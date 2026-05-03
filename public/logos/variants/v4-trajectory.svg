@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Klubba logo variant 4 trajectory">
+  <path d="M 5 24 Q 16 0 27 8" stroke="#1B4332" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="1.5 2.2" fill="none"/>
+  <circle cx="5" cy="24" r="2.5" fill="#D4A574"/>
+  <circle cx="27" cy="8" r="3" fill="#1B4332"/>
+</svg>

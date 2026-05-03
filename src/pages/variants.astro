@@ -1,0 +1,413 @@
+---
+import Base from '../layouts/Base.astro';
+
+const variants = [
+  {
+    id: 'v1-classic',
+    title: 'V1 — Classic Trou + Drapeau',
+    description: 'Diagonal dynamique. Mât slanted, fanion sable. La version la plus "iconographique golf" — lecture immédiate sans cliché.',
+    pros: 'Lecture instantanée • dynamique • mémorable',
+    cons: 'Le plus proche du visuel attendu (moins de surprise)',
+  },
+  {
+    id: 'v2-stroke',
+    title: 'V2 — Stroke (cercle creux)',
+    description: 'Même composition que V1 mais cercle en outline. Vibe "icon system", plus aéré. Cohabite mieux avec d\'autres icônes du site.',
+    pros: 'Élégance icon-set • léger visuellement',
+    cons: 'Moins ancré que V1, peut sembler timide à 16px',
+  },
+  {
+    id: 'v3-floating',
+    title: 'V3 — Floating Geometry',
+    description: 'Cercle plein + triangle détachés, sans mât. Le diagonal est implicite. Le plus scandinave abstrait.',
+    pros: 'Pur • intemporel • vrai signature design',
+    cons: 'Moins narratif, peut paraître déconnecté',
+  },
+  {
+    id: 'v4-trajectory',
+    title: 'V4 — Trajectory',
+    description: 'Petite balle sable → arc pointillé → trou vert. Storytelling complet du swing en un geste.',
+    pros: 'Narratif fort • différenciant',
+    cons: 'Plus complexe à 16px (les pointillés se brouillent)',
+  },
+  {
+    id: 'v5-pin',
+    title: 'V5 — Pin (mât vertical)',
+    description: 'Mât parfaitement vertical, fanion à droite. Plus calme, plus traditionnel club-house.',
+    pros: 'Iconique • lecture parfaite à toute taille',
+    cons: 'Plus "classique" / moins original que les diagonales',
+  },
+];
+---
+
+<Base locale="fr">
+  <section class="variants-intro">
+    <div class="container">
+      <p class="eyebrow">Design review · Direction B (symbol abstrait + wordmark)</p>
+      <h1>Logo Klubba — 5 variantes du picto</h1>
+      <p class="lead">Le wordmark <em>Klubba.</em> reste identique partout. Seul le picto à gauche change. Chaque variante est testée dans 5 contextes : nav, footer (fond foncé), favicon 32px, favicon 16px réel, et grand format 200px.</p>
+      <p class="lead-sub">Chaque variante a sa version <em>color</em> (sur clair) et <em>light</em> (sur foncé), couleurs déjà prêtes au shipping.</p>
+    </div>
+  </section>
+
+  <section class="variants-grid">
+    <div class="container">
+      {variants.map((v) => (
+        <article class="variant-card" data-id={v.id}>
+          <header class="variant-head">
+            <h2>{v.title}</h2>
+            <p class="variant-desc">{v.description}</p>
+            <ul class="variant-meta">
+              <li class="pros"><strong>+</strong> {v.pros}</li>
+              <li class="cons"><strong>−</strong> {v.cons}</li>
+            </ul>
+          </header>
+
+          <div class="variant-contexts">
+            <!-- Context 1: Nav (light bg) -->
+            <div class="ctx ctx-nav">
+              <span class="ctx-label">Nav (fond clair)</span>
+              <div class="nav-mock">
+                <div class="nav-brand">
+                  <img src={`/logos/variants/${v.id}.svg`} alt="" class="picto picto-md" />
+                  <span class="wordmark">Klubba<span class="dot">.</span></span>
+                </div>
+                <div class="nav-fake-links">
+                  <span>Pricing</span><span>Comment ça marche</span><span class="fake-cta">Demander une démo</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Context 2: Footer (dark bg) -->
+            <div class="ctx ctx-footer">
+              <span class="ctx-label">Footer (fond foncé)</span>
+              <div class="footer-mock">
+                <div class="footer-brand">
+                  <img src={`/logos/variants/${v.id}-light.svg`} alt="" class="picto picto-lg" />
+                  <span class="wordmark wordmark-light">Klubba<span class="dot">.</span></span>
+                </div>
+                <span class="footer-tag">klubba.golf</span>
+              </div>
+            </div>
+
+            <!-- Context 3: Favicon 32px -->
+            <div class="ctx ctx-favicon">
+              <span class="ctx-label">Favicon 32px</span>
+              <div class="favicon-mock favicon-32">
+                <img src={`/logos/variants/${v.id}-light.svg`} alt="" />
+              </div>
+            </div>
+
+            <!-- Context 4: Favicon 16px (real size!) -->
+            <div class="ctx ctx-favicon">
+              <span class="ctx-label">Favicon 16px réel</span>
+              <div class="favicon-mock favicon-16">
+                <img src={`/logos/variants/${v.id}-light.svg`} alt="" />
+              </div>
+              <span class="ctx-help">↑ taille réelle dans l'onglet navigateur</span>
+            </div>
+
+            <!-- Context 5: Large 200px -->
+            <div class="ctx ctx-large">
+              <span class="ctx-label">Large 200px (deck / hero)</span>
+              <div class="large-mock">
+                <img src={`/logos/variants/${v.id}.svg`} alt="" class="picto-xl" />
+              </div>
+            </div>
+
+            <!-- Context 6: SVG raw, monochrome test -->
+            <div class="ctx ctx-mono">
+              <span class="ctx-label">Test mono (impression / fax)</span>
+              <div class="mono-mock">
+                <img src={`/logos/variants/${v.id}.svg`} alt="" class="picto-md mono" />
+              </div>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="variants-decision">
+    <div class="container">
+      <h2>Ta décision</h2>
+      <ol>
+        <li>Choisis la variante qui te parle le plus → réponds à Claude par <code>v1</code> / <code>v2</code> / <code>v3</code> / <code>v4</code> / <code>v5</code></li>
+        <li>Optionnel : décris ce que tu veux ajuster (proportions, épaisseur, couleurs)</li>
+        <li>Je l'intègre dans Nav + Footer + Favicon, push une nouvelle PR, et tu valides en prod</li>
+      </ol>
+      <p class="hint">💡 Si aucune ne te plaît, dis-moi laquelle est la "moins pire" et ce qui cloche — je referai un round.</p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .variants-intro {
+    padding: var(--space-9) 0 var(--space-6);
+    background: var(--bg);
+    text-align: center;
+  }
+  .eyebrow {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: var(--space-3);
+  }
+  .variants-intro h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    margin-bottom: var(--space-4);
+  }
+  .lead {
+    font-size: var(--text-md);
+    color: var(--ink);
+    max-width: 65ch;
+    margin: 0 auto var(--space-3);
+    line-height: 1.55;
+  }
+  .lead-sub {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    max-width: 55ch;
+    margin: 0 auto;
+  }
+
+  .variants-grid {
+    padding: var(--space-7) 0 var(--space-9);
+    background: var(--bg);
+  }
+
+  .variant-card {
+    background: #FFFFFF;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    margin-bottom: var(--space-7);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .variant-head {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: var(--space-5);
+    margin-bottom: var(--space-6);
+  }
+  .variant-head h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin-bottom: var(--space-3);
+  }
+  .variant-desc {
+    color: var(--ink);
+    font-size: var(--text-base);
+    margin-bottom: var(--space-3);
+    max-width: 70ch;
+    line-height: 1.55;
+  }
+  .variant-meta {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: var(--text-sm);
+  }
+  .variant-meta strong {
+    display: inline-block;
+    width: 14px;
+    text-align: center;
+    margin-right: 6px;
+  }
+  .pros { color: var(--primary); }
+  .cons { color: var(--muted); }
+
+  /* Contexts grid */
+  .variant-contexts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--space-5);
+  }
+
+  .ctx {
+    background: var(--bg-soft, #FAF9F6);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .ctx-label {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .ctx-help {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* Nav mock */
+  .nav-mock {
+    background: #FFFFFF;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+  .nav-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .picto {
+    display: block;
+    flex-shrink: 0;
+  }
+  .picto-md { width: 28px; height: 28px; }
+  .picto-lg { width: 36px; height: 36px; }
+  .picto-xl { width: 200px; height: 200px; }
+
+  .wordmark {
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .wordmark .dot { color: var(--accent); }
+
+  .nav-fake-links {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+  .fake-cta {
+    background: var(--primary);
+    color: var(--bg);
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    font-weight: 700;
+  }
+
+  /* Footer mock */
+  .footer-mock {
+    background: var(--primary-deep);
+    border-radius: var(--radius-md);
+    padding: 20px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+  .footer-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .wordmark-light {
+    color: var(--bg);
+    font-size: 1.5rem;
+  }
+  .footer-tag {
+    color: var(--accent-soft);
+    font-size: var(--text-xs);
+    letter-spacing: 0.1em;
+    font-family: var(--font-sans);
+  }
+
+  /* Favicon mocks */
+  .favicon-mock {
+    background: var(--primary);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+  }
+  .favicon-32 {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+  }
+  .favicon-32 img {
+    width: 24px;
+    height: 24px;
+  }
+  .favicon-16 {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+  }
+  .favicon-16 img {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* Large mock */
+  .large-mock {
+    background: var(--bg);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 240px;
+  }
+
+  /* Mono mock */
+  .mono-mock {
+    background: #FFFFFF;
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: grayscale(100%);
+  }
+
+  /* Decision section */
+  .variants-decision {
+    background: var(--primary-deep);
+    color: var(--bg);
+    padding: var(--space-9) 0;
+  }
+  .variants-decision h2 {
+    color: var(--bg);
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin-bottom: var(--space-5);
+  }
+  .variants-decision ol {
+    color: var(--accent-soft);
+    line-height: 1.7;
+    padding-left: 1.4em;
+  }
+  .variants-decision code {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: var(--accent);
+    font-size: 0.95em;
+  }
+  .hint {
+    margin-top: var(--space-5);
+    color: var(--accent);
+    font-size: var(--text-sm);
+    font-style: italic;
+  }
+
+  @media (max-width: 640px) {
+    .variant-card { padding: var(--space-4); }
+    .nav-mock { flex-direction: column; align-items: flex-start; }
+    .nav-fake-links { flex-wrap: wrap; }
+  }
+</style>
