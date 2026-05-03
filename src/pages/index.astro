@@ -1,0 +1,26 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import ProblemNarrative from '../components/ProblemNarrative.astro';
+import ThreeSteps from '../components/ThreeSteps.astro';
+import PhoneMockup from '../components/PhoneMockup.astro';
+import ClubsShowcase from '../components/ClubsShowcase.astro';
+import HowItWorks from '../components/HowItWorks.astro';
+import Pricing from '../components/Pricing.astro';
+import FAQ from '../components/FAQ.astro';
+import CTAForm from '../components/CTAForm.astro';
+
+const locale = 'fr' as const;
+---
+
+<Base locale={locale}>
+  <Hero locale={locale} />
+  <ProblemNarrative locale={locale} />
+  <ThreeSteps locale={locale} />
+  <PhoneMockup locale={locale} />
+  <ClubsShowcase locale={locale} />
+  <HowItWorks locale={locale} />
+  <Pricing locale={locale} />
+  <FAQ locale={locale} />
+  <CTAForm locale={locale} />
+</Base>

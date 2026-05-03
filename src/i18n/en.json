@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "title": "Klubba — The branded digital scorecard for your golf club",
+    "description": "Your golfers play. Your club shines. Klubba turns every round into social visibility for your golf course — no app to install."
+  },
+  "launch": {
+    "tag": "Launch offer",
+    "text": "First month free for the first 10 clubs",
+    "cta": "I'm in"
+  },
+  "nav": {
+    "pricing": "Pricing",
+    "how": "How it works",
+    "demo": "See a demo"
+  },
+  "hero": {
+    "tagline": "The branded digital scorecard for your club.",
+    "subtagline": "Your golfers play. Your club shines.",
+    "cta": "See a 10-min demo",
+    "scroll": "Discover the concept"
+  },
+  "problem": {
+    "eyebrow": "The reality",
+    "lines": [
+      "Today, your golfers walk off the course.",
+      "They take out their smartphone.",
+      "And snap a picture of their paper scorecard.",
+      "Without any mention of your club."
+    ],
+    "punchline": "Every round is a missed visibility opportunity."
+  },
+  "steps": {
+    "eyebrow": "The solution",
+    "title": "Klubba in 3 gestures",
+    "lead": "A simple mechanic, designed for the club and the player. Zero installation, zero complexity for your team.",
+    "items": [
+      {
+        "num": "01",
+        "title": "QR at the desk",
+        "body": "We send you an elegant frame to place on your reception counter."
+      },
+      {
+        "num": "02",
+        "title": "The player scans",
+        "body": "Instant web app, no install. GPS, score, distance, duration — in real time."
+      },
+      {
+        "num": "03",
+        "title": "Card shared",
+        "body": "Recap card in your club's colors, shared on the player's social networks."
+      }
+    ]
+  },
+  "phone": {
+    "eyebrow": "Magic moment",
+    "phase1Title": "During the round, the app keeps pace.",
+    "phase1Lead": "GPS tracking, hole-by-hole scoring, distance, duration. The player never reaches for a notepad.",
+    "phase1Tag": "Complete plan · $79",
+    "phase2Title": "When it's over, the card is ready.",
+    "phase2Lead": "Branded in your colors, photographic, shareable in one tap. Available from the Essential plan.",
+    "phase2Tag": "Essential plan · $49",
+    "club": "Golf du Soleil",
+    "cardLabel": "Round summary",
+    "date": "Sat. Apr 25, 2026",
+    "time": "2:30 PM",
+    "ref": "N° 04287",
+    "score": "87",
+    "scoreOver": "+15",
+    "par": "Par 72",
+    "holes": "18 holes completed",
+    "playerName": "Antoine Dupré",
+    "stats": {
+      "distance": { "v": "4.0 mi", "l": "Distance" },
+      "steps": { "v": "8,432", "l": "Steps" },
+      "duration": { "v": "3h42", "l": "Duration" }
+    },
+    "live": {
+      "tracking": "Current hole",
+      "currentHole": "8/18",
+      "currentPar": "Par 4",
+      "currentScore": "Live score",
+      "speed": "1.1 mph",
+      "playing": "Antoine is playing"
+    },
+    "share": {
+      "ctaButton": "Share",
+      "sheetTitle": "Share the card",
+      "sheetSubtitle": "klubba.golf",
+      "previewLabel": "Round summary · 18 holes",
+      "previewName": "Golf du Soleil — 87 (+15)",
+      "contacts": [
+        { "initials": "SB", "name": "Sophie B.", "color": "#D4A574" },
+        { "initials": "PL", "name": "Paul L.", "color": "#1B4332" },
+        { "initials": "MT", "name": "Marc T.", "color": "#3B6B8E" },
+        { "initials": "LD", "name": "Léa D.", "color": "#7A2E1F" }
+      ],
+      "apps": ["Instagram", "WhatsApp", "Snapchat", "X", "Facebook", "Mail"],
+      "actions": ["Copy link", "AirDrop", "Save photo"],
+      "tapHint": "Tap to share",
+      "linkCopied": "Link copied!"
+    },
+    "gpsLabel": "GPS course track",
+    "footer": "Shared from Klubba · Golf du Soleil · #GolfDuSoleil"
+  },
+  "showcase": {
+    "eyebrow": "Made to measure",
+    "title": "One card per club identity.",
+    "lead": "Coastal, forest, classic, clay: the card adopts the visual codes of your golf course. No generic templates. No third-party branding.",
+    "palettes": [
+      { "name": "Coastal", "tagline": "Navy + sand", "primary": "#1B3A5C", "accent": "#D4A574", "ground": "#3B6B8E" },
+      { "name": "Forest", "tagline": "Deep green + gold", "primary": "#1B4332", "accent": "#D4A574", "ground": "#2D6A4F" },
+      { "name": "Mediterranean", "tagline": "Terracotta + cream", "primary": "#7A2E1F", "accent": "#E8C089", "ground": "#C46444" },
+      { "name": "Heritage", "tagline": "Burgundy + cream", "primary": "#5B1A1A", "accent": "#D4A574", "ground": "#8B3A3A" }
+    ]
+  },
+  "how": {
+    "eyebrow": "Onboarding",
+    "title": "From signature to first card shared: 7 days.",
+    "items": [
+      {
+        "num": "1",
+        "title": "5 min on the phone",
+        "body": "Give us your website URL. We extract logo, colors and photos to build a mockup."
+      },
+      {
+        "num": "2",
+        "title": "Mockup in 24h",
+        "body": "You receive the branded page to validate. Unlimited tweaks until your OK."
+      },
+      {
+        "num": "3",
+        "title": "QR frame delivered",
+        "body": "We ship you an elegant QR frame, ready to place on your reception desk."
+      },
+      {
+        "num": "4",
+        "title": "Monthly reporting",
+        "body": "Every month, an email recap: scans, rounds played, social shares."
+      }
+    ]
+  },
+  "pricing": {
+    "eyebrow": "Pricing",
+    "title": "Two plans, one promise.",
+    "lead": "$49 gives you the branded recap card. $79 adds the real-time tracking app. No commitment, cancel any month. −20% on 3 years.",
+    "launchBadge": "1ST MONTH FREE",
+    "plans": [
+      {
+        "name": "Essential",
+        "tagline": "The branded recap card",
+        "price": "$49",
+        "period": "/month",
+        "engagement": "or $39/month with 3-year commitment (−20%)",
+        "features": [
+          "Photographic recap card in your colors",
+          "Your club's logo and identity built in",
+          "Downloadable, shareable on socials",
+          "Elegant QR frame provided for the desk",
+          "Mockup delivered and validated in 24h",
+          "Basic monthly reporting (scans, shares)"
+        ],
+        "featured": false
+      },
+      {
+        "name": "Complete",
+        "tagline": "Everything in Essential + the tracking app",
+        "price": "$79",
+        "period": "/month",
+        "engagement": "or $63/month with 3-year commitment (−20%)",
+        "features": [
+          "All Essential features",
+          "Web app + iOS and Android apps",
+          "Real-time GPS, distance, steps, duration",
+          "Optional personal player accounts",
+          "Long-term history and progression",
+          "Detailed monthly club usage reporting"
+        ],
+        "featured": true,
+        "badge": "RECOMMENDED"
+      }
+    ]
+  },
+  "faq": {
+    "eyebrow": "Frequently asked",
+    "title": "Everything you'll ask, answered upfront.",
+    "items": [
+      {
+        "q": "Does the player need to install an app?",
+        "a": "No by default: a QR scan opens the web app in the browser, no install. For regulars, free iOS and Android apps are available on the App Store and Play Store."
+      },
+      {
+        "q": "Do you need our logo and brand guidelines?",
+        "a": "No. We start from your website and automatically extract logo, colors and photos. Mockup delivered within 24h, refined until your validation."
+      },
+      {
+        "q": "How do we track Klubba usage at the club?",
+        "a": "Every month you receive a clear email reporting: number of scans, rounds played, social shares. No interface to learn, no tools to install on the club side."
+      },
+      {
+        "q": "Is there a commitment?",
+        "a": "None by default, cancel any month. If you want to lock in a rate, the 3-year commitment gives −20% off ($39 or $63 /month)."
+      },
+      {
+        "q": "Do you need any specific equipment at the club?",
+        "a": "No. The provided QR frame is the only thing to set up. It works without power, without club wifi, without your team's intervention."
+      },
+      {
+        "q": "Is this an official handicap tracking tool?",
+        "a": "No. Klubba is a leisure round and social-sharing tool. It complements your official tools without replacing them."
+      }
+    ]
+  },
+  "cta": {
+    "eyebrow": "10-minute demo",
+    "title": "See what your card would look like before any decision.",
+    "lead": "Give us your golf course URL, we generate the mockup in 24h. No credit card required.",
+    "form": {
+      "name": "Your name",
+      "club": "Club name",
+      "email": "Work email",
+      "submit": "Request the demo",
+      "loading": "Sending…",
+      "success": "Thanks, we'll get back to you within 24h.",
+      "error": "Oops, something went wrong. Try again or email us directly."
+    },
+    "qrLabel": "Scan = sample card"
+  },
+  "footer": {
+    "tagline": "The branded digital scorecard for golf clubs.",
+    "rights": "© 2026 Klubba. All rights reserved.",
+    "legal": "Legal notice",
+    "privacy": "Privacy policy",
+    "contact": "Contact"
+  }
+}

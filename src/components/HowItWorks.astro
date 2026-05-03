@@ -1,0 +1,105 @@
+---
+import { useT, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useT(locale);
+---
+
+<section id="how" class="how" data-anim="how">
+  <div class="container">
+    <div class="section-header" data-anim="section-header">
+      <span class="section-eyebrow">{t.how.eyebrow}</span>
+      <h2 class="section-title">{t.how.title}</h2>
+    </div>
+
+    <div class="how-track">
+      <div class="how-line" data-how-line></div>
+      <div class="how-items">
+        {t.how.items.map((item) => (
+          <article class="how-item" data-how-item>
+            <div class="how-num">{item.num}</div>
+            <h3 class="how-title">{item.title}</h3>
+            <p class="how-body">{item.body}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .how {
+    background: var(--bg-soft);
+  }
+
+  .how-track {
+    position: relative;
+    margin-top: var(--space-7);
+  }
+  .how-line {
+    position: absolute;
+    top: 32px;
+    left: 5%;
+    right: 5%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--primary));
+    transform-origin: left center;
+    z-index: 0;
+  }
+  @media (max-width: 767px) {
+    .how-line { display: none; }
+  }
+
+  .how-items {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+  @media (min-width: 768px) {
+    .how-items {
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-5);
+    }
+  }
+
+  .how-item {
+    text-align: center;
+    padding: 0 var(--space-3);
+    z-index: 1;
+  }
+
+  .how-num {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+    color: var(--primary);
+    font-family: var(--font-serif);
+    font-size: var(--text-xl);
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-4);
+    box-shadow: var(--shadow-md);
+  }
+
+  .how-title {
+    font-size: var(--text-md);
+    margin-bottom: var(--space-2);
+    color: var(--primary);
+  }
+  .how-body {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    line-height: 1.5;
+    max-width: 24ch;
+    margin: 0 auto;
+  }
+</style>

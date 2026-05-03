@@ -1,0 +1,69 @@
+/* Klubba design tokens — repris du one-pager commercial/one-pager.html */
+:root {
+  /* Couleurs */
+  --primary: #1B4332;
+  --primary-soft: #2D6A4F;
+  --primary-bg: #F4F8F5;
+  --primary-deep: #0F2A1E;
+  --accent: #D4A574;
+  --accent-soft: #F5E6CF;
+  --accent-bright: #E8C089;
+  --ink: #1A1A1A;
+  --ink-soft: #2D2D2D;
+  --muted: #6B7280;
+  --muted-soft: #9CA3AF;
+  --line: #E5E7EB;
+  --line-soft: #F3F4F6;
+  --bg: #FFFFFF;
+  --bg-soft: #FBFBF9;
+
+  /* Espaces */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+
+  /* Typographie */
+  --font-serif: Georgia, 'Times New Roman', 'Cormorant Garamond', serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+
+  /* Tailles texte */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.5rem;
+  --text-4xl: 3.5rem;
+  --text-5xl: 4.5rem;
+  --text-hero: clamp(3rem, 10vw, 7rem);
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(27, 67, 50, 0.08);
+  --shadow-lg: 0 16px 48px rgba(27, 67, 50, 0.12);
+  --shadow-xl: 0 32px 80px rgba(27, 67, 50, 0.18);
+
+  /* Animations */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Layout */
+  --max-width: 1280px;
+  --content-width: 1080px;
+}

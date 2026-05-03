@@ -1,0 +1,42 @@
+---
+import '../styles/global.css';
+import LaunchBanner from '../components/LaunchBanner.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { useT, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useT(locale);
+---
+
+<!doctype html>
+<html lang={locale}>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content={Astro.generator} />
+  <title>{t.meta.title}</title>
+  <meta name="description" content={t.meta.description} />
+  <meta property="og:title" content={t.meta.title} />
+  <meta property="og:description" content={t.meta.description} />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#1B4332" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+  <LaunchBanner locale={locale} />
+  <Nav locale={locale} />
+  <main>
+    <slot />
+  </main>
+  <Footer locale={locale} />
+
+  <script>
+    import '../scripts/animations';
+  </script>
+</body>
+</html>

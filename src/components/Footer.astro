@@ -1,0 +1,96 @@
+---
+import { useT, altLocaleHref, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useT(locale);
+const altHref = altLocaleHref(locale);
+const altLabel = locale === 'fr' ? 'English' : 'Français';
+---
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="footer-mark">Klubba<span class="footer-dot">.</span></span>
+      <p class="footer-tagline">{t.footer.tagline}</p>
+    </div>
+
+    <ul class="footer-links">
+      <li><a href="#">{t.footer.legal}</a></li>
+      <li><a href="#">{t.footer.privacy}</a></li>
+      <li><a href="#cta">{t.footer.contact}</a></li>
+      <li><a href={altHref} class="lang-link">{altLabel}</a></li>
+    </ul>
+  </div>
+
+  <div class="container footer-bottom">
+    <span>{t.footer.rights}</span>
+    <span>klubba.golf</span>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    background: var(--primary-deep);
+    color: var(--accent-soft);
+    padding: var(--space-9) 0 var(--space-5);
+    margin-top: var(--space-10);
+  }
+  .footer-inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-7);
+    padding-bottom: var(--space-7);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  @media (min-width: 768px) {
+    .footer-inner { grid-template-columns: 2fr 1fr; }
+  }
+  .footer-mark {
+    font-family: var(--font-serif);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--bg);
+    letter-spacing: -0.02em;
+    display: block;
+    margin-bottom: var(--space-3);
+  }
+  .footer-dot { color: var(--accent); }
+  .footer-tagline {
+    font-size: var(--text-base);
+    color: rgba(255, 255, 255, 0.55);
+    max-width: 40ch;
+    line-height: 1.5;
+  }
+  .footer-links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .footer-links a {
+    font-size: var(--text-sm);
+    color: rgba(255, 255, 255, 0.65);
+    transition: color 0.2s var(--ease-out);
+  }
+  .footer-links a:hover { color: var(--accent); }
+  .lang-link {
+    color: var(--accent) !important;
+    font-weight: 600;
+  }
+
+  .footer-bottom {
+    padding-top: var(--space-5);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--text-xs);
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.05em;
+  }
+</style>

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" aria-label="Golf du Soleil — Méditerranée">
+  <!-- Cercle externe bleu marine -->
+  <circle cx="100" cy="100" r="94" fill="#F4EFE0" stroke="#1B3A5C" stroke-width="4"/>
+  <!-- Cercle inner stroke fin -->
+  <circle cx="100" cy="100" r="86" fill="none" stroke="#1B3A5C" stroke-width="0.8" opacity="0.4"/>
+
+  <!-- Sections internes : 3 zones séparées -->
+  <!-- Zone gauche : terracotta (collines + fer) -->
+  <path d="M 100 70 L 100 130 L 38 130 L 38 90 Q 50 78, 60 82 Q 75 70, 100 70 Z" fill="#C46444" opacity="0.85"/>
+  <!-- Zone droite : bleu/vagues + soleil -->
+  <path d="M 100 70 L 100 130 L 162 130 L 162 90 Q 150 80, 140 86 Q 120 78, 100 70 Z" fill="#3B6B8E" opacity="0.85"/>
+
+  <!-- Soleil dans la zone droite -->
+  <circle cx="142" cy="82" r="9" fill="#E8743A"/>
+  <g stroke="#E8743A" stroke-width="1.6" stroke-linecap="round">
+    <line x1="142" y1="68" x2="142" y2="63"/>
+    <line x1="129" y1="74" x2="125" y2="71"/>
+    <line x1="155" y1="74" x2="159" y2="71"/>
+  </g>
+
+  <!-- Vagues -->
+  <g stroke="#1B3A5C" stroke-width="2" fill="none" stroke-linecap="round">
+    <path d="M 116 102 Q 124 98, 132 102 T 148 102 T 158 102"/>
+    <path d="M 116 110 Q 124 106, 132 110 T 148 110 T 158 110"/>
+    <path d="M 120 118 Q 128 114, 136 118 T 152 118"/>
+  </g>
+
+  <!-- Fer (club) gauche -->
+  <g transform="translate(58 78) rotate(-18)">
+    <line x1="6" y1="0" x2="6" y2="38" stroke="#1B3A5C" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M -2 38 Q -1 50, 16 50 L 18 38 Z" fill="#F4EFE0" stroke="#1B3A5C" stroke-width="2.2" stroke-linejoin="round"/>
+    <line x1="2" y1="42" x2="14" y2="42" stroke="#1B3A5C" stroke-width="0.8"/>
+    <line x1="3" y1="44" x2="14" y2="44" stroke="#1B3A5C" stroke-width="0.8"/>
+    <line x1="3" y1="46" x2="14" y2="46" stroke="#1B3A5C" stroke-width="0.8"/>
+    <line x1="3" y1="48" x2="14" y2="48" stroke="#1B3A5C" stroke-width="0.8"/>
+  </g>
+
+  <!-- Cyprès central -->
+  <g>
+    <ellipse cx="100" cy="125" rx="14" ry="34" fill="#7B8D4A"/>
+    <ellipse cx="100" cy="115" rx="11" ry="28" fill="#92A157"/>
+    <path d="M 96 152 L 104 152 L 102 165 L 98 165 Z" fill="#3D2817"/>
+    <!-- Détails branches -->
+    <path d="M 100 100 Q 96 105, 92 108 M 100 110 Q 104 113, 108 116 M 100 120 Q 96 123, 93 126 M 100 130 Q 105 133, 108 136 M 100 140 Q 96 143, 94 145" stroke="#5A6B36" stroke-width="0.6" fill="none" opacity="0.7"/>
+  </g>
+
+  <!-- Zone basse: terracotta colline + balle -->
+  <path d="M 38 130 Q 70 134, 100 132 Q 130 134, 162 130 L 162 152 Q 130 156, 100 154 Q 70 156, 38 152 Z" fill="#C46444" opacity="0.7"/>
+
+  <!-- Balle sur tee en bas -->
+  <line x1="100" y1="155" x2="100" y2="168" stroke="#1B3A5C" stroke-width="1.6"/>
+  <path d="M 96 168 L 104 168 L 103 172 L 97 172 Z" fill="#1B3A5C"/>
+  <circle cx="100" cy="148" r="6" fill="#FFFFFF" stroke="#1B3A5C" stroke-width="1.4"/>
+  <g fill="#1B3A5C" opacity="0.4">
+    <circle cx="98.5" cy="146.5" r="0.6"/>
+    <circle cx="101.5" cy="146.5" r="0.6"/>
+    <circle cx="100" cy="148.5" r="0.6"/>
+    <circle cx="98.5" cy="149.5" r="0.6"/>
+    <circle cx="101.5" cy="149.5" r="0.6"/>
+  </g>
+
+  <!-- Bandeau central -->
+  <rect x="42" y="118" width="116" height="20" fill="#F4EFE0" stroke="#1B3A5C" stroke-width="1.2" rx="1"/>
+  <text x="100" y="130" font-family="Georgia, serif" font-size="9" font-weight="800" fill="#1B3A5C" text-anchor="middle" letter-spacing="1.8">LE CLUB DU SOLEIL</text>
+  <text x="100" y="138.5" font-family="Georgia, serif" font-size="6" font-weight="700" fill="#1B3A5C" text-anchor="middle" letter-spacing="2">GOLF</text>
+
+  <!-- Texte arc top : GOLF CLUB -->
+  <defs>
+    <path id="arcTopSoleil" d="M 26 100 Q 100 18, 174 100"/>
+    <path id="arcBottomSoleil" d="M 26 100 Q 100 184, 174 100"/>
+  </defs>
+  <text font-family="Georgia, serif" font-size="13" font-weight="800" fill="#1B3A5C" letter-spacing="3.5">
+    <textPath href="#arcTopSoleil" startOffset="50%" text-anchor="middle">GOLF CLUB</textPath>
+  </text>
+  <text font-family="Georgia, serif" font-size="11" font-weight="700" fill="#1B3A5C" letter-spacing="3.5">
+    <textPath href="#arcBottomSoleil" startOffset="50%" text-anchor="middle">MÉDITERRANÉE</textPath>
+  </text>
+
+  <!-- Petits ornements latéraux -->
+  <g fill="#C46444">
+    <circle cx="22" cy="100" r="1.6"/>
+    <circle cx="178" cy="100" r="1.6"/>
+  </g>
+</svg>

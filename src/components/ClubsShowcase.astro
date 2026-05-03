@@ -1,0 +1,229 @@
+---
+import { useT, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useT(locale);
+---
+
+<section class="showcase">
+  <div class="container">
+    <div class="section-header" data-anim="section-header">
+      <span class="section-eyebrow">{t.showcase.eyebrow}</span>
+      <h2 class="section-title">{t.showcase.title}</h2>
+      <p class="section-lead">{t.showcase.lead}</p>
+    </div>
+
+    <div class="showcase-grid">
+      {t.showcase.palettes.map((palette) => (
+        <article
+          class="palette-card"
+          data-anim="showcase-card"
+          style={`--primary: ${palette.primary}; --accent: ${palette.accent}; --ground: ${palette.ground};`}
+        >
+          <div class="palette-photo">
+            <svg viewBox="0 0 200 110" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <linearGradient id={`sky-${palette.name}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.25"/>
+                  <stop offset="100%" stop-color="var(--ground)" stop-opacity="0.05"/>
+                </linearGradient>
+              </defs>
+              <rect width="200" height="110" fill={`url(#sky-${palette.name})`}/>
+              <ellipse cx="40" cy="60" rx="80" ry="14" fill="var(--ground)" opacity="0.5"/>
+              <ellipse cx="160" cy="56" rx="90" ry="16" fill="var(--ground)" opacity="0.4"/>
+              <path d="M 0 78 Q 50 68, 100 76 T 200 74 L 200 110 L 0 110 Z" fill="var(--ground)" opacity="0.7"/>
+              <path d="M 0 90 Q 60 84, 120 90 T 200 88 L 200 110 L 0 110 Z" fill="var(--primary)" opacity="0.8"/>
+              <line x1="80" y1="92" x2="80" y2="58" stroke="var(--primary)" stroke-width="1.4"/>
+              <path d="M 80 58 L 96 62 L 80 66 Z" fill="var(--accent)"/>
+              <circle cx="80" cy="92" r="1.4" fill="#FFFFFF"/>
+            </svg>
+          </div>
+
+          <div class="palette-bar">
+            <div class="palette-logo-spot"></div>
+            <div class="palette-meta">
+              <small>{palette.tagline}</small>
+              <strong>{palette.name}</strong>
+            </div>
+          </div>
+
+          <div class="palette-content">
+            <div class="palette-score-wrap">
+              <div class="palette-score">{72 + (palette.name.length % 18)}</div>
+              <div class="palette-score-label">Par 72 · 18 trous</div>
+            </div>
+
+            <div class="palette-mini-grid" aria-hidden="true">
+              {Array.from({ length: 18 }, (_, i) => (
+                <span class={`mini-cell ${i % 5 === 0 ? 'is-birdie' : i % 3 === 0 ? 'is-bogey' : ''}`}></span>
+              ))}
+            </div>
+
+            <div class="palette-footer">
+              <span class="palette-dot"></span>
+              <span>{locale === 'fr' ? 'Votre carte. Vos couleurs.' : 'Your card. Your colors.'}</span>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .showcase {
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  .showcase-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+    align-items: stretch;
+  }
+  @media (min-width: 640px) {
+    .showcase-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-5); }
+  }
+  @media (min-width: 1024px) {
+    .showcase-grid { grid-template-columns: repeat(4, 1fr); gap: var(--space-5); }
+  }
+
+  .palette-card {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    transition: transform 0.5s var(--ease-out), box-shadow 0.5s var(--ease-out);
+    will-change: transform;
+    display: flex;
+    flex-direction: column;
+  }
+  .palette-card:hover {
+    transform: translateY(-8px) rotate(-0.5deg);
+    box-shadow: var(--shadow-xl);
+  }
+
+  .palette-photo {
+    height: 110px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .palette-photo svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .palette-bar {
+    background: var(--primary);
+    color: var(--bg);
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .palette-logo-spot {
+    width: 32px; height: 32px;
+    background: var(--bg);
+    border-radius: 50%;
+    border: 1.5px solid var(--accent);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .palette-logo-spot::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    background:
+      linear-gradient(135deg, var(--accent), var(--primary)),
+      var(--accent);
+    background-blend-mode: multiply;
+    border-radius: 50%;
+    opacity: 0.7;
+  }
+  .palette-meta { flex: 1; min-width: 0; }
+  .palette-meta small {
+    display: block;
+    color: var(--accent);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .palette-meta strong {
+    font-family: var(--font-serif);
+    font-size: var(--text-md);
+    font-weight: 700;
+  }
+
+  .palette-content {
+    padding: var(--space-4);
+    background: var(--bg-soft);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .palette-score-wrap {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .palette-score {
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+  }
+  .palette-score-label {
+    font-size: var(--text-xs);
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  .palette-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 3px;
+  }
+  .mini-cell {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    background: var(--accent);
+    opacity: 0.25;
+  }
+  .mini-cell.is-birdie {
+    background: var(--accent);
+    opacity: 1;
+  }
+  .mini-cell.is-bogey {
+    background: var(--ground);
+    opacity: 0.4;
+  }
+
+  .palette-footer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--line);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    font-style: italic;
+  }
+  .palette-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+</style>
