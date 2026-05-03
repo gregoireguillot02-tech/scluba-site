@@ -50,10 +50,57 @@ const variants = [
     </div>
   </section>
 
+  <section class="variants-compare">
+    <div class="container">
+      <h2 class="compare-title">Comparaison directe</h2>
+      <p class="compare-help">Les 5 variantes alignées dans le même contexte pour repérer celle qui te parle au premier regard.</p>
+
+      <div class="compare-row">
+        <h3>En Nav (taille réelle 28px)</h3>
+        <div class="compare-strip strip-light">
+          {variants.map((v) => (
+            <a href={`#${v.id}`} class="strip-cell" title={`Aller à ${v.title}`}>
+              <img src={`/logos/variants/${v.id}.svg`} alt="" class="picto picto-md" />
+              <span class="wordmark wordmark-sm">Klubba<span class="dot">.</span></span>
+              <span class="strip-id">{v.id.replace('-', ' · ').toUpperCase()}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <div class="compare-row">
+        <h3>En Favicon 16px (taille réelle dans onglet)</h3>
+        <div class="compare-strip strip-fav">
+          {variants.map((v) => (
+            <div class="strip-cell strip-cell-fav">
+              <div class="favicon-mock favicon-16">
+                <img src={`/logos/variants/${v.id}-light.svg`} alt="" />
+              </div>
+              <span class="strip-id">{v.id.split('-')[0].toUpperCase()}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div class="compare-row">
+        <h3>Picto seul, 80px (carte de visite, decks)</h3>
+        <div class="compare-strip strip-light">
+          {variants.map((v) => (
+            <div class="strip-cell strip-cell-large">
+              <img src={`/logos/variants/${v.id}.svg`} alt="" class="picto-lg2" />
+              <span class="strip-id">{v.id.split('-')[0].toUpperCase()}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="variants-grid">
     <div class="container">
+      <h2 class="grid-title">Détail par variante (6 contextes)</h2>
       {variants.map((v) => (
-        <article class="variant-card" data-id={v.id}>
+        <article class="variant-card" id={v.id} data-id={v.id}>
           <header class="variant-head">
             <h2>{v.title}</h2>
             <p class="variant-desc">{v.description}</p>
@@ -173,9 +220,88 @@ const variants = [
     margin: 0 auto;
   }
 
+  .variants-compare {
+    background: var(--bg-soft, #FAF9F6);
+    padding: var(--space-7) 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .compare-title {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin-bottom: var(--space-2);
+    text-align: center;
+  }
+  .compare-help {
+    text-align: center;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-6);
+    max-width: 60ch;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .compare-row {
+    margin-bottom: var(--space-7);
+  }
+  .compare-row h3 {
+    font-size: var(--text-base);
+    color: var(--muted);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: var(--space-3);
+    text-transform: uppercase;
+    font-family: var(--font-sans);
+  }
+  .compare-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--space-3);
+    background: #FFFFFF;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+  }
+  @media (max-width: 720px) {
+    .compare-strip { grid-template-columns: repeat(2, 1fr); }
+  }
+  .strip-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: var(--space-3);
+    border-radius: var(--radius-sm);
+    transition: background 0.15s var(--ease-out);
+  }
+  .strip-cell:hover {
+    background: var(--bg-soft, #FAF9F6);
+  }
+  .strip-cell-fav { gap: 12px; }
+  .strip-cell-large { gap: 16px; }
+  .strip-id {
+    font-size: 11px;
+    font-family: var(--font-sans);
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+  .wordmark-sm {
+    font-size: 1rem;
+  }
+  .picto-lg2 {
+    width: 80px;
+    height: 80px;
+  }
+
   .variants-grid {
     padding: var(--space-7) 0 var(--space-9);
     background: var(--bg);
+  }
+  .grid-title {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin-bottom: var(--space-6);
+    text-align: center;
   }
 
   .variant-card {
