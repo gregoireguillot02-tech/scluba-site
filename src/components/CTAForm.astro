@@ -7,9 +7,6 @@ interface Props {
 
 const { locale } = Astro.props;
 const t = useT(locale);
-
-// Endpoint Formspree à brancher via PUBLIC_FORMSPREE_ENDPOINT (.env)
-const formspreeEndpoint = import.meta.env.PUBLIC_FORMSPREE_ENDPOINT || 'https://formspree.io/f/YOUR_FORMSPREE_ID';
 ---
 
 <section id="cta" class="cta">
@@ -23,8 +20,7 @@ const formspreeEndpoint = import.meta.env.PUBLIC_FORMSPREE_ENDPOINT || 'https://
         <form
           class="cta-form"
           data-anim="cta-form"
-          action={formspreeEndpoint}
-          method="POST"
+          novalidate
         >
           <div class="form-row">
             <div class="form-field">

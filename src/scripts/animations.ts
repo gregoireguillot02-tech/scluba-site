@@ -369,9 +369,11 @@ function initCTAForm() {
   const loadingText = submitBtn?.dataset.loading ?? 'Envoi en cours…';
   const initialText = submitBtn?.textContent ?? 'Envoyer';
 
+  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
+  const SUPABASE_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const endpoint = form.action;
 
     if (successEl) successEl.style.display = 'none';
     if (errorEl) errorEl.style.display = 'none';
@@ -382,18 +384,32 @@ function initCTAForm() {
 
     try {
       const formData = new FormData(form);
+      const lead = {
+        name: String(formData.get('name') ?? '').trim(),
+        club: String(formData.get('club') ?? '').trim(),
+        email: String(formData.get('email') ?? '').trim(),
+        locale: document.documentElement.lang || 'fr',
+        user_agent: navigator.userAgent,
+      };
 
-      // En dev sans endpoint Formspree configuré : on simule succès
-      if (!endpoint || endpoint.includes('YOUR_FORMSPREE_ID')) {
+      if (!SUPABASE_URL || !SUPABASE_KEY) {
         await new Promise((resolve) => setTimeout(resolve, 800));
-        console.log('[DEV] Form data:', Object.fromEntries(formData.entries()));
+        console.log('[DEV] Lead:', lead);
       } else {
-        const res = await fetch(endpoint, {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
           method: 'POST',
-          body: formData,
-          headers: { Accept: 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`,
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify(lead),
         });
-        if (!res.ok) throw new Error('Failed');
+        if (!res.ok) {
+          console.error('Supabase insert failed:', res.status, await res.text().catch(() => ''));
+          throw new Error('Failed');
+        }
       }
 
       gsap.to(form.querySelectorAll('.form-field'), {
