@@ -12,6 +12,7 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.105.1",
     "astro": "^6.2.1",
     "gsap": "^3.15.0"
   }
