@@ -108,12 +108,16 @@ function initSteps() {
   });
 }
 
-/* ---------- PHONE MOCKUP (magic moment, 2 phases) ---------- */
+/* ---------- PHONE MOCKUP (magic moment, 2 phases) ----------
+   v3 (2026-05-05) : suppression du halo doré rotatif et de la rotation
+   du phone pendant le scroll (user feedback). Phone reste à son tilt CSS
+   initial. Phase 2 se transforme en "balle qui joue les 18 trous" :
+   chaque cellule s'allume à mesure que la balle la traverse, et le score
+   compte 0 -> 87. */
 function initPhone() {
   const wrap = document.querySelector<HTMLElement>('[data-anim="phone-wrap"]');
   if (!wrap) return;
 
-  const phone = wrap.querySelector<HTMLElement>('[data-phone]');
   const screenLive = wrap.querySelector<HTMLElement>('[data-screen-live]');
   const screenCard = wrap.querySelector<HTMLElement>('[data-screen-card]');
   const narrative1 = wrap.querySelector<HTMLElement>('[data-narrative-phase="1"]');
@@ -127,18 +131,24 @@ function initPhone() {
   const liveTime = wrap.querySelector<HTMLElement>('[data-live-time]');
 
   const cardBrand = wrap.querySelector<HTMLElement>('[data-card-brand]');
-  const cells = wrap.querySelectorAll<HTMLElement>('[data-hole]');
+  const cells = Array.from(wrap.querySelectorAll<HTMLElement>('[data-hole]'));
   const stats = wrap.querySelectorAll<HTMLElement>('[data-stat]');
   const score = wrap.querySelector<HTMLElement>('[data-score]');
+  const grid = wrap.querySelector<HTMLElement>('.card-grid');
+  const ball = wrap.querySelector<HTMLElement>('[data-grid-ball]');
   const shareHead = wrap.querySelector<HTMLElement>('[data-share-head]');
   const shareBtns = wrap.querySelectorAll<HTMLElement>('[data-share-platforms] .share-btn');
   const shareLink = wrap.querySelector<HTMLElement>('[data-share-link]');
 
   // États initiaux
-  gsap.set(cells, { opacity: 0, y: 6 });
+  gsap.set(cells, { opacity: 0.18 });
   gsap.set(stats, { opacity: 0, y: 10, scale: 0.94 });
-  if (score) gsap.set(score, { opacity: 0, scale: 0.5 });
+  if (score) {
+    gsap.set(score, { opacity: 0, scale: 0.5 });
+    score.textContent = '0';
+  }
   if (cardBrand) gsap.set(cardBrand, { opacity: 0, y: 20 });
+  if (ball) gsap.set(ball, { opacity: 0, x: 0, y: 0 });
   if (shareHead) gsap.set(shareHead, { opacity: 0, y: 16 });
   if (shareBtns.length) gsap.set(shareBtns, { opacity: 0, y: 12, scale: 0.9 });
   if (shareLink) gsap.set(shareLink, { opacity: 0, y: 10 });
@@ -151,14 +161,11 @@ function initPhone() {
       pin: true,
       scrub: 0.8,
       anticipatePin: 1,
+      invalidateOnRefresh: true,
     },
   });
 
-  // === Phase 1 : LIVE (0 → 0.45) ===
-  // Phone légère rotation
-  if (phone) {
-    tl.to(phone, { rotateY: -10, rotateX: 4, duration: 0.45 }, 0);
-  }
+  // === Phase 1 : LIVE (0 → 0.45) === (phone reste fixe à son tilt CSS)
 
   // Compteur trous (8 → 18)
   if (liveHole) {
@@ -213,19 +220,9 @@ function initPhone() {
     tl.to(phaseLine, { width: '100%', duration: 0.45, ease: 'none' }, 0);
   }
 
-  // === Transition (0.45 → 0.6) ===
-  // Live screen fade out + scale
-  if (screenLive) {
-    tl.to(screenLive, { opacity: 0, scale: 0.95, duration: 0.15 }, 0.45);
-  }
-  // Phone se redresse
-  if (phone) {
-    tl.to(phone, { rotateY: 0, rotateX: 0, scale: 1.04, duration: 0.15 }, 0.45);
-  }
-  // Card screen fade in
-  if (screenCard) {
-    tl.to(screenCard, { opacity: 1, scale: 1, duration: 0.15 }, 0.5);
-  }
+  // === Transition (0.45 → 0.6) === (pas de rotation du phone)
+  if (screenLive) tl.to(screenLive, { opacity: 0, scale: 0.95, duration: 0.15 }, 0.45);
+  if (screenCard) tl.to(screenCard, { opacity: 1, scale: 1, duration: 0.15 }, 0.5);
 
   // Narratives swap
   if (narrative1) tl.to(narrative1, { opacity: 0, y: -20, duration: 0.15 }, 0.42);
@@ -236,14 +233,74 @@ function initPhone() {
 
   // === Phase 2 : CARD (0.6 → 1.0) ===
   if (cardBrand) tl.to(cardBrand, { opacity: 1, y: 0, duration: 0.15 }, 0.62);
-  tl.to(stats, { opacity: 1, y: 0, scale: 1, duration: 0.2, stagger: 0.05 }, 0.7);
-  if (score) tl.to(score, { opacity: 1, scale: 1, duration: 0.2, ease: 'back.out(1.6)' }, 0.78);
-  tl.to(cells, { opacity: 1, y: 0, duration: 0.18, stagger: 0.012 }, 0.85);
+  tl.to(stats, { opacity: 1, y: 0, scale: 1, duration: 0.2, stagger: 0.05 }, 0.68);
 
-  // Bloc partage (apparait après les cells)
-  if (shareHead) tl.to(shareHead, { opacity: 1, y: 0, duration: 0.18 }, 0.92);
-  if (shareBtns.length) tl.to(shareBtns, { opacity: 1, y: 0, scale: 1, duration: 0.16, stagger: 0.04, ease: 'back.out(1.4)' }, 0.95);
-  if (shareLink) tl.to(shareLink, { opacity: 1, y: 0, duration: 0.18 }, 1.02);
+  // Score 0 → 87 avec compteur
+  if (score) {
+    tl.to(score, { opacity: 1, scale: 1, duration: 0.2, ease: 'back.out(1.6)' }, 0.76);
+    const scoreCounter = { v: 0 };
+    tl.to(scoreCounter, {
+      v: 87,
+      duration: 0.18,
+      ease: 'power2.out',
+      onUpdate: () => { score.textContent = String(Math.round(scoreCounter.v)); }
+    }, 0.76);
+  }
+
+  // === Balle qui joue les 18 trous (0.82 → 0.97) ===
+  // Chaque cellule s'allume à mesure que la balle la traverse.
+  if (ball && grid && cells.length === 18) {
+    // Position initiale : balle au-dessus du premier trou (à gauche au-dessus de F9 cell 1)
+    const positionsForCells = () => cells.map((cell) => ({
+      x: cell.offsetLeft + cell.offsetWidth / 2 - 5.5,
+      y: cell.offsetTop + cell.offsetHeight / 2 - 5.5,
+    }));
+
+    // Recalcule les positions à chaque refresh (notamment pendant le pin)
+    const positions = positionsForCells();
+
+    // Apparition de la balle au-dessus de la première cellule
+    tl.fromTo(ball,
+      { opacity: 0, x: positions[0].x, y: positions[0].y - 14 },
+      { opacity: 1, x: positions[0].x, y: positions[0].y - 14, duration: 0.012 },
+      0.82
+    );
+    // Drop sur le premier trou avec mini bounce
+    tl.to(ball, {
+      x: positions[0].x,
+      y: positions[0].y,
+      duration: 0.014,
+      ease: 'bounce.out',
+    }, 0.825);
+    tl.to(cells[0], { opacity: 1, duration: 0.01 }, 0.825);
+
+    // Visite des 17 trous restants
+    const totalSpan = 0.14; // 0.83 -> 0.97
+    const stepDur = totalSpan / 17;
+    for (let i = 1; i < positions.length; i++) {
+      const t = 0.83 + (i - 1) * stepDur;
+      tl.to(ball, {
+        x: positions[i].x,
+        y: positions[i].y,
+        duration: stepDur * 0.95,
+        ease: 'power1.inOut',
+      }, t);
+      tl.to(cells[i], { opacity: 1, duration: stepDur * 0.5 }, t);
+    }
+
+    // Final : la balle "tombe dans le trou" (scale + opacity)
+    tl.to(ball, {
+      scale: 0.6,
+      opacity: 0.7,
+      duration: 0.012,
+      ease: 'power2.in',
+    }, 0.97);
+  }
+
+  // Bloc partage (apparait après la traversée)
+  if (shareHead) tl.to(shareHead, { opacity: 1, y: 0, duration: 0.18 }, 0.97);
+  if (shareBtns.length) tl.to(shareBtns, { opacity: 1, y: 0, scale: 1, duration: 0.16, stagger: 0.04, ease: 'back.out(1.4)' }, 1.0);
+  if (shareLink) tl.to(shareLink, { opacity: 1, y: 0, duration: 0.18 }, 1.05);
 }
 
 /* ---------- SHOWCASE — drop golf-themed ----------
@@ -444,10 +501,14 @@ function initCTAForm() {
 }
 
 /* ---------- GOLF BALL SCROLL ----------
-   Balle de scroll détachée — apparaît après le hero, descend
-   le long de la gouttière droite avec le scroll, atterrit près du QR. */
+   Balle de scroll détachée — apparaît après le hero, descend le long
+   de la gouttière droite avec le scroll, atterrit près du QR.
+   v2 : split sur 2 éléments pour éviter le conflit y (scrub) vs y (bounce)
+   qui causait un blocage visuel à l'arrivée. L'outer wrapper porte le scrub,
+   l'inner wrapper porte le bounce. */
 function initGolfBallScroll() {
   const ball = document.querySelector<HTMLElement>('[data-ball-scroll]');
+  const ballInner = document.querySelector<HTMLElement>('[data-ball-scroll-inner]');
   const phoneTrigger = document.querySelector<HTMLElement>('[data-anim="phone-wrap"]');
   const cta = document.querySelector<HTMLElement>('#cta');
   if (!ball || !phoneTrigger || !cta) return;
@@ -463,7 +524,7 @@ function initGolfBallScroll() {
     },
   });
 
-  // Descente scroll-driven : la balle descend de top:120px vers ~75% du viewport,
+  // Descente scroll-driven : la balle descend de top:120px vers ~62% du viewport,
   // pile à hauteur du QR dans la CTA section
   const targetY = () => window.innerHeight * 0.62 - 120;
 
@@ -481,19 +542,25 @@ function initGolfBallScroll() {
     },
   });
 
-  // Mini bounce d'arrivée près du QR
-  gsap.to(ball, {
-    y: '+=10',
-    duration: 0.35,
-    yoyo: true,
-    repeat: 3,
-    ease: 'sine.inOut',
-    scrollTrigger: {
-      trigger: cta,
-      start: 'top 50%',
-      toggleActions: 'play none none reverse',
-    },
-  });
+  // Mini bounce d'arrivée — sur l'INNER wrapper, propre y indépendant
+  // pour ne pas entrer en conflit avec le scrub-y de l'outer
+  if (ballInner) {
+    gsap.fromTo(ballInner,
+      { y: 0 },
+      {
+        y: -8,
+        duration: 0.45,
+        yoyo: true,
+        repeat: 1,
+        ease: 'sine.out',
+        scrollTrigger: {
+          trigger: cta,
+          start: 'top 60%',
+          toggleActions: 'play none none reset',
+        },
+      }
+    );
+  }
 }
 
 /* ---------- INIT ---------- */
