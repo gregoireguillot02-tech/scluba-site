@@ -25,6 +25,7 @@ function splitChars(el: HTMLElement): HTMLSpanElement[] {
 /* ---------- HERO ---------- */
 function initHero() {
   const logoEl = document.querySelector<HTMLElement>('[data-anim="hero-logo"]');
+  const ballEl = document.querySelector<HTMLElement>('[data-hero-ball]');
   const taglineEl = document.querySelector<HTMLElement>('[data-anim="hero-tagline"]');
   const subEl = document.querySelector<HTMLElement>('[data-anim="hero-sub"]');
   const ctaEl = document.querySelector<HTMLElement>('[data-anim="hero-cta"]');
@@ -42,6 +43,17 @@ function initHero() {
     duration: 0.9,
     stagger: 0.06,
   });
+
+  // Balle de golf — tombe du haut, rebondit, se cale en place du point
+  if (ballEl) {
+    tl.from(ballEl, {
+      y: -240,
+      rotation: -180,
+      opacity: 0,
+      duration: 1.1,
+      ease: 'bounce.out',
+    }, '-=0.55');
+  }
 
   if (taglineEl) tl.from(taglineEl, { y: 24, opacity: 0, duration: 0.7 }, '-=0.5');
   if (subEl) tl.from(subEl, { y: 20, opacity: 0, duration: 0.6 }, '-=0.4');
@@ -234,21 +246,20 @@ function initPhone() {
   if (shareLink) tl.to(shareLink, { opacity: 1, y: 0, duration: 0.18 }, 1.02);
 }
 
-/* ---------- SHOWCASE — reveal éditorial ----------
-   Remplace l'ancien parallax scroll-bound (cards à ±115px qui mangeaient
-   le titre de section). Maintenant : stagger fade-in à l'entrée, puis posées. */
+/* ---------- SHOWCASE — drop golf-themed ----------
+   Les 4 cartes tombent une par une avec un rebond physique
+   (bounce.out natif GSAP, pas de plugin payant). */
 function initShowcase() {
   const cards = document.querySelectorAll<HTMLElement>('[data-anim="showcase-card"]');
   if (!cards.length) return;
 
   gsap.from(cards, {
     scrollTrigger: { trigger: cards[0], start: 'top 85%' },
-    y: 32,
+    y: -28,
     opacity: 0,
-    scale: 0.96,
-    duration: 0.8,
-    stagger: 0.12,
-    ease: 'power3.out',
+    duration: 0.95,
+    stagger: 0.10,
+    ease: 'bounce.out',
   });
 }
 
@@ -432,6 +443,59 @@ function initCTAForm() {
   });
 }
 
+/* ---------- GOLF BALL SCROLL ----------
+   Balle de scroll détachée — apparaît après le hero, descend
+   le long de la gouttière droite avec le scroll, atterrit près du QR. */
+function initGolfBallScroll() {
+  const ball = document.querySelector<HTMLElement>('[data-ball-scroll]');
+  const phoneTrigger = document.querySelector<HTMLElement>('[data-anim="phone-wrap"]');
+  const cta = document.querySelector<HTMLElement>('#cta');
+  if (!ball || !phoneTrigger || !cta) return;
+
+  // Apparition une fois passé la section hero (entre dans la phone-section)
+  gsap.to(ball, {
+    opacity: 1,
+    duration: 0.5,
+    scrollTrigger: {
+      trigger: phoneTrigger,
+      start: 'top 80%',
+      toggleActions: 'play none none reverse',
+    },
+  });
+
+  // Descente scroll-driven : la balle descend de top:120px vers ~75% du viewport,
+  // pile à hauteur du QR dans la CTA section
+  const targetY = () => window.innerHeight * 0.62 - 120;
+
+  gsap.to(ball, {
+    y: targetY,
+    rotation: 720,
+    ease: 'none',
+    scrollTrigger: {
+      trigger: phoneTrigger,
+      start: 'top top',
+      endTrigger: cta,
+      end: 'top 50%',
+      scrub: 0.6,
+      invalidateOnRefresh: true,
+    },
+  });
+
+  // Mini bounce d'arrivée près du QR
+  gsap.to(ball, {
+    y: '+=10',
+    duration: 0.35,
+    yoyo: true,
+    repeat: 3,
+    ease: 'sine.inOut',
+    scrollTrigger: {
+      trigger: cta,
+      start: 'top 50%',
+      toggleActions: 'play none none reverse',
+    },
+  });
+}
+
 /* ---------- INIT ---------- */
 function initAll() {
   initHero();
@@ -444,6 +508,7 @@ function initAll() {
   initFAQ();
   initSectionHeaders();
   initCTAForm();
+  initGolfBallScroll();
 }
 
 if (document.readyState === 'loading') {
