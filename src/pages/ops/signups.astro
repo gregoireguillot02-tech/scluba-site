@@ -1,0 +1,109 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../lib/supabase';
+import type { Lead } from '../../lib/ops-types';
+
+const sb = serviceClient();
+const { data, error } = await sb.from('leads').select('*').order('created_at', { ascending: false });
+
+const leads: Lead[] = (data ?? []) as Lead[];
+const fetchError = error ? error.message : null;
+
+function fmtDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('fr-FR', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+---
+
+<OpsLayout title="Leads" active="signups">
+  <div class="ops-page-header">
+    <div>
+      <h1 class="ops-page-title">Leads CTA publique</h1>
+      <p class="ops-page-subtitle">{leads.length} signup{leads.length > 1 ? 's' : ''} via klubba.golf — table <code>leads</code></p>
+    </div>
+  </div>
+
+  {fetchError && <div class="ops-flash ops-flash-err">Erreur Supabase : {fetchError}</div>}
+
+  <div class="ops-card">
+    {leads.length === 0 ? (
+      <div class="ops-empty">Pas encore de signup. Le formulaire CTA du site va alimenter cette table.</div>
+    ) : (
+      <table class="leads-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Nom</th>
+            <th>Club</th>
+            <th>Email</th>
+            <th>Locale</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {leads.map((l) => (
+            <tr>
+              <td class="cell-date">{fmtDateTime(l.created_at)}</td>
+              <td>{l.name}</td>
+              <td>{l.club}</td>
+              <td><a href={`mailto:${l.email}`} class="email-link">{l.email}</a></td>
+              <td>{l.locale ?? '—'}</td>
+              <td>
+                <form method="POST" action="/api/ops/prospects/from-lead" style="display:inline">
+                  <input type="hidden" name="club_name" value={l.club} />
+                  <input type="hidden" name="contact_name" value={l.name} />
+                  <input type="hidden" name="email" value={l.email} />
+                  <input type="hidden" name="source" value="CTA klubba.golf" />
+                  <button type="submit" class="ops-btn ops-btn-ghost" style="font-size:12px; padding:4px 10px">→ Ajouter au CRM</button>
+                </form>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+</OpsLayout>
+
+<style>
+  .leads-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .leads-table th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .leads-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .cell-date {
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .email-link {
+    color: var(--primary-soft);
+    text-decoration: none;
+  }
+  .email-link:hover { text-decoration: underline; }
+  code {
+    background: var(--line-soft);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+</style>
