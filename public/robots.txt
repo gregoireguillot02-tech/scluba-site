@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /ops/
+Disallow: /api/ops/
+
+Sitemap: https://klubba.golf/sitemap-index.xml

@@ -12,6 +12,8 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/netlify": "^7.0.8",
+    "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.1",
     "@types/qrcode": "^1.5.6",
     "astro": "^6.2.1",

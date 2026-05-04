@@ -1,0 +1,306 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../../lib/supabase';
+import {
+  PROSPECT_STATUSES,
+  STATUS_LABELS,
+  STATUS_COLORS,
+  OWNERS,
+  OWNER_LABELS,
+  type Prospect,
+  type ProspectStatus,
+} from '../../../lib/ops-types';
+
+const sb = serviceClient();
+
+const url = Astro.url;
+const filterStatus = url.searchParams.get('status') as ProspectStatus | null;
+const filterOwner = url.searchParams.get('owner');
+const search = (url.searchParams.get('q') ?? '').trim();
+
+let q = sb.from('prospects').select('*').order('updated_at', { ascending: false });
+if (filterStatus && PROSPECT_STATUSES.includes(filterStatus)) q = q.eq('status', filterStatus);
+if (filterOwner && OWNERS.includes(filterOwner as any)) q = q.eq('owner', filterOwner);
+if (search) q = q.or(`club_name.ilike.%${search}%,contact_name.ilike.%${search}%,city.ilike.%${search}%,email.ilike.%${search}%`);
+
+const { data } = await q;
+const prospects: Prospect[] = (data ?? []) as Prospect[];
+
+const grouped = new Map<ProspectStatus, Prospect[]>();
+for (const status of PROSPECT_STATUSES) grouped.set(status, []);
+for (const p of prospects) grouped.get(p.status)?.push(p);
+
+function fmtDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+---
+
+<OpsLayout title="CRM" active="prospects">
+  <div class="ops-page-header">
+    <div>
+      <h1 class="ops-page-title">CRM clubs</h1>
+      <p class="ops-page-subtitle">{prospects.length} prospect{prospects.length > 1 ? 's' : ''} — pipeline en colonnes</p>
+    </div>
+    <button type="button" class="ops-btn ops-btn-primary" data-open-new>+ Nouveau club</button>
+  </div>
+
+  <form class="filters-bar" method="GET">
+    <input class="ops-input filter-search" type="search" name="q" placeholder="Rechercher (club, contact, ville…)" value={search} />
+    <select class="ops-select filter-select" name="status">
+      <option value="">Tous les statuts</option>
+      {PROSPECT_STATUSES.map((s) => (
+        <option value={s} selected={filterStatus === s}>{STATUS_LABELS[s]}</option>
+      ))}
+    </select>
+    <select class="ops-select filter-select" name="owner">
+      <option value="">Tous les owners</option>
+      {OWNERS.map((o) => (
+        <option value={o} selected={filterOwner === o}>{OWNER_LABELS[o]}</option>
+      ))}
+    </select>
+    <button type="submit" class="ops-btn">Filtrer</button>
+    {(filterStatus || filterOwner || search) && (
+      <a href="/ops/prospects" class="ops-btn ops-btn-ghost">Reset</a>
+    )}
+  </form>
+
+  <div class="kanban">
+    {PROSPECT_STATUSES.map((status) => {
+      const items = grouped.get(status) ?? [];
+      return (
+        <div class="kanban-col" data-status={status}>
+          <div class="kanban-col-header">
+            <span class="kanban-col-dot" style={`background:${STATUS_COLORS[status]}`}></span>
+            <span class="kanban-col-title">{STATUS_LABELS[status]}</span>
+            <span class="kanban-col-count">{items.length}</span>
+          </div>
+          <div class="kanban-col-body">
+            {items.length === 0 ? (
+              <div class="kanban-empty">—</div>
+            ) : (
+              items.map((p) => (
+                <a href={`/ops/prospects/${p.id}`} class="kanban-card">
+                  <div class="kanban-card-title">{p.club_name}</div>
+                  {p.city && <div class="kanban-card-meta">{p.city}</div>}
+                  <div class="kanban-card-foot">
+                    <span class="ops-tag">{OWNER_LABELS[p.owner]}</span>
+                    <span class="kanban-card-date">{fmtDate(p.updated_at)}</span>
+                  </div>
+                </a>
+              ))
+            )}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+
+  <!-- Modal: nouveau club -->
+  <div class="modal" data-modal hidden>
+    <div class="modal-backdrop" data-modal-close></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Nouveau club</h2>
+        <button type="button" class="modal-x" data-modal-close aria-label="Fermer">×</button>
+      </div>
+      <form method="POST" action="/api/ops/prospects" class="modal-form">
+        <div class="form-grid">
+          <label class="ops-label">Nom du club *
+            <input class="ops-input" name="club_name" required />
+          </label>
+          <label class="ops-label">Contact
+            <input class="ops-input" name="contact_name" />
+          </label>
+          <label class="ops-label">Email
+            <input class="ops-input" type="email" name="email" />
+          </label>
+          <label class="ops-label">Téléphone
+            <input class="ops-input" name="phone" />
+          </label>
+          <label class="ops-label">Ville
+            <input class="ops-input" name="city" />
+          </label>
+          <label class="ops-label">Région
+            <input class="ops-input" name="region" />
+          </label>
+          <label class="ops-label">Statut
+            <select class="ops-select" name="status">
+              {PROSPECT_STATUSES.map((s) => (
+                <option value={s}>{STATUS_LABELS[s]}</option>
+              ))}
+            </select>
+          </label>
+          <label class="ops-label">Owner
+            <select class="ops-select" name="owner">
+              {OWNERS.map((o) => (
+                <option value={o} selected={o === 'shared'}>{OWNER_LABELS[o]}</option>
+              ))}
+            </select>
+          </label>
+          <label class="ops-label" style="grid-column:1/-1">Source
+            <input class="ops-input" name="source" placeholder="LinkedIn, salon, recommandation…" />
+          </label>
+          <label class="ops-label" style="grid-column:1/-1">Notes
+            <textarea class="ops-textarea" name="notes" rows="3"></textarea>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ops-btn" data-modal-close>Annuler</button>
+          <button type="submit" class="ops-btn ops-btn-primary">Créer le prospect</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</OpsLayout>
+
+<style>
+  .filters-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-search { flex: 1; min-width: 240px; }
+  .filter-select { width: 180px; }
+
+  .kanban {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(200px, 1fr));
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .kanban-col {
+    background: #F1F4F2;
+    border-radius: 10px;
+    padding: 12px;
+    min-height: 240px;
+  }
+  .kanban-col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .kanban-col-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .kanban-col-title { font-weight: 500; color: var(--ink-soft); flex: 1; }
+  .kanban-col-count {
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    font-size: 12px;
+    background: rgba(255,255,255,0.6);
+    padding: 1px 8px;
+    border-radius: 999px;
+  }
+  .kanban-col-body { display: flex; flex-direction: column; gap: 8px; }
+  .kanban-empty {
+    text-align: center;
+    color: var(--muted-soft);
+    font-size: 12px;
+    padding: 24px 0;
+  }
+  .kanban-card {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .kanban-card:hover { border-color: var(--primary-soft); transform: translateY(-1px); }
+  .kanban-card-title {
+    font-weight: 500;
+    color: var(--primary);
+    font-size: 14px;
+    line-height: 1.3;
+  }
+  .kanban-card-meta {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .kanban-card-foot {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .kanban-card-date {
+    font-size: 11px;
+    color: var(--muted-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .modal {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .modal[hidden] { display: none; }
+  .modal-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(15,42,30,0.45);
+    backdrop-filter: blur(2px);
+  }
+  .modal-card {
+    position: relative;
+    background: var(--bg);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.32);
+  }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 18px;
+  }
+  .modal-header h2 {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    margin: 0;
+    color: var(--primary);
+  }
+  .modal-x {
+    background: none; border: none;
+    font-size: 24px; line-height: 1;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+  }
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+  }
+  .modal-actions {
+    display: flex; justify-content: flex-end; gap: 8px;
+    margin-top: 20px;
+  }
+</style>
+
+<script>
+  const modal = document.querySelector<HTMLDivElement>('[data-modal]');
+  const openers = document.querySelectorAll<HTMLButtonElement>('[data-open-new]');
+  const closers = document.querySelectorAll<HTMLElement>('[data-modal-close]');
+
+  function open() { modal?.removeAttribute('hidden'); }
+  function close() { modal?.setAttribute('hidden', ''); }
+
+  openers.forEach((b) => b.addEventListener('click', open));
+  closers.forEach((b) => b.addEventListener('click', close));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+</script>
