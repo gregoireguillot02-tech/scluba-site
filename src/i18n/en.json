@@ -223,7 +223,7 @@
       "success": "Thanks, we'll get back to you within 24h.",
       "error": "Oops, something went wrong. Try again or email us directly."
     },
-    "qrLabel": "Scan = sample card"
+    "qrLabel": "Scan: see a sample card"
   },
   "footer": {
     "tagline": "The branded digital scorecard for golf clubs.",
