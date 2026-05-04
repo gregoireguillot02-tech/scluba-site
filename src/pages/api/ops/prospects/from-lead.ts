@@ -8,7 +8,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
   if (!user || !isAllowedEmail(user.email)) return new Response('Forbidden', { status: 403 });
 
   const form = await request.formData();
-  const club_name = String(form.get('club_name') ?? '').trim();
+  const club_name = String(form.get('club_name') ?? '').trim().slice(0, 255);
   if (!club_name) return new Response('club_name required', { status: 400 });
 
   const sb = serviceClient();
@@ -16,16 +16,19 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
     .from('prospects')
     .insert({
       club_name,
-      contact_name: String(form.get('contact_name') ?? '').trim() || null,
-      email: String(form.get('email') ?? '').trim() || null,
-      source: String(form.get('source') ?? '').trim() || 'CTA',
+      contact_name: String(form.get('contact_name') ?? '').trim().slice(0, 255) || null,
+      email: String(form.get('email') ?? '').trim().slice(0, 320) || null,
+      source: String(form.get('source') ?? '').trim().slice(0, 255) || 'CTA',
       status: 'in_discussion',
       owner: 'shared',
     })
     .select('id')
     .single();
 
-  if (error) return new Response(`Insert failed: ${error.message}`, { status: 500 });
+  if (error) {
+    console.error('[api/ops/prospects/from-lead] insert failed', error);
+    return new Response('Insert failed', { status: 500 });
+  }
 
   await sb.from('prospect_events').insert({
     prospect_id: data.id,

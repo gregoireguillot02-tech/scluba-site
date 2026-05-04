@@ -3,20 +3,27 @@ export const prerender = false;
 
 import '../../styles/tokens.css';
 import { isAllowedEmail } from '../../lib/supabase';
+import { safeNextPath } from '../../lib/safe-redirect';
 
 const url = Astro.url;
-const next = url.searchParams.get('next') || '/ops';
+const next = safeNextPath(url.searchParams.get('next'));
 const sent = url.searchParams.get('sent') === '1';
 const errMsg = url.searchParams.get('err');
 
+const ERR_MESSAGES: Record<string, string> = {
+  missing_code: 'Lien invalide ou expiré. Redemande un nouveau lien.',
+  auth_failed: 'Échec de la connexion. Redemande un nouveau lien.',
+};
+const safeErr = errMsg && ERR_MESSAGES[errMsg] ? ERR_MESSAGES[errMsg] : null;
+
 let formError: string | null = null;
-let formSent = sent;
+const formSent = sent;
 
 if (Astro.request.method === 'POST') {
   try {
     const formData = await Astro.request.formData();
     const email = String(formData.get('email') ?? '').trim().toLowerCase();
-    const nextField = String(formData.get('next') ?? '/ops');
+    const nextField = safeNextPath(String(formData.get('next') ?? '/ops'));
 
     if (!email) {
       formError = 'Email requis.';
@@ -31,13 +38,15 @@ if (Astro.request.method === 'POST') {
         options: { emailRedirectTo: redirectTo },
       });
       if (error) {
-        formError = `Erreur: ${error.message}`;
+        console.error('[ops/login] signInWithOtp failed', error);
+        formError = "Erreur lors de l'envoi du lien magique. Réessaie dans un instant.";
       } else {
         return Astro.redirect(`/ops/login?sent=1&next=${encodeURIComponent(nextField)}`, 302);
       }
     }
   } catch (e) {
-    formError = `Erreur: ${(e as Error).message}`;
+    console.error('[ops/login] unexpected error', e);
+    formError = 'Erreur inattendue. Réessaie dans un instant.';
   }
 }
 ---
@@ -67,7 +76,7 @@ if (Astro.request.method === 'POST') {
         </div>
       )}
       {formError && <div class="login-flash err">{formError}</div>}
-      {errMsg && <div class="login-flash err">{errMsg}</div>}
+      {safeErr && <div class="login-flash err">{safeErr}</div>}
 
       <form method="POST" class="login-form">
         <label class="login-label">

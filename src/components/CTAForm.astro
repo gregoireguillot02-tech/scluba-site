@@ -34,14 +34,20 @@ const qrSvg = await QRCode.toString(demoUrl, {
         >
           <div class="form-row">
             <div class="form-field">
-              <input type="text" name="name" required placeholder={t.cta.form.name} aria-label={t.cta.form.name} />
+              <input type="text" name="name" required maxlength="120" placeholder={t.cta.form.name} aria-label={t.cta.form.name} />
             </div>
             <div class="form-field">
-              <input type="text" name="club" required placeholder={t.cta.form.club} aria-label={t.cta.form.club} />
+              <input type="text" name="club" required maxlength="120" placeholder={t.cta.form.club} aria-label={t.cta.form.club} />
             </div>
           </div>
           <div class="form-field">
-            <input type="email" name="email" required placeholder={t.cta.form.email} aria-label={t.cta.form.email} />
+            <input type="email" name="email" required maxlength="254" placeholder={t.cta.form.email} aria-label={t.cta.form.email} />
+          </div>
+          {/* Honeypot — hidden from humans, ignored by them, but bots fill it. */}
+          <div class="hp-field" aria-hidden="true">
+            <label>Site web (laisser vide)
+              <input type="text" name="website" tabindex="-1" autocomplete="off" />
+            </label>
           </div>
           <button type="submit" class="btn btn-accent form-submit" data-loading={t.cta.form.loading}>
             {t.cta.form.submit}
@@ -65,6 +71,14 @@ const qrSvg = await QRCode.toString(demoUrl, {
 </section>
 
 <style>
+  .hp-field {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
   .cta {
     background: var(--bg);
   }

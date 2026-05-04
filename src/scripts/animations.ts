@@ -449,17 +449,36 @@ function initCTAForm() {
 
     try {
       const formData = new FormData(form);
+
+      // Honeypot: bots fill hidden fields, humans don't. Pretend success on bot.
+      const honeypot = String(formData.get('website') ?? '').trim();
+      if (honeypot) {
+        if (successEl) successEl.style.display = 'block';
+        return;
+      }
+
+      const rawLocale = (document.documentElement.lang || 'fr').toLowerCase();
+      const locale = rawLocale === 'en' ? 'en' : 'fr';
+
+      const name = String(formData.get('name') ?? '').trim().slice(0, 120);
+      const club = String(formData.get('club') ?? '').trim().slice(0, 120);
+      const email = String(formData.get('email') ?? '').trim().slice(0, 254);
+
+      // Minimal email shape check — server-side constraints are the real defense.
+      if (!name || !club || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new Error('Invalid');
+      }
+
       const lead = {
-        name: String(formData.get('name') ?? '').trim(),
-        club: String(formData.get('club') ?? '').trim(),
-        email: String(formData.get('email') ?? '').trim(),
-        locale: document.documentElement.lang || 'fr',
-        user_agent: navigator.userAgent,
+        name,
+        club,
+        email,
+        locale,
+        user_agent: navigator.userAgent.slice(0, 512),
       };
 
       if (!SUPABASE_URL || !SUPABASE_KEY) {
         await new Promise((resolve) => setTimeout(resolve, 800));
-        console.log('[DEV] Lead:', lead);
       } else {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
           method: 'POST',
@@ -472,7 +491,7 @@ function initCTAForm() {
           body: JSON.stringify(lead),
         });
         if (!res.ok) {
-          console.error('Supabase insert failed:', res.status, await res.text().catch(() => ''));
+          // Don't leak Supabase error body (schema, constraints) to the console.
           throw new Error('Failed');
         }
       }
