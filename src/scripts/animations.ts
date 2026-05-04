@@ -433,15 +433,80 @@ function initCTAForm() {
   const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
   const loadingText = submitBtn?.dataset.loading ?? 'Envoi en cours…';
   const initialText = submitBtn?.textContent ?? 'Envoyer';
+  const msgRequired = form.dataset.errorRequired ?? 'Required.';
+  const msgEmail = form.dataset.errorEmail ?? 'Invalid email.';
 
   const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
   const SUPABASE_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
+
+  const fields = ['name', 'club', 'email'] as const;
+  type FieldName = (typeof fields)[number];
+
+  const inputs = new Map<FieldName, HTMLInputElement>();
+  const errorSlots = new Map<FieldName, HTMLElement>();
+  fields.forEach((name) => {
+    const input = form.querySelector<HTMLInputElement>(`input[name="${name}"]`);
+    const slot = form.querySelector<HTMLElement>(`[data-field-error="${name}"]`);
+    if (input) inputs.set(name, input);
+    if (slot) errorSlots.set(name, slot);
+  });
+
+  const setFieldError = (name: FieldName, msg: string | null) => {
+    const input = inputs.get(name);
+    const slot = errorSlots.get(name);
+    if (!input || !slot) return;
+    if (msg) {
+      input.setAttribute('aria-invalid', 'true');
+      slot.textContent = msg;
+    } else {
+      input.removeAttribute('aria-invalid');
+      slot.textContent = '';
+    }
+  };
+
+  const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+  const validateField = (name: FieldName): boolean => {
+    const input = inputs.get(name);
+    if (!input) return true;
+    const v = input.value.trim();
+    if (!v) {
+      setFieldError(name, msgRequired);
+      return false;
+    }
+    if (name === 'email' && !isValidEmail(v)) {
+      setFieldError(name, msgEmail);
+      return false;
+    }
+    setFieldError(name, null);
+    return true;
+  };
+
+  // Validate on blur, clear on input (rule §8 inline-validation)
+  inputs.forEach((input, name) => {
+    input.addEventListener('blur', () => validateField(name));
+    input.addEventListener('input', () => {
+      if (input.getAttribute('aria-invalid') === 'true') setFieldError(name, null);
+    });
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     if (successEl) successEl.style.display = 'none';
     if (errorEl) errorEl.style.display = 'none';
+
+    // Client-side validation pass — focus first invalid (rule §8 focus-management)
+    let firstInvalid: HTMLInputElement | null = null;
+    for (const name of fields) {
+      const ok = validateField(name);
+      if (!ok && !firstInvalid) firstInvalid = inputs.get(name) ?? null;
+    }
+    if (firstInvalid) {
+      firstInvalid.focus();
+      return;
+    }
+
     if (submitBtn) {
       submitBtn.disabled = true;
       submitBtn.textContent = loadingText;
