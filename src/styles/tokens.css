@@ -1,13 +1,22 @@
-/* Klubba design tokens — repris du one-pager commercial/one-pager.html */
+/*
+ * Klubba design tokens
+ *
+ * Theme: Klubba Greenroom v1
+ *   Forest fairway + golden-hour honey + cream country-club.
+ *   Editorial / premium / chaleureux. Pas de purple gradient, pas d'Inter,
+ *   pas de full-centered. Anti-AI-slop.
+ *
+ * Inspired by: Forest Canopy × Golden Hour (theme-factory).
+ */
 :root {
-  /* Couleurs */
-  --primary: #1B4332;
-  --primary-soft: #2D6A4F;
-  --primary-bg: #F4F8F5;
-  --primary-deep: #0F2A1E;
-  --accent: #D4A574;
-  --accent-soft: #F5E6CF;
-  --accent-bright: #E8C089;
+  /* === Couleurs (Klubba Greenroom) === */
+  --primary: #1B4332;       /* Forest 800 — heading + brand */
+  --primary-soft: #2D6A4F;  /* Forest 600 — secondary text */
+  --primary-bg: #F4F8F5;    /* Forest 50 — hero wash */
+  --primary-deep: #0F2A1E;  /* Forest 900 — footer + CTA bg */
+  --accent: #D4A574;        /* Honey 500 — CTA secondary, highlights */
+  --accent-soft: #F5E6CF;   /* Honey 100 — subtle accent fills */
+  --accent-bright: #E8C089; /* Honey 400 — hover state */
   --ink: #1A1A1A;
   --ink-soft: #2D2D2D;
   --muted: #6B7280;

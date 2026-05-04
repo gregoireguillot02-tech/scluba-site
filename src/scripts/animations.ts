@@ -234,24 +234,21 @@ function initPhone() {
   if (shareLink) tl.to(shareLink, { opacity: 1, y: 0, duration: 0.18 }, 1.02);
 }
 
-/* ---------- SHOWCASE PARALLAX ---------- */
+/* ---------- SHOWCASE — reveal éditorial ----------
+   Remplace l'ancien parallax scroll-bound (cards à ±115px qui mangeaient
+   le titre de section). Maintenant : stagger fade-in à l'entrée, puis posées. */
 function initShowcase() {
   const cards = document.querySelectorAll<HTMLElement>('[data-anim="showcase-card"]');
-  cards.forEach((card, i) => {
-    const speed = (i % 2 === 0 ? 1 : -1) * (40 + i * 25);
-    gsap.fromTo(
-      card,
-      { y: speed },
-      {
-        y: -speed,
-        scrollTrigger: {
-          trigger: card,
-          start: 'top bottom',
-          end: 'bottom top',
-          scrub: true,
-        },
-      }
-    );
+  if (!cards.length) return;
+
+  gsap.from(cards, {
+    scrollTrigger: { trigger: cards[0], start: 'top 85%' },
+    y: 32,
+    opacity: 0,
+    scale: 0.96,
+    duration: 0.8,
+    stagger: 0.12,
+    ease: 'power3.out',
   });
 }
 

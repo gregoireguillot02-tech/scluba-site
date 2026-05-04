@@ -223,7 +223,7 @@
       "success": "Merci, on vous rappelle sous 24h.",
       "error": "Oups, une erreur. Réessayez ou écrivez-nous directement."
     },
-    "qrLabel": "Scan = exemple de carte"
+    "qrLabel": "Scannez : voir un exemple de carte"
   },
   "footer": {
     "tagline": "La scorecard digitale brandée pour les clubs de golf.",

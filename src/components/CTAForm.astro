@@ -1,4 +1,5 @@
 ---
+import QRCode from 'qrcode';
 import { useT, type Locale } from '../i18n';
 
 interface Props {
@@ -7,6 +8,15 @@ interface Props {
 
 const { locale } = Astro.props;
 const t = useT(locale);
+
+// QR fonctionnel — pointe vers la page de démo "Golf du Soleil" (carte récap fictive).
+const demoUrl = (import.meta.env.PUBLIC_DEMO_URL as string | undefined) ?? 'https://klubba.golf/demo';
+const qrSvg = await QRCode.toString(demoUrl, {
+  type: 'svg',
+  errorCorrectionLevel: 'M',
+  margin: 0,
+  color: { dark: '#1B4332', light: '#FFFFFF' },
+});
 ---
 
 <section id="cta" class="cta">
@@ -46,49 +56,10 @@ const t = useT(locale);
         </form>
       </div>
 
-      <div class="cta-qr" aria-hidden="true">
-        <div class="cta-qr-frame">
-          <svg viewBox="0 0 80 80" width="100%" height="auto">
-            <rect width="80" height="80" fill="#FFFFFF" rx="2"/>
-            <rect x="4" y="4" width="20" height="20" fill="#1B4332"/>
-            <rect x="8" y="8" width="12" height="12" fill="#FFFFFF"/>
-            <rect x="11" y="11" width="6" height="6" fill="#1B4332"/>
-            <rect x="56" y="4" width="20" height="20" fill="#1B4332"/>
-            <rect x="60" y="8" width="12" height="12" fill="#FFFFFF"/>
-            <rect x="63" y="11" width="6" height="6" fill="#1B4332"/>
-            <rect x="4" y="56" width="20" height="20" fill="#1B4332"/>
-            <rect x="8" y="60" width="12" height="12" fill="#FFFFFF"/>
-            <rect x="11" y="63" width="6" height="6" fill="#1B4332"/>
-            <g fill="#1B4332">
-              <rect x="28" y="4" width="4" height="4"/><rect x="36" y="4" width="4" height="4"/>
-              <rect x="44" y="4" width="4" height="4"/><rect x="52" y="4" width="4" height="4"/>
-              <rect x="28" y="12" width="4" height="4"/><rect x="40" y="12" width="4" height="4"/>
-              <rect x="48" y="12" width="4" height="4"/><rect x="32" y="20" width="4" height="4"/>
-              <rect x="44" y="20" width="4" height="4"/><rect x="52" y="20" width="4" height="4"/>
-              <rect x="4" y="28" width="4" height="4"/><rect x="12" y="28" width="4" height="4"/>
-              <rect x="24" y="28" width="4" height="4"/><rect x="32" y="28" width="4" height="4"/>
-              <rect x="44" y="28" width="4" height="4"/><rect x="56" y="28" width="4" height="4"/>
-              <rect x="64" y="28" width="4" height="4"/><rect x="72" y="28" width="4" height="4"/>
-              <rect x="8" y="36" width="4" height="4"/><rect x="20" y="36" width="4" height="4"/>
-              <rect x="28" y="36" width="4" height="4"/><rect x="36" y="36" width="4" height="4"/>
-              <rect x="48" y="36" width="4" height="4"/><rect x="60" y="36" width="4" height="4"/>
-              <rect x="68" y="36" width="4" height="4"/><rect x="4" y="44" width="4" height="4"/>
-              <rect x="16" y="44" width="4" height="4"/><rect x="24" y="44" width="4" height="4"/>
-              <rect x="40" y="44" width="4" height="4"/><rect x="52" y="44" width="4" height="4"/>
-              <rect x="64" y="44" width="4" height="4"/><rect x="72" y="44" width="4" height="4"/>
-              <rect x="12" y="52" width="4" height="4"/><rect x="28" y="52" width="4" height="4"/>
-              <rect x="36" y="52" width="4" height="4"/><rect x="44" y="52" width="4" height="4"/>
-              <rect x="56" y="52" width="4" height="4"/><rect x="68" y="52" width="4" height="4"/>
-              <rect x="28" y="60" width="4" height="4"/><rect x="40" y="60" width="4" height="4"/>
-              <rect x="48" y="60" width="4" height="4"/><rect x="60" y="60" width="4" height="4"/>
-              <rect x="72" y="60" width="4" height="4"/><rect x="32" y="68" width="4" height="4"/>
-              <rect x="40" y="68" width="4" height="4"/><rect x="52" y="68" width="4" height="4"/>
-              <rect x="68" y="68" width="4" height="4"/>
-            </g>
-          </svg>
-        </div>
+      <a href="/demo" class="cta-qr" aria-label={t.cta.qrLabel} target="_blank" rel="noopener">
+        <div class="cta-qr-frame" set:html={qrSvg}></div>
         <p class="cta-qr-label">{t.cta.qrLabel}</p>
-      </div>
+      </a>
     </div>
   </div>
 </section>
@@ -217,6 +188,16 @@ const t = useT(locale);
     z-index: 1;
     text-align: center;
     justify-self: center;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.3s var(--ease-out);
+  }
+  .cta-qr:hover { transform: translateY(-3px); }
+  .cta-qr:hover .cta-qr-frame {
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42);
   }
   .cta-qr-frame {
     width: 160px;
@@ -225,6 +206,13 @@ const t = useT(locale);
     padding: var(--space-3);
     border-radius: var(--radius-lg);
     box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
+    transition: box-shadow 0.3s var(--ease-out);
+  }
+  .cta-qr-frame :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
+    shape-rendering: crispEdges;
   }
   .cta-qr-label {
     margin-top: var(--space-3);
