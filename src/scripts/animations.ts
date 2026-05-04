@@ -501,10 +501,14 @@ function initCTAForm() {
 }
 
 /* ---------- GOLF BALL SCROLL ----------
-   Balle de scroll détachée — apparaît après le hero, descend
-   le long de la gouttière droite avec le scroll, atterrit près du QR. */
+   Balle de scroll détachée — apparaît après le hero, descend le long
+   de la gouttière droite avec le scroll, atterrit près du QR.
+   v2 : split sur 2 éléments pour éviter le conflit y (scrub) vs y (bounce)
+   qui causait un blocage visuel à l'arrivée. L'outer wrapper porte le scrub,
+   l'inner wrapper porte le bounce. */
 function initGolfBallScroll() {
   const ball = document.querySelector<HTMLElement>('[data-ball-scroll]');
+  const ballInner = document.querySelector<HTMLElement>('[data-ball-scroll-inner]');
   const phoneTrigger = document.querySelector<HTMLElement>('[data-anim="phone-wrap"]');
   const cta = document.querySelector<HTMLElement>('#cta');
   if (!ball || !phoneTrigger || !cta) return;
@@ -520,7 +524,7 @@ function initGolfBallScroll() {
     },
   });
 
-  // Descente scroll-driven : la balle descend de top:120px vers ~75% du viewport,
+  // Descente scroll-driven : la balle descend de top:120px vers ~62% du viewport,
   // pile à hauteur du QR dans la CTA section
   const targetY = () => window.innerHeight * 0.62 - 120;
 
@@ -538,19 +542,25 @@ function initGolfBallScroll() {
     },
   });
 
-  // Mini bounce d'arrivée près du QR
-  gsap.to(ball, {
-    y: '+=10',
-    duration: 0.35,
-    yoyo: true,
-    repeat: 3,
-    ease: 'sine.inOut',
-    scrollTrigger: {
-      trigger: cta,
-      start: 'top 50%',
-      toggleActions: 'play none none reverse',
-    },
-  });
+  // Mini bounce d'arrivée — sur l'INNER wrapper, propre y indépendant
+  // pour ne pas entrer en conflit avec le scrub-y de l'outer
+  if (ballInner) {
+    gsap.fromTo(ballInner,
+      { y: 0 },
+      {
+        y: -8,
+        duration: 0.45,
+        yoyo: true,
+        repeat: 1,
+        ease: 'sine.out',
+        scrollTrigger: {
+          trigger: cta,
+          start: 'top 60%',
+          toggleActions: 'play none none reset',
+        },
+      }
+    );
+  }
 }
 
 /* ---------- INIT ---------- */
