@@ -32,6 +32,8 @@
   /* Typographie */
   --font-serif: Georgia, 'Times New Roman', 'Cormorant Garamond', serif;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-wordmark: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-label: 'Marcellus', Georgia, 'Times New Roman', serif;
 
   /* Tailles texte */
   --text-xs: 0.75rem;

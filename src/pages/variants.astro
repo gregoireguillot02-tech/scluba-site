@@ -1,84 +1,123 @@
 ---
 import Base from '../layouts/Base.astro';
 
-const emblems = [
+const wordmarks = [
   {
-    id: 'e1-course-view',
-    title: 'E1 — Course View',
-    subtitle: 'Vue plongeante sur le green',
-    description: 'Un emblème qui se lit comme une vue aérienne sur un green : les nuances de vert simulent la profondeur du gazon, le cup forme un point focal sombre, et le drapeau sand traverse la composition en diagonale. Distinctif sans verser dans le cliché golf.',
-    designNotes: '4 gradients radiaux superposés (fond + green + cup + glow), highlight diagonal sur le pole, fanion avec gradient sand multi-stops. Composition asymétrique qui guide l\'œil de bas-droite (cup) vers haut-gauche (drapeau).',
+    id: 'w1-cormorant-period',
+    title: 'W1 — Cormorant + point',
+    subtitle: 'Plus minimal des trois',
+    description: 'Cormorant Garamond SemiBold en bas-de-casse, point sable comme aujourd\'hui mais affiné par la nouvelle font. Continuité maximale avec le brand actuel, juste un upgrade typo : Cormorant a des terminaisons et un kerning bien plus refined que Georgia.',
+    classMain: 'wm-cormorant',
+    classCaps: false,
+    markType: 'period',
   },
   {
-    id: 'e2-tee-ready',
-    title: 'E2 — Tee Ready',
-    subtitle: 'Adaptation directe Virage : pill + balle + tee',
-    description: 'Reprend littéralement la structure du logo Virage (toggle "on" en pill horizontale + knob blanc à droite), mais réinterprété en golf : pill = ligne de fairway, balle blanche = golf ball avec anneau intérieur, petit tee sand qui dépasse en bas. L\'instant juste avant le swing — état "ready".',
-    designNotes: 'Gradient linear sur la pill (bell-curve éclairé au centre), highlight top + ombre bottom pour 3D, balle avec gradient sphère + rim shadow + anneau dimples. Le plus Virage-faithful structurellement.',
+    id: 'w2-cormorant-lozenge',
+    title: 'W2 — Cormorant + losange (Recommandé)',
+    subtitle: 'Le point devient un mark custom',
+    description: 'Pareil que W1 mais le point est remplacé par un petit losange sable (carré tourné 45°). Subtil, géométrique, scandinave. Le losange devient la signature visuelle Klubba — utilisable seul comme mark sur les supports, comme le carré de Vuitton ou le rond Aesop.',
+    classMain: 'wm-cormorant',
+    classCaps: false,
+    markType: 'lozenge',
+  },
+  {
+    id: 'w3-marcellus-caps',
+    title: 'W3 — Marcellus capitales (label Aesop)',
+    subtitle: 'Universe apothicaire / hospitality',
+    description: 'KLUBBA en capitales Marcellus avec letter-spacing élargi, losange sable comme séparateur et tagline "GOLF · CLUB · SCORE" en dessous. Style étiquette Aesop / Le Labo / wine bottle. Plus formel, plus B2B premium.',
+    classMain: 'wm-marcellus',
+    classCaps: true,
+    markType: 'lozenge',
+    tagline: 'GOLF · CLUB · SCORE',
   },
 ];
 
-const minimalVariants = [
-  { id: 'v1-classic', title: 'V1 Classic' },
-  { id: 'v2-stroke', title: 'V2 Stroke' },
-  { id: 'v3-floating', title: 'V3 Floating' },
-  { id: 'v4-trajectory', title: 'V4 Trajectory' },
-  { id: 'v5-pin', title: 'V5 Pin' },
-];
+const oldRounds = {
+  emblems: ['e1-course-view', 'e2-tee-ready'],
+  minimal: ['v1-classic', 'v2-stroke', 'v3-floating', 'v4-trajectory', 'v5-pin'],
+};
 ---
 
 <Base locale="fr">
   <section class="intro">
     <div class="container">
-      <p class="eyebrow">Logo Klubba · Round 2 · Style emblème (Virage-faithful)</p>
-      <h1>2 emblems poussés à comparer</h1>
+      <p class="eyebrow">Logo Klubba · Round 3 · Wordmark custom (univers Aesop / Hospitality)</p>
+      <h1>3 directions wordmark</h1>
       <p class="lead">
-        Round 1 (5 picto minimaux plats) écarté — registre "icon system Linear", pas le bon ton pour Klubba.
-        Round 2 ici : <strong>emblems</strong> avec container plein, multi-gradients radiaux, layers superposés,
-        comme le logo Virage. Choisis E1 ou E2, ou dis-moi ce qui cloche pour un round 3.
+        Round 1 (5 picto plats) → trop minimal / icon-system. Round 2 (2 emblems gradient) → trop SaaS Virage,
+        pas dans la DA Klubba. <strong>Round 3 ici</strong> : on quitte le picto pour un <em>wordmark custom</em>
+        type Aesop / Le Labo / hospitality premium. Le mot <em>Klubba</em> EST le logo, peaufiné par une typo
+        bespoke + un mark sand subtil. La DA actuelle (Cormorant Garamond, sable, tons feutrés) est respectée.
       </p>
     </div>
   </section>
 
-  <section class="emblems-hero">
+  <section class="hero-show">
     <div class="container">
-      <div class="hero-grid">
-        {emblems.map((e) => (
-          <article class="hero-card" id={e.id}>
-            <div class="hero-emblem">
-              <img src={`/logos/emblems/${e.id}.svg`} alt={e.title} />
+      {wordmarks.map((w) => (
+        <article class="wm-card" id={w.id}>
+          <div class="wm-stage">
+            <div class={`wm-render ${w.classMain} wm-xl`}>
+              {w.classCaps ? (
+                <div class="wm-caps-stack">
+                  <span class="wm-caps-row">
+                    <span class="wm-caps">KLUBBA</span>
+                    <span class="wm-mark wm-mark-lozenge wm-mark-xl"></span>
+                  </span>
+                  <span class="wm-tagline">{w.tagline}</span>
+                </div>
+              ) : (
+                <span class="wm-row">
+                  <span class="wm-text">Klubba</span>
+                  {w.markType === 'lozenge' ? (
+                    <span class="wm-mark wm-mark-lozenge wm-mark-xl"></span>
+                  ) : (
+                    <span class="wm-mark wm-mark-dot">.</span>
+                  )}
+                </span>
+              )}
             </div>
-            <div class="hero-meta">
-              <h2>{e.title}</h2>
-              <p class="hero-sub">{e.subtitle}</p>
-              <p class="hero-desc">{e.description}</p>
-              <details class="hero-notes">
-                <summary>Notes design</summary>
-                <p>{e.designNotes}</p>
-              </details>
-            </div>
-          </article>
-        ))}
-      </div>
+          </div>
+          <div class="wm-meta">
+            <h2>{w.title}</h2>
+            <p class="wm-sub">{w.subtitle}</p>
+            <p class="wm-desc">{w.description}</p>
+          </div>
+        </article>
+      ))}
     </div>
   </section>
 
   <section class="contexts">
     <div class="container">
-      <h2 class="section-title">Mise en contexte (les 2 emblems)</h2>
-      <p class="section-help">Chaque emblème dans 6 situations réelles. Le wordmark <em>Klubba.</em> est rendu en texte Georgia comme dans l'actuel Nav/Footer.</p>
+      <h2 class="section-title">Mise en contexte des 3 wordmarks</h2>
+      <p class="section-help">Chaque wordmark dans Nav (clair), Footer (foncé), et 3 tailles favicon (le K seul comme monogramme).</p>
 
-      {emblems.map((e) => (
+      {wordmarks.map((w) => (
         <div class="ctx-block">
-          <h3 class="ctx-title">{e.title}</h3>
+          <h3 class="ctx-title">{w.title}</h3>
 
           <div class="ctx-grid">
+            <!-- Nav -->
             <div class="ctx ctx-nav">
               <span class="ctx-label">Nav (clair)</span>
               <div class="nav-mock">
-                <div class="brand-row">
-                  <img src={`/logos/emblems/${e.id}.svg`} alt="" class="emb emb-nav" />
-                  <span class="wordmark">Klubba<span class="dot">.</span></span>
+                <div class={`wm-render ${w.classMain} wm-nav`}>
+                  {w.classCaps ? (
+                    <span class="wm-caps-row">
+                      <span class="wm-caps">KLUBBA</span>
+                      <span class="wm-mark wm-mark-lozenge wm-mark-sm"></span>
+                    </span>
+                  ) : (
+                    <span class="wm-row">
+                      <span class="wm-text">Klubba</span>
+                      {w.markType === 'lozenge' ? (
+                        <span class="wm-mark wm-mark-lozenge wm-mark-sm"></span>
+                      ) : (
+                        <span class="wm-mark wm-mark-dot">.</span>
+                      )}
+                    </span>
+                  )}
                 </div>
                 <div class="nav-fake-links">
                   <span>Tarifs</span><span>Comment</span><span class="cta-fake">Démo</span>
@@ -86,43 +125,94 @@ const minimalVariants = [
               </div>
             </div>
 
+            <!-- Footer -->
             <div class="ctx ctx-footer">
               <span class="ctx-label">Footer (foncé)</span>
               <div class="footer-mock">
-                <div class="brand-row">
-                  <img src={`/logos/emblems/${e.id}.svg`} alt="" class="emb emb-footer" />
-                  <span class="wordmark wordmark-light">Klubba<span class="dot">.</span></span>
+                <div class={`wm-render ${w.classMain} wm-footer wm-light`}>
+                  {w.classCaps ? (
+                    <span class="wm-caps-row">
+                      <span class="wm-caps">KLUBBA</span>
+                      <span class="wm-mark wm-mark-lozenge wm-mark-md"></span>
+                    </span>
+                  ) : (
+                    <span class="wm-row">
+                      <span class="wm-text">Klubba</span>
+                      {w.markType === 'lozenge' ? (
+                        <span class="wm-mark wm-mark-lozenge wm-mark-md"></span>
+                      ) : (
+                        <span class="wm-mark wm-mark-dot">.</span>
+                      )}
+                    </span>
+                  )}
                 </div>
                 <span class="footer-tag">klubba.golf</span>
               </div>
             </div>
 
+            <!-- Monogram K. as favicon -->
             <div class="ctx ctx-favicon">
-              <span class="ctx-label">Favicon 64px</span>
+              <span class="ctx-label">Monogramme K. — 64px</span>
               <div class="fav-mock fav-64">
-                <img src={`/logos/emblems/${e.id}.svg`} alt="" />
+                <div class={`wm-render ${w.classMain} fav-mono`}>
+                  <span class="wm-text">K</span>
+                  {w.markType === 'lozenge' ? (
+                    <span class="wm-mark wm-mark-lozenge wm-mark-fav"></span>
+                  ) : (
+                    <span class="wm-mark wm-mark-dot">.</span>
+                  )}
+                </div>
               </div>
             </div>
 
             <div class="ctx ctx-favicon">
-              <span class="ctx-label">Favicon 32px</span>
+              <span class="ctx-label">32px</span>
               <div class="fav-mock fav-32">
-                <img src={`/logos/emblems/${e.id}.svg`} alt="" />
+                <div class={`wm-render ${w.classMain} fav-mono-32`}>
+                  <span class="wm-text">K</span>
+                  {w.markType === 'lozenge' ? (
+                    <span class="wm-mark wm-mark-lozenge wm-mark-tiny"></span>
+                  ) : (
+                    <span class="wm-mark wm-mark-dot">.</span>
+                  )}
+                </div>
               </div>
             </div>
 
             <div class="ctx ctx-favicon">
-              <span class="ctx-label">Favicon 16px (réel onglet)</span>
+              <span class="ctx-label">16px (réel onglet)</span>
               <div class="fav-mock fav-16">
-                <img src={`/logos/emblems/${e.id}.svg`} alt="" />
+                <div class={`wm-render ${w.classMain} fav-mono-16`}>
+                  <span class="wm-text">K</span>
+                </div>
               </div>
-              <span class="ctx-help">↑ taille réelle</span>
+              <span class="ctx-help">↑ taille réelle (le losange disparaît à 16px, normal — on garde juste K)</span>
             </div>
 
+            <!-- Large display -->
             <div class="ctx ctx-large">
-              <span class="ctx-label">Large 240px (deck / app icon)</span>
+              <span class="ctx-label">Large 240px (deck / hero)</span>
               <div class="large-mock">
-                <img src={`/logos/emblems/${e.id}.svg`} alt="" class="emb emb-xl" />
+                <div class={`wm-render ${w.classMain} wm-display`}>
+                  {w.classCaps ? (
+                    <div class="wm-caps-stack">
+                      <span class="wm-caps-row">
+                        <span class="wm-caps">KLUBBA</span>
+                        <span class="wm-mark wm-mark-lozenge wm-mark-xl"></span>
+                      </span>
+                      <span class="wm-tagline">{w.tagline}</span>
+                    </div>
+                  ) : (
+                    <span class="wm-row">
+                      <span class="wm-text">Klubba</span>
+                      {w.markType === 'lozenge' ? (
+                        <span class="wm-mark wm-mark-lozenge wm-mark-xl"></span>
+                      ) : (
+                        <span class="wm-mark wm-mark-dot">.</span>
+                      )}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -131,73 +221,31 @@ const minimalVariants = [
     </div>
   </section>
 
-  <section class="compare-direct">
-    <div class="container">
-      <h2 class="section-title">Côte à côte</h2>
-      <p class="section-help">Les 2 emblems alignés à 4 tailles réelles.</p>
-
-      <div class="compare-row">
-        <h3>16px (favicon réel)</h3>
-        <div class="strip strip-light">
-          {emblems.map((e) => (
-            <div class="strip-cell">
-              <img src={`/logos/emblems/${e.id}.svg`} alt="" class="emb-16" />
-              <span class="strip-id">{e.id.split('-')[0].toUpperCase()}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div class="compare-row">
-        <h3>32px</h3>
-        <div class="strip strip-light">
-          {emblems.map((e) => (
-            <div class="strip-cell">
-              <img src={`/logos/emblems/${e.id}.svg`} alt="" class="emb-32" />
-              <span class="strip-id">{e.id.split('-')[0].toUpperCase()}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div class="compare-row">
-        <h3>80px</h3>
-        <div class="strip strip-light">
-          {emblems.map((e) => (
-            <div class="strip-cell">
-              <img src={`/logos/emblems/${e.id}.svg`} alt="" class="emb-80" />
-              <span class="strip-id">{e.id.split('-')[0].toUpperCase()}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div class="compare-row">
-        <h3>200px (decks / hero)</h3>
-        <div class="strip strip-light">
-          {emblems.map((e) => (
-            <div class="strip-cell">
-              <img src={`/logos/emblems/${e.id}.svg`} alt="" class="emb-200" />
-              <span class="strip-id">{e.id.split('-')[0].toUpperCase()}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  </section>
-
   <section class="archive">
     <div class="container">
       <details class="archive-drop">
-        <summary>Round 1 — 5 picto minimaux (rejetés, gardés en référence)</summary>
-        <p class="archive-help">Style "icon system Linear/Vercel". Ne sont pas dans le bon registre pour Klubba.</p>
-        <div class="archive-strip">
-          {minimalVariants.map((v) => (
-            <div class="archive-cell">
-              <img src={`/logos/variants/${v.id}.svg`} alt={v.title} class="emb-32" />
-              <span class="strip-id">{v.title}</span>
-            </div>
-          ))}
+        <summary>Archive des rounds précédents (cliquer pour déplier)</summary>
+        <div class="archive-section">
+          <h4>Round 2 — 2 emblems Virage-style (rejetés : trop SaaS)</h4>
+          <div class="archive-strip">
+            {oldRounds.emblems.map((id) => (
+              <div class="archive-cell">
+                <img src={`/logos/emblems/${id}.svg`} alt={id} class="emb-32" />
+                <span class="strip-id">{id.split('-')[0].toUpperCase()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div class="archive-section">
+          <h4>Round 1 — 5 picto minimaux (rejetés : trop icon-system)</h4>
+          <div class="archive-strip">
+            {oldRounds.minimal.map((id) => (
+              <div class="archive-cell">
+                <img src={`/logos/variants/${id}.svg`} alt={id} class="emb-32" />
+                <span class="strip-id">{id.split('-')[0].toUpperCase()}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </details>
     </div>
@@ -207,11 +255,11 @@ const minimalVariants = [
     <div class="container">
       <h2>Ta décision</h2>
       <ol>
-        <li>Choisis : <code>e1</code> (Course View) ou <code>e2</code> (Tee Ready)</li>
-        <li>Optionnel : ce que tu veux ajuster (proportions, intensité gradients, position du fanion, taille du cup, couleurs)</li>
-        <li>Si aucun ne te plaît : dis-moi pourquoi (trop chargé, pas assez "golf", couleurs, etc.) et je fais un round 3</li>
+        <li>Choisis : <code>w1</code> / <code>w2</code> / <code>w3</code></li>
+        <li>Optionnel : ce que tu veux ajuster (font weight, taille du losange, kerning, autre tagline pour W3)</li>
+        <li>Si rien ne va : <code>r4</code> + tes critiques précises (univers de marque, références visuelles à coller)</li>
       </ol>
-      <p class="hint">💡 Inspecte aussi à 16px dans le tab du navigateur — c'est l'épreuve du feu pour un emblème. Si ça reste lisible là, ça passe partout.</p>
+      <p class="hint">💡 Une fois validé, j'intègre dans Nav + Footer + favicon (en remplaçant le rendu Georgia actuel par Cormorant + le mark choisi). Le wordmark devient ton vrai logo.</p>
     </div>
   </section>
 </Base>
@@ -239,71 +287,130 @@ const minimalVariants = [
     color: var(--ink);
     max-width: 70ch;
     margin: 0 auto;
-    line-height: 1.55;
+    line-height: 1.6;
   }
 
+  /* Wordmark renderings */
+  .wm-render {
+    color: var(--primary);
+    display: inline-block;
+  }
+  .wm-light { color: var(--bg); }
+
+  .wm-cormorant {
+    font-family: var(--font-wordmark);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1;
+  }
+  .wm-marcellus {
+    font-family: var(--font-label);
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .wm-row {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.04em;
+  }
+  .wm-text { display: inline-block; }
+
+  .wm-caps-stack {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4em;
+  }
+  .wm-caps-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+  }
+  .wm-caps {
+    letter-spacing: 0.16em;
+    font-weight: 400;
+  }
+  .wm-tagline {
+    font-family: var(--font-sans);
+    font-size: 0.32em;
+    letter-spacing: 0.32em;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .wm-light .wm-tagline { color: var(--accent-soft); }
+
+  /* Marks */
+  .wm-mark { display: inline-block; flex-shrink: 0; }
+  .wm-mark-dot {
+    color: var(--accent);
+    font-family: inherit;
+    font-weight: inherit;
+    line-height: 1;
+  }
+  .wm-mark-lozenge {
+    background: var(--accent);
+    transform: rotate(45deg);
+    align-self: center;
+  }
+  .wm-mark-tiny { width: 0.18em; height: 0.18em; margin-left: 0.18em; }
+  .wm-mark-sm { width: 0.22em; height: 0.22em; margin-left: 0.22em; }
+  .wm-mark-md { width: 0.26em; height: 0.26em; margin-left: 0.24em; }
+  .wm-mark-fav { width: 0.18em; height: 0.18em; margin-left: 0.14em; align-self: flex-end; margin-bottom: 0.1em; }
+  .wm-mark-xl { width: 0.24em; height: 0.24em; margin-left: 0.22em; align-self: center; }
+
+  /* Sizes */
+  .wm-xl { font-size: clamp(3rem, 7vw, 5rem); }
+  .wm-display { font-size: clamp(3rem, 7vw, 5rem); }
+  .wm-nav { font-size: 1.5rem; }
+  .wm-footer { font-size: 2rem; }
+
+  .fav-mono { font-size: 56px; display: inline-flex; align-items: baseline; line-height: 1; }
+  .fav-mono-32 { font-size: 28px; display: inline-flex; align-items: baseline; line-height: 1; }
+  .fav-mono-16 { font-size: 14px; line-height: 1; display: inline-flex; align-items: baseline; }
+
   /* Hero showcase */
-  .emblems-hero {
+  .hero-show {
     padding: var(--space-7) 0;
-    background: linear-gradient(180deg, var(--bg) 0%, #FAF9F6 100%);
+    background: linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 100%);
   }
-  .hero-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-    gap: var(--space-6);
-  }
-  .hero-card {
+  .wm-card {
     background: #FFFFFF;
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
     padding: var(--space-6);
+    margin-bottom: var(--space-6);
     box-shadow: var(--shadow-sm);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-5);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-6);
+    align-items: center;
   }
-  .hero-emblem {
+  @media (max-width: 720px) {
+    .wm-card { grid-template-columns: 1fr; }
+  }
+  .wm-stage {
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--accent-soft) 100%);
+    border-radius: var(--radius-md);
+    padding: var(--space-7);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #FAF9F6 0%, #F0EDE5 100%);
-    border-radius: var(--radius-md);
-    padding: var(--space-7);
-    min-height: 260px;
+    min-height: 240px;
   }
-  .hero-emblem img {
-    width: 200px;
-    height: 200px;
-    filter: drop-shadow(0 12px 32px rgba(15, 42, 30, 0.18));
-  }
-  .hero-meta h2 {
+  .wm-meta h2 {
     font-size: clamp(1.5rem, 3vw, 2rem);
     margin-bottom: var(--space-1);
   }
-  .hero-sub {
+  .wm-sub {
     color: var(--accent);
     font-weight: 700;
     margin-bottom: var(--space-3);
     letter-spacing: 0.02em;
   }
-  .hero-desc {
+  .wm-desc {
     color: var(--ink);
-    font-size: var(--text-base);
     line-height: 1.6;
-    margin-bottom: var(--space-3);
-  }
-  .hero-notes summary {
-    cursor: pointer;
-    color: var(--muted);
-    font-size: var(--text-sm);
-    font-weight: 700;
-    letter-spacing: 0.04em;
-  }
-  .hero-notes p {
-    margin-top: var(--space-3);
-    color: var(--muted);
-    font-size: var(--text-sm);
-    line-height: 1.55;
   }
 
   /* Contexts grid */
@@ -343,7 +450,7 @@ const minimalVariants = [
     gap: var(--space-4);
   }
   .ctx {
-    background: #FAF9F6;
+    background: var(--bg-soft);
     border: 1px solid var(--line);
     border-radius: var(--radius-md);
     padding: var(--space-4);
@@ -364,7 +471,7 @@ const minimalVariants = [
     margin-top: 4px;
   }
 
-  /* Nav mock */
+  /* Mocks */
   .nav-mock {
     background: #FFFFFF;
     border: 1px solid var(--line);
@@ -375,27 +482,6 @@ const minimalVariants = [
     justify-content: space-between;
     gap: var(--space-3);
   }
-  .brand-row {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .emb { display: block; flex-shrink: 0; }
-  .emb-nav { width: 32px; height: 32px; }
-  .emb-footer { width: 40px; height: 40px; }
-  .emb-xl { width: 240px; height: 240px; filter: drop-shadow(0 18px 40px rgba(15, 42, 30, 0.22)); }
-
-  .wordmark {
-    font-family: var(--font-serif);
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--primary);
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-  .wordmark .dot { color: var(--accent); }
-  .wordmark-light { color: #FFFFFF; font-size: 1.5rem; }
-
   .nav-fake-links {
     display: flex;
     gap: 12px;
@@ -410,8 +496,6 @@ const minimalVariants = [
     border-radius: var(--radius-full);
     font-weight: 700;
   }
-
-  /* Footer mock */
   .footer-mock {
     background: var(--primary-deep);
     border-radius: var(--radius-md);
@@ -427,80 +511,30 @@ const minimalVariants = [
     letter-spacing: 0.1em;
   }
 
-  /* Favicon mocks - emblem already has its own bg so no green wrapper needed */
+  /* Favicon mocks */
   .fav-mock {
-    background: #F0EDE5;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto;
-    padding: 6px;
   }
-  .fav-64 { width: 64px; height: 64px; padding: 4px; }
-  .fav-64 img { width: 56px; height: 56px; }
-  .fav-32 { width: 32px; height: 32px; padding: 2px; border-radius: 6px; }
-  .fav-32 img { width: 28px; height: 28px; }
-  .fav-16 { width: 16px; height: 16px; padding: 1px; border-radius: 3px; }
-  .fav-16 img { width: 14px; height: 14px; }
+  .fav-64 { width: 80px; height: 80px; padding: 8px; }
+  .fav-32 { width: 40px; height: 40px; padding: 4px; border-radius: 6px; }
+  .fav-16 { width: 24px; height: 24px; padding: 2px; border-radius: 4px; }
 
   /* Large mock */
   .large-mock {
-    background: linear-gradient(135deg, #FAF9F6 0%, #EBE7DC 100%);
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--accent-soft) 100%);
     border-radius: var(--radius-md);
     padding: var(--space-5);
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 280px;
+    min-height: 240px;
   }
-
-  /* Compare strips */
-  .compare-direct {
-    background: #FAF9F6;
-    padding: var(--space-7) 0;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-  }
-  .compare-row {
-    margin-bottom: var(--space-6);
-  }
-  .compare-row h3 {
-    font-size: var(--text-sm);
-    color: var(--muted);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-bottom: var(--space-3);
-    font-family: var(--font-sans);
-  }
-  .strip {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-4);
-    background: #FFFFFF;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    padding: var(--space-5);
-    align-items: center;
-    justify-items: center;
-  }
-  .strip-cell {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  }
-  .strip-id {
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    font-weight: 700;
-  }
-  .emb-16 { width: 16px; height: 16px; }
-  .emb-32 { width: 32px; height: 32px; }
-  .emb-80 { width: 80px; height: 80px; }
-  .emb-200 { width: 200px; height: 200px; filter: drop-shadow(0 12px 32px rgba(15, 42, 30, 0.18)); }
 
   /* Archive */
   .archive {
@@ -508,7 +542,7 @@ const minimalVariants = [
     background: var(--bg);
   }
   .archive-drop {
-    background: #FAF9F6;
+    background: var(--bg-soft);
     border: 1px dashed var(--line);
     border-radius: var(--radius-md);
     padding: var(--space-4) var(--space-5);
@@ -520,27 +554,38 @@ const minimalVariants = [
     font-size: var(--text-sm);
     letter-spacing: 0.04em;
   }
-  .archive-help {
-    color: var(--muted);
+  .archive-section { margin-top: var(--space-5); }
+  .archive-section h4 {
+    font-family: var(--font-sans);
     font-size: var(--text-sm);
-    margin-top: var(--space-3);
-    margin-bottom: var(--space-4);
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: var(--space-3);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
   .archive-strip {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
     gap: var(--space-3);
   }
   .archive-cell {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     padding: var(--space-3);
     background: #FFFFFF;
     border: 1px solid var(--line);
     border-radius: var(--radius-sm);
-    opacity: 0.7;
+    opacity: 0.65;
+  }
+  .archive-cell .emb-32 { width: 32px; height: 32px; }
+  .strip-id {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    font-weight: 700;
   }
 
   /* Decision */
@@ -571,11 +616,5 @@ const minimalVariants = [
     color: var(--accent);
     font-size: var(--text-sm);
     font-style: italic;
-  }
-
-  @media (max-width: 720px) {
-    .hero-grid { grid-template-columns: 1fr; }
-    .nav-mock { flex-direction: column; align-items: flex-start; }
-    .strip { grid-template-columns: 1fr 1fr; }
   }
 </style>
