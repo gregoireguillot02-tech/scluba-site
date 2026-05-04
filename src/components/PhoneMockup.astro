@@ -108,7 +108,7 @@ const back9 = [
               <div class="screen screen-live" data-screen-live>
                 <div class="live-header">
                   <div class="live-club">
-                    <img src="/logos/golf-du-soleil.svg" alt="Golf du Soleil" class="live-club-logo" loading="lazy" />
+                    <img src="/logos/golf-du-soleil.svg" alt="Golf du Soleil" class="live-club-logo" width="20" height="20" loading="lazy" decoding="async" />
                     <div>
                       <div class="live-club-name">{t.phone.club}</div>
                       <div class="live-club-meta">{t.phone.live.playing}</div>
@@ -183,13 +183,13 @@ const back9 = [
               <div class="screen screen-card" data-screen-card>
                 <!-- Photo paysage -->
                 <div class="card-photo">
-                  <img src="/photos/golf-du-soleil.jpg" alt="" loading="lazy" />
+                  <img src="/photos/golf-du-soleil.jpg" alt="" width="320" height="120" loading="lazy" decoding="async" />
                   <div class="card-photo-fade"></div>
                 </div>
 
                 <!-- Logo + club name overlay sur photo -->
                 <div class="card-brand" data-card-brand>
-                  <img src="/logos/golf-du-soleil.svg" alt="" class="card-brand-logo" data-club-logo loading="lazy" />
+                  <img src="/logos/golf-du-soleil.svg" alt="" class="card-brand-logo" data-club-logo width="60" height="60" loading="lazy" decoding="async" />
                   <div class="card-brand-meta">
                     <small>{t.phone.cardLabel}</small>
                     <strong>{t.phone.club}</strong>
@@ -581,7 +581,7 @@ const back9 = [
     font-weight: 600;
     pointer-events: none;
   }
-  .status-time { color: #fff; }
+  .status-time { color: #fff; font-variant-numeric: tabular-nums; }
   .status-icons {
     display: flex;
     align-items: center;
@@ -727,6 +727,7 @@ const back9 = [
     color: var(--primary);
     line-height: 1;
     margin: 4px 0;
+    font-variant-numeric: tabular-nums;
   }
   .live-current-par {
     font-size: 9px;
@@ -755,6 +756,7 @@ const back9 = [
     font-weight: 700;
     color: var(--primary);
     line-height: 1.1;
+    font-variant-numeric: tabular-nums;
   }
   .live-stat-l {
     display: block;
@@ -807,6 +809,7 @@ const back9 = [
     font-size: 9px;
     font-weight: 600;
     color: var(--ink);
+    font-variant-numeric: tabular-nums;
   }
   .live-cell-birdie { color: #C0392B; background: var(--accent-soft); }
   .live-cell-par { color: var(--primary); }
@@ -918,6 +921,7 @@ const back9 = [
     color: var(--primary);
     line-height: 1;
     letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
   }
   .card-score-meta {
     font-size: 9px;
@@ -944,6 +948,7 @@ const back9 = [
     font-weight: 700;
     color: var(--primary);
     line-height: 1.1;
+    font-variant-numeric: tabular-nums;
   }
   .card-stat .stat-l {
     font-size: 6.5px;
@@ -983,6 +988,7 @@ const back9 = [
     font-weight: 700;
     color: var(--ink);
     will-change: opacity, transform;
+    font-variant-numeric: tabular-nums;
   }
   .grid-cell-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
   .grid-cell-par { color: var(--primary); }

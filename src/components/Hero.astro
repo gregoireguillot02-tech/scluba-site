@@ -52,13 +52,13 @@ const t = useT(locale);
             <div class="hero-card">
               <!-- Photo -->
               <div class="hero-card-photo">
-                <img src="/photos/golf-du-soleil.jpg" alt="" loading="eager" />
+                <img src="/photos/golf-du-soleil.jpg" alt="" width="280" height="110" loading="eager" decoding="async" fetchpriority="high" />
                 <div class="hero-card-photo-fade"></div>
               </div>
 
               <!-- Logo + nom -->
               <div class="hero-card-brand">
-                <img src="/logos/golf-du-soleil.svg" alt="" class="hero-card-logo" />
+                <img src="/logos/golf-du-soleil.svg" alt="" class="hero-card-logo" width="50" height="50" loading="eager" decoding="async" />
                 <div class="hero-card-meta">
                   <small>Carte récap</small>
                   <strong>Golf du Soleil</strong>
@@ -337,16 +337,17 @@ const t = useT(locale);
     background: conic-gradient(
       from 0deg,
       transparent 0deg 60deg,
-      rgba(212, 165, 116, 0.4) 120deg,
-      rgba(255, 220, 170, 0.85) 180deg,
-      rgba(212, 165, 116, 0.4) 240deg,
+      rgba(212, 165, 116, 0.32) 120deg,
+      rgba(255, 220, 170, 0.62) 180deg,
+      rgba(212, 165, 116, 0.32) 240deg,
       transparent 300deg 360deg
     );
-    filter: blur(18px);
-    opacity: 0.6;
-    animation: heroNeon 8s linear infinite;
+    filter: blur(22px);
+    opacity: 0.42;
+    animation: heroNeon 14s cubic-bezier(0.45, 0, 0.55, 1) infinite;
     transform: rotateY(-12deg) rotateX(4deg);
     z-index: 0;
+    will-change: transform;
   }
   @keyframes heroNeon {
     from { transform: rotateY(-12deg) rotateX(4deg) rotate(0deg); }
@@ -500,6 +501,7 @@ const t = useT(locale);
     font-weight: 800;
     color: var(--primary);
     line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
   .hero-card-score-meta {
     text-align: center;
@@ -525,6 +527,7 @@ const t = useT(locale);
     display: flex;
     align-items: center;
     justify-content: center;
+    font-variant-numeric: tabular-nums;
   }
   .hero-card-cell.is-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
   .hero-card-cell.is-bogey { color: var(--muted); }
