@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Klubba Tee Ready emblem">
+  <defs>
+    <radialGradient id="e2-bg" cx="38%" cy="32%" r="82%">
+      <stop offset="0%" stop-color="#3C8B5C"/>
+      <stop offset="35%" stop-color="#2D6A4F"/>
+      <stop offset="70%" stop-color="#1B4332"/>
+      <stop offset="100%" stop-color="#0A1F14"/>
+    </radialGradient>
+
+    <linearGradient id="e2-pill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1F5238"/>
+      <stop offset="20%" stop-color="#3C8B5C"/>
+      <stop offset="50%" stop-color="#5BA679"/>
+      <stop offset="80%" stop-color="#3C8B5C"/>
+      <stop offset="100%" stop-color="#1F5238"/>
+    </linearGradient>
+
+    <linearGradient id="e2-pillTop" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.18"/>
+    </linearGradient>
+
+    <radialGradient id="e2-ball" cx="35%" cy="32%" r="70%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="55%" stop-color="#F5F2EC"/>
+      <stop offset="100%" stop-color="#C8C0B0"/>
+    </radialGradient>
+
+    <radialGradient id="e2-ballRim" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#5BA679" stop-opacity="0"/>
+      <stop offset="80%" stop-color="#5BA679" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#1F5238" stop-opacity="0.6"/>
+    </radialGradient>
+
+    <linearGradient id="e2-tee" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F5E6CF"/>
+      <stop offset="50%" stop-color="#E8C089"/>
+      <stop offset="100%" stop-color="#A87642"/>
+    </linearGradient>
+
+    <radialGradient id="e2-glow" cx="50%" cy="20%" r="55%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#e2-bg)"/>
+  <circle cx="100" cy="100" r="100" fill="url(#e2-glow)"/>
+  <circle cx="100" cy="100" r="99.5" fill="none" stroke="#0A1F14" stroke-width="1" opacity="0.5"/>
+
+  <rect x="38" y="86" width="124" height="32" rx="16" ry="16" fill="url(#e2-pill)"/>
+  <rect x="38" y="86" width="124" height="32" rx="16" ry="16" fill="url(#e2-pillTop)"/>
+
+  <path d="M 60 87 Q 100 80 140 87" fill="none" stroke="#FFFFFF" stroke-width="0.6" opacity="0.28"/>
+
+  <circle cx="138" cy="102" r="18" fill="url(#e2-ball)"/>
+  <circle cx="138" cy="102" r="18" fill="url(#e2-ballRim)" opacity="0.45"/>
+  <circle cx="138" cy="102" r="13" fill="none" stroke="#3C8B5C" stroke-width="0.9" opacity="0.55"/>
+  <circle cx="138" cy="102" r="3.2" fill="#1B4332"/>
+
+  <path d="M 134 120 L 142 120 L 138 134 Z" fill="url(#e2-tee)"/>
+  <path d="M 138 120 L 138 134" stroke="#000000" stroke-width="0.4" opacity="0.2"/>
+</svg>

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Klubba Course View emblem">
+  <defs>
+    <radialGradient id="e1-bg" cx="34%" cy="30%" r="82%">
+      <stop offset="0%" stop-color="#3C8B5C"/>
+      <stop offset="32%" stop-color="#2D6A4F"/>
+      <stop offset="65%" stop-color="#1B4332"/>
+      <stop offset="100%" stop-color="#0A1F14"/>
+    </radialGradient>
+
+    <radialGradient id="e1-green" cx="46%" cy="32%" r="68%">
+      <stop offset="0%" stop-color="#5BA679"/>
+      <stop offset="40%" stop-color="#3C8B5C"/>
+      <stop offset="100%" stop-color="#1F5238"/>
+    </radialGradient>
+
+    <radialGradient id="e1-hole" cx="50%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#0F2A1E"/>
+      <stop offset="55%" stop-color="#061509"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+
+    <linearGradient id="e1-flag" x1="0%" y1="0%" x2="100%" y2="20%">
+      <stop offset="0%" stop-color="#F5E6CF"/>
+      <stop offset="35%" stop-color="#E8C089"/>
+      <stop offset="100%" stop-color="#B8854F"/>
+    </linearGradient>
+
+    <linearGradient id="e1-pole" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="50%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#C8C8C8"/>
+    </linearGradient>
+
+    <radialGradient id="e1-glow" cx="50%" cy="20%" r="55%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#e1-bg)"/>
+  <circle cx="100" cy="100" r="100" fill="url(#e1-glow)"/>
+  <circle cx="100" cy="100" r="99.5" fill="none" stroke="#0A1F14" stroke-width="1" opacity="0.5"/>
+
+  <ellipse cx="100" cy="118" rx="78" ry="56" fill="url(#e1-green)" opacity="0.94"/>
+  <ellipse cx="100" cy="78" rx="58" ry="7" fill="#5BA679" opacity="0.22"/>
+
+  <ellipse cx="118" cy="120" rx="11" ry="6.8" fill="url(#e1-hole)"/>
+  <ellipse cx="118" cy="120" rx="11.6" ry="7.4" fill="none" stroke="#0A1F14" stroke-width="0.9" opacity="0.55"/>
+
+  <line x1="118" y1="120" x2="100" y2="50" stroke="url(#e1-pole)" stroke-width="2.4" stroke-linecap="round"/>
+
+  <path d="M 100 50 Q 116 51.5 126 56 Q 116 60.5 100 62 Z" fill="url(#e1-flag)"/>
+  <path d="M 100 50 L 100 62" stroke="#000000" stroke-width="0.5" opacity="0.18"/>
+</svg>
