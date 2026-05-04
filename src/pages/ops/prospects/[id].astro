@@ -1,0 +1,339 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../../lib/supabase';
+import {
+  PROSPECT_STATUSES,
+  STATUS_LABELS,
+  STATUS_COLORS,
+  OWNERS,
+  OWNER_LABELS,
+  EVENT_LABELS,
+  EVENT_TYPES,
+  type Prospect,
+  type ProspectEvent,
+  type Task,
+} from '../../../lib/ops-types';
+
+const { id } = Astro.params;
+const sb = serviceClient();
+
+const [{ data: prospect }, { data: events }, { data: tasks }] = await Promise.all([
+  sb.from('prospects').select('*').eq('id', id).maybeSingle(),
+  sb.from('prospect_events').select('*').eq('prospect_id', id).order('created_at', { ascending: false }),
+  sb.from('tasks').select('*').eq('prospect_id', id).order('done').order('due_date'),
+]);
+
+if (!prospect) {
+  return Astro.redirect('/ops/prospects', 302);
+}
+
+const p: Prospect = prospect as Prospect;
+const allEvents: ProspectEvent[] = (events ?? []) as ProspectEvent[];
+const allTasks: Task[] = (tasks ?? []) as Task[];
+
+function fmtDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+function fmtDate(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+---
+
+<OpsLayout title={p.club_name} active="prospects">
+  <div class="ops-page-header">
+    <div>
+      <a href="/ops/prospects" class="back-link">← CRM</a>
+      <h1 class="ops-page-title">{p.club_name}</h1>
+      <p class="ops-page-subtitle">
+        {p.city ? `${p.city}` : ''}{p.region ? ` · ${p.region}` : ''}
+        {p.contact_name ? ` · ${p.contact_name}` : ''}
+      </p>
+    </div>
+    <span class="ops-tag" style={`background:${STATUS_COLORS[p.status]}22; color:${STATUS_COLORS[p.status]}; font-size:14px; padding:6px 14px`}>{STATUS_LABELS[p.status]}</span>
+  </div>
+
+  <div class="detail-grid">
+    <div>
+      <div class="ops-card">
+        <h2>Détails</h2>
+        <form method="POST" action="/api/ops/prospects" class="detail-form">
+          <input type="hidden" name="action" value="update" />
+          <input type="hidden" name="id" value={p.id} />
+
+          <div class="form-grid">
+            <label class="ops-label">Nom du club
+              <input class="ops-input" name="club_name" value={p.club_name} required />
+            </label>
+            <label class="ops-label">Contact
+              <input class="ops-input" name="contact_name" value={p.contact_name ?? ''} />
+            </label>
+            <label class="ops-label">Email
+              <input class="ops-input" type="email" name="email" value={p.email ?? ''} />
+            </label>
+            <label class="ops-label">Téléphone
+              <input class="ops-input" name="phone" value={p.phone ?? ''} />
+            </label>
+            <label class="ops-label">Ville
+              <input class="ops-input" name="city" value={p.city ?? ''} />
+            </label>
+            <label class="ops-label">Région
+              <input class="ops-input" name="region" value={p.region ?? ''} />
+            </label>
+            <label class="ops-label">Statut
+              <select class="ops-select" name="status">
+                {PROSPECT_STATUSES.map((s) => (
+                  <option value={s} selected={s === p.status}>{STATUS_LABELS[s]}</option>
+                ))}
+              </select>
+            </label>
+            <label class="ops-label">Owner
+              <select class="ops-select" name="owner">
+                {OWNERS.map((o) => (
+                  <option value={o} selected={o === p.owner}>{OWNER_LABELS[o]}</option>
+                ))}
+              </select>
+            </label>
+            <label class="ops-label" style="grid-column:1/-1">Source
+              <input class="ops-input" name="source" value={p.source ?? ''} />
+            </label>
+            <label class="ops-label" style="grid-column:1/-1">Notes
+              <textarea class="ops-textarea" name="notes" rows="4">{p.notes ?? ''}</textarea>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="ops-btn ops-btn-primary">Enregistrer</button>
+          </div>
+        </form>
+
+        <details class="danger-zone">
+          <summary>Zone dangereuse</summary>
+          <form method="POST" action="/api/ops/prospects">
+            <input type="hidden" name="action" value="delete" />
+            <input type="hidden" name="id" value={p.id} />
+            <button type="submit" class="ops-btn danger" onclick="return confirm('Supprimer ce prospect ? Tous les events seront perdus.')">Supprimer le prospect</button>
+          </form>
+        </details>
+      </div>
+
+      <div class="ops-card" style="margin-top:16px">
+        <h2>Tâches liées</h2>
+        {allTasks.length === 0 ? (
+          <p class="ops-empty">Aucune tâche pour ce club.</p>
+        ) : (
+          <ul class="task-list">
+            {allTasks.map((t) => (
+              <li class={`task-row${t.done ? ' done' : ''}`}>
+                <form method="POST" action="/api/ops/tasks" style="display:inline">
+                  <input type="hidden" name="action" value="toggle" />
+                  <input type="hidden" name="id" value={t.id} />
+                  <input type="hidden" name="done" value={String(!t.done)} />
+                  <button type="submit" class={`task-check${t.done ? ' checked' : ''}`} aria-label="Toggle"></button>
+                </form>
+                <span class="task-title">{t.title}</span>
+                <span class="ops-tag">{OWNER_LABELS[t.assignee]}</span>
+                <span class="task-due">{fmtDate(t.due_date)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form method="POST" action="/api/ops/tasks" class="quick-task">
+          <input type="hidden" name="action" value="create" />
+          <input type="hidden" name="prospect_id" value={p.id} />
+          <input class="ops-input" name="title" placeholder="Ajouter une tâche…" required />
+          <select class="ops-select" name="assignee">
+            {OWNERS.map((o) => <option value={o}>{OWNER_LABELS[o]}</option>)}
+          </select>
+          <input class="ops-input" type="date" name="due_date" />
+          <button type="submit" class="ops-btn">+</button>
+        </form>
+      </div>
+    </div>
+
+    <div>
+      <div class="ops-card">
+        <h2>Timeline</h2>
+        <form method="POST" action={`/api/ops/prospects/${p.id}/events`} class="event-form">
+          <select class="ops-select" name="type">
+            {EVENT_TYPES.filter((t) => t !== 'status_change').map((t) => (
+              <option value={t}>{EVENT_LABELS[t]}</option>
+            ))}
+          </select>
+          <textarea class="ops-textarea" name="body" placeholder="Détail (optionnel)" rows="2"></textarea>
+          <button type="submit" class="ops-btn ops-btn-primary">Ajouter</button>
+        </form>
+
+        {allEvents.length === 0 ? (
+          <p class="ops-empty">Pas encore d'événement.</p>
+        ) : (
+          <ul class="timeline">
+            {allEvents.map((e) => (
+              <li class="timeline-item">
+                <div class="timeline-meta">
+                  <span class="timeline-type">{EVENT_LABELS[e.type]}</span>
+                  <span class="timeline-date">{fmtDateTime(e.created_at)}</span>
+                </div>
+                {e.body && <div class="timeline-body">{e.body}</div>}
+                {e.author && <div class="timeline-author">— {e.author}</div>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  </div>
+</OpsLayout>
+
+<style>
+  .back-link {
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: none;
+  }
+  .back-link:hover { color: var(--primary); }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 14px;
+  }
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+  }
+  .form-actions {
+    margin-top: 16px;
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+
+  .danger-zone { margin-top: 18px; }
+  .danger-zone summary {
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .danger-zone .ops-btn.danger {
+    margin-top: 10px;
+    border-color: #FECACA;
+    color: #991B1B;
+    background: #FEF2F2;
+  }
+  .danger-zone .ops-btn.danger:hover {
+    background: #FEE2E2;
+    border-color: #F87171;
+  }
+
+  .event-form {
+    display: grid;
+    grid-template-columns: 160px 1fr auto;
+    gap: 8px;
+    margin-bottom: 18px;
+    align-items: start;
+  }
+  @media (max-width: 600px) {
+    .event-form { grid-template-columns: 1fr; }
+  }
+
+  .timeline {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .timeline-item {
+    border-left: 2px solid var(--line);
+    padding: 4px 0 12px 14px;
+    position: relative;
+  }
+  .timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .timeline-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .timeline-type {
+    font-weight: 500;
+    color: var(--primary);
+    font-size: 13px;
+  }
+  .timeline-date {
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .timeline-body {
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  .timeline-author {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .task-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .task-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .task-row.done .task-title { color: var(--muted-soft); text-decoration: line-through; }
+  .task-check {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+    background: var(--bg);
+    cursor: pointer;
+    padding: 0;
+  }
+  .task-check.checked { background: var(--primary-soft); border-color: var(--primary-soft); }
+  .task-due { color: var(--muted); font-size: 12px; }
+
+  .quick-task {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 8px;
+    align-items: center;
+  }
+  @media (max-width: 600px) {
+    .quick-task { grid-template-columns: 1fr; }
+  }
+</style>

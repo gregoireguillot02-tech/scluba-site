@@ -1,0 +1,171 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../lib/supabase';
+import { OWNERS, OWNER_LABELS, type Task } from '../../lib/ops-types';
+
+const sb = serviceClient();
+const url = Astro.url;
+const filterAssignee = url.searchParams.get('assignee');
+const showDone = url.searchParams.get('done') === '1';
+
+let q = sb.from('tasks').select('*, prospects(club_name)').order('done').order('due_date', { nullsFirst: false }).order('created_at', { ascending: false });
+if (filterAssignee && OWNERS.includes(filterAssignee as any)) q = q.eq('assignee', filterAssignee);
+if (!showDone) q = q.eq('done', false);
+
+const { data } = await q;
+type TaskWithClub = Task & { prospects: { club_name: string } | null };
+const tasks: TaskWithClub[] = (data ?? []) as TaskWithClub[];
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+function isOverdue(t: Task): boolean {
+  if (!t.due_date || t.done) return false;
+  return new Date(t.due_date).getTime() < Date.now() - 24 * 3600 * 1000;
+}
+---
+
+<OpsLayout title="Todo partagée" active="todo">
+  <div class="ops-page-header">
+    <div>
+      <h1 class="ops-page-title">Todo partagée</h1>
+      <p class="ops-page-subtitle">{tasks.length} tâche{tasks.length > 1 ? 's' : ''}</p>
+    </div>
+  </div>
+
+  <form method="POST" action="/api/ops/tasks" class="todo-create">
+    <input type="hidden" name="action" value="create" />
+    <input class="ops-input" name="title" placeholder="Nouvelle tâche…" required />
+    <select class="ops-select" name="assignee">
+      {OWNERS.map((o) => <option value={o} selected={o === 'shared'}>{OWNER_LABELS[o]}</option>)}
+    </select>
+    <input class="ops-input" type="date" name="due_date" />
+    <button type="submit" class="ops-btn ops-btn-primary">Ajouter</button>
+  </form>
+
+  <div class="todo-filters">
+    <a href="/ops/todo" class={`todo-filter${!filterAssignee && !showDone ? ' active' : ''}`}>Toutes</a>
+    {OWNERS.map((o) => (
+      <a href={`/ops/todo?assignee=${o}`} class={`todo-filter${filterAssignee === o ? ' active' : ''}`}>{OWNER_LABELS[o]}</a>
+    ))}
+    <a href={`/ops/todo?done=1${filterAssignee ? `&assignee=${filterAssignee}` : ''}`} class={`todo-filter${showDone ? ' active' : ''}`}>Inclure faites</a>
+  </div>
+
+  <div class="ops-card">
+    {tasks.length === 0 ? (
+      <div class="ops-empty">Pas de tâche {filterAssignee ? `pour ${OWNER_LABELS[filterAssignee as any]}` : ''}.</div>
+    ) : (
+      <ul class="task-list">
+        {tasks.map((t) => (
+          <li class={`task-row${t.done ? ' done' : ''}${isOverdue(t) ? ' overdue' : ''}`}>
+            <form method="POST" action="/api/ops/tasks" style="display:inline">
+              <input type="hidden" name="action" value="toggle" />
+              <input type="hidden" name="id" value={t.id} />
+              <input type="hidden" name="done" value={String(!t.done)} />
+              <button type="submit" class={`task-check${t.done ? ' checked' : ''}`} aria-label="Toggle"></button>
+            </form>
+            <div class="task-main">
+              <div class="task-title">{t.title}</div>
+              {t.prospects?.club_name && (
+                <a href={`/ops/prospects/${t.prospect_id}`} class="task-club">→ {t.prospects.club_name}</a>
+              )}
+            </div>
+            <span class="ops-tag">{OWNER_LABELS[t.assignee]}</span>
+            <span class="task-due">{fmtDate(t.due_date)}</span>
+            <form method="POST" action="/api/ops/tasks" style="display:inline">
+              <input type="hidden" name="action" value="delete" />
+              <input type="hidden" name="id" value={t.id} />
+              <button type="submit" class="task-delete" aria-label="Supprimer" onclick="return confirm('Supprimer cette tâche ?')">×</button>
+            </form>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</OpsLayout>
+
+<style>
+  .todo-create {
+    display: grid;
+    grid-template-columns: 1fr 160px 160px auto;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 700px) {
+    .todo-create { grid-template-columns: 1fr; }
+  }
+  .todo-filters {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .todo-filter {
+    padding: 6px 12px;
+    border-radius: 999px;
+    text-decoration: none;
+    color: var(--muted);
+    font-size: 13px;
+    background: var(--line-soft);
+  }
+  .todo-filter.active {
+    background: var(--primary);
+    color: var(--bg);
+  }
+
+  .task-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+  .task-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 14px;
+  }
+  .task-row:last-child { border-bottom: 0; }
+  .task-row.done .task-title { color: var(--muted-soft); text-decoration: line-through; }
+  .task-row.overdue .task-due { color: #DC2626; font-weight: 500; }
+
+  .task-check {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+    background: var(--bg);
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .task-check.checked {
+    background: var(--primary-soft);
+    border-color: var(--primary-soft);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'><path d='M6.5 11L3.5 8l1-1 2 2 4-4 1 1z'/></svg>");
+    background-size: 14px;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  .task-main { display: flex; flex-direction: column; gap: 2px; }
+  .task-title { color: var(--ink); }
+  .task-club { font-size: 12px; color: var(--primary-soft); text-decoration: none; }
+  .task-club:hover { text-decoration: underline; }
+  .task-due {
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    min-width: 56px;
+    text-align: right;
+  }
+  .task-delete {
+    background: none;
+    border: none;
+    color: var(--muted-soft);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+  }
+  .task-delete:hover { color: #DC2626; }
+</style>

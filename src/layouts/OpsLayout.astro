@@ -1,0 +1,271 @@
+---
+import '../styles/tokens.css';
+
+interface Props {
+  title: string;
+  active?: 'home' | 'prospects' | 'todo' | 'signups';
+}
+
+const { title, active } = Astro.props;
+const user = Astro.locals.user;
+
+const nav = [
+  { id: 'home', label: 'Vue d\'ensemble', href: '/ops' },
+  { id: 'prospects', label: 'CRM', href: '/ops/prospects' },
+  { id: 'todo', label: 'Todo partagée', href: '/ops/todo' },
+  { id: 'signups', label: 'Leads CTA', href: '/ops/signups' },
+] as const;
+---
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>{title} — Klubba Ops</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+  <header class="ops-header">
+    <div class="ops-header-inner">
+      <a href="/ops" class="ops-brand">
+        <span class="ops-brand-mark">K</span>
+        <span class="ops-brand-text">Klubba Ops</span>
+      </a>
+      <nav class="ops-nav">
+        {nav.map((item) => (
+          <a href={item.href} class={`ops-nav-link${active === item.id ? ' active' : ''}`}>
+            {item.label}
+          </a>
+        ))}
+      </nav>
+      <div class="ops-user">
+        {user && <span class="ops-user-email">{user.email}</span>}
+        <a href="/ops/auth/signout" class="ops-signout">Déconnexion</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="ops-main">
+    <slot />
+  </main>
+</body>
+</html>
+
+<style is:global>
+  body {
+    margin: 0;
+    background: #F8FAF8;
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  a { color: inherit; }
+
+  .ops-header {
+    background: var(--primary-deep);
+    color: var(--bg);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .ops-header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 14px 24px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 24px;
+  }
+  .ops-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--bg);
+    font-weight: 600;
+  }
+  .ops-brand-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--primary-deep);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-serif);
+    font-size: 16px;
+  }
+  .ops-brand-text {
+    letter-spacing: 0.02em;
+  }
+  .ops-nav {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+  }
+  .ops-nav-link {
+    padding: 8px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: rgba(255,255,255,0.72);
+    font-size: 14px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .ops-nav-link:hover { color: var(--bg); background: rgba(255,255,255,0.06); }
+  .ops-nav-link.active { color: var(--bg); background: rgba(212,165,116,0.18); }
+
+  .ops-user {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 13px;
+  }
+  .ops-user-email {
+    color: rgba(255,255,255,0.65);
+  }
+  .ops-signout {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .ops-signout:hover { text-decoration: underline; }
+
+  .ops-main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* ---- Common ops UI primitives ---- */
+  .ops-page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .ops-page-title {
+    font-family: var(--font-serif);
+    font-size: 28px;
+    color: var(--primary);
+    margin: 0;
+  }
+  .ops-page-subtitle {
+    color: var(--muted);
+    margin: 6px 0 0;
+    font-size: 14px;
+  }
+
+  .ops-card {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 2px rgba(15,42,30,0.04);
+  }
+  .ops-card h2 {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    margin: 0 0 12px;
+    color: var(--primary);
+  }
+
+  .ops-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .ops-btn:hover { background: var(--bg-soft); border-color: var(--primary-soft); }
+  .ops-btn-primary {
+    background: var(--primary);
+    color: var(--bg);
+    border-color: var(--primary);
+  }
+  .ops-btn-primary:hover { background: var(--primary-deep); border-color: var(--primary-deep); }
+  .ops-btn-ghost {
+    border-color: transparent;
+    background: transparent;
+    color: var(--muted);
+  }
+  .ops-btn-ghost:hover { background: var(--line-soft); color: var(--ink); }
+
+  .ops-input,
+  .ops-select,
+  .ops-textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    font-size: 14px;
+    font-family: var(--font-sans);
+    color: var(--ink);
+  }
+  .ops-input:focus,
+  .ops-select:focus,
+  .ops-textarea:focus {
+    outline: none;
+    border-color: var(--primary-soft);
+    box-shadow: 0 0 0 3px rgba(45,106,79,0.15);
+  }
+  .ops-textarea { resize: vertical; min-height: 80px; }
+
+  .ops-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+
+  .ops-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--line-soft);
+    color: var(--ink-soft);
+  }
+
+  .ops-empty {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .ops-flash {
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+  .ops-flash-ok {
+    background: #ECFDF5;
+    border: 1px solid #A7F3D0;
+    color: #065F46;
+  }
+  .ops-flash-err {
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #991B1B;
+  }
+</style>
