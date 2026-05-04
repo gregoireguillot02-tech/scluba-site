@@ -3,6 +3,7 @@ export const prerender = false;
 
 import OpsLayout from '../../../layouts/OpsLayout.astro';
 import { serviceClient } from '../../../lib/supabase';
+import { isValidUuid } from '../../../lib/validators';
 import {
   PROSPECT_STATUSES,
   STATUS_LABELS,
@@ -17,6 +18,9 @@ import {
 } from '../../../lib/ops-types';
 
 const { id } = Astro.params;
+if (!isValidUuid(id)) {
+  return Astro.redirect('/ops/prospects', 302);
+}
 const sb = serviceClient();
 
 const [{ data: prospect }, { data: events }, { data: tasks }] = await Promise.all([
