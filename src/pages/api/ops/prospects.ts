@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { serviceClient, isAllowedEmail } from '../../../lib/supabase';
 import { PROSPECT_STATUSES, OWNERS, type ProspectStatus, type Owner } from '../../../lib/ops-types';
+import { isValidUuid } from '../../../lib/validators';
 
 export const prerender = false;
 
@@ -50,7 +51,10 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
         })
         .select('id')
         .single();
-      if (error) return new Response(`Create failed: ${error.message}`, { status: 500 });
+      if (error) {
+        console.error('[api/ops/prospects] create failed', error);
+        return new Response('Create failed', { status: 500 });
+      }
 
       await sb.from('prospect_events').insert({
         prospect_id: data.id,
@@ -64,10 +68,17 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
 
     if (action === 'update') {
       const id = String(form.get('id') ?? '');
-      if (!id) return new Response('id required', { status: 400 });
+      if (!isValidUuid(id)) return new Response('invalid id', { status: 400 });
 
       const { data: prev } = await sb.from('prospects').select('status').eq('id', id).maybeSingle();
       const newStatus = form.get('status') as ProspectStatus | null;
+      if (newStatus && !PROSPECT_STATUSES.includes(newStatus)) {
+        return new Response('bad status', { status: 400 });
+      }
+      const newOwner = form.get('owner') as Owner | null;
+      if (newOwner && !OWNERS.includes(newOwner)) {
+        return new Response('bad owner', { status: 400 });
+      }
 
       const updates = {
         club_name: String(form.get('club_name') ?? '').trim(),
@@ -77,13 +88,16 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
         city: nullable(form.get('city')),
         region: nullable(form.get('region')),
         status: newStatus ?? undefined,
-        owner: (form.get('owner') as Owner | null) ?? undefined,
+        owner: newOwner ?? undefined,
         source: nullable(form.get('source')),
         notes: nullable(form.get('notes')),
       };
 
       const { error } = await sb.from('prospects').update(updates).eq('id', id);
-      if (error) return new Response(`Update failed: ${error.message}`, { status: 500 });
+      if (error) {
+        console.error('[api/ops/prospects] update failed', error);
+        return new Response('Update failed', { status: 500 });
+      }
 
       if (prev && newStatus && prev.status !== newStatus) {
         await sb.from('prospect_events').insert({
@@ -99,14 +113,18 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
 
     if (action === 'delete') {
       const id = String(form.get('id') ?? '');
-      if (!id) return new Response('id required', { status: 400 });
+      if (!isValidUuid(id)) return new Response('invalid id', { status: 400 });
       const { error } = await sb.from('prospects').delete().eq('id', id);
-      if (error) return new Response(`Delete failed: ${error.message}`, { status: 500 });
+      if (error) {
+        console.error('[api/ops/prospects] delete failed', error);
+        return new Response('Delete failed', { status: 500 });
+      }
       return redirect('/ops/prospects', 302);
     }
 
-    return new Response(`Unknown action: ${action}`, { status: 400 });
+    return new Response('Bad request', { status: 400 });
   } catch (e) {
-    return new Response(`Error: ${(e as Error).message}`, { status: 500 });
+    console.error('[api/ops/prospects] unexpected', e);
+    return new Response('Internal error', { status: 500 });
   }
 };

@@ -18,7 +18,12 @@ const sb = serviceClient();
 const url = Astro.url;
 const filterStatus = url.searchParams.get('status') as ProspectStatus | null;
 const filterOwner = url.searchParams.get('owner');
-const search = (url.searchParams.get('q') ?? '').trim();
+// Cap length and strip characters that would break PostgREST's `or()` filter syntax
+// (commas separate conditions, parens group them, asterisks are wildcards).
+const search = (url.searchParams.get('q') ?? '')
+  .trim()
+  .slice(0, 100)
+  .replace(/[,()*]/g, '');
 
 let q = sb.from('prospects').select('*').order('updated_at', { ascending: false });
 if (filterStatus && PROSPECT_STATUSES.includes(filterStatus)) q = q.eq('status', filterStatus);

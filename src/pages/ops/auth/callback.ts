@@ -1,11 +1,12 @@
 import type { APIRoute } from 'astro';
+import { safeNextPath } from '../../../lib/safe-redirect';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url, locals, redirect }) => {
   const code = url.searchParams.get('code');
   const errorDescription = url.searchParams.get('error_description');
-  const next = url.searchParams.get('next') || '/ops';
+  const next = safeNextPath(url.searchParams.get('next'));
 
   if (errorDescription) {
     return redirect(`/ops/login?err=${encodeURIComponent(errorDescription)}`, 302);
@@ -19,7 +20,8 @@ export const GET: APIRoute = async ({ url, locals, redirect }) => {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    return redirect(`/ops/login?err=${encodeURIComponent(error.message)}`, 302);
+    console.error('[ops/auth/callback] exchangeCodeForSession failed', error);
+    return redirect('/ops/login?err=auth_failed', 302);
   }
 
   return redirect(next, 302);
