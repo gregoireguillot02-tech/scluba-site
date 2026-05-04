@@ -127,6 +127,23 @@ section {
   color: var(--bg);
 }
 
+/* Section header — global pattern (was scoped to ThreeSteps only,
+   causing no spacing in other sections like ClubsShowcase / FAQ / Pricing) */
+.section-header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto var(--space-8);
+}
+.section-header .section-eyebrow,
+.section-header .section-title,
+.section-header .section-lead {
+  margin-left: auto;
+  margin-right: auto;
+}
+.section-header .section-lead {
+  margin-top: var(--space-3);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
