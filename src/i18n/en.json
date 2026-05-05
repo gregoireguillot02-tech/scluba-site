@@ -221,7 +221,12 @@
       "submit": "Request the demo",
       "loading": "Sending…",
       "success": "Thanks, we'll get back to you within 24h.",
-      "error": "Oops, something went wrong. Try again or email us directly."
+      "error": "Oops, something went wrong. Try again or email us directly.",
+      "requiredHint": "All fields are required.",
+      "errors": {
+        "required": "This field is required.",
+        "email": "Invalid email address."
+      }
     },
     "qrLabel": "Scan: see a sample card"
   },

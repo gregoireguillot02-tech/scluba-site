@@ -30,19 +30,56 @@ const qrSvg = await QRCode.toString(demoUrl, {
         <form
           class="cta-form"
           data-anim="cta-form"
+          data-error-required={t.cta.form.errors.required}
+          data-error-email={t.cta.form.errors.email}
           novalidate
         >
           <div class="form-row">
             <div class="form-field">
-              <input type="text" name="name" required placeholder={t.cta.form.name} aria-label={t.cta.form.name} />
+              <label for="cta-name" class="sr-only">{t.cta.form.name}</label>
+              <input
+                id="cta-name"
+                type="text"
+                name="name"
+                required
+                aria-required="true"
+                autocomplete="name"
+                placeholder={t.cta.form.name}
+                aria-describedby="cta-name-error"
+              />
+              <span class="form-field-error" id="cta-name-error" data-field-error="name" role="alert" aria-live="polite"></span>
             </div>
             <div class="form-field">
-              <input type="text" name="club" required placeholder={t.cta.form.club} aria-label={t.cta.form.club} />
+              <label for="cta-club" class="sr-only">{t.cta.form.club}</label>
+              <input
+                id="cta-club"
+                type="text"
+                name="club"
+                required
+                aria-required="true"
+                autocomplete="organization"
+                placeholder={t.cta.form.club}
+                aria-describedby="cta-club-error"
+              />
+              <span class="form-field-error" id="cta-club-error" data-field-error="club" role="alert" aria-live="polite"></span>
             </div>
           </div>
           <div class="form-field">
-            <input type="email" name="email" required placeholder={t.cta.form.email} aria-label={t.cta.form.email} />
+            <label for="cta-email" class="sr-only">{t.cta.form.email}</label>
+            <input
+              id="cta-email"
+              type="email"
+              name="email"
+              required
+              aria-required="true"
+              autocomplete="email"
+              inputmode="email"
+              placeholder={t.cta.form.email}
+              aria-describedby="cta-email-error"
+            />
+            <span class="form-field-error" id="cta-email-error" data-field-error="email" role="alert" aria-live="polite"></span>
           </div>
+          <p class="form-required-hint" aria-hidden="true">{t.cta.form.requiredHint}</p>
           <button type="submit" class="btn btn-accent form-submit" data-loading={t.cta.form.loading}>
             {t.cta.form.submit}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -51,8 +88,8 @@ const qrSvg = await QRCode.toString(demoUrl, {
             </svg>
           </button>
 
-          <div class="form-success" data-form-success>{t.cta.form.success}</div>
-          <div class="form-error" data-form-error>{t.cta.form.error}</div>
+          <div class="form-success" data-form-success role="status" aria-live="polite">{t.cta.form.success}</div>
+          <div class="form-error" data-form-error role="alert" aria-live="assertive">{t.cta.form.error}</div>
         </form>
       </div>
 
@@ -135,23 +172,48 @@ const qrSvg = await QRCode.toString(demoUrl, {
     .form-row { grid-template-columns: 1fr; }
   }
 
+  .form-field {
+    position: relative;
+  }
   .form-field input {
     width: 100%;
     padding: 14px 16px;
     border-radius: var(--radius-md);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     background: rgba(255, 255, 255, 0.06);
     color: var(--bg);
     font-size: var(--text-base);
     transition: background 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
   }
   .form-field input::placeholder {
-    color: rgba(255, 255, 255, 0.45);
+    color: rgba(255, 255, 255, 0.78);
   }
   .form-field input:focus {
     outline: none;
     background: rgba(255, 255, 255, 0.12);
     border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.35);
+  }
+  .form-field input[aria-invalid="true"] {
+    border-color: #FFB4AC;
+    background: rgba(192, 57, 43, 0.10);
+  }
+  .form-field-error {
+    display: block;
+    min-height: 0;
+    margin-top: 4px;
+    font-size: var(--text-xs);
+    color: #FFB4AC;
+    line-height: 1.4;
+  }
+  .form-field-error:empty {
+    margin-top: 0;
+  }
+
+  .form-required-hint {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: rgba(255, 255, 255, 0.7);
   }
 
   .form-submit {

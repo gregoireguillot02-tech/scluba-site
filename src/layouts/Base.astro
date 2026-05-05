@@ -29,9 +29,10 @@ const t = useT(locale);
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 </head>
 <body>
+  <a href="#main" class="skip-link">{locale === 'fr' ? 'Aller au contenu' : 'Skip to content'}</a>
   <LaunchBanner locale={locale} />
   <Nav locale={locale} />
-  <main>
+  <main id="main">
     <slot />
   </main>
   <GolfBallScroll />

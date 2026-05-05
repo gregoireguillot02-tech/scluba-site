@@ -221,7 +221,12 @@
       "submit": "Demander la démo",
       "loading": "Envoi en cours…",
       "success": "Merci, on vous rappelle sous 24h.",
-      "error": "Oups, une erreur. Réessayez ou écrivez-nous directement."
+      "error": "Oups, une erreur. Réessayez ou écrivez-nous directement.",
+      "requiredHint": "Tous les champs sont requis.",
+      "errors": {
+        "required": "Ce champ est requis.",
+        "email": "Adresse email invalide."
+      }
     },
     "qrLabel": "Scannez : voir un exemple de carte"
   },
