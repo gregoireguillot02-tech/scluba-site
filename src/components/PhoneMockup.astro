@@ -408,12 +408,10 @@ const back9 = [
   /* Phone stage */
   .phone-stage {
     position: relative;
-    perspective: 2000px;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    padding: 4vh 0;
+    padding: var(--space-6) 0;
   }
   .phone-shadow {
     position: absolute;
@@ -425,10 +423,10 @@ const back9 = [
     z-index: 0;
   }
 
-  /* iPhone Pro photoréaliste — face-on, hauteur pilotée pour rester entier visible */
+  /* iPhone Pro photoréaliste — face-on, hauteur calibrée pour tenir dans le viewport */
   .phone-device {
     position: relative;
-    height: min(76vh, 680px);
+    height: min(62vh, 560px);
     aspect-ratio: 9 / 19.5;
     width: auto;
     will-change: transform;
@@ -441,9 +439,9 @@ const back9 = [
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: min(440px, 92%);
-    height: min(82vh + 60px, 760px);
-    border-radius: 40px;
+    width: min(380px, 94%);
+    height: calc(min(62vh, 560px) + 80px);
+    border-radius: 36px;
     background:
       radial-gradient(ellipse 70% 40% at 50% 95%, rgba(45, 106, 79, 0.14), transparent 70%),
       linear-gradient(160deg, #E8F2EA 0%, #D6E7DA 100%);

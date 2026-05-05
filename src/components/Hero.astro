@@ -401,11 +401,12 @@ const t = useT(locale);
 
   .hero-phone {
     position: relative;
-    width: clamp(240px, 28vw, 290px);
+    height: min(58vh, 540px);
     aspect-ratio: 9 / 19.5;
+    width: auto;
     background: linear-gradient(135deg, #5a5a5d 0%, #2a2a2c 18%, #1a1a1c 40%, #2a2a2c 60%, #4a4a4d 78%, #2a2a2c 100%);
-    border-radius: 50px;
-    padding: 11px;
+    border-radius: 46px;
+    padding: 10px;
     /* Ombre verticale propre (phone face-on, virage.one style) */
     box-shadow:
       0 32px 64px rgba(27, 67, 50, 0.28),
