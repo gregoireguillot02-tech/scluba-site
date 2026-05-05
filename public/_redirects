@@ -1,0 +1,3 @@
+# Legacy domain → primary (preserves SEO, avoids duplicate content)
+https://klubba.golf/*       https://scluba.com/:splat   301!
+https://www.klubba.golf/*   https://scluba.com/:splat   301!
