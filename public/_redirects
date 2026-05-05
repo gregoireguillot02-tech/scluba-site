@@ -1,3 +1,5 @@
-# Legacy domain → primary (preserves SEO, avoids duplicate content)
-https://klubba.golf/*       https://scluba.com/:splat   301!
-https://www.klubba.golf/*   https://scluba.com/:splat   301!
+# Legacy domain → primary (preserves SEO, avoids duplicate content).
+# Use Host= conditions because Netlify ignores absolute-URL sources
+# when the alias serves the same site as the primary.
+/*  https://scluba.com/:splat  301!  Host=klubba.golf
+/*  https://scluba.com/:splat  301!  Host=www.klubba.golf
