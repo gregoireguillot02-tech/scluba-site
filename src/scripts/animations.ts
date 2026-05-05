@@ -454,6 +454,10 @@ function initCTAForm() {
       const honeypot = String(formData.get('website') ?? '').trim();
       if (honeypot) {
         if (successEl) successEl.style.display = 'block';
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '✓';
+        }
         return;
       }
 

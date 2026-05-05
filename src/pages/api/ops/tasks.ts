@@ -6,9 +6,9 @@ import { safeNextPath } from '../../../lib/safe-redirect';
 
 export const prerender = false;
 
-function nullable(v: FormDataEntryValue | null): string | null {
+function nullable(v: FormDataEntryValue | null, maxLen = 1000): string | null {
   if (v == null) return null;
-  const s = String(v).trim();
+  const s = String(v).trim().slice(0, maxLen);
   return s === '' ? null : s;
 }
 
@@ -42,9 +42,9 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
 
     const { error } = await sb.from('tasks').insert({
       title,
-      description: nullable(form.get('description')),
+      description: nullable(form.get('description'), 4000),
       assignee,
-      due_date: nullable(form.get('due_date')),
+      due_date: nullable(form.get('due_date'), 32),
       prospect_id: prospectIdRaw,
       created_by: user.email,
     });

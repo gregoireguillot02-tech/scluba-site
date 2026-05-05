@@ -14,7 +14,11 @@ const ERR_MESSAGES: Record<string, string> = {
   missing_code: 'Lien invalide ou expiré. Redemande un nouveau lien.',
   auth_failed: 'Échec de la connexion. Redemande un nouveau lien.',
 };
-const safeErr = errMsg && ERR_MESSAGES[errMsg] ? ERR_MESSAGES[errMsg] : null;
+// Use Object.hasOwn so prototype keys ("constructor", "toString", etc.) cannot
+// leak the prototype's value into the page.
+const safeErr = errMsg && Object.hasOwn(ERR_MESSAGES, errMsg)
+  ? ERR_MESSAGES[errMsg]
+  : (errMsg ? ERR_MESSAGES.auth_failed : null);
 
 let formError: string | null = null;
 const formSent = sent;

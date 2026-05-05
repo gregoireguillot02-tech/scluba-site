@@ -9,9 +9,9 @@ function backTo(url: URL, fallback = '/ops/prospects'): string {
   return url.searchParams.get('return_to') || fallback;
 }
 
-function nullable(value: FormDataEntryValue | null): string | null {
+function nullable(value: FormDataEntryValue | null, maxLen = 1000): string | null {
   if (value == null) return null;
-  const s = String(value).trim();
+  const s = String(value).trim().slice(0, maxLen);
   return s === '' ? null : s;
 }
 
@@ -27,7 +27,7 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
 
   try {
     if (action === 'create') {
-      const club_name = String(form.get('club_name') ?? '').trim();
+      const club_name = String(form.get('club_name') ?? '').trim().slice(0, 255);
       if (!club_name) return new Response('club_name required', { status: 400 });
 
       const status = (form.get('status') as ProspectStatus | null) ?? 'to_contact';
@@ -39,15 +39,15 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
         .from('prospects')
         .insert({
           club_name,
-          contact_name: nullable(form.get('contact_name')),
-          email: nullable(form.get('email')),
-          phone: nullable(form.get('phone')),
-          city: nullable(form.get('city')),
-          region: nullable(form.get('region')),
+          contact_name: nullable(form.get('contact_name'), 255),
+          email: nullable(form.get('email'), 320),
+          phone: nullable(form.get('phone'), 64),
+          city: nullable(form.get('city'), 120),
+          region: nullable(form.get('region'), 120),
           status,
           owner,
-          source: nullable(form.get('source')),
-          notes: nullable(form.get('notes')),
+          source: nullable(form.get('source'), 255),
+          notes: nullable(form.get('notes'), 4000),
         })
         .select('id')
         .single();
@@ -80,17 +80,20 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
         return new Response('bad owner', { status: 400 });
       }
 
+      const club_name = String(form.get('club_name') ?? '').trim().slice(0, 255);
+      if (!club_name) return new Response('club_name required', { status: 400 });
+
       const updates = {
-        club_name: String(form.get('club_name') ?? '').trim(),
-        contact_name: nullable(form.get('contact_name')),
-        email: nullable(form.get('email')),
-        phone: nullable(form.get('phone')),
-        city: nullable(form.get('city')),
-        region: nullable(form.get('region')),
+        club_name,
+        contact_name: nullable(form.get('contact_name'), 255),
+        email: nullable(form.get('email'), 320),
+        phone: nullable(form.get('phone'), 64),
+        city: nullable(form.get('city'), 120),
+        region: nullable(form.get('region'), 120),
         status: newStatus ?? undefined,
         owner: newOwner ?? undefined,
-        source: nullable(form.get('source')),
-        notes: nullable(form.get('notes')),
+        source: nullable(form.get('source'), 255),
+        notes: nullable(form.get('notes'), 4000),
       };
 
       const { error } = await sb.from('prospects').update(updates).eq('id', id);

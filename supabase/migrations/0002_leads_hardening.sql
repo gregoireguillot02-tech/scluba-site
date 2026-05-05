@@ -1,4 +1,4 @@
--- Klubba — harden the public `leads` table (CTAForm signups).
+-- Scluba — harden the public `leads` table (CTAForm signups).
 -- Run this once in the Supabase SQL editor.
 --
 -- Background: the marketing CTAForm POSTs to Supabase with the public anon key.

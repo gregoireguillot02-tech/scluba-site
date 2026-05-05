@@ -9,7 +9,8 @@ export const GET: APIRoute = async ({ url, locals, redirect }) => {
   const next = safeNextPath(url.searchParams.get('next'));
 
   if (errorDescription) {
-    return redirect(`/ops/login?err=${encodeURIComponent(errorDescription)}`, 302);
+    console.error('[ops/auth/callback] provider error', errorDescription);
+    return redirect('/ops/login?err=auth_failed', 302);
   }
 
   if (!code) {

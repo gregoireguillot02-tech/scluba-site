@@ -43,10 +43,19 @@ const qrSvg = await QRCode.toString(demoUrl, {
           <div class="form-field">
             <input type="email" name="email" required maxlength="254" placeholder={t.cta.form.email} aria-label={t.cta.form.email} />
           </div>
-          {/* Honeypot — hidden from humans, ignored by them, but bots fill it. */}
-          <div class="hp-field" aria-hidden="true">
-            <label>Site web (laisser vide)
-              <input type="text" name="website" tabindex="-1" autocomplete="off" />
+          {/* Honeypot — visually hidden, not focusable, autofill-resistant.
+              No aria-hidden on the wrapper (would conflict with the focusable
+              input per ARIA spec). The label text tells assistive tech to skip it. */}
+          <div class="hp-field">
+            <label>
+              Ne pas remplir ce champ
+              <input
+                type="text"
+                name="website"
+                tabindex="-1"
+                autocomplete="new-password"
+                aria-hidden="true"
+              />
             </label>
           </div>
           <button type="submit" class="btn btn-accent form-submit" data-loading={t.cta.form.loading}>
