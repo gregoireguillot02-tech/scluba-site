@@ -1,5 +1,6 @@
 ---
 import { useT, type Locale } from '../i18n';
+import PhoneAtmosphere from './PhoneAtmosphere.astro';
 
 interface Props {
   locale: Locale;
@@ -70,22 +71,9 @@ const back9 = [
       <div class="phone-stage" aria-hidden="true">
         <div class="phone-shadow"></div>
 
-        <!-- Putting green sous le phone (remplace l'ancien halo doré rotatif) -->
+        <!-- Atmosphère golden hour cinématique (remplace le panneau pastel) -->
         <div class="phone-green" aria-hidden="true">
-          <svg viewBox="0 0 480 220" preserveAspectRatio="none">
-            <defs>
-              <radialGradient id="phoneGreenGrad" cx="50%" cy="65%" r="60%">
-                <stop offset="0%" stop-color="#3D7A56" stop-opacity="0.42"/>
-                <stop offset="55%" stop-color="#2D6A4F" stop-opacity="0.22"/>
-                <stop offset="100%" stop-color="#1B4332" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-            <ellipse cx="240" cy="140" rx="220" ry="68" fill="url(#phoneGreenGrad)"/>
-            <ellipse cx="240" cy="140" rx="180" ry="54" fill="none" stroke="#2D6A4F" stroke-width="0.8" opacity="0.18"/>
-            <ellipse cx="240" cy="140" rx="140" ry="42" fill="none" stroke="#2D6A4F" stroke-width="0.8" opacity="0.22"/>
-            <ellipse cx="240" cy="140" rx="100" ry="30" fill="none" stroke="#2D6A4F" stroke-width="0.8" opacity="0.26"/>
-            <ellipse cx="240" cy="140" rx="60" ry="18" fill="none" stroke="#2D6A4F" stroke-width="0.8" opacity="0.30"/>
-          </svg>
+          <PhoneAtmosphere variant="full" id="mockup" />
         </div>
 
         <div class="phone-device" data-phone>
@@ -433,7 +421,7 @@ const back9 = [
     z-index: 2;
   }
 
-  /* === Panneau pastel virage.one : snug autour du phone === */
+  /* === Panneau atmosphère golden hour : container snug autour du phone === */
   .phone-green {
     position: absolute;
     left: 50%;
@@ -443,14 +431,14 @@ const back9 = [
     max-width: 92%;
     height: calc(min(70vh, 620px) + 70px);
     border-radius: 32px;
-    background:
-      radial-gradient(ellipse 70% 40% at 50% 95%, rgba(45, 106, 79, 0.14), transparent 70%),
-      linear-gradient(160deg, #E8F2EA 0%, #D6E7DA 100%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    overflow: hidden;
+    box-shadow:
+      0 24px 56px rgba(15, 42, 30, 0.18),
+      0 8px 16px rgba(15, 42, 30, 0.10),
+      inset 0 1px 0 rgba(255, 228, 181, 0.35);
     pointer-events: none;
     z-index: 1;
   }
-  .phone-green svg { display: none; }
 
   .phone-frame {
     position: relative;

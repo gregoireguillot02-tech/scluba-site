@@ -1,0 +1,181 @@
+---
+// Atmosphère golden hour cinématique derrière les phones (Hero + magic-moment).
+// Couches : ciel dégradé → sun glow → sun shafts → far/mid/near hills → particules.
+// Animations continues : CSS keyframes (sun breath, shaft drift, particle float).
+// Animation scroll-driven (variant="full" uniquement) : parallax hills + shafts opacity.
+//   → câblée par initPhoneAtmosphere() dans src/scripts/animations.ts.
+//
+// Pas de plugin GSAP payant. Respect prefers-reduced-motion. Mobile : couches dégradées.
+
+interface Props {
+  /** "full" = magic-moment (avec parallax scroll-driven). "compact" = hero (ambiant only). */
+  variant?: 'full' | 'compact';
+  /** Suffixe id pour éviter les collisions SVG quand plusieurs instances coexistent. */
+  id?: string;
+}
+
+const { variant = 'full', id = variant } = Astro.props;
+const skyId = `atmo-sky-${id}`;
+const sunId = `atmo-sun-${id}`;
+---
+
+<div class={`atmosphere atmosphere-${variant}`} data-atmosphere={variant} aria-hidden="true">
+  <svg class="atmosphere-svg" viewBox="0 0 480 800" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <!-- Ciel dégradé : forest top → forest mid → honey horizon -->
+      <linearGradient id={skyId} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1B4332"/>
+        <stop offset="40%" stop-color="#2D6A4F"/>
+        <stop offset="78%" stop-color="#A88560"/>
+        <stop offset="100%" stop-color="#D4A574"/>
+      </linearGradient>
+
+      <!-- Sun glow bas-centre -->
+      <radialGradient id={sunId} cx="50%" cy="100%" r="60%">
+        <stop offset="0%" stop-color="#FFE4B5" stop-opacity="0.95"/>
+        <stop offset="35%" stop-color="#E8C089" stop-opacity="0.55"/>
+        <stop offset="70%" stop-color="#D4A574" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="#D4A574" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+
+    <!-- 1. Ciel -->
+    <rect width="480" height="800" fill={`url(#${skyId})`}/>
+
+    <!-- 2. Sun glow (animé : breath) -->
+    <g class="atmosphere-sun">
+      <ellipse cx="240" cy="720" rx="280" ry="200" fill={`url(#${sunId})`}/>
+    </g>
+
+    <!-- 3. Sun shafts diagonaux (animés : drift) -->
+    <g class="atmosphere-shafts" style="mix-blend-mode: screen;">
+      <polygon class="atmosphere-shaft atmosphere-shaft-1"
+        points="180,800 220,800 360,200 320,200"
+        fill="#FFE4B5" opacity="0.10"/>
+      <polygon class="atmosphere-shaft atmosphere-shaft-2"
+        points="240,800 290,800 480,150 420,150"
+        fill="#FFE4B5" opacity="0.07"/>
+      <polygon class="atmosphere-shaft atmosphere-shaft-3"
+        points="60,800 110,800 220,180 160,180"
+        fill="#E8C089" opacity="0.08"/>
+    </g>
+
+    <!-- 4. Far hills — sombre forest 900, parallax léger -->
+    <path class="atmosphere-hills atmosphere-hills-far"
+      d="M0,560 C60,540 120,548 180,544 C240,540 300,536 360,548 C420,560 460,556 480,560 L480,800 L0,800 Z"
+      fill="#0F2A1E" opacity="0.78"/>
+
+    <!-- 5. Mid hills — forest 600 -->
+    <path class="atmosphere-hills atmosphere-hills-mid"
+      d="M0,620 C40,600 90,612 140,608 C200,604 260,628 320,624 C380,620 430,608 480,616 L480,800 L0,800 Z"
+      fill="#1B4332" opacity="0.85"/>
+
+    <!-- 6. Near hills — forest 700 + tip de grass -->
+    <path class="atmosphere-hills atmosphere-hills-near"
+      d="M0,690 C50,672 110,684 170,680 C230,676 290,696 340,690 C390,684 440,694 480,688 L480,800 L0,800 Z"
+      fill="#163E2D"/>
+
+    <!-- 7. Particules dorées (cachées en mobile) -->
+    <g class="atmosphere-particles">
+      <circle class="atmosphere-particle atmosphere-particle-1" cx="80" cy="320" r="2" fill="#D4A574" opacity="0.55"/>
+      <circle class="atmosphere-particle atmosphere-particle-2" cx="180" cy="240" r="1.5" fill="#E8C089" opacity="0.45"/>
+      <circle class="atmosphere-particle atmosphere-particle-3" cx="320" cy="380" r="2" fill="#D4A574" opacity="0.50"/>
+      <circle class="atmosphere-particle atmosphere-particle-4" cx="400" cy="280" r="1.5" fill="#E8C089" opacity="0.50"/>
+      <circle class="atmosphere-particle atmosphere-particle-5" cx="140" cy="440" r="1.8" fill="#D4A574" opacity="0.40"/>
+      <circle class="atmosphere-particle atmosphere-particle-6" cx="380" cy="520" r="2.2" fill="#E8C089" opacity="0.35"/>
+      <circle class="atmosphere-particle atmosphere-particle-7" cx="60" cy="180" r="1.5" fill="#FFE4B5" opacity="0.45"/>
+      <circle class="atmosphere-particle atmosphere-particle-8" cx="280" cy="160" r="1.8" fill="#D4A574" opacity="0.40"/>
+    </g>
+  </svg>
+</div>
+
+<style>
+  .atmosphere {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 0;
+  }
+  .atmosphere-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* === Animations continues (CSS keyframes, transform/opacity only) === */
+
+  /* Sun glow — respiration lente */
+  .atmosphere-sun {
+    transform-origin: 50% 90%;
+    will-change: transform, opacity;
+    animation: atmoSunBreath 9s ease-in-out infinite alternate;
+  }
+  @keyframes atmoSunBreath {
+    0%   { transform: scale(1)    translateY(0);    opacity: 0.85; }
+    100% { transform: scale(1.05) translateY(-6px); opacity: 1;    }
+  }
+
+  /* Sun shafts — dérive horizontale, 3 instances décalées */
+  .atmosphere-shaft {
+    transform-origin: 50% 100%;
+    will-change: transform, opacity;
+    animation: atmoShaftDrift 22s linear infinite;
+  }
+  .atmosphere-shaft-1 { animation-delay: 0s; }
+  .atmosphere-shaft-2 { animation-delay: -7s; }
+  .atmosphere-shaft-3 { animation-delay: -14s; }
+  @keyframes atmoShaftDrift {
+    0%, 100% { transform: translateX(-12px) skewX(0.5deg); opacity: 0.8; }
+    50%      { transform: translateX(12px)  skewX(-0.5deg); opacity: 1;   }
+  }
+
+  /* Particles — float ascendant + fondu */
+  .atmosphere-particle {
+    will-change: transform, opacity;
+    animation: atmoParticleFloat 14s linear infinite;
+  }
+  .atmosphere-particle-1 { animation-delay: 0s;    animation-duration: 13s; }
+  .atmosphere-particle-2 { animation-delay: -3s;   animation-duration: 16s; }
+  .atmosphere-particle-3 { animation-delay: -6s;   animation-duration: 12s; }
+  .atmosphere-particle-4 { animation-delay: -9s;   animation-duration: 17s; }
+  .atmosphere-particle-5 { animation-delay: -2s;   animation-duration: 15s; }
+  .atmosphere-particle-6 { animation-delay: -7s;   animation-duration: 14s; }
+  .atmosphere-particle-7 { animation-delay: -11s;  animation-duration: 18s; }
+  .atmosphere-particle-8 { animation-delay: -5s;   animation-duration: 13s; }
+  @keyframes atmoParticleFloat {
+    0%   { transform: translateY(0)    translateX(0);    opacity: 0;   }
+    20%  { opacity: 0.6; }
+    50%  { transform: translateY(-30px) translateX(8px); opacity: 0.5; }
+    80%  { opacity: 0.4; }
+    100% { transform: translateY(-60px) translateX(-4px); opacity: 0; }
+  }
+
+  /* Hills parallax (anim ScrollTrigger) — état initial neutre */
+  .atmosphere-hills {
+    will-change: transform;
+  }
+
+  /* Variant compact (Hero) — moins dense, sun plus petit */
+  .atmosphere-compact .atmosphere-sun ellipse { ry: 160; }
+  .atmosphere-compact .atmosphere-shaft-3 { display: none; }
+
+  /* Mobile : dégrader couches non-essentielles */
+  @media (max-width: 640px) {
+    .atmosphere-particles { display: none; }
+    .atmosphere-shaft { opacity: 0.04 !important; }
+  }
+
+  /* Reduced motion : freeze tous les keyframes (le reset global le fait déjà
+     via *, mais on neutralise aussi les transforms WAAPI pour clarté) */
+  @media (prefers-reduced-motion: reduce) {
+    .atmosphere-sun,
+    .atmosphere-shaft,
+    .atmosphere-particle,
+    .atmosphere-hills {
+      animation: none !important;
+      transform: none !important;
+    }
+  }
+</style>
