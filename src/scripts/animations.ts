@@ -564,8 +564,8 @@ function initGolfBallScroll() {
 }
 
 /* ---------- ATMOSPHERE PARALLAX (magic-moment) ---------- */
-// Donne de la profondeur au panneau golden hour : les hills bougent à des
-// vitesses différentes (back lent, near rapide) au fil du scroll de la section.
+// Donne de la profondeur au panneau cinématique : couches abstraites parallaxées
+// au fil du scroll (sun glow lent, contours moyen, particules rapides).
 function initPhoneAtmosphere() {
   const wrap = document.querySelector<HTMLElement>('[data-anim="phone-wrap"]');
   if (!wrap) return;
@@ -573,12 +573,12 @@ function initPhoneAtmosphere() {
   if (!atmo) return;
 
   const mm = gsap.matchMedia();
-  // Reduced motion → on skip le parallax (les keyframes CSS sont déjà neutralisés)
   mm.add('(prefers-reduced-motion: no-preference)', () => {
-    const far = atmo.querySelector('.atmosphere-hills-far');
-    const mid = atmo.querySelector('.atmosphere-hills-mid');
-    const near = atmo.querySelector('.atmosphere-hills-near');
+    const sun = atmo.querySelector('.atmosphere-sun');
+    const aurora = atmo.querySelector('.atmosphere-aurora');
+    const contours = atmo.querySelector('.atmosphere-contours');
     const shafts = atmo.querySelector('.atmosphere-shafts');
+    const particles = atmo.querySelector('.atmosphere-particles');
 
     const trigger = {
       trigger: wrap,
@@ -587,11 +587,13 @@ function initPhoneAtmosphere() {
       scrub: 0.8,
     };
 
-    if (far) gsap.to(far, { y: -8, ease: 'none', scrollTrigger: trigger });
-    if (mid) gsap.to(mid, { y: -18, ease: 'none', scrollTrigger: trigger });
-    if (near) gsap.to(near, { y: -32, ease: 'none', scrollTrigger: trigger });
+    // Parallax depth : couches arrière lentes, avant rapides
+    if (sun) gsap.to(sun, { y: -10, ease: 'none', scrollTrigger: trigger });
+    if (aurora) gsap.to(aurora, { y: -20, ease: 'none', scrollTrigger: trigger });
+    if (contours) gsap.to(contours, { y: -36, ease: 'none', scrollTrigger: trigger });
+    if (particles) gsap.to(particles, { y: -56, ease: 'none', scrollTrigger: trigger });
 
-    // Sun shafts : montée d'intensité au passage de la section
+    // Rays : intensité monte au passage central de la section
     if (shafts) {
       gsap.fromTo(
         shafts,
