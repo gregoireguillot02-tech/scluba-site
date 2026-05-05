@@ -367,7 +367,7 @@ const t = useT(locale);
   }
   .hero-phone-stage {
     position: relative;
-    padding: 56px 64px 48px;
+    padding: 36px 32px;
   }
   /* Panneau vert pastel derrière le phone (style virage.one) */
   .hero-phone-green {
@@ -375,7 +375,7 @@ const t = useT(locale);
     inset: 0;
     pointer-events: none;
     z-index: 0;
-    border-radius: 32px;
+    border-radius: 28px;
     background:
       radial-gradient(ellipse 60% 40% at 50% 90%, rgba(45, 106, 79, 0.12), transparent 70%),
       linear-gradient(160deg, #E8F2EA 0%, #D6E7DA 100%);
@@ -401,7 +401,7 @@ const t = useT(locale);
 
   .hero-phone {
     position: relative;
-    height: min(58vh, 540px);
+    height: min(64vh, 580px);
     aspect-ratio: 9 / 19.5;
     width: auto;
     background: linear-gradient(135deg, #5a5a5d 0%, #2a2a2c 18%, #1a1a1c 40%, #2a2a2c 60%, #4a4a4d 78%, #2a2a2c 100%);
@@ -440,10 +440,12 @@ const t = useT(locale);
     top: 9px;
     left: 50%;
     transform: translateX(-50%);
-    width: 88px;
-    height: 26px;
+    width: 30%;
+    max-width: 92px;
+    min-width: 68px;
+    height: 24px;
     background: #000;
-    border-radius: 16px;
+    border-radius: 14px;
     z-index: 5;
     display: flex;
     align-items: center;
