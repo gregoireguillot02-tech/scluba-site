@@ -10,7 +10,7 @@ const { locale } = Astro.props;
 const t = useT(locale);
 
 // QR fonctionnel — pointe vers la page de démo "Golf du Soleil" (carte récap fictive).
-const demoUrl = (import.meta.env.PUBLIC_DEMO_URL as string | undefined) ?? 'https://klubba.golf/demo';
+const demoUrl = (import.meta.env.PUBLIC_DEMO_URL as string | undefined) ?? 'https://scluba.com/demo';
 const qrSvg = await QRCode.toString(demoUrl, {
   type: 'svg',
   errorCorrectionLevel: 'M',

@@ -2,4 +2,4 @@ User-agent: *
 Disallow: /ops/
 Disallow: /api/ops/
 
-Sitemap: https://klubba.golf/sitemap-index.xml
+Sitemap: https://scluba.com/sitemap-index.xml

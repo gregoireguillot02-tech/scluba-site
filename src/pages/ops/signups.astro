@@ -23,7 +23,7 @@ function fmtDateTime(iso: string): string {
   <div class="ops-page-header">
     <div>
       <h1 class="ops-page-title">Leads CTA publique</h1>
-      <p class="ops-page-subtitle">{leads.length} signup{leads.length > 1 ? 's' : ''} via klubba.golf — table <code>leads</code></p>
+      <p class="ops-page-subtitle">{leads.length} signup{leads.length > 1 ? 's' : ''} via scluba.com — table <code>leads</code></p>
     </div>
   </div>
 
@@ -57,7 +57,7 @@ function fmtDateTime(iso: string): string {
                   <input type="hidden" name="club_name" value={l.club} />
                   <input type="hidden" name="contact_name" value={l.name} />
                   <input type="hidden" name="email" value={l.email} />
-                  <input type="hidden" name="source" value="CTA klubba.golf" />
+                  <input type="hidden" name="source" value="CTA scluba.com" />
                   <button type="submit" class="ops-btn ops-btn-ghost" style="font-size:12px; padding:4px 10px">→ Ajouter au CRM</button>
                 </form>
               </td>

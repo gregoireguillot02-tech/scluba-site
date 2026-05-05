@@ -1,7 +1,7 @@
 /*
- * Klubba design tokens
+ * Scluba design tokens
  *
- * Theme: Klubba Greenroom v1
+ * Theme: Scluba Greenroom v1
  *   Forest fairway + golden-hour honey + cream country-club.
  *   Editorial / premium / chaleureux. Pas de purple gradient, pas d'Inter,
  *   pas de full-centered. Anti-AI-slop.
@@ -9,7 +9,7 @@
  * Inspired by: Forest Canopy × Golden Hour (theme-factory).
  */
 :root {
-  /* === Couleurs (Klubba Greenroom) === */
+  /* === Couleurs (Scluba Greenroom) === */
   --primary: #1B4332;       /* Forest 800 — heading + brand */
   --primary-soft: #2D6A4F;  /* Forest 600 — secondary text */
   --primary-bg: #F4F8F5;    /* Forest 50 — hero wash */
