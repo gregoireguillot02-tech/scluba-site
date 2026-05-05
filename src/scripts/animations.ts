@@ -563,12 +563,61 @@ function initGolfBallScroll() {
   }
 }
 
+/* ---------- ATMOSPHERE PARALLAX (magic-moment) ---------- */
+// Donne de la profondeur au panneau golden hour : les hills bougent à des
+// vitesses différentes (back lent, near rapide) au fil du scroll de la section.
+function initPhoneAtmosphere() {
+  const wrap = document.querySelector<HTMLElement>('[data-anim="phone-wrap"]');
+  if (!wrap) return;
+  const atmo = wrap.querySelector<HTMLElement>('[data-atmosphere="full"]');
+  if (!atmo) return;
+
+  const mm = gsap.matchMedia();
+  // Reduced motion → on skip le parallax (les keyframes CSS sont déjà neutralisés)
+  mm.add('(prefers-reduced-motion: no-preference)', () => {
+    const far = atmo.querySelector('.atmosphere-hills-far');
+    const mid = atmo.querySelector('.atmosphere-hills-mid');
+    const near = atmo.querySelector('.atmosphere-hills-near');
+    const shafts = atmo.querySelector('.atmosphere-shafts');
+
+    const trigger = {
+      trigger: wrap,
+      start: 'top bottom',
+      end: 'bottom top',
+      scrub: 0.8,
+    };
+
+    if (far) gsap.to(far, { y: -8, ease: 'none', scrollTrigger: trigger });
+    if (mid) gsap.to(mid, { y: -18, ease: 'none', scrollTrigger: trigger });
+    if (near) gsap.to(near, { y: -32, ease: 'none', scrollTrigger: trigger });
+
+    // Sun shafts : montée d'intensité au passage de la section
+    if (shafts) {
+      gsap.fromTo(
+        shafts,
+        { opacity: 0.7 },
+        {
+          opacity: 1,
+          ease: 'sine.inOut',
+          scrollTrigger: {
+            trigger: wrap,
+            start: 'top 70%',
+            end: 'bottom 30%',
+            scrub: 1.2,
+          },
+        }
+      );
+    }
+  });
+}
+
 /* ---------- INIT ---------- */
 function initAll() {
   initHero();
   initProblem();
   initSteps();
   initPhone();
+  initPhoneAtmosphere();
   initShowcase();
   initHow();
   initPricing();
