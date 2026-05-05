@@ -30,7 +30,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
   await sb.from('prospect_events').insert({
     prospect_id: data.id,
     type: 'note',
-    body: 'Importé depuis le formulaire CTA klubba.golf',
+    body: 'Importé depuis le formulaire CTA scluba.golf',
     author: user.email,
   });
 

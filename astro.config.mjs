@@ -4,7 +4,7 @@ import netlify from '@astrojs/netlify';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://klubba.golf',
+  site: 'https://scluba.golf',
   output: 'static',
   adapter: netlify(),
   i18n: {

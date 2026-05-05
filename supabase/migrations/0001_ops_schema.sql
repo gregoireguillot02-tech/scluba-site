@@ -1,4 +1,4 @@
--- Klubba — schema for the internal ops dashboard.
+-- Scluba — schema for the internal ops dashboard.
 -- Run this once in the Supabase SQL editor.
 
 -- 1. Pipeline statuses (8 stages, ordered).

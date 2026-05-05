@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "Klubba — La scorecard digitale brandée pour votre club de golf",
-    "description": "Vos joueurs jouent. Votre club rayonne. Klubba transforme chaque partie en visibilité sociale pour votre golf — sans app à installer."
+    "title": "Scluba — La scorecard digitale brandée pour votre club de golf",
+    "description": "Vos joueurs jouent. Votre club rayonne. Scluba transforme chaque partie en visibilité sociale pour votre golf — sans app à installer."
   },
   "launch": {
     "tag": "Offre de lancement",
@@ -31,7 +31,7 @@
   },
   "steps": {
     "eyebrow": "La solution",
-    "title": "Klubba en 3 gestes",
+    "title": "Scluba en 3 gestes",
     "lead": "Une mécanique simple, pensée pour le club et le joueur. Aucune installation, aucune complexité côté équipe.",
     "items": [
       {
@@ -85,7 +85,7 @@
     "share": {
       "ctaButton": "Partager",
       "sheetTitle": "Partager la carte",
-      "sheetSubtitle": "klubba.golf",
+      "sheetSubtitle": "scluba.golf",
       "previewLabel": "Carte récapitulative · 18 trous",
       "previewName": "Golf du Soleil — 87 (+15)",
       "contacts": [
@@ -100,7 +100,7 @@
       "linkCopied": "Lien copié !"
     },
     "gpsLabel": "Tracé GPS du parcours",
-    "footer": "Partagé depuis Klubba · Golf du Soleil · #GolfDuSoleil"
+    "footer": "Partagé depuis Scluba · Golf du Soleil · #GolfDuSoleil"
   },
   "showcase": {
     "eyebrow": "Sur-mesure",
@@ -193,7 +193,7 @@
         "a": "Non. Nous partons de votre site web pour extraire automatiquement logo, couleurs et photos. Maquette livrée sous 24h, ajustée jusqu'à votre validation."
       },
       {
-        "q": "Comment suivons-nous l'usage de Klubba au club ?",
+        "q": "Comment suivons-nous l'usage de Scluba au club ?",
         "a": "Chaque mois, vous recevez par email un reporting clair : nombre de scans, parties jouées, cartes partagées sur les réseaux. Aucune interface à apprendre, aucun outil à installer côté club."
       },
       {
@@ -206,7 +206,7 @@
       },
       {
         "q": "Est-ce un outil HCP officiel FFGolf ?",
-        "a": "Non. Klubba est un outil de partie loisir et de partage social. Il complète vos outils officiels sans les remplacer."
+        "a": "Non. Scluba est un outil de partie loisir et de partage social. Il complète vos outils officiels sans les remplacer."
       }
     ]
   },
@@ -227,7 +227,7 @@
   },
   "footer": {
     "tagline": "La scorecard digitale brandée pour les clubs de golf.",
-    "rights": "© 2026 Klubba. Tous droits réservés.",
+    "rights": "© 2026 Scluba. Tous droits réservés.",
     "legal": "Mentions légales",
     "privacy": "Politique de confidentialité",
     "contact": "Contact"
