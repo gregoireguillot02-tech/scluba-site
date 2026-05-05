@@ -1,90 +1,116 @@
 ---
-// Atmosphère golden hour cinématique derrière les phones (Hero + magic-moment).
-// Couches : ciel dégradé → sun glow → sun shafts → far/mid/near hills → particules.
-// Animations continues : CSS keyframes (sun breath, shaft drift, particle float).
-// Animation scroll-driven (variant="full" uniquement) : parallax hills + shafts opacity.
-//   → câblée par initPhoneAtmosphere() dans src/scripts/animations.ts.
+// Atmosphère cinématique abstraite (terminal-industries vibe) derrière les phones.
+// Pas de hills figuratifs : mesh gradient diagonal + soleil + courbes de niveau
+// (signal golf course map) + rayons + particules. Tout en SVG/CSS, pas de canvas.
 //
-// Pas de plugin GSAP payant. Respect prefers-reduced-motion. Mobile : couches dégradées.
+// Animations continues : sun breath, contour drift, ray dance, particle float.
+// Animation scroll-driven (variant=full) : parallax léger sur contours + rays
+//   → câblé par initPhoneAtmosphere() dans src/scripts/animations.ts.
 
 interface Props {
-  /** "full" = magic-moment (avec parallax scroll-driven). "compact" = hero (ambiant only). */
+  /** "full" = magic-moment (avec parallax scroll). "compact" = hero (ambiant only). */
   variant?: 'full' | 'compact';
-  /** Suffixe id pour éviter les collisions SVG quand plusieurs instances coexistent. */
+  /** Suffixe id pour éviter collisions SVG. */
   id?: string;
 }
 
 const { variant = 'full', id = variant } = Astro.props;
 const skyId = `atmo-sky-${id}`;
 const sunId = `atmo-sun-${id}`;
+const meshId = `atmo-mesh-${id}`;
+const auroraId = `atmo-aurora-${id}`;
 ---
 
 <div class={`atmosphere atmosphere-${variant}`} data-atmosphere={variant} aria-hidden="true">
   <svg class="atmosphere-svg" viewBox="0 0 480 800" preserveAspectRatio="xMidYMid slice">
     <defs>
-      <!-- Ciel dégradé : forest top → forest mid → honey horizon -->
-      <linearGradient id={skyId} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#1B4332"/>
-        <stop offset="40%" stop-color="#2D6A4F"/>
-        <stop offset="78%" stop-color="#A88560"/>
-        <stop offset="100%" stop-color="#D4A574"/>
+      <!-- Mesh gradient diagonal : forest bas-gauche → honey haut-droite (lumière du soleil) -->
+      <linearGradient id={skyId} x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0%"  stop-color="#0F2A1E"/>
+        <stop offset="35%" stop-color="#1B4332"/>
+        <stop offset="68%" stop-color="#896E50"/>
+        <stop offset="92%" stop-color="#D4A574"/>
+        <stop offset="100%" stop-color="#F5E6CF"/>
       </linearGradient>
 
-      <!-- Sun glow bas-centre -->
-      <radialGradient id={sunId} cx="50%" cy="100%" r="60%">
-        <stop offset="0%" stop-color="#FFE4B5" stop-opacity="0.95"/>
-        <stop offset="35%" stop-color="#E8C089" stop-opacity="0.55"/>
-        <stop offset="70%" stop-color="#D4A574" stop-opacity="0.18"/>
+      <!-- Soleil radial haut-droite : visible AUTOUR du phone -->
+      <radialGradient id={sunId} cx="80%" cy="22%" r="55%">
+        <stop offset="0%"  stop-color="#FFF4D6" stop-opacity="0.95"/>
+        <stop offset="22%" stop-color="#FFE4B5" stop-opacity="0.65"/>
+        <stop offset="55%" stop-color="#E8C089" stop-opacity="0.25"/>
         <stop offset="100%" stop-color="#D4A574" stop-opacity="0"/>
+      </radialGradient>
+
+      <!-- Aurora : nappe de couleur qui flotte au milieu -->
+      <radialGradient id={auroraId} cx="30%" cy="60%" r="50%">
+        <stop offset="0%"  stop-color="#3D7A56" stop-opacity="0.45"/>
+        <stop offset="60%" stop-color="#2D6A4F" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="#1B4332" stop-opacity="0"/>
+      </radialGradient>
+
+      <!-- Subtle noise for mesh feel -->
+      <radialGradient id={meshId} cx="50%" cy="70%" r="80%">
+        <stop offset="0%"  stop-color="#D4A574" stop-opacity="0.08"/>
+        <stop offset="100%" stop-color="#1B4332" stop-opacity="0"/>
       </radialGradient>
     </defs>
 
-    <!-- 1. Ciel -->
+    <!-- 1. Mesh base diagonal -->
     <rect width="480" height="800" fill={`url(#${skyId})`}/>
 
-    <!-- 2. Sun glow (animé : breath) -->
-    <g class="atmosphere-sun">
-      <ellipse cx="240" cy="720" rx="280" ry="200" fill={`url(#${sunId})`}/>
+    <!-- 2. Aurora nappe (animée : float lent) -->
+    <g class="atmosphere-aurora">
+      <rect width="480" height="800" fill={`url(#${auroraId})`}/>
     </g>
 
-    <!-- 3. Sun shafts diagonaux (animés : drift) -->
+    <!-- 3. Mesh sub-glow -->
+    <rect width="480" height="800" fill={`url(#${meshId})`}/>
+
+    <!-- 4. Sun glow haut-droite (animé : breath) -->
+    <g class="atmosphere-sun">
+      <circle cx="380" cy="170" r="240" fill={`url(#${sunId})`}/>
+    </g>
+
+    <!-- 5. Topographic contours — golf course map signal, abstrait -->
+    <g class="atmosphere-contours" stroke="#FFE4B5" stroke-width="0.7" fill="none" opacity="0.22">
+      <path d="M-40,170  Q120,150 240,180 T560,150"/>
+      <path d="M-40,230  Q140,210 260,240 T560,210"/>
+      <path d="M-40,300  Q120,278 250,308 T560,278"/>
+      <path d="M-40,380  Q150,360 270,390 T560,358"/>
+      <path d="M-40,470  Q140,448 270,478 T560,448"/>
+      <path d="M-40,560  Q160,540 280,570 T560,538"/>
+      <path d="M-40,640  Q150,620 270,650 T560,620"/>
+      <path d="M-40,720  Q140,700 260,732 T560,700"/>
+    </g>
+
+    <!-- 6. Sun rays diagonaux (cinématiques, mix-blend screen) -->
     <g class="atmosphere-shafts" style="mix-blend-mode: screen;">
       <polygon class="atmosphere-shaft atmosphere-shaft-1"
-        points="180,800 220,800 360,200 320,200"
-        fill="#FFE4B5" opacity="0.10"/>
+        points="380,-20 440,-20 220,820 160,820"
+        fill="#FFE4B5" opacity="0.16"/>
       <polygon class="atmosphere-shaft atmosphere-shaft-2"
-        points="240,800 290,800 480,150 420,150"
-        fill="#FFE4B5" opacity="0.07"/>
+        points="440,-20 490,-20 320,820 270,820"
+        fill="#FFF4D6" opacity="0.10"/>
       <polygon class="atmosphere-shaft atmosphere-shaft-3"
-        points="60,800 110,800 220,180 160,180"
+        points="240,-20 290,-20 50,820 0,820"
         fill="#E8C089" opacity="0.08"/>
+      <polygon class="atmosphere-shaft atmosphere-shaft-4"
+        points="320,-20 360,-20 140,820 100,820"
+        fill="#FFE4B5" opacity="0.06"/>
     </g>
-
-    <!-- 4. Far hills — sombre forest 900, parallax léger -->
-    <path class="atmosphere-hills atmosphere-hills-far"
-      d="M0,560 C60,540 120,548 180,544 C240,540 300,536 360,548 C420,560 460,556 480,560 L480,800 L0,800 Z"
-      fill="#0F2A1E" opacity="0.78"/>
-
-    <!-- 5. Mid hills — forest 600 -->
-    <path class="atmosphere-hills atmosphere-hills-mid"
-      d="M0,620 C40,600 90,612 140,608 C200,604 260,628 320,624 C380,620 430,608 480,616 L480,800 L0,800 Z"
-      fill="#1B4332" opacity="0.85"/>
-
-    <!-- 6. Near hills — forest 700 + tip de grass -->
-    <path class="atmosphere-hills atmosphere-hills-near"
-      d="M0,690 C50,672 110,684 170,680 C230,676 290,696 340,690 C390,684 440,694 480,688 L480,800 L0,800 Z"
-      fill="#163E2D"/>
 
     <!-- 7. Particules dorées (cachées en mobile) -->
     <g class="atmosphere-particles">
-      <circle class="atmosphere-particle atmosphere-particle-1" cx="80" cy="320" r="2" fill="#D4A574" opacity="0.55"/>
-      <circle class="atmosphere-particle atmosphere-particle-2" cx="180" cy="240" r="1.5" fill="#E8C089" opacity="0.45"/>
-      <circle class="atmosphere-particle atmosphere-particle-3" cx="320" cy="380" r="2" fill="#D4A574" opacity="0.50"/>
-      <circle class="atmosphere-particle atmosphere-particle-4" cx="400" cy="280" r="1.5" fill="#E8C089" opacity="0.50"/>
-      <circle class="atmosphere-particle atmosphere-particle-5" cx="140" cy="440" r="1.8" fill="#D4A574" opacity="0.40"/>
-      <circle class="atmosphere-particle atmosphere-particle-6" cx="380" cy="520" r="2.2" fill="#E8C089" opacity="0.35"/>
-      <circle class="atmosphere-particle atmosphere-particle-7" cx="60" cy="180" r="1.5" fill="#FFE4B5" opacity="0.45"/>
-      <circle class="atmosphere-particle atmosphere-particle-8" cx="280" cy="160" r="1.8" fill="#D4A574" opacity="0.40"/>
+      <circle class="atmosphere-particle atmosphere-particle-1" cx="80"  cy="320" r="2.2" fill="#FFE4B5" opacity="0.65"/>
+      <circle class="atmosphere-particle atmosphere-particle-2" cx="180" cy="240" r="1.6" fill="#E8C089" opacity="0.55"/>
+      <circle class="atmosphere-particle atmosphere-particle-3" cx="320" cy="380" r="2.4" fill="#FFF4D6" opacity="0.60"/>
+      <circle class="atmosphere-particle atmosphere-particle-4" cx="400" cy="280" r="1.8" fill="#E8C089" opacity="0.55"/>
+      <circle class="atmosphere-particle atmosphere-particle-5" cx="140" cy="440" r="1.8" fill="#D4A574" opacity="0.50"/>
+      <circle class="atmosphere-particle atmosphere-particle-6" cx="380" cy="520" r="2.4" fill="#FFE4B5" opacity="0.45"/>
+      <circle class="atmosphere-particle atmosphere-particle-7" cx="60"  cy="180" r="1.8" fill="#FFF4D6" opacity="0.55"/>
+      <circle class="atmosphere-particle atmosphere-particle-8" cx="280" cy="160" r="2"   fill="#E8C089" opacity="0.50"/>
+      <circle class="atmosphere-particle atmosphere-particle-9" cx="100" cy="600" r="2"   fill="#D4A574" opacity="0.45"/>
+      <circle class="atmosphere-particle atmosphere-particle-10" cx="420" cy="660" r="1.6" fill="#FFE4B5" opacity="0.50"/>
     </g>
   </svg>
 </div>
@@ -104,31 +130,54 @@ const sunId = `atmo-sun-${id}`;
     display: block;
   }
 
-  /* === Animations continues (CSS keyframes, transform/opacity only) === */
+  /* === Animations continues === */
 
-  /* Sun glow — respiration lente */
+  /* Sun glow — respiration */
   .atmosphere-sun {
-    transform-origin: 50% 90%;
+    transform-origin: 80% 22%;
     will-change: transform, opacity;
     animation: atmoSunBreath 9s ease-in-out infinite alternate;
   }
   @keyframes atmoSunBreath {
-    0%   { transform: scale(1)    translateY(0);    opacity: 0.85; }
-    100% { transform: scale(1.05) translateY(-6px); opacity: 1;    }
+    0%   { transform: scale(1)    translate(0, 0);     opacity: 0.85; }
+    100% { transform: scale(1.08) translate(-6px, 4px); opacity: 1;    }
   }
 
-  /* Sun shafts — dérive horizontale, 3 instances décalées */
-  .atmosphere-shaft {
-    transform-origin: 50% 100%;
+  /* Aurora — float lent et continu */
+  .atmosphere-aurora {
+    transform-origin: 30% 60%;
     will-change: transform, opacity;
-    animation: atmoShaftDrift 22s linear infinite;
+    animation: atmoAuroraDrift 18s ease-in-out infinite alternate;
+  }
+  @keyframes atmoAuroraDrift {
+    0%   { transform: scale(1)    translate(-20px, 10px);  opacity: 0.6; }
+    100% { transform: scale(1.15) translate(30px, -20px);  opacity: 1;   }
+  }
+
+  /* Sun shafts — dérive diagonale, 4 instances décalées */
+  .atmosphere-shaft {
+    transform-origin: 50% 0%;
+    will-change: transform, opacity;
+    animation: atmoShaftDrift 26s linear infinite;
   }
   .atmosphere-shaft-1 { animation-delay: 0s; }
-  .atmosphere-shaft-2 { animation-delay: -7s; }
-  .atmosphere-shaft-3 { animation-delay: -14s; }
+  .atmosphere-shaft-2 { animation-delay: -6s; }
+  .atmosphere-shaft-3 { animation-delay: -13s; }
+  .atmosphere-shaft-4 { animation-delay: -19s; }
   @keyframes atmoShaftDrift {
-    0%, 100% { transform: translateX(-12px) skewX(0.5deg); opacity: 0.8; }
-    50%      { transform: translateX(12px)  skewX(-0.5deg); opacity: 1;   }
+    0%, 100% { transform: translateX(-14px) skewX(0.8deg); opacity: 0.7; }
+    50%      { transform: translateX(14px)  skewX(-0.8deg); opacity: 1;   }
+  }
+
+  /* Topographic contours — drift horizontal lent */
+  .atmosphere-contours {
+    transform-origin: 50% 50%;
+    will-change: transform;
+    animation: atmoContourDrift 30s ease-in-out infinite alternate;
+  }
+  @keyframes atmoContourDrift {
+    0%   { transform: translateX(-8px) translateY(2px); }
+    100% { transform: translateX(8px)  translateY(-4px); }
   }
 
   /* Particles — float ascendant + fondu */
@@ -136,44 +185,44 @@ const sunId = `atmo-sun-${id}`;
     will-change: transform, opacity;
     animation: atmoParticleFloat 14s linear infinite;
   }
-  .atmosphere-particle-1 { animation-delay: 0s;    animation-duration: 13s; }
-  .atmosphere-particle-2 { animation-delay: -3s;   animation-duration: 16s; }
-  .atmosphere-particle-3 { animation-delay: -6s;   animation-duration: 12s; }
-  .atmosphere-particle-4 { animation-delay: -9s;   animation-duration: 17s; }
-  .atmosphere-particle-5 { animation-delay: -2s;   animation-duration: 15s; }
-  .atmosphere-particle-6 { animation-delay: -7s;   animation-duration: 14s; }
-  .atmosphere-particle-7 { animation-delay: -11s;  animation-duration: 18s; }
-  .atmosphere-particle-8 { animation-delay: -5s;   animation-duration: 13s; }
+  .atmosphere-particle-1  { animation-delay: 0s;    animation-duration: 13s; }
+  .atmosphere-particle-2  { animation-delay: -3s;   animation-duration: 16s; }
+  .atmosphere-particle-3  { animation-delay: -6s;   animation-duration: 12s; }
+  .atmosphere-particle-4  { animation-delay: -9s;   animation-duration: 17s; }
+  .atmosphere-particle-5  { animation-delay: -2s;   animation-duration: 15s; }
+  .atmosphere-particle-6  { animation-delay: -7s;   animation-duration: 14s; }
+  .atmosphere-particle-7  { animation-delay: -11s;  animation-duration: 18s; }
+  .atmosphere-particle-8  { animation-delay: -5s;   animation-duration: 13s; }
+  .atmosphere-particle-9  { animation-delay: -8s;   animation-duration: 16s; }
+  .atmosphere-particle-10 { animation-delay: -4s;   animation-duration: 15s; }
   @keyframes atmoParticleFloat {
-    0%   { transform: translateY(0)    translateX(0);    opacity: 0;   }
-    20%  { opacity: 0.6; }
-    50%  { transform: translateY(-30px) translateX(8px); opacity: 0.5; }
-    80%  { opacity: 0.4; }
-    100% { transform: translateY(-60px) translateX(-4px); opacity: 0; }
+    0%   { transform: translateY(0)     translateX(0);    opacity: 0;    }
+    20%  {                                                opacity: 0.7;  }
+    50%  { transform: translateY(-40px) translateX(10px); opacity: 0.55; }
+    80%  {                                                opacity: 0.45; }
+    100% { transform: translateY(-80px) translateX(-6px); opacity: 0;    }
   }
 
-  /* Hills parallax (anim ScrollTrigger) — état initial neutre */
-  .atmosphere-hills {
-    will-change: transform;
-  }
+  /* Variant compact (Hero) — dégradation légère */
+  .atmosphere-compact .atmosphere-shaft-3,
+  .atmosphere-compact .atmosphere-shaft-4 { display: none; }
+  .atmosphere-compact .atmosphere-particle-9,
+  .atmosphere-compact .atmosphere-particle-10 { display: none; }
 
-  /* Variant compact (Hero) — moins dense, sun plus petit */
-  .atmosphere-compact .atmosphere-sun ellipse { ry: 160; }
-  .atmosphere-compact .atmosphere-shaft-3 { display: none; }
-
-  /* Mobile : dégrader couches non-essentielles */
+  /* Mobile — couches dégradées */
   @media (max-width: 640px) {
     .atmosphere-particles { display: none; }
-    .atmosphere-shaft { opacity: 0.04 !important; }
+    .atmosphere-shaft { opacity: 0.05 !important; }
+    .atmosphere-contours { opacity: 0.14 !important; }
   }
 
-  /* Reduced motion : freeze tous les keyframes (le reset global le fait déjà
-     via *, mais on neutralise aussi les transforms WAAPI pour clarté) */
+  /* Reduced motion : freeze tout */
   @media (prefers-reduced-motion: reduce) {
     .atmosphere-sun,
+    .atmosphere-aurora,
     .atmosphere-shaft,
     .atmosphere-particle,
-    .atmosphere-hills {
+    .atmosphere-contours {
       animation: none !important;
       transform: none !important;
     }
