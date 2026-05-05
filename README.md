@@ -1,6 +1,6 @@
 # scluba-site
 
-Marketing site (`scluba.golf`) and internal ops dashboard (`scluba.golf/ops`).
+Marketing site (`scluba.com`) and internal ops dashboard (`scluba.com/ops`).
 Astro + Supabase, deployed on Netlify.
 
 ## Stack
@@ -53,8 +53,8 @@ Surfaces:
 3. **Configure Supabase Auth redirect URLs** (Supabase dashboard →
    Authentication → URL Configuration):
 
-   - Site URL: `https://scluba.golf`
-   - Add to redirect allowlist: `https://scluba.golf/ops/auth/callback`
+   - Site URL: `https://scluba.com`
+   - Add to redirect allowlist: `https://scluba.com/ops/auth/callback`
      and `http://localhost:4321/ops/auth/callback` for local dev.
 
 4. **Deploy**: push to `main` → Netlify auto-builds with the SSR adapter.
