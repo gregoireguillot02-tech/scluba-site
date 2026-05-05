@@ -425,36 +425,33 @@ const back9 = [
     z-index: 0;
   }
 
-  /* iPhone Pro photoréaliste — height-driven pour rester entier visible */
+  /* iPhone Pro photoréaliste — face-on, hauteur pilotée pour rester entier visible */
   .phone-device {
     position: relative;
-    height: min(82vh, 720px);
+    height: min(76vh, 680px);
     aspect-ratio: 9 / 19.5;
     width: auto;
-    transform-style: preserve-3d;
-    transform: rotateY(-12deg) rotateX(5deg);
     will-change: transform;
     z-index: 2;
   }
 
-  /* === Putting green sous le phone (remplace l'ancien halo rotatif) === */
+  /* === Panneau pastel virage.one : rectangle arrondi derrière le phone === */
   .phone-green {
     position: absolute;
     left: 50%;
-    bottom: -40px;
-    width: min(140vh, 1100px);
-    max-width: 760px;
-    height: 220px;
-    transform: translateX(-50%);
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(440px, 92%);
+    height: min(82vh + 60px, 760px);
+    border-radius: 40px;
+    background:
+      radial-gradient(ellipse 70% 40% at 50% 95%, rgba(45, 106, 79, 0.14), transparent 70%),
+      linear-gradient(160deg, #E8F2EA 0%, #D6E7DA 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
     pointer-events: none;
     z-index: 1;
-    opacity: 0.85;
   }
-  .phone-green svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
+  .phone-green svg { display: none; }
 
   .phone-frame {
     position: relative;
@@ -472,11 +469,10 @@ const back9 = [
     border-radius: 56px;
     padding: 12px;
     box-shadow:
-      /* Ombre projetée multi-couches asymétrique (lumière haut-droite -> ombre bas-gauche) */
-      -8px 8px 16px rgba(27, 67, 50, 0.20),
-      -16px 32px 64px rgba(27, 67, 50, 0.32),
-      -32px 80px 160px rgba(27, 67, 50, 0.32),
-      0 24px 48px rgba(0, 0, 0, 0.22),
+      /* Ombre verticale propre (phone face-on) */
+      0 16px 32px rgba(27, 67, 50, 0.20),
+      0 32px 64px rgba(27, 67, 50, 0.28),
+      0 8px 16px rgba(0, 0, 0, 0.18),
       /* Reflet inner top */
       inset 0 1px 0 rgba(255, 255, 255, 0.18),
       inset 0 -1px 0 rgba(255, 255, 255, 0.04),

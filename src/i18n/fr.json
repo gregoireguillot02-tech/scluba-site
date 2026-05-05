@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Scluba — La scorecard digitale brandée pour votre club de golf",
+    "title": "Scluba — La carte de score digitale brandée pour votre club de golf",
     "description": "Vos joueurs jouent. Votre club rayonne. Scluba transforme chaque partie en visibilité sociale pour votre golf — sans app à installer."
   },
   "launch": {
@@ -14,7 +14,7 @@
     "demo": "Voir une démo"
   },
   "hero": {
-    "tagline": "La scorecard digitale brandée pour votre club.",
+    "tagline": "La carte de score digitale brandée pour votre club.",
     "subtagline": "Vos joueurs jouent. Votre club rayonne.",
     "cta": "Voir une démo de 10 min",
     "scroll": "Découvrez le concept"
@@ -24,7 +24,7 @@
     "lines": [
       "Aujourd'hui, vos joueurs sortent du parcours.",
       "Ils sortent leur smartphone.",
-      "Et photographient leur scorecard papier.",
+      "Et photographient leur carte de score papier.",
       "Sans aucune mention de votre club."
     ],
     "punchline": "Chaque partie est une opportunité de visibilité perdue."
@@ -226,7 +226,7 @@
     "qrLabel": "Scannez : voir un exemple de carte"
   },
   "footer": {
-    "tagline": "La scorecard digitale brandée pour les clubs de golf.",
+    "tagline": "La carte de score digitale brandée pour les clubs de golf.",
     "rights": "© 2026 Scluba. Tous droits réservés.",
     "legal": "Mentions légales",
     "privacy": "Politique de confidentialité",
