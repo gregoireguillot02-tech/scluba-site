@@ -1,6 +1,5 @@
 ---
 import { useT, type Locale } from '../i18n';
-import PhoneAtmosphere from './PhoneAtmosphere.astro';
 
 interface Props {
   locale: Locale;
@@ -57,11 +56,6 @@ const t = useT(locale);
 
     <div class="hero-visual" data-anim="hero-phone" aria-hidden="true">
       <div class="hero-phone-stage">
-        <!-- Atmosphère golden hour cinématique (version compacte) -->
-        <div class="hero-phone-green" aria-hidden="true">
-          <PhoneAtmosphere variant="compact" id="hero" />
-        </div>
-
         <div class="hero-phone">
           <!-- Boutons latéraux -->
           <span class="hero-phone-btn hero-phone-btn-action"></span>
@@ -355,20 +349,6 @@ const t = useT(locale);
   }
   .hero-phone-stage {
     position: relative;
-    padding: 56px 72px 64px;
-  }
-  /* Panneau atmosphère golden hour (compact pour le hero) */
-  .hero-phone-green {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    border-radius: 28px;
-    overflow: hidden;
-    box-shadow:
-      0 18px 40px rgba(15, 42, 30, 0.14),
-      0 6px 12px rgba(15, 42, 30, 0.08),
-      inset 0 1px 0 rgba(255, 228, 181, 0.30);
   }
 
   /* Balle de golf — point du wordmark "Scluba." */

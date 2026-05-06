@@ -1,6 +1,5 @@
 ---
 import { useT, type Locale } from '../i18n';
-import PhoneAtmosphere from './PhoneAtmosphere.astro';
 
 interface Props {
   locale: Locale;
@@ -70,11 +69,6 @@ const back9 = [
 
       <div class="phone-stage" aria-hidden="true">
         <div class="phone-shadow"></div>
-
-        <!-- Atmosphère golden hour cinématique (remplace le panneau pastel) -->
-        <div class="phone-green" aria-hidden="true">
-          <PhoneAtmosphere variant="full" id="mockup" />
-        </div>
 
         <div class="phone-device" data-phone>
           <!-- Cadre titanium -->
@@ -421,24 +415,6 @@ const back9 = [
     z-index: 2;
   }
 
-  /* === Panneau atmosphère cinématique : grand format pour laisser respirer la scène === */
-  .phone-green {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    /* Largement plus large que le phone pour que l'atmosphère soit lisible */
-    width: min(520px, 96%);
-    height: min(80vh, 740px);
-    border-radius: 40px;
-    overflow: hidden;
-    box-shadow:
-      0 32px 72px rgba(15, 42, 30, 0.28),
-      0 12px 24px rgba(15, 42, 30, 0.14),
-      inset 0 1px 0 rgba(255, 228, 181, 0.30);
-    pointer-events: none;
-    z-index: 1;
-  }
 
   .phone-frame {
     position: relative;

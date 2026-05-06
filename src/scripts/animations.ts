@@ -563,63 +563,12 @@ function initGolfBallScroll() {
   }
 }
 
-/* ---------- ATMOSPHERE PARALLAX (magic-moment) ---------- */
-// Donne de la profondeur au panneau cinématique : couches abstraites parallaxées
-// au fil du scroll (sun glow lent, contours moyen, particules rapides).
-function initPhoneAtmosphere() {
-  const wrap = document.querySelector<HTMLElement>('[data-anim="phone-wrap"]');
-  if (!wrap) return;
-  const atmo = wrap.querySelector<HTMLElement>('[data-atmosphere="full"]');
-  if (!atmo) return;
-
-  const mm = gsap.matchMedia();
-  mm.add('(prefers-reduced-motion: no-preference)', () => {
-    const sun = atmo.querySelector('.atmosphere-sun');
-    const aurora = atmo.querySelector('.atmosphere-aurora');
-    const contours = atmo.querySelector('.atmosphere-contours');
-    const shafts = atmo.querySelector('.atmosphere-shafts');
-    const particles = atmo.querySelector('.atmosphere-particles');
-
-    const trigger = {
-      trigger: wrap,
-      start: 'top bottom',
-      end: 'bottom top',
-      scrub: 0.8,
-    };
-
-    // Parallax depth : couches arrière lentes, avant rapides
-    if (sun) gsap.to(sun, { y: -10, ease: 'none', scrollTrigger: trigger });
-    if (aurora) gsap.to(aurora, { y: -20, ease: 'none', scrollTrigger: trigger });
-    if (contours) gsap.to(contours, { y: -36, ease: 'none', scrollTrigger: trigger });
-    if (particles) gsap.to(particles, { y: -56, ease: 'none', scrollTrigger: trigger });
-
-    // Rays : intensité monte au passage central de la section
-    if (shafts) {
-      gsap.fromTo(
-        shafts,
-        { opacity: 0.7 },
-        {
-          opacity: 1,
-          ease: 'sine.inOut',
-          scrollTrigger: {
-            trigger: wrap,
-            start: 'top 70%',
-            end: 'bottom 30%',
-            scrub: 1.2,
-          },
-        }
-      );
-    }
-  });
-}
-
 /* ---------- INIT ---------- */
 function initAll() {
   initHero();
   initProblem();
   initSteps();
   initPhone();
-  initPhoneAtmosphere();
   initShowcase();
   initHow();
   initPricing();
