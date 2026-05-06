@@ -5,13 +5,55 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import GolfBallScroll from '../components/GolfBallScroll.astro';
 import { useT, type Locale } from '../i18n';
+import {
+  SITE_NAME,
+  SITE_URL,
+  SITE_OG_IMAGE,
+  SITE_TWITTER,
+  canonicalUrl,
+  hreflangAlternates,
+  organizationJsonLd,
+  websiteJsonLd,
+} from '../lib/seo';
 
 interface Props {
   locale: Locale;
+  /** Override page title; defaults to the homepage title from i18n. */
+  title?: string;
+  /** Override page description; defaults to the homepage description from i18n. */
+  description?: string;
+  /** Path of the equivalent page in the alternate locale (used for hreflang). */
+  altPathname?: string;
+  /** Custom OG image (absolute or root-relative). */
+  ogImage?: string;
+  /** Set noindex on this page. */
+  noindex?: boolean;
+  /** Extra JSON-LD blobs to inject in <head>. */
+  jsonLd?: unknown[];
 }
 
-const { locale } = Astro.props;
+const {
+  locale,
+  title,
+  description,
+  altPathname,
+  ogImage,
+  noindex = false,
+  jsonLd = [],
+} = Astro.props;
+
 const t = useT(locale);
+const pageTitle = title ?? t.meta.title;
+const pageDescription = description ?? t.meta.description;
+const pathname = Astro.url.pathname;
+const canonical = canonicalUrl(pathname);
+const alternates = hreflangAlternates(locale, pathname, altPathname);
+const ogImageUrl = (() => {
+  const path = ogImage ?? SITE_OG_IMAGE;
+  return path.startsWith('http') ? path : `${SITE_URL}${path}`;
+})();
+
+const baseJsonLd = [organizationJsonLd(), websiteJsonLd(locale), ...jsonLd];
 ---
 
 <!doctype html>
@@ -20,13 +62,43 @@ const t = useT(locale);
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="generator" content={Astro.generator} />
-  <title>{t.meta.title}</title>
-  <meta name="description" content={t.meta.description} />
-  <meta property="og:title" content={t.meta.title} />
-  <meta property="og:description" content={t.meta.description} />
+
+  <title>{pageTitle}</title>
+  <meta name="description" content={pageDescription} />
+  {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+  <link rel="canonical" href={canonical} />
+  <link rel="alternate" hreflang={alternates.current.locale} href={alternates.current.href} />
+  <link rel="alternate" hreflang={alternates.alt.locale} href={alternates.alt.href} />
+  <link rel="alternate" hreflang="x-default" href={alternates.xDefault} />
+
+  {/* Open Graph */}
+  <meta property="og:site_name" content={SITE_NAME} />
+  <meta property="og:title" content={pageTitle} />
+  <meta property="og:description" content={pageDescription} />
   <meta property="og:type" content="website" />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:locale" content={locale === 'fr' ? 'fr_FR' : 'en_US'} />
+  <meta property="og:locale:alternate" content={locale === 'fr' ? 'en_US' : 'fr_FR'} />
+  <meta property="og:image" content={ogImageUrl} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content={pageTitle} />
+
+  {/* Twitter */}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content={SITE_TWITTER} />
+  <meta name="twitter:title" content={pageTitle} />
+  <meta name="twitter:description" content={pageDescription} />
+  <meta name="twitter:image" content={ogImageUrl} />
+
   <meta name="theme-color" content="#1B4332" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="alternate icon" href="/favicon.ico" />
+
+  {baseJsonLd.map((ld) => (
+    <script type="application/ld+json" set:html={JSON.stringify(ld)} />
+  ))}
 </head>
 <body>
   <LaunchBanner locale={locale} />

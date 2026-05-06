@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "Scluba — The branded digital scorecard for your golf club",
-    "description": "Your golfers play. Your club shines. Scluba turns every round into social visibility for your golf course — no app to install."
+    "title": "Scluba — Branded digital scorecard for golf clubs",
+    "description": "Scluba turns every round into social visibility for your golf course. Branded digital scorecard, QR code at the desk, social sharing — no app required."
   },
   "launch": {
     "tag": "Launch offer",
@@ -228,8 +228,16 @@
   "footer": {
     "tagline": "The branded digital scorecard for golf clubs.",
     "rights": "© 2026 Scluba. All rights reserved.",
+    "legalSection": "Legal",
+    "productSection": "Product",
     "legal": "Legal notice",
     "privacy": "Privacy policy",
+    "terms": "Terms of use",
+    "sales": "Sales terms",
+    "cookies": "Cookie policy",
+    "pricing": "Pricing",
+    "how": "How it works",
+    "demo": "Request a demo",
     "contact": "Contact"
   }
 }

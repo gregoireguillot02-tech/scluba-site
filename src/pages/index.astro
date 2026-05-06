@@ -9,11 +9,15 @@ import HowItWorks from '../components/HowItWorks.astro';
 import Pricing from '../components/Pricing.astro';
 import FAQ from '../components/FAQ.astro';
 import CTAForm from '../components/CTAForm.astro';
+import { useT } from '../i18n';
+import { softwareApplicationJsonLd, faqJsonLd } from '../lib/seo';
 
 const locale = 'fr' as const;
+const t = useT(locale);
+const jsonLd = [softwareApplicationJsonLd(locale), faqJsonLd(t.faq.items)];
 ---
 
-<Base locale={locale}>
+<Base locale={locale} altPathname="/en/" jsonLd={jsonLd}>
   <Hero locale={locale} />
   <ProblemNarrative locale={locale} />
   <ThreeSteps locale={locale} />

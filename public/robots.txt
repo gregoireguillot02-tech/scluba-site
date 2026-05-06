@@ -1,5 +1,16 @@
 User-agent: *
+Allow: /
 Disallow: /ops/
-Disallow: /api/ops/
+Disallow: /api/
+
+# AI / scrapers — explicitly allowed (we want indexability for now)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
 
 Sitemap: https://scluba.com/sitemap-index.xml

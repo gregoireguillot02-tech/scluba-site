@@ -9,21 +9,64 @@ const { locale } = Astro.props;
 const t = useT(locale);
 const altHref = altLocaleHref(locale);
 const altLabel = locale === 'fr' ? 'English' : 'Français';
+
+const home = locale === 'fr' ? '/' : '/en/';
+
+const legalLinks = locale === 'fr'
+  ? [
+      { label: t.footer.legal, href: '/legal/mentions-legales/' },
+      { label: t.footer.privacy, href: '/legal/confidentialite/' },
+      { label: t.footer.terms, href: '/legal/cgu/' },
+      { label: t.footer.sales, href: '/legal/cgv/' },
+      { label: t.footer.cookies, href: '/legal/cookies/' },
+    ]
+  : [
+      { label: t.footer.legal, href: '/en/legal/legal-notice/' },
+      { label: t.footer.privacy, href: '/en/legal/privacy/' },
+      { label: t.footer.terms, href: '/en/legal/terms-of-use/' },
+      { label: t.footer.sales, href: '/en/legal/sales-terms/' },
+      { label: t.footer.cookies, href: '/en/legal/cookies/' },
+    ];
+
+const productLinks = [
+  { label: t.footer.pricing, href: `${home}#pricing` },
+  { label: t.footer.how, href: `${home}#how` },
+  { label: t.footer.demo, href: `${home}#cta` },
+];
 ---
 
 <footer class="footer">
   <div class="container footer-inner">
     <div class="footer-brand">
-      <span class="footer-mark">Scluba<span class="footer-dot">.</span></span>
+      <a href={home} class="footer-mark" aria-label="Scluba">Scluba<span class="footer-dot">.</span></a>
       <p class="footer-tagline">{t.footer.tagline}</p>
+      <a href="mailto:contact@scluba.com" class="footer-contact">contact@scluba.com</a>
     </div>
 
-    <ul class="footer-links">
-      <li><a href="#">{t.footer.legal}</a></li>
-      <li><a href="#">{t.footer.privacy}</a></li>
-      <li><a href="#cta">{t.footer.contact}</a></li>
-      <li><a href={altHref} class="lang-link">{altLabel}</a></li>
-    </ul>
+    <nav class="footer-col" aria-label={t.footer.productSection}>
+      <h2 class="footer-col-title">{t.footer.productSection}</h2>
+      <ul>
+        {productLinks.map((l) => (
+          <li><a href={l.href}>{l.label}</a></li>
+        ))}
+      </ul>
+    </nav>
+
+    <nav class="footer-col" aria-label={t.footer.legalSection}>
+      <h2 class="footer-col-title">{t.footer.legalSection}</h2>
+      <ul>
+        {legalLinks.map((l) => (
+          <li><a href={l.href}>{l.label}</a></li>
+        ))}
+      </ul>
+    </nav>
+
+    <div class="footer-col">
+      <h2 class="footer-col-title">{locale === 'fr' ? 'Langue' : 'Language'}</h2>
+      <ul>
+        <li><a href={altHref} class="lang-link">{altLabel}</a></li>
+      </ul>
+    </div>
   </div>
 
   <div class="container footer-bottom">
@@ -46,26 +89,53 @@ const altLabel = locale === 'fr' ? 'English' : 'Français';
     padding-bottom: var(--space-7);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
-  @media (min-width: 768px) {
-    .footer-inner { grid-template-columns: 2fr 1fr; }
+  @media (min-width: 640px) {
+    .footer-inner {
+      grid-template-columns: 1fr 1fr;
+    }
   }
+  @media (min-width: 960px) {
+    .footer-inner {
+      grid-template-columns: 1.6fr 1fr 1fr 0.8fr;
+    }
+  }
+
+  .footer-brand { max-width: 36ch; }
   .footer-mark {
     font-family: var(--font-serif);
     font-size: 2rem;
     font-weight: 700;
     color: var(--bg);
     letter-spacing: -0.02em;
-    display: block;
+    display: inline-block;
     margin-bottom: var(--space-3);
+    line-height: 1;
   }
+  .footer-mark:hover { color: var(--accent-soft); }
   .footer-dot { color: var(--accent); }
   .footer-tagline {
     font-size: var(--text-base);
     color: rgba(255, 255, 255, 0.55);
-    max-width: 40ch;
     line-height: 1.5;
+    margin-bottom: var(--space-3);
   }
-  .footer-links {
+  .footer-contact {
+    font-size: var(--text-sm);
+    color: var(--accent);
+    transition: color 0.2s var(--ease-out);
+  }
+  .footer-contact:hover { color: var(--accent-bright); }
+
+  .footer-col-title {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+    margin: 0 0 var(--space-4);
+  }
+  .footer-col ul {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -73,12 +143,13 @@ const altLabel = locale === 'fr' ? 'English' : 'Français';
     flex-direction: column;
     gap: var(--space-2);
   }
-  .footer-links a {
+  .footer-col a {
     font-size: var(--text-sm);
-    color: rgba(255, 255, 255, 0.65);
+    color: rgba(255, 255, 255, 0.7);
     transition: color 0.2s var(--ease-out);
   }
-  .footer-links a:hover { color: var(--accent); }
+  .footer-col a:hover { color: var(--accent); }
+
   .lang-link {
     color: var(--accent) !important;
     font-weight: 600;
@@ -87,6 +158,8 @@ const altLabel = locale === 'fr' ? 'English' : 'Français';
   .footer-bottom {
     padding-top: var(--space-5);
     display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
     justify-content: space-between;
     align-items: center;
     font-size: var(--text-xs);
