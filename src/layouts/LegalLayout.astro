@@ -1,0 +1,219 @@
+---
+import Base from './Base.astro';
+import { breadcrumbJsonLd } from '../lib/seo';
+import type { Locale } from '../i18n';
+import { useT } from '../i18n';
+
+interface Props {
+  locale: Locale;
+  title: string;
+  description: string;
+  altPathname: string;
+  /** Section eyebrow (e.g. "Mentions légales", "Privacy"). */
+  eyebrow: string;
+  /** Last updated date in ISO format (yyyy-mm-dd). */
+  updated: string;
+}
+
+const { locale, title, description, altPathname, eyebrow, updated } = Astro.props;
+const t = useT(locale);
+
+const homeLabel = locale === 'fr' ? 'Accueil' : 'Home';
+const legalLabel = locale === 'fr' ? 'Légal' : 'Legal';
+const homeHref = locale === 'fr' ? '/' : '/en/';
+
+const updatedLabel = locale === 'fr' ? 'Dernière mise à jour' : 'Last updated';
+const updatedDate = new Date(updated).toLocaleDateString(
+  locale === 'fr' ? 'fr-FR' : 'en-US',
+  { year: 'numeric', month: 'long', day: 'numeric' }
+);
+
+const crumbs = breadcrumbJsonLd([
+  { name: homeLabel, url: homeHref },
+  { name: legalLabel, url: Astro.url.pathname.replace(/\/[^/]+\/?$/, '/') },
+  { name: title, url: Astro.url.pathname },
+]);
+---
+
+<Base
+  locale={locale}
+  title={`${title} — ${t.meta.title.split('—')[0].trim()}`}
+  description={description}
+  altPathname={altPathname}
+  jsonLd={[crumbs]}
+>
+  <article class="legal">
+    <div class="container legal-container">
+      <nav class="legal-breadcrumb" aria-label={legalLabel}>
+        <a href={homeHref}>{homeLabel}</a>
+        <span aria-hidden="true">›</span>
+        <span aria-current="page">{title}</span>
+      </nav>
+
+      <header class="legal-header">
+        <p class="legal-eyebrow">{eyebrow}</p>
+        <h1 class="legal-title">{title}</h1>
+        <p class="legal-updated">
+          <span>{updatedLabel}</span>
+          <time datetime={updated}>{updatedDate}</time>
+        </p>
+      </header>
+
+      <div class="legal-content">
+        <slot />
+      </div>
+    </div>
+  </article>
+</Base>
+
+<style>
+  .legal {
+    padding: 160px 0 96px;
+    background: linear-gradient(180deg, var(--primary-bg) 0%, var(--bg) 220px);
+  }
+  .legal-container {
+    max-width: 760px;
+  }
+  .legal-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin-bottom: var(--space-6);
+  }
+  .legal-breadcrumb a {
+    color: var(--primary-soft);
+    transition: color 0.2s var(--ease-out);
+  }
+  .legal-breadcrumb a:hover { color: var(--primary); }
+  .legal-breadcrumb span[aria-current] {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .legal-header {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: var(--space-6);
+    margin-bottom: var(--space-7);
+  }
+  .legal-eyebrow {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: var(--space-3);
+  }
+  .legal-title {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 5vw, 3rem);
+    color: var(--primary);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--space-4);
+  }
+  .legal-updated {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    display: flex;
+    gap: 6px;
+  }
+  .legal-updated span { color: var(--muted-soft); }
+  .legal-updated time { font-weight: 500; color: var(--ink-soft); }
+
+  /* Long-form prose */
+  .legal-content {
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+  .legal-content :global(h2) {
+    font-family: var(--font-serif);
+    font-size: clamp(1.4rem, 3vw, 1.75rem);
+    color: var(--primary);
+    margin: var(--space-7) 0 var(--space-3);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  .legal-content :global(h2:first-child) { margin-top: 0; }
+  .legal-content :global(h3) {
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    color: var(--primary-soft);
+    margin: var(--space-5) 0 var(--space-2);
+  }
+  .legal-content :global(p) {
+    margin: 0 0 var(--space-4);
+  }
+  .legal-content :global(ul),
+  .legal-content :global(ol) {
+    margin: 0 0 var(--space-4);
+    padding-left: var(--space-5);
+  }
+  .legal-content :global(li) {
+    margin-bottom: var(--space-2);
+  }
+  .legal-content :global(li::marker) {
+    color: var(--accent);
+  }
+  .legal-content :global(a) {
+    color: var(--primary-soft);
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-underline-offset: 3px;
+    transition: color 0.2s var(--ease-out);
+  }
+  .legal-content :global(a:hover) {
+    color: var(--primary);
+  }
+  .legal-content :global(strong) {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .legal-content :global(.placeholder) {
+    background: rgba(212, 165, 116, 0.18);
+    color: var(--primary-deep);
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 0.95em;
+    border: 1px dashed var(--accent);
+  }
+  .legal-content :global(.legal-callout) {
+    border-left: 3px solid var(--accent);
+    background: rgba(212, 165, 116, 0.08);
+    padding: var(--space-4) var(--space-5);
+    margin: var(--space-5) 0;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    font-size: var(--text-sm);
+  }
+  .legal-content :global(.legal-callout strong) {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--primary);
+  }
+  .legal-content :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--space-5) 0;
+    font-size: var(--text-sm);
+  }
+  .legal-content :global(thead) {
+    background: var(--primary-bg);
+  }
+  .legal-content :global(th),
+  .legal-content :global(td) {
+    text-align: left;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .legal-content :global(th) {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+</style>

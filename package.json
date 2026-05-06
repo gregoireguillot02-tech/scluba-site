@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@astrojs/netlify": "^7.0.8",
+    "@astrojs/sitemap": "^3.7.2",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.1",
     "@types/qrcode": "^1.5.6",
