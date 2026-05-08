@@ -22,6 +22,53 @@ const accent = c.primary_color ?? '#1B4332';
 const front9 = c.course_data.holes.filter((h) => h.number <= 9);
 const back9 = c.course_data.holes.filter((h) => h.number > 9);
 const totalPar = c.course_data.holes.reduce((s, h) => s + h.par, 0);
+
+// === Stats ===
+const now = new Date();
+const startOfDay = new Date(now);
+startOfDay.setHours(0, 0, 0, 0);
+const startOfWeek = new Date(now);
+startOfWeek.setDate(startOfWeek.getDate() - 7);
+const startOfMonth = new Date(now);
+startOfMonth.setDate(startOfMonth.getDate() - 30);
+
+const [{ data: rounds }, { data: roster }] = await Promise.all([
+  sb.from('rounds').select('id, status, started_at, finished_at, created_at').eq('club_id', c.id).order('created_at', { ascending: false }),
+  sb.from('round_players').select('display_name, user_id, joined_at, round_id').in('round_id',
+    (await sb.from('rounds').select('id').eq('club_id', c.id)).data?.map((r) => r.id) ?? [],
+  ),
+]);
+
+const allRounds = rounds ?? [];
+const allPlayers = roster ?? [];
+
+const stats = {
+  totalRounds: allRounds.length,
+  finishedRounds: allRounds.filter((r) => r.status === 'finished').length,
+  activeRounds: allRounds.filter((r) => r.status === 'lobby' || r.status === 'playing').length,
+  roundsToday: allRounds.filter((r) => new Date(r.created_at) >= startOfDay).length,
+  roundsThisWeek: allRounds.filter((r) => new Date(r.created_at) >= startOfWeek).length,
+  roundsThisMonth: allRounds.filter((r) => new Date(r.created_at) >= startOfMonth).length,
+  totalPlayers: allPlayers.length,
+  uniquePlayers: new Set(allPlayers.map((p) => p.display_name.toLowerCase().trim())).size,
+  loggedInPlayers: allPlayers.filter((p) => p.user_id).length,
+  lastRoundAt: allRounds[0]?.started_at ?? allRounds[0]?.created_at ?? null,
+};
+
+const avgPlayersPerRound = stats.totalRounds > 0
+  ? (stats.totalPlayers / stats.totalRounds).toFixed(1)
+  : '—';
+
+function fmtRelative(iso: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return 'à l\'instant';
+  if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `il y a ${Math.floor(diff / 3600)} h`;
+  if (diff < 86400 * 7) return `il y a ${Math.floor(diff / 86400)} j`;
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
 ---
 
 <OpsLayout title={c.name} active="clubs">
@@ -55,6 +102,55 @@ const totalPar = c.course_data.holes.reduce((s, h) => s + h.par, 0);
 
   {justSaved && <div class="ops-flash ops-flash-ok">✓ Modifications enregistrées.</div>}
   {errMsg && <div class="ops-flash ops-flash-err">{errMsg}</div>}
+
+  <section class="stats-row" aria-labelledby="stats-title">
+    <header class="stats-head">
+      <h2 id="stats-title">Activité</h2>
+      <span class="stats-last">Dernière partie : <strong>{fmtRelative(stats.lastRoundAt)}</strong></span>
+    </header>
+    <ul class="stats-grid">
+      <li class="stats-card">
+        <span class="stats-label">Aujourd'hui</span>
+        <span class="stats-value">{stats.roundsToday}</span>
+        <span class="stats-sub">parties</span>
+      </li>
+      <li class="stats-card">
+        <span class="stats-label">7 derniers jours</span>
+        <span class="stats-value">{stats.roundsThisWeek}</span>
+        <span class="stats-sub">parties</span>
+      </li>
+      <li class="stats-card">
+        <span class="stats-label">30 derniers jours</span>
+        <span class="stats-value">{stats.roundsThisMonth}</span>
+        <span class="stats-sub">parties</span>
+      </li>
+      <li class="stats-card">
+        <span class="stats-label">En cours</span>
+        <span class="stats-value">{stats.activeRounds}</span>
+        <span class="stats-sub">{stats.activeRounds > 1 ? 'parties actives' : 'partie active'}</span>
+      </li>
+      <li class="stats-card">
+        <span class="stats-label">Total parties</span>
+        <span class="stats-value">{stats.totalRounds}</span>
+        <span class="stats-sub">dont {stats.finishedRounds} terminée{stats.finishedRounds > 1 ? 's' : ''}</span>
+      </li>
+      <li class="stats-card">
+        <span class="stats-label">Joueurs uniques</span>
+        <span class="stats-value">{stats.uniquePlayers}</span>
+        <span class="stats-sub">par prénom</span>
+      </li>
+      <li class="stats-card">
+        <span class="stats-label">Joueurs total</span>
+        <span class="stats-value">{stats.totalPlayers}</span>
+        <span class="stats-sub">avec doublons</span>
+      </li>
+      <li class="stats-card">
+        <span class="stats-label">Moyenne / partie</span>
+        <span class="stats-value">{avgPlayersPerRound}</span>
+        <span class="stats-sub">joueurs</span>
+      </li>
+    </ul>
+  </section>
 
   <div class="edit-grid">
     <div>
@@ -241,6 +337,82 @@ const totalPar = c.course_data.holes.reduce((s, h) => s + h.par, 0);
   }
   @media (max-width: 980px) {
     .edit-grid { grid-template-columns: 1fr; }
+  }
+
+  .stats-row {
+    margin-bottom: 16px;
+    padding: 16px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15,42,30,0.04);
+  }
+  .stats-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .stats-head h2 {
+    font-family: var(--font-serif);
+    font-size: 17px;
+    margin: 0;
+    color: var(--primary);
+  }
+  .stats-last {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .stats-last strong { color: var(--ink); font-weight: 600; }
+
+  .stats-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 1280px) {
+    .stats-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 700px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .stats-card {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+    transition: border-color 0.15s;
+  }
+  .stats-card:hover { border-color: var(--accent); }
+
+  .stats-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .stats-value {
+    font-family: var(--font-serif);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stats-sub {
+    font-size: 11px;
+    color: var(--muted-soft);
+    line-height: 1.3;
   }
 
   .form-grid {
