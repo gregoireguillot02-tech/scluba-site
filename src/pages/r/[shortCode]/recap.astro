@@ -74,6 +74,7 @@ const front9 = r.club.course_data.holes.filter((h) => h.number <= 9);
 const back9 = r.club.course_data.holes.filter((h) => h.number > 9);
 
 const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
+const clubColor = r.club.primary_color ?? '#1B4332';
 ---
 
 <!doctype html>
@@ -238,7 +239,7 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
     }
   </script>
 
-  <style>
+  <style define:vars={{ clubColor }}>
     body {
       background: #FAF7EE;
       min-height: 100dvh;
@@ -336,7 +337,7 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       line-height: 1.15;
       letter-spacing: 0.04em;
       text-transform: uppercase;
-      color: var(--primary);
+      color: var(--clubColor);
       max-width: 22ch;
     }
 
@@ -365,7 +366,7 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
     .meta-v {
       font-family: var(--font-serif);
       font-size: var(--text-sm);
-      color: var(--primary);
+      color: var(--clubColor);
       font-weight: 700;
       font-variant-numeric: tabular-nums;
     }
@@ -387,7 +388,7 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       font-family: var(--font-serif);
       font-size: clamp(5rem, 22vw, 7rem);
       font-weight: 800;
-      color: var(--primary);
+      color: var(--clubColor);
       line-height: 1;
       letter-spacing: -0.03em;
       font-variant-numeric: tabular-nums;
@@ -403,7 +404,7 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
     }
     .score-diff { font-weight: 700; font-variant-numeric: tabular-nums; }
     .score-diff.over { color: #C0392B; }
-    .score-diff.under { color: var(--primary); }
+    .score-diff.under { color: var(--clubColor); }
     .score-sep { color: var(--accent); font-weight: 700; }
 
     /* === Grid block === */
@@ -419,7 +420,7 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       gap: 4px;
     }
     .grid-label {
-      background: var(--primary);
+      background: var(--clubColor);
       color: var(--bg);
       font-size: 11px;
       font-weight: 700;
@@ -438,7 +439,7 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       font-variant-numeric: tabular-nums;
     }
     .cell-eagle, .cell-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
-    .cell-par { color: var(--primary); }
+    .cell-par { color: var(--clubColor); }
     .cell-bogey { color: var(--muted); }
     .cell-double { color: #6B7280; background: rgba(107,114,128,0.08); }
     .cell-empty { color: var(--muted-soft); opacity: 0.5; }
@@ -476,7 +477,7 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
     .player-name {
       font-family: var(--font-serif);
       font-size: var(--text-md);
-      color: var(--primary);
+      color: var(--clubColor);
       font-weight: 700;
     }
     .share-btn {
@@ -487,7 +488,7 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       padding: 10px 18px;
       border-radius: 12px;
       border: none;
-      background: var(--primary);
+      background: var(--clubColor);
       color: var(--bg);
       font-size: var(--text-sm);
       font-weight: 600;
@@ -495,7 +496,7 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 4px 12px rgba(27, 67, 50, 0.10);
       transition: background 0.15s;
     }
-    .share-btn:hover { background: var(--primary-deep); }
+    .share-btn:hover { filter: brightness(0.92); }
 
     /* === Colophon === */
     .colophon {
@@ -526,7 +527,7 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
     .colophon-text strong {
       font-family: var(--font-serif);
       font-weight: 700;
-      color: var(--primary);
+      color: var(--clubColor);
       letter-spacing: 0.08em;
     }
     .colophon-dot {

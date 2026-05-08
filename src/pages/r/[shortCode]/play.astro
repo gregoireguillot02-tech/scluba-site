@@ -44,7 +44,7 @@ if (!player) {
 const me = player as RoundPlayer;
 const myScores = (rawScores ?? []) as Score[];
 const par = totalPar(r.club.course_data);
-const heroColor = r.club.primary_color ?? '#1B4332';
+const clubColor = r.club.primary_color ?? '#1B4332';
 
 const scoresByHole: Record<number, number> = {};
 for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
@@ -57,9 +57,9 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>{r.club.name} — Saisie en cours · Scluba</title>
   <meta name="robots" content="noindex, nofollow" />
-  <meta name="theme-color" content={heroColor} />
+  <meta name="theme-color" content={clubColor} />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <style define:vars={{ heroColor }}>
+  <style define:vars={{ clubColor }}>
     body {
       background: #FAF7EE;
       min-height: 100dvh;
@@ -70,7 +70,7 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
 </head>
 <body>
   <main class="play">
-    <header class="play-header" style={`background: ${heroColor}`}>
+    <header class="play-header" style={`background: ${clubColor}`}>
       <div class="play-header-inner">
         {r.club.logo_url && (
           <img class="play-header-logo" src={r.club.logo_url} alt="" />
@@ -363,7 +363,7 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
     .hole-meta-count {
       font-family: var(--font-serif);
       font-size: var(--text-md);
-      color: var(--primary);
+      color: var(--clubColor);
       font-weight: 700;
       letter-spacing: 0.05em;
     }
@@ -383,7 +383,7 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
       font-family: var(--font-serif);
       font-size: clamp(3rem, 14vw, 4.5rem);
       font-weight: 800;
-      color: var(--primary);
+      color: var(--clubColor);
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
@@ -402,7 +402,7 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
       border-radius: 50%;
       border: 1.5px solid var(--line);
       background: #fff;
-      color: var(--primary);
+      color: var(--clubColor);
       font-size: 28px;
       font-weight: 600;
       cursor: pointer;
@@ -414,7 +414,7 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
       font-family: var(--font-serif);
       font-size: clamp(4rem, 18vw, 6rem);
       font-weight: 800;
-      color: var(--primary);
+      color: var(--clubColor);
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
@@ -458,7 +458,7 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
       border-radius: 10px;
       border: 1px solid var(--line);
       background: #fff;
-      color: var(--primary);
+      color: var(--clubColor);
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
@@ -485,7 +485,7 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
     }
     .leaderboard-head span:last-child {
       font-family: var(--font-serif);
-      color: var(--primary);
+      color: var(--clubColor);
       font-size: var(--text-sm);
       letter-spacing: 0;
       text-transform: none;
@@ -502,7 +502,7 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
       gap: 4px;
     }
     .grid-label {
-      background: var(--primary);
+      background: var(--clubColor);
       color: var(--bg);
       font-size: 11px;
       font-weight: 700;
@@ -525,7 +525,7 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
       font-variant-numeric: tabular-nums;
     }
     .grid-cell.cell-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
-    .grid-cell.cell-par { color: var(--primary); }
+    .grid-cell.cell-par { color: var(--clubColor); }
     .grid-cell.cell-bogey { color: var(--muted); }
     .grid-cell.cell-double { color: #6B7280; background: rgba(107,114,128,0.08); }
 
@@ -537,7 +537,7 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
       padding: 16px 24px;
       border-radius: 12px;
       border: none;
-      background: var(--primary);
+      background: var(--clubColor);
       color: #FAF7EE;
       font-size: 16px;
       font-weight: 600;
