@@ -1,0 +1,477 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../../../lib/supabase';
+import { qrSvg, clubPageUrl, SCLUBA_GREEN } from '../../../../lib/qr';
+import type { Club } from '../../../../lib/clubs-types';
+
+const { id } = Astro.params;
+const sb = serviceClient();
+
+const { data: club } = await sb.from('clubs').select('*').eq('id', id).maybeSingle();
+if (!club) {
+  return Astro.redirect('/ops/clubs', 302);
+}
+const c = club as Club;
+
+const origin = Astro.url.origin;
+const pageUrl = clubPageUrl(c.slug, origin);
+
+// Use the club's primary color for the printed QR if it's dark enough; fall back
+// to Scluba green to keep contrast safe on white paper.
+const qrColor = c.primary_color ?? SCLUBA_GREEN;
+const posterQr = await qrSvg(pageUrl, { errorCorrectionLevel: 'H', dark: qrColor, margin: 1 });
+const stickerQr = await qrSvg(pageUrl, { errorCorrectionLevel: 'M', dark: qrColor, margin: 1 });
+const tees = Array.from({ length: 18 }, (_, i) => i + 1);
+---
+
+<OpsLayout title={`Kit imprimable — ${c.name}`} active="clubs">
+  <div class="ops-page-header no-print">
+    <div>
+      <a href={`/ops/clubs/${c.id}/edit`} class="back-link">← Édition club</a>
+      <h1 class="ops-page-title">Kit imprimable</h1>
+      <p class="ops-page-subtitle">{c.name} · slug <code>{c.slug}</code></p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="ops-btn ops-btn-primary" onclick="window.print()">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+        Imprimer / PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="ops-card no-print intro-card">
+    <h2>Comment utiliser ce kit</h2>
+    <p>Cette page contient 3 documents prêts à imprimer (Cmd+P → "Enregistrer en PDF" pour archiver) :</p>
+    <ol class="intro-list">
+      <li><strong>Affiche A4</strong> à laisser à l'accueil du club</li>
+      <li><strong>18 stickers QR</strong> (1 par tee) — découper et installer</li>
+      <li><strong>Mémo équipe d'accueil</strong> A5 — 1 par hôte</li>
+    </ol>
+    <p class="intro-hint">L'URL pointe vers <code>{pageUrl}</code>. Si tu changes le slug ensuite, regénère ce kit.</p>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- SHEET 1 — Affiche A4 (portrait)                            -->
+  <!-- ========================================================== -->
+  <section class="print-sheet poster">
+    <div class="poster-inner">
+      <header class="poster-head">
+        {c.logo_url && <img class="poster-logo" src={c.logo_url} alt="" />}
+        <p class="poster-eyebrow">Scorecard digitale</p>
+        <h2 class="poster-title" style={`color: ${qrColor}`}>{c.name}</h2>
+        {c.city && <p class="poster-city">{c.city}</p>}
+      </header>
+
+      <div class="poster-qr-wrap">
+        <div class="poster-qr" set:html={posterQr}></div>
+      </div>
+
+      <div class="poster-instructions">
+        <ol>
+          <li><strong>Scannez</strong> le QR avec votre téléphone</li>
+          <li><strong>Saisissez</strong> votre prénom</li>
+          <li><strong>Jouez</strong> votre carte digitale, partagez à la fin</li>
+        </ol>
+        <p class="poster-recover">
+          Tel cassé en cours ? Re-scannez n'importe quel QR du parcours, votre partie est sauvegardée.
+        </p>
+      </div>
+
+      <footer class="poster-footer">
+        <span>une carte propre, faite à</span>
+        <strong>SCLUBA</strong>
+        <span class="poster-footer-dot" aria-hidden="true"></span>
+        <span class="poster-footer-url">{pageUrl.replace(/^https?:\/\//, '')}</span>
+      </footer>
+    </div>
+  </section>
+
+  <!-- ========================================================== -->
+  <!-- SHEET 2 — Stickers QR (1 par tee)                           -->
+  <!-- ========================================================== -->
+  <section class="print-sheet stickers-sheet">
+    <header class="stickers-head">
+      <h2>Stickers QR — Caen-La-Mer</h2>
+      <p>1 sticker par tee. Découper le long des pointillés et coller sur le piquet ou la borne du départ.</p>
+    </header>
+    <div class="stickers-grid">
+      {tees.map((n) => (
+        <div class="sticker">
+          <div class="sticker-qr" set:html={stickerQr}></div>
+          <div class="sticker-text">
+            <span class="sticker-tee">Tee {n}</span>
+            <span class="sticker-club">{c.name}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- ========================================================== -->
+  <!-- SHEET 3 — Mémo équipe d'accueil                             -->
+  <!-- ========================================================== -->
+  <section class="print-sheet memo-sheet">
+    <div class="memo-inner">
+      <header class="memo-head">
+        <p class="memo-eyebrow">Mémo · Équipe d'accueil</p>
+        <h2 class="memo-title" style={`color: ${qrColor}`}>{c.name} · Scorecard digitale</h2>
+      </header>
+
+      <section class="memo-section">
+        <h3>Quand un golfeur arrive au comptoir</h3>
+        <ol>
+          <li>Indiquez le QR à l'accueil ou n'importe quel piquet de tee.</li>
+          <li>Précisez : "<em>Pas besoin de compte. Tape ton prénom et joue.</em>"</li>
+          <li>Si plusieurs golfeurs jouent ensemble : un seul crée la partie, les autres rejoignent avec le code à 6 caractères affiché à l'écran.</li>
+        </ol>
+      </section>
+
+      <section class="memo-section">
+        <h3>Questions fréquentes</h3>
+        <dl>
+          <dt>« C'est gratuit pour moi ? »</dt>
+          <dd>Oui, totalement. Le club paie l'abonnement, le golfeur ne paie rien.</dd>
+
+          <dt>« Mes données sont stockées où ? »</dt>
+          <dd>Sur des serveurs en Europe. Aucune donnée personnelle n'est demandée — juste un prénom.</dd>
+
+          <dt>« Comment je récupère ma carte à la fin ? »</dt>
+          <dd>Bouton "Partager" en fin de partie : SMS, email, WhatsApp, ou copier le lien.</dd>
+        </dl>
+      </section>
+
+      <section class="memo-section">
+        <h3>En cas de pépin</h3>
+        <ul>
+          <li><strong>Tel cassé / batterie morte</strong> : re-scanner n'importe quel QR du parcours, taper son prénom dans "Reprendre ma partie" → la carte est récupérée.</li>
+          <li><strong>QR illisible</strong> : URL à taper manuellement = <code>{pageUrl.replace(/^https?:\/\//, '')}</code></li>
+          <li><strong>Bug bloquant</strong> : prendre un screenshot + envoyer à <strong>greg@scluba.com</strong>.</li>
+        </ul>
+      </section>
+
+      <footer class="memo-footer">
+        <span>SCLUBA</span>
+        <span class="dot">·</span>
+        <span>{pageUrl.replace(/^https?:\/\//, '')}</span>
+        <span class="dot">·</span>
+        <span>greg@scluba.com</span>
+      </footer>
+    </div>
+  </section>
+</OpsLayout>
+
+<style>
+  /* === Screen-only chrome (hidden on print) === */
+  .intro-card { margin-bottom: 24px; }
+  .intro-list {
+    margin: 8px 0 0 24px;
+    padding: 0;
+  }
+  .intro-list li { margin: 6px 0; }
+  .intro-hint { margin-top: 12px; color: var(--muted); font-size: 13px; }
+  .intro-hint code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--line-soft);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .back-link {
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: none;
+  }
+  .back-link:hover { color: var(--primary); }
+  .header-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+  /* === Sheets — common === */
+  .print-sheet {
+    background: #fff;
+    color: #1A1A1A;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin: 24px auto;
+    padding: 24px;
+    max-width: 21cm; /* A4 width */
+    border-radius: 8px;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+
+  /* === SHEET 1 — Poster === */
+  .poster {
+    aspect-ratio: 21 / 29.7;
+    padding: 0;
+    overflow: hidden;
+  }
+  .poster-inner {
+    height: 100%;
+    padding: 1.5cm 1.5cm 1cm;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-sizing: border-box;
+  }
+  .poster-head { padding-top: 0.5cm; }
+  .poster-logo {
+    width: 3cm;
+    height: 3cm;
+    object-fit: contain;
+    margin: 0 auto 0.5cm;
+    display: block;
+  }
+  .poster-eyebrow {
+    margin: 0 0 0.3cm;
+    font-size: 11pt;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #6B7280;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  }
+  .poster-title {
+    margin: 0;
+    font-size: 36pt;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.1;
+  }
+  .poster-city {
+    margin: 0.3cm 0 0;
+    font-size: 14pt;
+    color: #6B7280;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  }
+  .poster-qr-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1cm 0;
+  }
+  .poster-qr {
+    width: 11cm;
+    height: 11cm;
+    padding: 0.4cm;
+    border: 4px solid #1A1A1A;
+    background: #fff;
+  }
+  .poster-qr :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .poster-instructions {
+    width: 100%;
+    max-width: 14cm;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  }
+  .poster-instructions ol {
+    list-style: none;
+    counter-reset: step;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6cm;
+  }
+  .poster-instructions li {
+    counter-increment: step;
+    font-size: 11pt;
+    text-align: center;
+    line-height: 1.4;
+    position: relative;
+    padding-top: 1.2cm;
+  }
+  .poster-instructions li::before {
+    content: counter(step);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0.9cm;
+    height: 0.9cm;
+    border-radius: 50%;
+    border: 2px solid #1A1A1A;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, serif;
+    font-size: 14pt;
+    font-weight: 700;
+  }
+  .poster-recover {
+    margin: 0.6cm 0 0;
+    text-align: center;
+    font-size: 9pt;
+    color: #6B7280;
+    font-style: italic;
+  }
+  .poster-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3cm;
+    padding-top: 0.6cm;
+    border-top: 1px solid #E5E7EB;
+    font-size: 9pt;
+    letter-spacing: 0.05em;
+    color: #6B7280;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  }
+  .poster-footer strong {
+    font-family: Georgia, serif;
+    font-weight: 700;
+    color: #1A1A1A;
+    font-size: 11pt;
+    letter-spacing: 0.1em;
+  }
+  .poster-footer-dot {
+    width: 4px; height: 4px;
+    background: #D4A574;
+    border-radius: 1px;
+  }
+  .poster-footer-url { font-family: ui-monospace, monospace; font-size: 8pt; }
+
+  /* === SHEET 2 — Stickers === */
+  .stickers-sheet { padding: 1.2cm; }
+  .stickers-head {
+    text-align: center;
+    margin-bottom: 0.8cm;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  .stickers-head h2 { margin: 0 0 0.2cm; font-family: Georgia, serif; font-size: 16pt; }
+  .stickers-head p { margin: 0; font-size: 10pt; color: #6B7280; }
+  .stickers-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4cm;
+  }
+  .sticker {
+    border: 1px dashed #9CA3AF;
+    padding: 0.3cm;
+    display: flex;
+    align-items: center;
+    gap: 0.3cm;
+    aspect-ratio: 5 / 3;
+    box-sizing: border-box;
+  }
+  .sticker-qr {
+    width: 2.6cm;
+    height: 2.6cm;
+    flex-shrink: 0;
+  }
+  .sticker-qr :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .sticker-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1cm;
+    min-width: 0;
+  }
+  .sticker-tee {
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 14pt;
+    letter-spacing: 0.04em;
+  }
+  .sticker-club {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 8pt;
+    color: #6B7280;
+    letter-spacing: 0.04em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* === SHEET 3 — Memo (A5 landscape sur A4) === */
+  .memo-sheet { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+  .memo-inner { padding: 1cm; }
+  .memo-head { padding-bottom: 0.6cm; border-bottom: 2px solid #D4A574; margin-bottom: 0.6cm; }
+  .memo-eyebrow {
+    margin: 0 0 0.2cm;
+    font-size: 9pt;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #D4A574;
+    font-weight: 700;
+  }
+  .memo-title {
+    margin: 0;
+    font-family: Georgia, serif;
+    font-size: 22pt;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .memo-section { margin-bottom: 0.6cm; }
+  .memo-section h3 {
+    margin: 0 0 0.3cm;
+    font-family: Georgia, serif;
+    font-size: 13pt;
+    color: #1B4332;
+  }
+  .memo-section ol, .memo-section ul {
+    margin: 0;
+    padding-left: 1cm;
+  }
+  .memo-section li { margin: 0.15cm 0; font-size: 10.5pt; line-height: 1.45; }
+  .memo-section dl { margin: 0; font-size: 10.5pt; }
+  .memo-section dt { font-weight: 700; margin-top: 0.3cm; color: #1A1A1A; }
+  .memo-section dt:first-child { margin-top: 0; }
+  .memo-section dd { margin: 0.1cm 0 0 0.5cm; color: #4B5563; line-height: 1.45; }
+  .memo-section em { font-style: italic; color: #1B4332; }
+  .memo-section code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: #F3F4F6;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 9pt;
+  }
+  .memo-section strong { font-weight: 700; }
+
+  .memo-footer {
+    margin-top: 0.5cm;
+    padding-top: 0.4cm;
+    border-top: 1px solid #E5E7EB;
+    font-size: 8.5pt;
+    color: #6B7280;
+    text-align: center;
+    letter-spacing: 0.04em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.3cm;
+  }
+  .memo-footer .dot { color: #D4A574; }
+
+  /* === Print rules === */
+  @media print {
+    .no-print { display: none !important; }
+    body { background: #fff; }
+    .ops-main, .ops-header { all: unset; }
+    .ops-header { display: none !important; }
+    .print-sheet {
+      box-shadow: none;
+      margin: 0;
+      padding: 0;
+      max-width: none;
+      border-radius: 0;
+      page-break-after: always;
+      width: 21cm;
+      min-height: 29.7cm;
+    }
+    .print-sheet:last-child { page-break-after: auto; }
+    @page { size: A4; margin: 0; }
+  }
+</style>

@@ -41,6 +41,7 @@ const totalPar = c.course_data.holes.reduce((s, h) => s + h.par, 0);
     </div>
     <div class="header-actions">
       <a href={`/ops/clubs/${c.id}/qr`} class="ops-btn">QR</a>
+      <a href={`/ops/clubs/${c.id}/print`} class="ops-btn">Kit imprimable</a>
       <a href={`/c/${c.slug}`} target="_blank" rel="noopener" class="ops-btn ops-btn-primary">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
