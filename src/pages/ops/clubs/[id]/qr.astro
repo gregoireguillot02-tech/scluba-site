@@ -57,14 +57,18 @@ const png = await qrPngDataUrl(pageUrl);
         Cette URL ne doit pas être listée publiquement. Elle est exclue du sitemap et des moteurs de recherche.
       </p>
 
-      <h2 style="margin-top:24px">Test</h2>
-      <a href={`/c/${c.slug}`} target="_blank" rel="noopener" class="ops-btn">
+      <h2 style="margin-top:24px">Aperçu côté golfeur</h2>
+      <p class="qr-hint" style="margin-top:0">Voici ce que verra le golfeur en scannant le QR.</p>
+      <div class="preview-frame">
+        <iframe src={`/c/${c.slug}`} title="Aperçu page club" loading="lazy"></iframe>
+      </div>
+      <a href={`/c/${c.slug}`} target="_blank" rel="noopener" class="ops-btn" style="margin-top:12px">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
           <polyline points="15 3 21 3 21 9"/>
           <line x1="10" y1="14" x2="21" y2="3"/>
         </svg>
-        Ouvrir la page club
+        Ouvrir en plein écran
       </a>
 
       {c.prospect_id && (
@@ -162,5 +166,23 @@ const png = await qrPngDataUrl(pageUrl);
     padding: 1px 6px;
     border-radius: 4px;
     font-size: 12px;
+  }
+
+  .preview-frame {
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    max-height: 560px;
+    margin-top: 12px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: #FAF7EE;
+    box-shadow: 0 1px 2px rgba(15, 42, 30, 0.04);
+  }
+  .preview-frame iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
   }
 </style>

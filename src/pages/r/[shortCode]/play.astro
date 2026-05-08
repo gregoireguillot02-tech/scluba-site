@@ -72,8 +72,13 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
   <main class="play">
     <header class="play-header" style={`background: ${heroColor}`}>
       <div class="play-header-inner">
-        <p class="play-club">{r.club.name}</p>
-        <p class="play-player">{me.display_name}</p>
+        {r.club.logo_url && (
+          <img class="play-header-logo" src={r.club.logo_url} alt="" />
+        )}
+        <div class="play-header-text">
+          <p class="play-club">{r.club.name}</p>
+          <p class="play-player">{me.display_name}</p>
+        </div>
       </div>
     </header>
 
@@ -303,20 +308,39 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
     }
     .play-header-inner {
       display: flex;
-      justify-content: space-between;
-      align-items: baseline;
+      align-items: center;
       gap: var(--space-3);
+    }
+    .play-header-logo {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      background: rgba(250, 247, 238, 0.92);
+      border-radius: 50%;
+      padding: 4px;
+      flex-shrink: 0;
+    }
+    .play-header-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
     }
     .play-club {
       margin: 0;
       font-family: var(--font-serif);
       font-size: var(--text-md);
       font-weight: 600;
+      letter-spacing: 0.02em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .play-player {
       margin: 0;
-      font-size: var(--text-xs);
-      letter-spacing: 0.1em;
+      font-size: 11px;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
       opacity: 0.85;
     }
@@ -390,7 +414,7 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
       font-family: var(--font-serif);
       font-size: clamp(4rem, 18vw, 6rem);
       font-weight: 800;
-      color: var(--heroColor);
+      color: var(--primary);
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
@@ -513,7 +537,7 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
       padding: 16px 24px;
       border-radius: 12px;
       border: none;
-      background: var(--heroColor);
+      background: var(--primary);
       color: #FAF7EE;
       font-size: 16px;
       font-weight: 600;

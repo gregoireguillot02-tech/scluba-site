@@ -22,19 +22,19 @@ if (!round) {
 
 const r = round as Round & { club: Club };
 
+const { data: roster } = await sb.from('round_players').select('id').eq('round_id', r.id);
+const playerIds = (roster ?? []).map((p) => p.id);
+
 const [{ data: players }, { data: rawScores }] = await Promise.all([
   sb.from('round_players').select('*').eq('round_id', r.id).order('joined_at'),
-  sb.from('scores')
-    .select('*')
-    .in('round_player_id', (
-      await sb.from('round_players').select('id').eq('round_id', r.id)
-    ).data?.map((p) => p.id) ?? []),
+  playerIds.length
+    ? sb.from('scores').select('*').in('round_player_id', playerIds)
+    : Promise.resolve({ data: [] }),
 ]);
 
 const allPlayers = (players ?? []) as RoundPlayer[];
 const allScores = (rawScores ?? []) as Score[];
 const par = totalPar(r.club.course_data);
-const heroColor = r.club.primary_color ?? '#1B4332';
 
 function scoresFor(playerId: string): Record<number, number> {
   const out: Record<number, number> = {};
@@ -66,7 +66,7 @@ function fmtTime(iso: string | null): string {
   return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 
-const me = allPlayers[0]; // PR A: solo, the only player
+const me = allPlayers[0];
 const myMap = me ? scoresFor(me.id) : {};
 const myTotal = me ? totalFor(me.id) : { strokes: 0, played: 0, diff: 0 };
 
@@ -83,90 +83,102 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Carte du {fmtDate(r.started_at ?? r.created_at)} — {r.club.name} · Scluba</title>
   <meta name="robots" content="noindex, nofollow" />
-  <meta name="theme-color" content={heroColor} />
+  <meta name="theme-color" content="#FAF7EE" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 </head>
 <body>
   <main class="card">
-    <div class="card-photo" style={`background: linear-gradient(135deg, ${heroColor}, ${heroColor}dd);`}>
-      {r.club.photo_url && <img src={r.club.photo_url} alt="" loading="eager" />}
-      <div class="card-photo-fade"></div>
-    </div>
-
-    <header class="card-brand">
-      {r.club.logo_url && (
-        <img class="card-brand-logo" src={r.club.logo_url} alt="" />
+    <header class="masthead">
+      {r.club.photo_url ? (
+        <figure class="photo-card">
+          <img src={r.club.photo_url} alt="" loading="eager" decoding="async" />
+          <span class="photo-card-fade" aria-hidden="true"></span>
+        </figure>
+      ) : (
+        <div class="photo-card photo-card-placeholder" aria-hidden="true"></div>
       )}
-      <p class="card-brand-eyebrow">Carte récapitulative</p>
-      <h1 class="card-brand-name">{r.club.name}</h1>
+
+      {r.club.logo_url && (
+        <div class="logo-frame">
+          <img src={r.club.logo_url} alt="" />
+        </div>
+      )}
+
+      <p class="masthead-eyebrow">Carte récapitulative</p>
+      <div class="title-rail" aria-hidden="true"></div>
+      <h1 class="masthead-title">{r.club.name}</h1>
+      <div class="title-rail" aria-hidden="true"></div>
     </header>
 
-    <div class="card-meta">
-      <div>
-        <span class="card-meta-l">DATE</span>
-        <span class="card-meta-v">{fmtDate(r.started_at ?? r.created_at)}</span>
-      </div>
-      <div>
-        <span class="card-meta-l">DÉPART</span>
-        <span class="card-meta-v">{fmtTime(r.started_at)}</span>
-      </div>
-      <div>
-        <span class="card-meta-l">RÉF.</span>
-        <span class="card-meta-v">{r.short_code}</span>
-      </div>
-    </div>
+    <ul class="meta-strip" aria-label="Détails de la partie">
+      <li>
+        <span class="meta-l">Date</span>
+        <span class="meta-v">{fmtDate(r.started_at ?? r.created_at)}</span>
+      </li>
+      <li>
+        <span class="meta-l">Départ</span>
+        <span class="meta-v">{fmtTime(r.started_at)}</span>
+      </li>
+      <li>
+        <span class="meta-l">Réf.</span>
+        <span class="meta-v">{r.short_code}</span>
+      </li>
+    </ul>
 
-    <section class="card-score-block">
-      <div class="card-divider"><span></span><em>SCORE · {r.club.course_data.holes.length} TROUS</em><span></span></div>
-      <div class="card-score" data-card-score data-target={String(myTotal.strokes)}>0</div>
-      <div class="card-score-meta">
-        <span class={`card-score-over${myTotal.diff > 0 ? ' over' : myTotal.diff < 0 ? ' under' : ''}`}>
+    <section class="score-block" aria-labelledby="score-title">
+      <p id="score-title" class="sr-only">
+        Score final {myTotal.strokes}, {myTotal.diff >= 0 ? '+' : ''}{myTotal.diff} par rapport au par {par}.
+      </p>
+      <p class="score-eyebrow">Score · {r.club.course_data.holes.length} trous</p>
+      <div class="score-value" data-card-score data-target={String(myTotal.strokes)}>0</div>
+      <p class="score-meta">
+        <span class={`score-diff${myTotal.diff > 0 ? ' over' : myTotal.diff < 0 ? ' under' : ''}`}>
           {myTotal.diff > 0 ? `+${myTotal.diff}` : myTotal.diff < 0 ? String(myTotal.diff) : '±0'}
         </span>
-        <span class="card-score-sep">·</span>
+        <span class="score-sep" aria-hidden="true">·</span>
         <span>Par {par}</span>
-      </div>
+      </p>
     </section>
 
-    <section class="card-grid">
-      <div class="card-grid-row">
-        <span class="card-grid-label">F9</span>
+    <section class="grid-block" aria-label="Score par trou">
+      <div class="grid-row">
+        <span class="grid-label">F9</span>
         {front9.map((h) => {
           const s = myMap[h.number];
           const t = s !== undefined ? scoreType(s, h.par) : null;
           return (
-            <span class={`card-cell${t ? ` card-cell-${t}` : ' card-cell-empty'}`}>
+            <span class={`grid-cell${t ? ` cell-${t}` : ' cell-empty'}`} aria-label={`Trou ${h.number}: ${s ?? '—'}`}>
               {s ?? '—'}
             </span>
           );
         })}
       </div>
-      <div class="card-grid-row">
-        <span class="card-grid-label">B9</span>
+      <div class="grid-row">
+        <span class="grid-label">B9</span>
         {back9.map((h) => {
           const s = myMap[h.number];
           const t = s !== undefined ? scoreType(s, h.par) : null;
           return (
-            <span class={`card-cell${t ? ` card-cell-${t}` : ' card-cell-empty'}`}>
+            <span class={`grid-cell${t ? ` cell-${t}` : ' cell-empty'}`} aria-label={`Trou ${h.number}: ${s ?? '—'}`}>
               {s ?? '—'}
             </span>
           );
         })}
       </div>
-      <ul class="card-legend">
-        <li><span class="card-legend-swatch card-cell-birdie"></span>Birdie</li>
-        <li><span class="card-legend-swatch card-cell-par"></span>Par</li>
-        <li><span class="card-legend-swatch card-cell-bogey"></span>Bogey</li>
+      <ul class="grid-legend" aria-hidden="true">
+        <li><span class="legend-swatch cell-birdie"></span>Birdie</li>
+        <li><span class="legend-swatch cell-par"></span>Par</li>
+        <li><span class="legend-swatch cell-bogey"></span>Bogey</li>
       </ul>
     </section>
 
-    <section class="card-player">
+    <section class="player-row">
       <div>
-        <span class="card-meta-l">JOUEUR</span>
-        <span class="card-player-name">{me?.display_name ?? '—'}</span>
+        <span class="meta-l">Joueur</span>
+        <span class="player-name">{me?.display_name ?? '—'}</span>
       </div>
-      <button type="button" class="card-share" data-share-url={pageUrl} data-share-title={`Carte ${r.club.name}`}>
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <button type="button" class="share-btn" data-share-url={pageUrl} data-share-title={`Carte ${r.club.name}`}>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
           <polyline points="16 6 12 2 8 6"/>
           <line x1="12" y1="2" x2="12" y2="15"/>
@@ -175,9 +187,14 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       </button>
     </section>
 
-    <footer class="card-footer">
-      <span>FAIT À</span>
-      <strong>Scluba<em>.</em></strong>
+    <footer class="colophon">
+      <span class="colophon-rail" aria-hidden="true"></span>
+      <span class="colophon-text">
+        <span>carte by</span>
+        <strong>SCLUBA</strong>
+        <span class="colophon-dot" aria-hidden="true"></span>
+      </span>
+      <span class="colophon-rail" aria-hidden="true"></span>
     </footer>
   </main>
 
@@ -228,86 +245,124 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       overflow-x: hidden;
       margin: 0;
     }
+
+    .sr-only {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
     .card {
       max-width: 480px;
       margin: 0 auto;
-      background: linear-gradient(180deg, #FAF7EE 0%, #F4F8F5 100%);
-      box-shadow: 0 32px 80px rgba(27, 67, 50, 0.18);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 0 var(--space-4);
     }
-    .card-photo {
+
+    /* === Masthead === */
+    .masthead {
+      text-align: center;
+      padding-top: var(--space-5);
+      padding-bottom: var(--space-5);
+    }
+    .photo-card {
       position: relative;
-      height: clamp(180px, 36vh, 260px);
+      margin: 0;
+      aspect-ratio: 16 / 9;
+      max-height: 240px;
+      width: 100%;
+      border-radius: 16px;
       overflow: hidden;
+      background: #E8E0CB;
+      box-shadow:
+        0 1px 2px rgba(15, 42, 30, 0.06),
+        0 12px 32px rgba(27, 67, 50, 0.10);
     }
-    .card-photo img {
+    .photo-card img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      object-position: center 60%;
+      object-position: center 55%;
+      display: block;
     }
-    .card-photo-fade {
+    .photo-card-fade {
       position: absolute;
       inset: auto 0 0 0;
-      height: 80px;
-      background: linear-gradient(180deg, transparent, #FAF7EE);
+      height: 40%;
+      background: linear-gradient(180deg, transparent, rgba(15, 42, 30, 0.35));
+      pointer-events: none;
     }
-
-    .card-brand {
-      margin-top: -52px;
-      text-align: center;
-      padding: 0 var(--space-5);
+    .photo-card-placeholder {
+      background: linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%);
+    }
+    .logo-frame {
       position: relative;
       z-index: 2;
-    }
-    .card-brand-logo {
-      display: block;
-      margin: 0 auto;
-      filter: drop-shadow(0 4px 16px rgba(0,0,0,0.16));
+      margin: -36px auto 0;
       width: 76px;
       height: 76px;
+      border-radius: 50%;
+      background: #FAF7EE;
+      border: 2px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 20px rgba(27, 67, 50, 0.10);
+      padding: 10px;
     }
-    .card-brand-eyebrow {
-      font-size: var(--text-xs);
-      letter-spacing: 0.18em;
+    .logo-frame img { width: 100%; height: 100%; object-fit: contain; }
+
+    .masthead-eyebrow {
+      margin: var(--space-4) 0 var(--space-3);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
       color: var(--accent);
-      font-weight: 600;
-      margin-top: var(--space-3);
     }
-    .card-brand-name {
+    .title-rail {
+      width: 64px;
+      height: 1px;
+      margin: 0 auto;
+      background: var(--accent);
+      opacity: 0.55;
+    }
+    .masthead-title {
+      margin: var(--space-3) auto;
       font-family: var(--font-serif);
-      font-size: clamp(1.75rem, 6vw, 2.5rem);
-      color: var(--primary);
       font-weight: 700;
-      letter-spacing: -0.01em;
-      margin: 4px 0 0;
-      line-height: 1.1;
+      font-size: clamp(1.6rem, 5.5vw, 2.1rem);
+      line-height: 1.15;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--primary);
+      max-width: 22ch;
     }
 
-    .card-meta {
+    /* === Meta strip === */
+    .meta-strip {
+      list-style: none;
+      margin: 0 0 var(--space-6);
+      padding: var(--space-3) var(--space-4);
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: var(--space-3);
-      margin: var(--space-5) var(--space-5) 0;
-      padding: var(--space-3) var(--space-4);
-      background: rgba(212, 165, 116, 0.08);
-      border-top: 1px solid rgba(212, 165, 116, 0.3);
-      border-bottom: 1px solid rgba(212, 165, 116, 0.3);
+      background: rgba(212, 165, 116, 0.10);
+      border-top: 1px solid rgba(212, 165, 116, 0.4);
+      border-bottom: 1px solid rgba(212, 165, 116, 0.4);
     }
-    .card-meta > div {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      text-align: center;
+    .meta-strip li {
+      display: flex; flex-direction: column; gap: 4px; text-align: center;
     }
-    .card-meta-l {
+    .meta-l {
       font-size: 9px;
       font-weight: 700;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.2em;
       color: var(--accent);
       text-transform: uppercase;
     }
-    .card-meta-v {
+    .meta-v {
       font-family: var(--font-serif);
       font-size: var(--text-sm);
       color: var(--primary);
@@ -315,33 +370,20 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       font-variant-numeric: tabular-nums;
     }
 
-    .card-score-block {
+    /* === Score block === */
+    .score-block {
       text-align: center;
-      padding: var(--space-7) var(--space-5) var(--space-5);
+      padding: var(--space-7) 0 var(--space-5);
     }
-    .card-divider {
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-      margin-bottom: var(--space-4);
-      max-width: 280px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .card-divider span {
-      flex: 1;
-      height: 1px;
-      background: var(--accent);
-      opacity: 0.5;
-    }
-    .card-divider em {
-      font-style: normal;
-      font-size: 10px;
-      color: var(--accent);
+    .score-eyebrow {
+      margin: 0 0 var(--space-4);
+      font-size: 11px;
+      font-weight: 700;
       letter-spacing: 0.2em;
-      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--accent);
     }
-    .card-score {
+    .score-value {
       font-family: var(--font-serif);
       font-size: clamp(5rem, 22vw, 7rem);
       font-weight: 800;
@@ -350,7 +392,7 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       letter-spacing: -0.03em;
       font-variant-numeric: tabular-nums;
     }
-    .card-score-meta {
+    .score-meta {
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -359,52 +401,49 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       color: var(--muted);
       letter-spacing: 0.04em;
     }
-    .card-score-over { font-weight: 700; font-variant-numeric: tabular-nums; }
-    .card-score-over.over { color: #C0392B; }
-    .card-score-over.under { color: #1B4332; }
-    .card-score-sep { color: var(--accent); font-weight: 700; }
+    .score-diff { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .score-diff.over { color: #C0392B; }
+    .score-diff.under { color: var(--primary); }
+    .score-sep { color: var(--accent); font-weight: 700; }
 
-    .card-grid {
-      padding: var(--space-6) var(--space-5) var(--space-4);
+    /* === Grid block === */
+    .grid-block {
+      padding: var(--space-5) 0 var(--space-4);
       display: flex;
       flex-direction: column;
       gap: var(--space-3);
     }
-    .card-grid-row {
+    .grid-row {
       display: grid;
       grid-template-columns: 28px repeat(9, 1fr);
       gap: 4px;
     }
-    .card-grid-label {
+    .grid-label {
       background: var(--primary);
       color: var(--bg);
       font-size: 11px;
       font-weight: 700;
       border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
     }
-    .card-cell {
+    .grid-cell {
       aspect-ratio: 1;
-      background: var(--bg);
+      background: #fff;
       border: 1px solid var(--line);
       border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       font-size: 13px;
       font-weight: 700;
       color: var(--ink);
       font-variant-numeric: tabular-nums;
     }
-    .card-cell-birdie, .card-cell-eagle { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
-    .card-cell-par { color: var(--primary); }
-    .card-cell-bogey { color: var(--muted); }
-    .card-cell-double { color: #6B7280; background: rgba(107,114,128,0.08); }
-    .card-cell-empty { color: var(--muted-soft, var(--muted)); opacity: 0.5; }
+    .cell-eagle, .cell-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
+    .cell-par { color: var(--primary); }
+    .cell-bogey { color: var(--muted); }
+    .cell-double { color: #6B7280; background: rgba(107,114,128,0.08); }
+    .cell-empty { color: var(--muted-soft); opacity: 0.5; }
 
-    .card-legend {
+    .grid-legend {
       list-style: none;
       margin: var(--space-3) 0 0;
       padding: 0;
@@ -415,36 +454,36 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       color: var(--muted);
       letter-spacing: 0.04em;
     }
-    .card-legend li { display: inline-flex; align-items: center; gap: 6px; }
-    .card-legend-swatch {
-      width: 14px;
-      height: 14px;
+    .grid-legend li { display: inline-flex; align-items: center; gap: 6px; }
+    .legend-swatch {
+      width: 14px; height: 14px;
       border-radius: var(--radius-sm);
       border: 1px solid var(--line);
     }
 
-    .card-player {
+    /* === Player row + share === */
+    .player-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: var(--space-3);
-      margin: 0 var(--space-5);
-      padding: var(--space-4) 0 var(--space-5);
+      padding: var(--space-4) 0;
+      margin-top: var(--space-4);
       border-top: 1px dashed rgba(212, 165, 116, 0.5);
       border-bottom: 1px dashed rgba(212, 165, 116, 0.5);
     }
-    .card-player-name {
-      display: block;
+    .player-row > div { display: flex; flex-direction: column; gap: 4px; }
+    .player-name {
       font-family: var(--font-serif);
       font-size: var(--text-md);
       color: var(--primary);
       font-weight: 700;
-      margin-top: 2px;
     }
-    .card-share {
+    .share-btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      min-height: 44px;
       padding: 10px 18px;
       border-radius: 12px;
       border: none;
@@ -453,25 +492,48 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
       font-size: var(--text-sm);
       font-weight: 600;
       cursor: pointer;
+      box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 4px 12px rgba(27, 67, 50, 0.10);
+      transition: background 0.15s;
     }
-    .card-share:hover { background: var(--primary-deep); }
+    .share-btn:hover { background: var(--primary-deep); }
 
-    .card-footer {
-      text-align: center;
-      padding: var(--space-5) 0 var(--space-7);
-      font-size: 11px;
-      color: var(--muted);
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+    /* === Colophon === */
+    .colophon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-3);
+      padding: var(--space-6) 0 var(--space-7);
+      max-width: 320px;
+      margin: 0 auto;
     }
-    .card-footer strong {
+    .colophon-rail {
+      flex: 1;
+      height: 1px;
+      background: var(--accent);
+      opacity: 0.45;
+    }
+    .colophon-text {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       font-family: var(--font-serif);
-      color: var(--primary);
-      font-size: var(--text-md);
-      font-weight: 700;
-      margin-left: 6px;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      white-space: nowrap;
     }
-    .card-footer em { font-style: normal; color: var(--accent); }
+    .colophon-text strong {
+      font-family: var(--font-serif);
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.08em;
+    }
+    .colophon-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 1px;
+    }
   </style>
 </body>
 </html>
