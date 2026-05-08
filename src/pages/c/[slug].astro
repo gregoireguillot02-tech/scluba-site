@@ -24,6 +24,66 @@ const c = club as Club;
 const par = totalPar(c.course_data);
 const holeCount = c.course_data.holes.length;
 const clubColor = c.primary_color ?? '#1B4332';
+
+// Recovery flow: read query params set by /api/clubs/[slug]/find-round.
+const url = new URL(Astro.request.url);
+const recoverErr = url.searchParams.get('recover_err');
+const recoverMode = url.searchParams.get('recover');
+const recoverName = url.searchParams.get('name') ?? '';
+
+// Ambiguous case — multiple active rounds match the name. Fetch them so the
+// page can render a disambiguation list (start time + code + player count).
+type AmbiguousMatch = {
+  round_id: string;
+  short_code: string;
+  status: 'lobby' | 'playing';
+  started_at: string | null;
+  created_at: string;
+  display_name: string;
+  player_count: number;
+};
+let ambiguousMatches: AmbiguousMatch[] = [];
+
+if (recoverMode === 'ambiguous' && recoverName) {
+  const { data: activeRounds } = await sb
+    .from('rounds')
+    .select('id, short_code, status, started_at, created_at')
+    .eq('club_id', c.id)
+    .in('status', ['lobby', 'playing']);
+  const rounds = activeRounds ?? [];
+  if (rounds.length > 0) {
+    const roundIds = rounds.map((r) => r.id);
+    const [{ data: players }, { data: roster }] = await Promise.all([
+      sb.from('round_players').select('round_id, display_name').in('round_id', roundIds).ilike('display_name', recoverName),
+      sb.from('round_players').select('round_id').in('round_id', roundIds),
+    ]);
+    const counts: Record<string, number> = {};
+    for (const r of roster ?? []) counts[r.round_id] = (counts[r.round_id] ?? 0) + 1;
+
+    const seenRound = new Set<string>();
+    for (const p of players ?? []) {
+      if (seenRound.has(p.round_id)) continue;
+      seenRound.add(p.round_id);
+      const r = rounds.find((x) => x.id === p.round_id);
+      if (!r) continue;
+      ambiguousMatches.push({
+        round_id: r.id,
+        short_code: r.short_code,
+        status: r.status as 'lobby' | 'playing',
+        started_at: r.started_at,
+        created_at: r.created_at,
+        display_name: p.display_name,
+        player_count: counts[r.round_id] ?? 1,
+      });
+    }
+    ambiguousMatches.sort((a, b) => (b.started_at ?? b.created_at).localeCompare(a.started_at ?? a.created_at));
+  }
+}
+
+function fmtTime(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
 ---
 
 <!doctype html>
@@ -105,6 +165,68 @@ const clubColor = c.primary_color ?? '#1B4332';
       </form>
 
       <p class="cta-hint">Pas besoin de compte. Tu pourras partager ta carte à la fin.</p>
+
+      {recoverErr === 'not_found' && (
+        <div class="recover-flash recover-flash-warn">
+          Pas de partie en cours au nom de <strong>{recoverName}</strong>. Demande à un copain le code, ou démarre une nouvelle partie.
+        </div>
+      )}
+
+      {recoverMode === 'ambiguous' && ambiguousMatches.length > 1 && (
+        <section class="recover-picker" aria-labelledby="recover-picker-title">
+          <p id="recover-picker-title" class="recover-picker-title">
+            Plusieurs parties trouvées au nom de <strong>{recoverName}</strong>. Choisis la tienne&nbsp;:
+          </p>
+          <ul class="recover-picker-list">
+            {ambiguousMatches.map((m) => (
+              <li>
+                <form method="POST" action={`/api/clubs/${c.slug}/find-round`}>
+                  <input type="hidden" name="display_name" value={m.display_name} />
+                  <input type="hidden" name="short_code" value={m.short_code} />
+                  <button type="submit" class="recover-picker-btn">
+                    <span class="picker-time">{fmtTime(m.started_at ?? m.created_at)}</span>
+                    <span class="picker-meta">
+                      <code>{m.short_code}</code>
+                      <span> · {m.player_count} joueur{m.player_count > 1 ? 's' : ''}</span>
+                      {m.status === 'lobby' && <span class="picker-status">en lobby</span>}
+                    </span>
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <details class="join-block recover-block" open={recoverErr === 'not_found' || recoverMode === 'ambiguous'}>
+        <summary class="join-summary">
+          <span>Reprendre ma partie</span>
+          <svg class="join-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </summary>
+        <form method="POST" action={`/api/clubs/${c.slug}/find-round`} class="join-form">
+          <label class="start-label">
+            <span>Ton prénom</span>
+            <input
+              class="start-input"
+              type="text"
+              name="display_name"
+              placeholder="Antoine"
+              maxlength="40"
+              required
+              autocomplete="given-name"
+              value={recoverName}
+            />
+          </label>
+          <button type="submit" class="join-btn">
+            Retrouver ma partie
+          </button>
+        </form>
+        <p class="recover-hint">
+          Ton tel s'est éteint en cours de partie ? Tape ton prénom et on te ramène sur ta carte. Pas besoin du code.
+        </p>
+      </details>
 
       <details class="join-block">
         <summary class="join-summary">
@@ -504,6 +626,106 @@ const clubColor = c.primary_color ?? '#1B4332';
       color: var(--clubColor);
       text-decoration: underline;
       text-underline-offset: 2px;
+    }
+
+    /* === Recovery flow === */
+    .recover-flash {
+      max-width: 340px;
+      margin: var(--space-5) auto 0;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.4;
+      text-align: left;
+    }
+    .recover-flash-warn {
+      background: #FEF3C7;
+      border: 1px solid #FCD34D;
+      color: #78350F;
+    }
+
+    .recover-picker {
+      max-width: 340px;
+      margin: var(--space-5) auto 0;
+      padding: var(--space-3) var(--space-4);
+      background: rgba(212, 165, 116, 0.10);
+      border: 1px solid rgba(212, 165, 116, 0.4);
+      border-radius: 12px;
+    }
+    .recover-picker-title {
+      margin: 0 0 var(--space-3);
+      font-size: 13px;
+      color: var(--ink-soft);
+      line-height: 1.4;
+      text-align: left;
+    }
+    .recover-picker-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .recover-picker-list form { margin: 0; }
+    .recover-picker-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      text-align: left;
+    }
+    .recover-picker-btn:hover {
+      border-color: var(--clubColor);
+      background: var(--bg-soft);
+    }
+    .picker-time {
+      font-family: var(--font-serif);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--clubColor);
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+    .picker-meta {
+      font-size: 12px;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .picker-meta code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: var(--line-soft);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      color: var(--ink);
+    }
+    .picker-status {
+      background: rgba(212, 165, 116, 0.18);
+      color: #92400E;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .recover-hint {
+      margin: var(--space-3) 0 0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      text-align: left;
     }
 
     /* === Colophon === */
