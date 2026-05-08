@@ -3,7 +3,7 @@ import '../styles/tokens.css';
 
 interface Props {
   title: string;
-  active?: 'home' | 'prospects' | 'todo' | 'signups';
+  active?: 'home' | 'prospects' | 'clubs' | 'todo' | 'signups';
 }
 
 const { title, active } = Astro.props;
@@ -12,6 +12,7 @@ const user = Astro.locals.user;
 const nav = [
   { id: 'home', label: 'Vue d\'ensemble', href: '/ops' },
   { id: 'prospects', label: 'CRM', href: '/ops/prospects' },
+  { id: 'clubs', label: 'Clubs', href: '/ops/clubs' },
   { id: 'todo', label: 'Todo partagée', href: '/ops/todo' },
   { id: 'signups', label: 'Leads CTA', href: '/ops/signups' },
 ] as const;
