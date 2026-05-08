@@ -1,0 +1,235 @@
+---
+export const prerender = false;
+
+import '../../styles/tokens.css';
+import '../../styles/global.css';
+
+const url = Astro.url;
+const next = url.searchParams.get('next') || '/';
+const sent = url.searchParams.get('sent') === '1';
+const errMsg = url.searchParams.get('err');
+
+let formError: string | null = null;
+let formSent = sent;
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const email = String(formData.get('email') ?? '').trim().toLowerCase();
+    const nextField = String(formData.get('next') ?? '/');
+
+    if (!email) {
+      formError = 'Email requis.';
+    } else {
+      const supabase = Astro.locals.supabase;
+      const origin = url.origin;
+      const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(nextField)}`;
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectTo },
+      });
+      if (error) {
+        formError = `Erreur: ${error.message}`;
+      } else {
+        return Astro.redirect(`/auth/login?sent=1&next=${encodeURIComponent(nextField)}`, 302);
+      }
+    }
+  } catch (e) {
+    formError = `Erreur: ${(e as Error).message}`;
+  }
+}
+---
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Connexion · Scluba</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#FAF7EE" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+  <main class="auth-page">
+    <header class="auth-head">
+      <a href={next} class="auth-back" aria-label="Retour">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+        Retour
+      </a>
+      <p class="auth-eyebrow">Scorecard</p>
+      <div class="title-rail" aria-hidden="true"></div>
+      <h1 class="auth-title">Se connecter</h1>
+      <div class="title-rail" aria-hidden="true"></div>
+      <p class="auth-lead">
+        Entre ton email pour recevoir un lien de connexion. Optionnel — il sert juste à retrouver tes parties plus tard.
+      </p>
+    </header>
+
+    {formSent && !formError && (
+      <div class="auth-flash ok">
+        ✓ Lien envoyé. Ouvre ton email et clique pour te connecter.
+      </div>
+    )}
+    {formError && <div class="auth-flash err">{formError}</div>}
+    {errMsg && <div class="auth-flash err">{errMsg}</div>}
+
+    <form method="POST" class="auth-form">
+      <input type="hidden" name="next" value={next} />
+      <label class="auth-label">
+        <span>Email</span>
+        <input
+          type="email"
+          name="email"
+          required
+          autofocus
+          autocomplete="email"
+          inputmode="email"
+          placeholder="toi@email.com"
+          class="auth-input"
+        />
+      </label>
+      <button type="submit" class="auth-btn">Recevoir le lien</button>
+    </form>
+
+    <a href={next} class="auth-skip">Continuer sans compte →</a>
+
+    <footer class="colophon">
+      <span class="colophon-rail" aria-hidden="true"></span>
+      <span class="colophon-text">
+        <span>by</span>
+        <strong>SCLUBA</strong>
+        <span class="colophon-dot" aria-hidden="true"></span>
+      </span>
+      <span class="colophon-rail" aria-hidden="true"></span>
+    </footer>
+  </main>
+
+  <style>
+    body {
+      background: #FAF7EE;
+      min-height: 100dvh;
+      margin: 0;
+      overflow-x: hidden;
+    }
+    .auth-page {
+      max-width: 420px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: var(--space-5) var(--space-4) var(--space-7);
+    }
+    .auth-head { text-align: center; margin-bottom: var(--space-6); }
+    .auth-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      margin-bottom: var(--space-5);
+      align-self: flex-start;
+    }
+    .auth-back:hover { color: var(--primary); }
+    .auth-eyebrow {
+      margin: 0 0 var(--space-2);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .title-rail { width: 64px; height: 1px; margin: 0 auto; background: var(--accent); opacity: 0.55; }
+    .auth-title {
+      margin: var(--space-3) auto;
+      font-family: var(--font-serif);
+      font-weight: 700;
+      font-size: clamp(1.6rem, 5.5vw, 2.1rem);
+      line-height: 1.15;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+    .auth-lead {
+      margin: var(--space-4) 0 0;
+      color: var(--ink-soft);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .auth-flash {
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-bottom: var(--space-4);
+    }
+    .auth-flash.ok { background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; }
+    .auth-flash.err { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
+
+    .auth-form { display: flex; flex-direction: column; gap: var(--space-4); margin-bottom: var(--space-4); }
+    .auth-label > span {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .auth-input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 16px;
+      font-family: var(--font-sans);
+      color: var(--ink);
+    }
+    .auth-input:focus {
+      outline: none;
+      border-color: var(--primary-soft);
+      box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15);
+    }
+    .auth-btn {
+      min-height: 52px;
+      padding: 14px 24px;
+      border-radius: 12px;
+      border: none;
+      background: var(--primary);
+      color: #FAF7EE;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 20px rgba(27, 67, 50, 0.18);
+    }
+    .auth-btn:hover { filter: brightness(0.92); }
+    .auth-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    .auth-skip {
+      display: block;
+      text-align: center;
+      margin: var(--space-3) 0 var(--space-7);
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .auth-skip:hover { color: var(--primary); }
+
+    .colophon {
+      display: flex; align-items: center; justify-content: center; gap: var(--space-3);
+      max-width: 260px;
+      margin: auto auto 0;
+      padding-top: var(--space-5);
+    }
+    .colophon-rail { flex: 1; height: 1px; background: var(--accent); opacity: 0.45; }
+    .colophon-text { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-serif); font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .colophon-text strong { font-weight: 700; color: var(--primary); letter-spacing: 0.08em; }
+    .colophon-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 1px; }
+  </style>
+</body>
+</html>

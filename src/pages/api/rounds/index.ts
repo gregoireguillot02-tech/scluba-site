@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { serviceClient } from '../../../lib/supabase';
+import { authServerClient, serviceClient } from '../../../lib/supabase';
 import { generateRoundShortCode } from '../../../lib/slug';
 
 export const prerender = false;
@@ -31,7 +31,7 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
     short_code = generateRoundShortCode();
     const { data: created, error: rErr } = await sb
       .from('rounds')
-      .insert({ club_id: club.id, short_code, status: 'playing', started_at: new Date().toISOString() })
+      .insert({ club_id: club.id, short_code, status: 'lobby' })
       .select('id')
       .single();
     if (!rErr && created) {
@@ -44,9 +44,18 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
   }
   if (!roundId) return new Response('short_code collision exhausted', { status: 500 });
 
+  // If the creator has a Supabase session, link the round_player to the user.
+  const auth = authServerClient(cookies, request.headers);
+  const { data: { user } } = await auth.auth.getUser();
+
   const { data: player, error: pErr } = await sb
     .from('round_players')
-    .insert({ round_id: roundId, display_name, is_creator: true })
+    .insert({
+      round_id: roundId,
+      display_name,
+      is_creator: true,
+      user_id: user?.id ?? null,
+    })
     .select('id')
     .single();
   if (pErr) return new Response(`Create player failed: ${pErr.message}`, { status: 500 });
@@ -59,5 +68,5 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
     maxAge: 60 * 60 * 24 * 7,
   });
 
-  return redirect(`/r/${short_code}/play`, 302);
+  return redirect(`/r/${short_code}`, 302);
 };

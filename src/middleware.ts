@@ -12,7 +12,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const isOpsPage = pathname.startsWith('/ops');
   const isOpsApi = pathname.startsWith('/api/ops');
-  if (!isOpsPage && !isOpsApi) return next();
+  const isAuthPage = pathname.startsWith('/auth');
+  const isAuthApi = pathname.startsWith('/api/auth');
+
+  // Pages outside the auth/ops zones don't need the supabase client populated.
+  if (!isOpsPage && !isOpsApi && !isAuthPage && !isAuthApi) return next();
 
   const supabase = authServerClient(context.cookies, context.request.headers);
   const {
@@ -23,6 +27,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
     ? { id: user.id, email: user.email ?? '' }
     : null;
   context.locals.supabase = supabase;
+
+  // Golfer-side auth pages have no allowlist — anyone can sign in.
+  if (isAuthPage || isAuthApi) return next();
 
   if (PUBLIC_OPS_PATHS.has(pathname)) return next();
 

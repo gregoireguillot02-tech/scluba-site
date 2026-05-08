@@ -28,26 +28,34 @@ if (r.status === 'finished') {
 
 const playerId = Astro.cookies.get(`scluba_player_${shortCode}`)?.value ?? null;
 
-const [{ data: player }, { data: rawScores }] = await Promise.all([
-  playerId
-    ? sb.from('round_players').select('*').eq('id', playerId).eq('round_id', r.id).maybeSingle()
-    : Promise.resolve({ data: null }),
-  playerId
-    ? sb.from('scores').select('*').eq('round_player_id', playerId).order('hole_number')
-    : Promise.resolve({ data: [] }),
-]);
+const { data: allPlayersRaw } = await sb
+  .from('round_players')
+  .select('*')
+  .eq('round_id', r.id)
+  .order('joined_at');
+const allPlayers = (allPlayersRaw ?? []) as RoundPlayer[];
 
-if (!player) {
+const me = allPlayers.find((p) => p.id === playerId);
+if (!me) {
   return new Response('Tu n\'es pas joueur dans cette partie. Reviens depuis la page du club pour démarrer.', { status: 403 });
 }
 
-const me = player as RoundPlayer;
-const myScores = (rawScores ?? []) as Score[];
+const playerIds = allPlayers.map((p) => p.id);
+const { data: allScoresRaw } = playerIds.length
+  ? await sb.from('scores').select('*').in('round_player_id', playerIds)
+  : { data: [] as Score[] };
+const allScores = (allScoresRaw ?? []) as Score[];
+
 const par = totalPar(r.club.course_data);
 const clubColor = r.club.primary_color ?? '#1B4332';
 
 const scoresByHole: Record<number, number> = {};
-for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
+for (const s of allScores) {
+  if (s.round_player_id === me.id) scoresByHole[s.hole_number] = s.strokes;
+}
+
+const holesByNumber: Record<number, number> = {};
+for (const h of r.club.course_data.holes) holesByNumber[h.number] = h.par;
 ---
 
 <!doctype html>
@@ -81,6 +89,19 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
         </div>
       </div>
     </header>
+
+    <section
+      class="live-board"
+      aria-label="Classement en direct"
+      data-live-board
+      data-round-id={r.id}
+      data-me-id={me.id}
+      data-holes={JSON.stringify(holesByNumber)}
+      data-players={JSON.stringify(allPlayers.map((p) => ({ id: p.id, name: p.display_name })))}
+      data-scores={JSON.stringify(allScores.map((s) => ({ pid: s.round_player_id, hole: s.hole_number, strokes: s.strokes })))}
+    >
+      <ul class="live-list" data-live-list></ul>
+    </section>
 
     <section
       class="hole-card"
@@ -152,8 +173,116 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
   </main>
 
   <script>
-    type CourseData = { holes: { number: number; par: number }[] };
+    import { subscribeToRound, unsubscribeFromRound } from '../../../lib/realtime';
 
+    type CourseData = { holes: { number: number; par: number }[] };
+    type LivePlayer = { id: string; name: string };
+    type LiveScore = { pid: string; hole: number; strokes: number };
+
+    /* === Live leaderboard ============================================== */
+    const board = document.querySelector<HTMLElement>('[data-live-board]');
+    if (board) {
+      const roundId = board.dataset.roundId!;
+      const meId = board.dataset.meId!;
+      const holes = JSON.parse(board.dataset.holes!) as Record<number, number>;
+      const players: Map<string, LivePlayer> = new Map(
+        (JSON.parse(board.dataset.players!) as LivePlayer[]).map((p) => [p.id, p]),
+      );
+      const scoresByPlayer: Map<string, Map<number, number>> = new Map();
+      for (const s of JSON.parse(board.dataset.scores!) as LiveScore[]) {
+        if (!scoresByPlayer.has(s.pid)) scoresByPlayer.set(s.pid, new Map());
+        scoresByPlayer.get(s.pid)!.set(s.hole, s.strokes);
+      }
+      const list = board.querySelector<HTMLElement>('[data-live-list]')!;
+
+      function totalsFor(pid: string): { strokes: number; played: number; diff: number } {
+        const map = scoresByPlayer.get(pid);
+        if (!map) return { strokes: 0, played: 0, diff: 0 };
+        let strokes = 0;
+        let played = 0;
+        let diff = 0;
+        for (const [hole, s] of map) {
+          strokes += s;
+          played++;
+          diff += s - (holes[hole] ?? 0);
+        }
+        return { strokes, played, diff };
+      }
+
+      function fmtDiff(diff: number, played: number): string {
+        if (played === 0) return '—';
+        if (diff === 0) return '±0';
+        return diff > 0 ? `+${diff}` : String(diff);
+      }
+
+      function renderBoard() {
+        list.replaceChildren();
+        const ordered = Array.from(players.values()).sort((a, b) => {
+          const ta = totalsFor(a.id);
+          const tb = totalsFor(b.id);
+          if (ta.played === 0 && tb.played === 0) return 0;
+          if (ta.played === 0) return 1;
+          if (tb.played === 0) return -1;
+          return ta.diff - tb.diff;
+        });
+        for (const p of ordered) {
+          const t = totalsFor(p.id);
+          const li = document.createElement('li');
+          li.className = 'live-item' + (p.id === meId ? ' is-me' : '');
+          li.innerHTML = `
+            <span class="live-name"></span>
+            <span class="live-strokes"></span>
+            <span class="live-diff"></span>
+          `;
+          li.querySelector('.live-name')!.textContent = p.name + (p.id === meId ? ' (vous)' : '');
+          li.querySelector('.live-strokes')!.textContent = t.played === 0 ? '—' : String(t.strokes);
+          const diffEl = li.querySelector<HTMLElement>('.live-diff')!;
+          diffEl.textContent = fmtDiff(t.diff, t.played);
+          if (t.played > 0) {
+            if (t.diff < 0) diffEl.classList.add('under');
+            else if (t.diff > 0) diffEl.classList.add('over');
+          }
+          list.appendChild(li);
+        }
+      }
+
+      renderBoard();
+
+      const channel = subscribeToRound(roundId, {
+        onPlayersChange: (event, row) => {
+          const p = row as { id: string; round_id: string; display_name: string };
+          if (p.round_id !== roundId) return;
+          if (event === 'DELETE') {
+            players.delete(p.id);
+            scoresByPlayer.delete(p.id);
+          } else {
+            players.set(p.id, { id: p.id, name: p.display_name });
+          }
+          renderBoard();
+        },
+        onScoresChange: (event, row) => {
+          const s = row as { round_player_id: string; hole_number: number; strokes: number };
+          if (!players.has(s.round_player_id)) return;
+          const map = scoresByPlayer.get(s.round_player_id) ?? new Map<number, number>();
+          if (event === 'DELETE') {
+            map.delete(s.hole_number);
+          } else {
+            map.set(s.hole_number, s.strokes);
+          }
+          scoresByPlayer.set(s.round_player_id, map);
+          renderBoard();
+        },
+        onRoundUpdate: (row) => {
+          if ((row as { status?: string }).status === 'finished') {
+            window.location.href = window.location.pathname.replace(/\/play$/, '/recap');
+          }
+        },
+      });
+
+      window.addEventListener('beforeunload', () => unsubscribeFromRound(channel));
+    }
+
+    /* === Score entry (existing logic, unchanged) ======================== */
     const root = document.querySelector<HTMLElement>('[data-play-root]');
     if (root) {
       const shortCode = root.dataset.shortCode!;
@@ -301,6 +430,60 @@ for (const s of myScores) scoresByHole[s.hole_number] = s.strokes;
       display: flex;
       flex-direction: column;
     }
+
+    /* === Live leaderboard === */
+    .live-board {
+      padding: var(--space-3) var(--space-4);
+      background: rgba(212, 165, 116, 0.10);
+      border-bottom: 1px solid rgba(212, 165, 116, 0.4);
+    }
+    .live-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .live-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
+      align-items: baseline;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      transition: background 200ms ease-out;
+    }
+    .live-item.is-me {
+      background: rgba(212, 165, 116, 0.20);
+    }
+    .live-name {
+      font-weight: 600;
+      color: var(--ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .live-strokes {
+      font-family: var(--font-serif);
+      font-weight: 700;
+      color: var(--clubColor);
+      font-variant-numeric: tabular-nums;
+      min-width: 28px;
+      text-align: right;
+    }
+    .live-diff {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      min-width: 32px;
+      text-align: right;
+    }
+    .live-diff.over { color: #C0392B; }
+    .live-diff.under { color: #1B4332; }
 
     .play-header {
       color: #FAF7EE;
