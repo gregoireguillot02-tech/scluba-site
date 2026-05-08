@@ -19,10 +19,11 @@ import {
 const { id } = Astro.params;
 const sb = serviceClient();
 
-const [{ data: prospect }, { data: events }, { data: tasks }] = await Promise.all([
+const [{ data: prospect }, { data: events }, { data: tasks }, { data: club }] = await Promise.all([
   sb.from('prospects').select('*').eq('id', id).maybeSingle(),
   sb.from('prospect_events').select('*').eq('prospect_id', id).order('created_at', { ascending: false }),
   sb.from('tasks').select('*').eq('prospect_id', id).order('done').order('due_date'),
+  sb.from('clubs').select('id, slug').eq('prospect_id', id).maybeSingle(),
 ]);
 
 if (!prospect) {
@@ -52,7 +53,27 @@ function fmtDate(iso: string | null): string {
         {p.contact_name ? ` · ${p.contact_name}` : ''}
       </p>
     </div>
-    <span class="ops-tag" style={`background:${STATUS_COLORS[p.status]}22; color:${STATUS_COLORS[p.status]}; font-size:14px; padding:6px 14px`}>{STATUS_LABELS[p.status]}</span>
+    <div class="header-right">
+      <span class="ops-tag" style={`background:${STATUS_COLORS[p.status]}22; color:${STATUS_COLORS[p.status]}; font-size:14px; padding:6px 14px`}>{STATUS_LABELS[p.status]}</span>
+      {club ? (
+        <a href={`/ops/clubs/${club.id}/qr`} class="ops-btn ops-btn-primary">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 18h3"/>
+          </svg>
+          Voir le QR
+        </a>
+      ) : (
+        <form method="POST" action="/api/ops/clubs/from-prospect" style="display:inline">
+          <input type="hidden" name="prospect_id" value={p.id} />
+          <button type="submit" class="ops-btn ops-btn-primary">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Générer la page club
+          </button>
+        </form>
+      )}
+    </div>
   </div>
 
   <div class="detail-grid">
@@ -194,6 +215,14 @@ function fmtDate(iso: string | null): string {
     text-decoration: none;
   }
   .back-link:hover { color: var(--primary); }
+
+  .header-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
 
   .detail-grid {
     display: grid;

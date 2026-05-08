@@ -1,0 +1,477 @@
+---
+export const prerender = false;
+
+import '../../../styles/tokens.css';
+import '../../../styles/global.css';
+import { serviceClient } from '../../../lib/supabase';
+import type { Club, Round, RoundPlayer, Score } from '../../../lib/clubs-types';
+import { totalPar, scoreType } from '../../../lib/clubs-types';
+
+const { shortCode } = Astro.params;
+const sb = serviceClient();
+
+const { data: round } = await sb
+  .from('rounds')
+  .select('*, club:clubs(*)')
+  .eq('short_code', shortCode)
+  .maybeSingle();
+
+if (!round) {
+  return new Response('Partie introuvable', { status: 404 });
+}
+
+const r = round as Round & { club: Club };
+
+const [{ data: players }, { data: rawScores }] = await Promise.all([
+  sb.from('round_players').select('*').eq('round_id', r.id).order('joined_at'),
+  sb.from('scores')
+    .select('*')
+    .in('round_player_id', (
+      await sb.from('round_players').select('id').eq('round_id', r.id)
+    ).data?.map((p) => p.id) ?? []),
+]);
+
+const allPlayers = (players ?? []) as RoundPlayer[];
+const allScores = (rawScores ?? []) as Score[];
+const par = totalPar(r.club.course_data);
+const heroColor = r.club.primary_color ?? '#1B4332';
+
+function scoresFor(playerId: string): Record<number, number> {
+  const out: Record<number, number> = {};
+  for (const s of allScores) if (s.round_player_id === playerId) out[s.hole_number] = s.strokes;
+  return out;
+}
+
+function totalFor(playerId: string): { strokes: number; played: number; diff: number } {
+  let strokes = 0;
+  let played = 0;
+  let diff = 0;
+  const map = scoresFor(playerId);
+  for (const h of r.club.course_data.holes) {
+    const s = map[h.number];
+    if (s !== undefined) {
+      strokes += s;
+      played++;
+      diff += s - h.par;
+    }
+  }
+  return { strokes, played, diff };
+}
+
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+}
+function fmtTime(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+const me = allPlayers[0]; // PR A: solo, the only player
+const myMap = me ? scoresFor(me.id) : {};
+const myTotal = me ? totalFor(me.id) : { strokes: 0, played: 0, diff: 0 };
+
+const front9 = r.club.course_data.holes.filter((h) => h.number <= 9);
+const back9 = r.club.course_data.holes.filter((h) => h.number > 9);
+
+const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
+---
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Carte du {fmtDate(r.started_at ?? r.created_at)} — {r.club.name} · Scluba</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content={heroColor} />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+  <main class="card">
+    <div class="card-photo" style={`background: linear-gradient(135deg, ${heroColor}, ${heroColor}dd);`}>
+      {r.club.photo_url && <img src={r.club.photo_url} alt="" loading="eager" />}
+      <div class="card-photo-fade"></div>
+    </div>
+
+    <header class="card-brand">
+      {r.club.logo_url && (
+        <img class="card-brand-logo" src={r.club.logo_url} alt="" />
+      )}
+      <p class="card-brand-eyebrow">Carte récapitulative</p>
+      <h1 class="card-brand-name">{r.club.name}</h1>
+    </header>
+
+    <div class="card-meta">
+      <div>
+        <span class="card-meta-l">DATE</span>
+        <span class="card-meta-v">{fmtDate(r.started_at ?? r.created_at)}</span>
+      </div>
+      <div>
+        <span class="card-meta-l">DÉPART</span>
+        <span class="card-meta-v">{fmtTime(r.started_at)}</span>
+      </div>
+      <div>
+        <span class="card-meta-l">RÉF.</span>
+        <span class="card-meta-v">{r.short_code}</span>
+      </div>
+    </div>
+
+    <section class="card-score-block">
+      <div class="card-divider"><span></span><em>SCORE · {r.club.course_data.holes.length} TROUS</em><span></span></div>
+      <div class="card-score" data-card-score data-target={String(myTotal.strokes)}>0</div>
+      <div class="card-score-meta">
+        <span class={`card-score-over${myTotal.diff > 0 ? ' over' : myTotal.diff < 0 ? ' under' : ''}`}>
+          {myTotal.diff > 0 ? `+${myTotal.diff}` : myTotal.diff < 0 ? String(myTotal.diff) : '±0'}
+        </span>
+        <span class="card-score-sep">·</span>
+        <span>Par {par}</span>
+      </div>
+    </section>
+
+    <section class="card-grid">
+      <div class="card-grid-row">
+        <span class="card-grid-label">F9</span>
+        {front9.map((h) => {
+          const s = myMap[h.number];
+          const t = s !== undefined ? scoreType(s, h.par) : null;
+          return (
+            <span class={`card-cell${t ? ` card-cell-${t}` : ' card-cell-empty'}`}>
+              {s ?? '—'}
+            </span>
+          );
+        })}
+      </div>
+      <div class="card-grid-row">
+        <span class="card-grid-label">B9</span>
+        {back9.map((h) => {
+          const s = myMap[h.number];
+          const t = s !== undefined ? scoreType(s, h.par) : null;
+          return (
+            <span class={`card-cell${t ? ` card-cell-${t}` : ' card-cell-empty'}`}>
+              {s ?? '—'}
+            </span>
+          );
+        })}
+      </div>
+      <ul class="card-legend">
+        <li><span class="card-legend-swatch card-cell-birdie"></span>Birdie</li>
+        <li><span class="card-legend-swatch card-cell-par"></span>Par</li>
+        <li><span class="card-legend-swatch card-cell-bogey"></span>Bogey</li>
+      </ul>
+    </section>
+
+    <section class="card-player">
+      <div>
+        <span class="card-meta-l">JOUEUR</span>
+        <span class="card-player-name">{me?.display_name ?? '—'}</span>
+      </div>
+      <button type="button" class="card-share" data-share-url={pageUrl} data-share-title={`Carte ${r.club.name}`}>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+          <polyline points="16 6 12 2 8 6"/>
+          <line x1="12" y1="2" x2="12" y2="15"/>
+        </svg>
+        Partager
+      </button>
+    </section>
+
+    <footer class="card-footer">
+      <span>FAIT À</span>
+      <strong>Scluba<em>.</em></strong>
+    </footer>
+  </main>
+
+  <script>
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const el = document.querySelector<HTMLElement>('[data-card-score]');
+    if (el) {
+      const target = Number(el.dataset.target ?? '0');
+      if (reduced || target === 0) {
+        el.textContent = String(target);
+      } else {
+        const duration = 1600;
+        const start = performance.now();
+        const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+        const tick = (now: number) => {
+          const t = Math.min(1, (now - start) / duration);
+          el.textContent = String(Math.round(target * easeOut(t)));
+          if (t < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+    }
+
+    const shareBtn = document.querySelector<HTMLButtonElement>('[data-share-url]');
+    if (shareBtn) {
+      shareBtn.addEventListener('click', async () => {
+        const url = shareBtn.dataset.shareUrl!;
+        const title = shareBtn.dataset.shareTitle!;
+        if (navigator.share) {
+          try { await navigator.share({ url, title }); return; } catch { /* user cancelled */ }
+        }
+        try {
+          await navigator.clipboard.writeText(url);
+          const prev = shareBtn.textContent;
+          shareBtn.textContent = 'Lien copié ✓';
+          setTimeout(() => { shareBtn.textContent = prev; }, 1500);
+        } catch {
+          window.prompt('Copie ce lien :', url);
+        }
+      });
+    }
+  </script>
+
+  <style>
+    body {
+      background: #FAF7EE;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      margin: 0;
+    }
+    .card {
+      max-width: 480px;
+      margin: 0 auto;
+      background: linear-gradient(180deg, #FAF7EE 0%, #F4F8F5 100%);
+      box-shadow: 0 32px 80px rgba(27, 67, 50, 0.18);
+    }
+    .card-photo {
+      position: relative;
+      height: clamp(180px, 36vh, 260px);
+      overflow: hidden;
+    }
+    .card-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 60%;
+    }
+    .card-photo-fade {
+      position: absolute;
+      inset: auto 0 0 0;
+      height: 80px;
+      background: linear-gradient(180deg, transparent, #FAF7EE);
+    }
+
+    .card-brand {
+      margin-top: -52px;
+      text-align: center;
+      padding: 0 var(--space-5);
+      position: relative;
+      z-index: 2;
+    }
+    .card-brand-logo {
+      display: block;
+      margin: 0 auto;
+      filter: drop-shadow(0 4px 16px rgba(0,0,0,0.16));
+      width: 76px;
+      height: 76px;
+    }
+    .card-brand-eyebrow {
+      font-size: var(--text-xs);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 600;
+      margin-top: var(--space-3);
+    }
+    .card-brand-name {
+      font-family: var(--font-serif);
+      font-size: clamp(1.75rem, 6vw, 2.5rem);
+      color: var(--primary);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin: 4px 0 0;
+      line-height: 1.1;
+    }
+
+    .card-meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-3);
+      margin: var(--space-5) var(--space-5) 0;
+      padding: var(--space-3) var(--space-4);
+      background: rgba(212, 165, 116, 0.08);
+      border-top: 1px solid rgba(212, 165, 116, 0.3);
+      border-bottom: 1px solid rgba(212, 165, 116, 0.3);
+    }
+    .card-meta > div {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      text-align: center;
+    }
+    .card-meta-l {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .card-meta-v {
+      font-family: var(--font-serif);
+      font-size: var(--text-sm);
+      color: var(--primary);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .card-score-block {
+      text-align: center;
+      padding: var(--space-7) var(--space-5) var(--space-5);
+    }
+    .card-divider {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+      max-width: 280px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .card-divider span {
+      flex: 1;
+      height: 1px;
+      background: var(--accent);
+      opacity: 0.5;
+    }
+    .card-divider em {
+      font-style: normal;
+      font-size: 10px;
+      color: var(--accent);
+      letter-spacing: 0.2em;
+      font-weight: 600;
+    }
+    .card-score {
+      font-family: var(--font-serif);
+      font-size: clamp(5rem, 22vw, 7rem);
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+    .card-score-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: var(--space-3);
+      font-size: var(--text-sm);
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+    .card-score-over { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .card-score-over.over { color: #C0392B; }
+    .card-score-over.under { color: #1B4332; }
+    .card-score-sep { color: var(--accent); font-weight: 700; }
+
+    .card-grid {
+      padding: var(--space-6) var(--space-5) var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+    .card-grid-row {
+      display: grid;
+      grid-template-columns: 28px repeat(9, 1fr);
+      gap: 4px;
+    }
+    .card-grid-label {
+      background: var(--primary);
+      color: var(--bg);
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card-cell {
+      aspect-ratio: 1;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+    .card-cell-birdie, .card-cell-eagle { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
+    .card-cell-par { color: var(--primary); }
+    .card-cell-bogey { color: var(--muted); }
+    .card-cell-double { color: #6B7280; background: rgba(107,114,128,0.08); }
+    .card-cell-empty { color: var(--muted-soft, var(--muted)); opacity: 0.5; }
+
+    .card-legend {
+      list-style: none;
+      margin: var(--space-3) 0 0;
+      padding: 0;
+      display: flex;
+      gap: var(--space-4);
+      justify-content: center;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+    .card-legend li { display: inline-flex; align-items: center; gap: 6px; }
+    .card-legend-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--line);
+    }
+
+    .card-player {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin: 0 var(--space-5);
+      padding: var(--space-4) 0 var(--space-5);
+      border-top: 1px dashed rgba(212, 165, 116, 0.5);
+      border-bottom: 1px dashed rgba(212, 165, 116, 0.5);
+    }
+    .card-player-name {
+      display: block;
+      font-family: var(--font-serif);
+      font-size: var(--text-md);
+      color: var(--primary);
+      font-weight: 700;
+      margin-top: 2px;
+    }
+    .card-share {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 12px;
+      border: none;
+      background: var(--primary);
+      color: var(--bg);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .card-share:hover { background: var(--primary-deep); }
+
+    .card-footer {
+      text-align: center;
+      padding: var(--space-5) 0 var(--space-7);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .card-footer strong {
+      font-family: var(--font-serif);
+      color: var(--primary);
+      font-size: var(--text-md);
+      font-weight: 700;
+      margin-left: 6px;
+    }
+    .card-footer em { font-style: normal; color: var(--accent); }
+  </style>
+</body>
+</html>

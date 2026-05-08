@@ -1,0 +1,166 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../../../lib/supabase';
+import { qrSvg, qrPngDataUrl, clubPageUrl } from '../../../../lib/qr';
+import type { Club } from '../../../../lib/clubs-types';
+
+const { id } = Astro.params;
+const sb = serviceClient();
+
+const { data: club } = await sb.from('clubs').select('*').eq('id', id).maybeSingle();
+if (!club) {
+  return Astro.redirect('/ops/prospects', 302);
+}
+const c = club as Club;
+
+const origin = Astro.url.origin;
+const pageUrl = clubPageUrl(c.slug, origin);
+const svg = await qrSvg(pageUrl);
+const png = await qrPngDataUrl(pageUrl);
+---
+
+<OpsLayout title={`QR — ${c.name}`} active="prospects">
+  <div class="ops-page-header">
+    <div>
+      <a href={c.prospect_id ? `/ops/prospects/${c.prospect_id}` : '/ops/prospects'} class="back-link">← Fiche prospect</a>
+      <h1 class="ops-page-title">{c.name}</h1>
+      <p class="ops-page-subtitle">Page club active · slug <code>{c.slug}</code></p>
+    </div>
+  </div>
+
+  <div class="qr-grid">
+    <div class="ops-card qr-card">
+      <h2>QR à imprimer</h2>
+      <div class="qr-frame" set:html={svg}></div>
+      <div class="qr-actions">
+        <a href={png} download={`scluba-qr-${c.slug}.png`} class="ops-btn ops-btn-primary">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Télécharger PNG (1024×1024)
+        </a>
+      </div>
+      <p class="qr-hint">Imprime au minimum 6 cm × 6 cm. Le QR a une marge intégrée — laisse au moins 5 mm autour pour un scan fiable.</p>
+    </div>
+
+    <div class="ops-card">
+      <h2>URL de la page</h2>
+      <div class="url-box">
+        <input type="text" readonly value={pageUrl} class="ops-input" id="club-url" />
+        <button type="button" class="ops-btn" data-copy-url>Copier</button>
+      </div>
+      <p class="qr-hint">
+        Cette URL ne doit pas être listée publiquement. Elle est exclue du sitemap et des moteurs de recherche.
+      </p>
+
+      <h2 style="margin-top:24px">Test</h2>
+      <a href={`/c/${c.slug}`} target="_blank" rel="noopener" class="ops-btn">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/>
+          <line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+        Ouvrir la page club
+      </a>
+
+      {c.prospect_id && (
+        <form method="POST" action={`/api/ops/prospects/${c.prospect_id}/events`} style="margin-top:24px">
+          <input type="hidden" name="type" value="qr_sent" />
+          <input type="hidden" name="body" value={`QR envoyé au club (${pageUrl})`} />
+          <button type="submit" class="ops-btn">
+            Marquer comme “QR envoyé”
+          </button>
+        </form>
+      )}
+    </div>
+  </div>
+</OpsLayout>
+
+<script is:inline>
+  document.querySelector('[data-copy-url]')?.addEventListener('click', async () => {
+    const input = document.getElementById('club-url');
+    if (!(input instanceof HTMLInputElement)) return;
+    try {
+      await navigator.clipboard.writeText(input.value);
+      const btn = document.querySelector('[data-copy-url]');
+      if (btn) {
+        const prev = btn.textContent;
+        btn.textContent = 'Copié ✓';
+        setTimeout(() => { btn.textContent = prev; }, 1500);
+      }
+    } catch {
+      input.select();
+      document.execCommand('copy');
+    }
+  });
+</script>
+
+<style>
+  .back-link {
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: none;
+  }
+  .back-link:hover { color: var(--primary); }
+
+  .qr-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .qr-grid { grid-template-columns: 1fr; }
+  }
+
+  .qr-card { text-align: center; }
+  .qr-frame {
+    width: 320px;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 18px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .qr-frame :global(svg) {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .qr-actions {
+    margin-top: 16px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+  }
+  .qr-hint {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .url-box {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .url-box .ops-input {
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+    font-size: 13px;
+  }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--line-soft);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+</style>

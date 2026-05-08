@@ -10,7 +10,9 @@ const PUBLIC_OPS_PATHS = new Set([
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
 
-  if (!pathname.startsWith('/ops')) return next();
+  const isOpsPage = pathname.startsWith('/ops');
+  const isOpsApi = pathname.startsWith('/api/ops');
+  if (!isOpsPage && !isOpsApi) return next();
 
   const supabase = authServerClient(context.cookies, context.request.headers);
   const {
@@ -25,11 +27,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (PUBLIC_OPS_PATHS.has(pathname)) return next();
 
   if (!user) {
+    if (isOpsApi) return new Response('Unauthorized', { status: 401 });
     const next_ = encodeURIComponent(pathname + context.url.search);
     return context.redirect(`/ops/login?next=${next_}`, 302);
   }
 
   if (!isAllowedEmail(user.email)) {
+    if (isOpsApi) return new Response('Forbidden', { status: 403 });
     return new Response(
       `<!doctype html><html><head><meta charset="utf-8"><title>Accès refusé</title></head>` +
         `<body style="font-family:system-ui;max-width:520px;margin:80px auto;padding:0 20px;color:#1B4332">` +
