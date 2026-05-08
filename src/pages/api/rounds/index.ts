@@ -6,6 +6,8 @@ export const prerender = false;
 
 const PLAYER_COOKIE_PREFIX = 'scluba_player_';
 
+export const GET: APIRoute = ({ redirect }) => redirect('/', 302);
+
 export const POST: APIRoute = async ({ request, redirect, cookies }) => {
   const form = await request.formData();
   const slug = String(form.get('slug') ?? '').trim();
