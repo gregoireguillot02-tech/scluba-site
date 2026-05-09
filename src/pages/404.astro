@@ -1,0 +1,154 @@
+---
+import '../styles/tokens.css';
+import '../styles/global.css';
+
+// Set the response status so this page is served with a real 404 to clients
+// and crawlers, both when Astro renders it directly (e.g. unknown URL) and
+// when another page rewrites here (e.g. /[slug] when the club doesn't exist).
+Astro.response.status = 404;
+---
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Introuvable · Scluba</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#FAF7EE" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+  <main class="not-found">
+    <p class="eyebrow">Erreur 404</p>
+    <div class="rail" aria-hidden="true"></div>
+    <h1 class="title">Cette page n'existe pas</h1>
+    <div class="rail" aria-hidden="true"></div>
+
+    <p class="lead">
+      Le lien que tu as suivi est peut-être obsolète,
+      ou tu as tapé une URL qui ne correspond à aucun club Scluba.
+    </p>
+
+    <div class="actions">
+      <a href="/" class="btn-primary">Retour à l'accueil</a>
+    </div>
+
+    <footer class="colophon">
+      <span class="colophon-rail" aria-hidden="true"></span>
+      <span class="colophon-text">
+        <span>by</span>
+        <strong>SCLUBA</strong>
+        <span class="colophon-dot" aria-hidden="true"></span>
+      </span>
+      <span class="colophon-rail" aria-hidden="true"></span>
+    </footer>
+  </main>
+
+  <style>
+    body {
+      background: #FAF7EE;
+      min-height: 100dvh;
+      margin: 0;
+    }
+    .not-found {
+      max-width: 420px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-6) var(--space-5);
+      text-align: center;
+    }
+    .eyebrow {
+      margin: 0 0 var(--space-2);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .rail {
+      width: 64px;
+      height: 1px;
+      margin: 0 auto;
+      background: var(--accent);
+      opacity: 0.55;
+    }
+    .title {
+      margin: var(--space-3) auto;
+      font-family: var(--font-serif);
+      font-weight: 700;
+      font-size: clamp(1.6rem, 5.5vw, 2.1rem);
+      line-height: 1.15;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--primary);
+      max-width: 22ch;
+    }
+    .lead {
+      margin: var(--space-5) 0;
+      color: var(--ink-soft);
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 32ch;
+    }
+    .actions {
+      margin-top: var(--space-4);
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 12px 20px;
+      border-radius: 12px;
+      background: var(--primary);
+      color: #FAF7EE;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 20px rgba(27, 67, 50, 0.18);
+      transition: filter 0.15s;
+    }
+    .btn-primary:hover { filter: brightness(0.92); }
+
+    .colophon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-3);
+      margin-top: var(--space-7);
+      max-width: 260px;
+    }
+    .colophon-rail {
+      flex: 1;
+      height: 1px;
+      background: var(--accent);
+      opacity: 0.45;
+    }
+    .colophon-text {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-serif);
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .colophon-text strong {
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.08em;
+    }
+    .colophon-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 1px;
+    }
+  </style>
+</body>
+</html>

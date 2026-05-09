@@ -17,7 +17,7 @@ const { data: round } = await sb
   .maybeSingle();
 
 if (!round) {
-  return new Response('Partie introuvable', { status: 404 });
+  return Astro.rewrite('/404');
 }
 
 const r = round as Round & { club: Club };

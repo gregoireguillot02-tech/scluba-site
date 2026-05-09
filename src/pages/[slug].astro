@@ -17,7 +17,7 @@ const { data: club } = await sb
   .maybeSingle();
 
 if (!club) {
-  return new Response('Club introuvable', { status: 404 });
+  return Astro.rewrite('/404');
 }
 
 const c = club as Club;
