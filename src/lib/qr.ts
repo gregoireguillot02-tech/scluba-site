@@ -34,5 +34,5 @@ export async function qrPngDataUrl(url: string, options: QrOptions = {}): Promis
 }
 
 export function clubPageUrl(slug: string, origin: string): string {
-  return `${origin.replace(/\/$/, '')}/c/${slug}`;
+  return `${origin.replace(/\/$/, '')}/${slug}`;
 }

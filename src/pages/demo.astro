@@ -1,14 +1,14 @@
 ---
 export const prerender = false;
 
-// /demo was the original hardcoded "Golf du Soleil" mockup. PR A replaced it
-// with the data-driven /c/[slug] flow, and the live demo seed is now at
-// /c/golf-de-caen (renamed from scluba-test in migration 0007). Redirect
-// anything still pointing at /demo so old QR codes, pitch links, etc. land
-// on the right page.
+// /demo was the original hardcoded "Golf du Soleil" mockup. PR A replaced
+// it with the data-driven /[slug] flow, and the live demo seed is at
+// /caen-la-mer (renamed from scluba-test → golf-de-caen → caen-la-mer
+// across migrations 0003/0007/0008). Redirect anything still pointing at
+// /demo so old QR codes, pitch links, etc. land on the right page.
 
 return new Response(null, {
   status: 301,
-  headers: { Location: '/c/golf-de-caen' },
+  headers: { Location: '/caen-la-mer' },
 });
 ---

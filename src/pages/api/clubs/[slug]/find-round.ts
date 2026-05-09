@@ -13,9 +13,9 @@ const PLAYER_COOKIE_PREFIX = 'scluba_player_';
 // the backend reattaches them to their existing round_player.
 //
 // Cases:
-//   0 active rounds match the name → redirect /c/<slug>?recover_err=not_found
+//   0 active rounds match the name → redirect /<slug>?recover_err=not_found
 //   exactly 1 → set scluba_player_<CODE>, redirect /r/<CODE>/play
-//   multiple → redirect /c/<slug>?recover=ambiguous&name=<encoded>
+//   multiple → redirect /<slug>?recover=ambiguous&name=<encoded>
 //                 the page server-renders a small picker (start time + code)
 //                 each row POSTs back here with `short_code` to disambiguate.
 
@@ -48,7 +48,7 @@ export const POST: APIRoute = async ({ request, params, redirect, cookies }) => 
   const activeRounds = rounds ?? [];
 
   if (activeRounds.length === 0) {
-    return redirect(`/c/${slug}?recover_err=not_found&name=${encodeURIComponent(display_name)}`, 302);
+    return redirect(`/${slug}?recover_err=not_found&name=${encodeURIComponent(display_name)}`, 302);
   }
 
   // Find round_players matching the name (case-insensitive) in any of those rounds.
@@ -61,7 +61,7 @@ export const POST: APIRoute = async ({ request, params, redirect, cookies }) => 
   const matches = players ?? [];
 
   if (matches.length === 0) {
-    return redirect(`/c/${slug}?recover_err=not_found&name=${encodeURIComponent(display_name)}`, 302);
+    return redirect(`/${slug}?recover_err=not_found&name=${encodeURIComponent(display_name)}`, 302);
   }
 
   if (matches.length === 1) {
@@ -82,5 +82,5 @@ export const POST: APIRoute = async ({ request, params, redirect, cookies }) => 
   }
 
   // Multiple matches → punt to the page for disambiguation.
-  return redirect(`/c/${slug}?recover=ambiguous&name=${encodeURIComponent(display_name)}`, 302);
+  return redirect(`/${slug}?recover=ambiguous&name=${encodeURIComponent(display_name)}`, 302);
 };
