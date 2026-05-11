@@ -147,7 +147,11 @@ const qrSvg = await QRCode.toString(demoUrl, {
     background: rgba(255, 255, 255, 0.06);
     color: var(--bg);
     font-size: var(--text-base);
-    transition: background 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+    transition:
+      background 0.25s var(--ease-out),
+      border-color 0.25s var(--ease-out),
+      transform 0.25s var(--ease-out),
+      box-shadow 0.25s var(--ease-out);
   }
   .form-field input::placeholder {
     color: rgba(255, 255, 255, 0.45);
@@ -156,6 +160,15 @@ const qrSvg = await QRCode.toString(demoUrl, {
     outline: none;
     background: rgba(255, 255, 255, 0.12);
     border-color: var(--accent);
+  }
+  .form-field input:focus-visible {
+    transform: scale(1.015);
+    box-shadow:
+      0 0 0 4px rgba(212, 165, 116, 0.22),
+      0 6px 18px rgba(15, 42, 30, 0.18);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .form-field input:focus-visible { transform: none; }
   }
 
   .form-submit {
