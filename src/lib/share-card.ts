@@ -209,3 +209,46 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
     node.remove();
   }
 }
+
+export interface ShareOptions {
+  title: string;
+  text?: string;
+  filename?: string;
+  fallbackUrl?: string;
+}
+
+export async function sharePngFile(blob: Blob, opts: ShareOptions): Promise<'shared' | 'downloaded' | 'url-shared'> {
+  const file = new File([blob], opts.filename ?? 'scluba-carte.png', { type: 'image/png' });
+
+  // 1. Web Share API niveau 2 (avec fichier)
+  if (typeof navigator !== 'undefined' && 'canShare' in navigator && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: opts.title, text: opts.text });
+      return 'shared';
+    } catch (err) {
+      if ((err as DOMException).name === 'AbortError') throw err;
+      // Sinon on tombe sur les autres fallbacks
+    }
+  }
+
+  // 2. Fallback URL (Web Share niveau 1)
+  if (opts.fallbackUrl && typeof navigator !== 'undefined' && 'share' in navigator) {
+    try {
+      await navigator.share({ url: opts.fallbackUrl, title: opts.title });
+      return 'url-shared';
+    } catch (err) {
+      if ((err as DOMException).name === 'AbortError') throw err;
+    }
+  }
+
+  // 3. Download manuel
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = opts.filename ?? 'scluba-carte.png';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  return 'downloaded';
+}
