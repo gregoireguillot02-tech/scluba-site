@@ -1,19 +1,22 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-import netlify from '@astrojs/netlify';
+import cloudflare from '@astrojs/cloudflare';
 import sentry from '@sentry/astro';
 
 const SENTRY_DSN = process.env.PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
 const SENTRY_ENV =
   process.env.SENTRY_ENVIRONMENT ||
-  process.env.CONTEXT /* netlify: production | deploy-preview | branch-deploy */ ||
+  // Cloudflare Pages : CF_PAGES_BRANCH = main → production, autres branches = branch name.
+  (process.env.CF_PAGES_BRANCH === 'main' ? 'production' : process.env.CF_PAGES_BRANCH) ||
   'development';
 
 // https://astro.build/config
 export default defineConfig({
   site: 'https://scluba.com',
-  output: 'static',
-  adapter: netlify(),
+  output: 'server',
+  adapter: cloudflare({
+    imageService: 'compile',
+  }),
   integrations: [
     ...(SENTRY_DSN
       ? [

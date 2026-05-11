@@ -1,4 +1,8 @@
-import type { Context } from '@netlify/edge-functions';
+// Best-effort in-memory rate limiting (porté depuis l'ex-Netlify Edge Function).
+// Cloudflare Workers : chaque Worker instance a sa mémoire isolée par edge
+// location, cold starts resettent. Même comportement best-effort que la version
+// précédente, pas distribué. Pour du strict distribué : Cloudflare KV ou
+// Durable Objects (out-of-scope MVP).
 
 type Bucket = { count: number; resetAt: number };
 type LimitRule = { limit: number; windowSec: number };
@@ -18,11 +22,10 @@ const RULES: Array<{ match: RegExp; method?: string; rule: LimitRule; keyByEmail
   { match: /^\/api\//, rule: { limit: 60, windowSec: 60 } },
 ];
 
-function clientIp(request: Request, context: Context): string {
+function clientIp(headers: Headers): string {
   return (
-    request.headers.get('x-nf-client-connection-ip') ??
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    context.ip ??
+    headers.get('cf-connecting-ip') ??
+    headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
     'unknown'
   );
 }
@@ -82,21 +85,25 @@ function rateLimitResponse(retryAfterSec: number): Response {
   );
 }
 
-export default async (request: Request, context: Context): Promise<Response | void> => {
+/**
+ * À appeler en tête de middleware. Retourne une `Response` 429 si limité,
+ * `null` sinon (laisse passer la requête).
+ */
+export async function applyRateLimit(request: Request): Promise<Response | null> {
   const url = new URL(request.url);
   const path = url.pathname;
 
   const isProtected =
     path.startsWith('/api/') || path === '/auth/login' || path === '/ops/login';
-  if (!isProtected) return;
-  if (request.method === 'GET' || request.method === 'HEAD' || request.method === 'OPTIONS') return;
+  if (!isProtected) return null;
+  if (request.method === 'GET' || request.method === 'HEAD' || request.method === 'OPTIONS') return null;
 
   const matches = RULES.filter(
     (r) => r.match.test(path) && (!r.method || r.method === request.method),
   );
-  if (matches.length === 0) return;
+  if (matches.length === 0) return null;
 
-  const ip = clientIp(request, context);
+  const ip = clientIp(request.headers);
   const now = Date.now();
   cleanup(now);
 
@@ -116,8 +123,6 @@ export default async (request: Request, context: Context): Promise<Response | vo
       return rateLimitResponse(retry);
     }
   }
-};
 
-export const config = {
-  path: ['/api/*', '/auth/login', '/ops/login'],
-};
+  return null;
+}

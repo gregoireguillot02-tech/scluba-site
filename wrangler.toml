@@ -1,0 +1,11 @@
+name = "scluba-site"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Le build Astro génère dist/server/wrangler.json avec main + assets pointés
+# correctement (output du @astrojs/cloudflare adapter). Le deploy doit utiliser
+# ce config-là :
+#   npx wrangler deploy -c dist/server/wrangler.json
+#
+# KV namespace SESSION : à créer dans le dashboard CF (Storage & Databases →
+# KV), puis wirer via Settings → Bindings sur le projet Worker.
