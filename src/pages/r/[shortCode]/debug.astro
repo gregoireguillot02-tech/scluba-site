@@ -10,16 +10,25 @@ const env = {
 };
 
 let svcResult = 'not-tried';
-let queryResult = 'not-tried';
+let qAllRounds = 'not-tried';
+let qByShortCode = 'not-tried';
+let qWithClubJoin = 'not-tried';
+let qClubsTable = 'not-tried';
 try {
   const sb = serviceClient();
   svcResult = 'ok';
-  try {
-    const q = await sb.from('rounds').select('id, short_code').limit(1);
-    queryResult = q.error ? `error: ${q.error.code} ${q.error.message}` : `ok rows=${q.data?.length ?? 0}`;
-  } catch (e) {
-    queryResult = `THROW: ${e instanceof Error ? e.name + ': ' + e.message : String(e)}`;
-  }
+
+  const a = await sb.from('rounds').select('id,short_code,club_id').limit(5);
+  qAllRounds = a.error ? `error ${a.error.code}: ${a.error.message}` : `rows=${a.data?.length ?? 0} sample=${JSON.stringify(a.data?.slice(0,2))}`;
+
+  const b = await sb.from('rounds').select('id,short_code').eq('short_code', shortCode).limit(1);
+  qByShortCode = b.error ? `error ${b.error.code}: ${b.error.message}` : `rows=${b.data?.length ?? 0} data=${JSON.stringify(b.data)}`;
+
+  const c = await sb.from('rounds').select('id, short_code, club:clubs(*)').eq('short_code', shortCode).maybeSingle();
+  qWithClubJoin = c.error ? `error ${c.error.code}: ${c.error.message} | ${c.error.details ?? ''} | ${c.error.hint ?? ''}` : `data=${JSON.stringify(c.data).slice(0, 200)}`;
+
+  const d = await sb.from('clubs').select('id,name,slug').limit(3);
+  qClubsTable = d.error ? `error ${d.error.code}: ${d.error.message}` : `rows=${d.data?.length ?? 0}`;
 } catch (e) {
   svcResult = `THROW: ${e instanceof Error ? e.name + ': ' + e.message : String(e)}`;
 }
@@ -31,5 +40,8 @@ env.hasUrl = {String(env.hasUrl)}
 env.hasAnon = {String(env.hasAnon)}
 env.hasService = {String(env.hasService)}
 svcResult = {svcResult}
-queryResult = {queryResult}
+qAllRounds = {qAllRounds}
+qByShortCode = {qByShortCode}
+qWithClubJoin = {qWithClubJoin}
+qClubsTable = {qClubsTable}
 </pre>
