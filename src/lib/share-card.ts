@@ -376,7 +376,7 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   ctx.fillText(subText, W / 2, BAND_Y + 92, W - 2 * PAD_X);
 
   // Section 3 : Score block — eyebrow + gros total + sub (style recap.astro)
-  const SCORE_Y = BAND_Y + 110; // ~785
+  const SCORE_Y = BAND_Y + 160; // ~835 (espace meta → eyebrow)
 
   // Eyebrow "SCORE · 18 TROUS" en coral upper letterspaced
   ctx.fillStyle = '#D4A574'; // --accent
