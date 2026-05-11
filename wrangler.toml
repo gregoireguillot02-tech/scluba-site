@@ -1,0 +1,12 @@
+name = "scluba-site"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "./dist"
+
+# KV namespace pour les sessions Astro (auth Supabase).
+# À créer dans le dashboard Cloudflare avant le 1er deploy :
+#   Workers & Pages → KV → Create namespace → "scluba-sessions"
+# Puis copier l'ID ici (ou définir via env var SESSION_KV_ID).
+# [[kv_namespaces]]
+# binding = "SESSION"
+# id = "<replace-with-kv-namespace-id>"

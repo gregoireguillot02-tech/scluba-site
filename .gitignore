@@ -31,3 +31,6 @@ pnpm-debug.log*
 
 # Supabase CLI temp
 supabase/.temp/
+
+# Cloudflare Workers local dev state
+.wrangler/
