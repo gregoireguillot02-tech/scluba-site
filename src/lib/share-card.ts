@@ -1,3 +1,5 @@
+import { createBrowserClient } from '@supabase/ssr';
+
 const TARGET_W = 1080;
 const TARGET_H = 1350;
 const JPEG_QUALITY = 0.85;
@@ -34,4 +36,38 @@ export async function compressPhoto(file: File): Promise<Blob> {
   } finally {
     bitmap.close();
   }
+}
+
+const BUCKET = 'round-share-photos';
+
+function browserClient() {
+  const url = import.meta.env.PUBLIC_SUPABASE_URL as string;
+  const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string;
+  return createBrowserClient(url, key);
+}
+
+export async function uploadSharePhoto(roundId: string, blob: Blob): Promise<string> {
+  const sb = browserClient();
+  const path = `${roundId}/cover.jpg`;
+
+  const { error: uploadError } = await sb.storage
+    .from(BUCKET)
+    .upload(path, blob, {
+      upsert: true,
+      contentType: 'image/jpeg',
+      cacheControl: '60',
+    });
+  if (uploadError) throw uploadError;
+
+  const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
+  // bust cache au remplacement
+  const url = `${pub.publicUrl}?v=${Date.now()}`;
+
+  const { error: updateError } = await sb
+    .from('rounds')
+    .update({ share_photo_url: url })
+    .eq('id', roundId);
+  if (updateError) throw updateError;
+
+  return url;
 }
