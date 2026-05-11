@@ -1,0 +1,17 @@
+---
+export const prerender = false;
+
+const { shortCode } = Astro.params;
+const env = {
+  hasUrl: typeof import.meta.env.PUBLIC_SUPABASE_URL === 'string' && import.meta.env.PUBLIC_SUPABASE_URL.length > 0,
+  hasAnon: typeof import.meta.env.PUBLIC_SUPABASE_ANON_KEY === 'string' && import.meta.env.PUBLIC_SUPABASE_ANON_KEY.length > 0,
+  hasService: typeof import.meta.env.SUPABASE_SERVICE_ROLE_KEY === 'string' && import.meta.env.SUPABASE_SERVICE_ROLE_KEY.length > 0,
+};
+---
+<pre>
+debug page reached
+shortCode = {shortCode}
+env.hasUrl = {String(env.hasUrl)}
+env.hasAnon = {String(env.hasAnon)}
+env.hasService = {String(env.hasService)}
+</pre>
