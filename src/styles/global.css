@@ -171,3 +171,23 @@ section {
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+/* ============================================================
+   Progressive enhancement : scroll-driven CSS natif
+   `animation-timeline: view()` — Chrome 115+ / Edge 115+ / Safari 18+.
+   Sur les autres browsers, les keyframes ne s'exécutent pas → rendu
+   standard inchangé (aucune régression).
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .section-eyebrow {
+      animation: eyebrowReveal linear both;
+      animation-timeline: view();
+      animation-range: entry 10% entry 100%;
+    }
+    @keyframes eyebrowReveal {
+      from { opacity: 0.5; letter-spacing: 0.30em; }
+      to   { opacity: 1;   letter-spacing: 0.18em; }
+    }
+  }
+}
