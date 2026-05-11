@@ -108,6 +108,102 @@ function initSteps() {
   });
 }
 
+/* ---------- PHONE SHOWCASE (scroll-pinned, 3 phases) ----------
+   Phone reste fixe au tilt CSS initial. 3 écrans empilés transitionnent
+   via opacity + scale ; narrative gauche se synchronise. */
+function initPhoneShowcase() {
+  const wrap = document.querySelector<HTMLElement>('[data-anim="showcase-wrap"]');
+  if (!wrap) return;
+
+  const screen1 = wrap.querySelector<HTMLElement>('[data-flow-screen="1"]');
+  const screen2 = wrap.querySelector<HTMLElement>('[data-flow-screen="2"]');
+  const screen3 = wrap.querySelector<HTMLElement>('[data-flow-screen="3"]');
+  const phase1 = wrap.querySelector<HTMLElement>('[data-flow-phase="1"]');
+  const phase2 = wrap.querySelector<HTMLElement>('[data-flow-phase="2"]');
+  const phase3 = wrap.querySelector<HTMLElement>('[data-flow-phase="3"]');
+  const progressBars = wrap.querySelectorAll<HTMLElement>('[data-progress-bar]');
+  const progressDots = wrap.querySelectorAll<HTMLElement>('[data-progress-dot]');
+  const cells = wrap.querySelectorAll<HTMLElement>('[data-flow-cell]');
+  const scoreEl = wrap.querySelector<HTMLElement>('[data-flow-score]');
+  const shareSheet = wrap.querySelector<HTMLElement>('[data-share-sheet]');
+  const shareApps = wrap.querySelectorAll<HTMLElement>('[data-share-app]');
+  const shareToast = wrap.querySelector<HTMLElement>('[data-share-toast]');
+
+  // États initiaux : grille cells faibles, score 0, sheet hors-écran
+  gsap.set(cells, { opacity: 0.18 });
+  if (scoreEl) {
+    scoreEl.textContent = '0';
+    gsap.set(scoreEl, { opacity: 0, scale: 0.5 });
+  }
+  if (shareSheet) gsap.set(shareSheet, { y: 320, opacity: 0 });
+  if (shareApps.length) gsap.set(shareApps, { opacity: 0, y: 10, scale: 0.9 });
+  if (shareToast) gsap.set(shareToast, { opacity: 0, y: -12 });
+
+  const tl = gsap.timeline({
+    scrollTrigger: {
+      trigger: wrap,
+      start: 'top top',
+      end: '+=300%',
+      pin: true,
+      scrub: 0.8,
+      anticipatePin: 1,
+      invalidateOnRefresh: true,
+    },
+  });
+
+  // === PHASE 1 (0 → 0.33) : join screen reste visible, anim caret/code déjà CSS ===
+
+  // === TRANSITION 1→2 (0.33 → 0.40) ===
+  if (screen1) tl.to(screen1, { opacity: 0, scale: 0.96, duration: 0.07 }, 0.33);
+  if (phase1) tl.to(phase1, { opacity: 0, y: -20, duration: 0.07 }, 0.33);
+  if (screen2) tl.to(screen2, { opacity: 1, scale: 1, duration: 0.07 }, 0.36);
+  if (phase2) tl.to(phase2, { opacity: 1, y: 0, duration: 0.07 }, 0.36);
+  if (progressBars[0]) tl.to(progressBars[0], { width: '100%', duration: 0.05, ease: 'none' }, 0.33);
+  if (progressDots[1]) tl.to(progressDots[1], { backgroundColor: '#1B4332', duration: 0.05 }, 0.36);
+
+  // === PHASE 2 (0.40 → 0.66) : score compte 0→87, cells s'illuminent une par une ===
+  if (scoreEl) {
+    const counter = { v: 0 };
+    tl.to(scoreEl, { opacity: 1, scale: 1, duration: 0.08 }, 0.40);
+    tl.to(counter, {
+      v: 87,
+      duration: 0.20,
+      ease: 'none',
+      onUpdate: () => { scoreEl.textContent = String(Math.round(counter.v)); },
+    }, 0.42);
+  }
+  if (cells.length) {
+    tl.to(cells, {
+      opacity: 1,
+      duration: 0.04,
+      stagger: 0.01,
+      ease: 'none',
+    }, 0.42);
+  }
+
+  // === TRANSITION 2→3 (0.66 → 0.73) ===
+  if (screen2) tl.to(screen2, { opacity: 0, scale: 0.96, duration: 0.07 }, 0.66);
+  if (phase2) tl.to(phase2, { opacity: 0, y: -20, duration: 0.07 }, 0.66);
+  if (screen3) tl.to(screen3, { opacity: 1, scale: 1, duration: 0.07 }, 0.69);
+  if (phase3) tl.to(phase3, { opacity: 1, y: 0, duration: 0.07 }, 0.69);
+  if (progressBars[1]) tl.to(progressBars[1], { width: '100%', duration: 0.05, ease: 'none' }, 0.66);
+  if (progressDots[2]) tl.to(progressDots[2], { backgroundColor: '#1B4332', duration: 0.05 }, 0.69);
+
+  // === PHASE 3 (0.73 → 1.0) : sheet monte, apps apparaissent, toast à la fin ===
+  if (shareSheet) tl.to(shareSheet, { y: 0, opacity: 1, duration: 0.10, ease: 'power2.out' }, 0.73);
+  if (shareApps.length) {
+    tl.to(shareApps, {
+      opacity: 1, y: 0, scale: 1,
+      duration: 0.08,
+      stagger: 0.025,
+      ease: 'back.out(1.4)',
+    }, 0.82);
+  }
+  if (shareToast) {
+    tl.to(shareToast, { opacity: 1, y: 0, duration: 0.06, ease: 'power2.out' }, 0.95);
+  }
+}
+
 
 /* ---------- SHOWCASE — drop golf-themed ----------
    Les 4 cartes tombent une par une avec un rebond physique
@@ -335,6 +431,7 @@ function initAll() {
   initHero();
   initProblem();
   initSteps();
+  initPhoneShowcase();
   initShowcase();
   initHow();
   initPricing();
