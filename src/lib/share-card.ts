@@ -109,11 +109,11 @@ const CELL_SIZE = 96;
 
 function buildTemplate(input: ComposeInput): HTMLElement {
   const root = document.createElement('div');
-  // Position off-screen above the viewport. opacity:0 cause un PNG transparent
-  // (html-to-image rasterise tel quel) ; negative-left peut être skip-painted
-  // par iOS Safari. Negative-top fonctionne : peint mais hors viewport.
+  // DIAGNOSTIC: template visible on-screen. iOS Safari peut skip le paint des
+  // éléments offscreen (fixed/-3000px) — résultat : PNG transparent.
+  // Une fois confirmé, on masquera derrière un cover element ou via transform.
   root.style.cssText = `
-    position: fixed; top: -3000px; left: 0; pointer-events: none;
+    position: absolute; top: 0; left: 0; pointer-events: none; z-index: 999;
     width: 1080px; height: 1350px;
     background: #FAF7EE;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
