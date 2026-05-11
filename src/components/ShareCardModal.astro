@@ -1,0 +1,92 @@
+---
+// scluba-site/src/components/ShareCardModal.astro
+// Modal de partage. Le parent (recap.astro) sérialise les données round/club/scores
+// dans des data-* attributes et appelle window.openShareCardModal() au click "Partager".
+export interface Props {
+  initialPhotoUrl: string | null;
+  shareTitle: string;
+  fallbackUrl: string;
+  roundId: string;
+  payload: string; // JSON-stringified payload (player, club, holes, scores, totals, startedAt)
+}
+const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.props;
+---
+<div
+  id="share-card-modal"
+  class="scm-overlay"
+  hidden
+  data-initial-photo={initialPhotoUrl ?? ''}
+  data-share-title={shareTitle}
+  data-fallback-url={fallbackUrl}
+  data-round-id={roundId}
+  data-payload={payload}
+>
+  <div class="scm-sheet" role="dialog" aria-modal="true" aria-labelledby="scm-title">
+    <header class="scm-header">
+      <h2 id="scm-title">Partager ta carte</h2>
+      <button type="button" class="scm-close" aria-label="Fermer" data-action="close">×</button>
+    </header>
+
+    <div class="scm-body">
+      <div class="scm-preview" data-role="preview" hidden>
+        <img alt="" data-role="preview-img" />
+      </div>
+      <div class="scm-empty" data-role="empty">
+        <div class="scm-empty-icon">📷</div>
+        <p>Ajoute une photo pour personnaliser ta carte</p>
+      </div>
+      <p class="scm-error" data-role="error" hidden></p>
+    </div>
+
+    <div class="scm-actions">
+      <input type="file" accept="image/*" capture="environment" data-role="file-input" hidden />
+
+      <button type="button" class="scm-btn scm-btn-secondary" data-action="pick-photo">
+        Ajouter une photo
+      </button>
+      <button type="button" class="scm-btn scm-btn-secondary" data-action="replace-photo" hidden>
+        Remplacer la photo
+      </button>
+      <button type="button" class="scm-btn scm-btn-primary" data-action="share">
+        Partager
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .scm-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: flex-end; justify-content: center;
+    z-index: 1000;
+  }
+  @media (min-width: 640px) {
+    .scm-overlay { align-items: center; }
+  }
+  .scm-sheet {
+    background: #FAF7EE;
+    width: 100%; max-width: 460px;
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
+    max-height: 90vh; overflow-y: auto;
+  }
+  @media (min-width: 640px) {
+    .scm-sheet { border-radius: 16px; }
+  }
+  .scm-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .scm-header h2 { margin: 0; font-size: 18px; }
+  .scm-close { background: none; border: none; font-size: 28px; line-height: 1; cursor: pointer; color: #666; }
+  .scm-body { margin-bottom: 20px; }
+  .scm-preview { aspect-ratio: 4/5; background: #ddd; border-radius: 12px; overflow: hidden; }
+  .scm-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .scm-empty { aspect-ratio: 4/5; border: 2px dashed #ccc; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; padding: 24px; text-align: center; }
+  .scm-empty-icon { font-size: 36px; margin-bottom: 8px; }
+  .scm-empty p { margin: 0; font-size: 14px; }
+  .scm-error { color: #b00020; font-size: 14px; margin-top: 12px; }
+  .scm-actions { display: flex; flex-direction: column; gap: 8px; }
+  .scm-btn { padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 600; border: none; cursor: pointer; }
+  .scm-btn-primary { background: #1B4332; color: white; }
+  .scm-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .scm-btn-secondary { background: white; color: #1B4332; border: 1.5px solid #1B4332; }
+</style>
