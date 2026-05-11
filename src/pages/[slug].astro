@@ -313,6 +313,11 @@ function fmtTime(iso: string | null): string {
       </span>
       <span class="colophon-rail" aria-hidden="true"></span>
     </footer>
+
+    <p class="privacy-note">
+      Données stockées en Europe. Aucune donnée perso requise — juste un prénom.
+      <a href="/legal/confidentialite/">En savoir plus</a>
+    </p>
   </main>
 
   <style define:vars={{ clubColor }}>
@@ -766,6 +771,21 @@ function fmtTime(iso: string | null): string {
       background: var(--accent);
       border-radius: 1px;
     }
+
+    .privacy-note {
+      max-width: 360px;
+      margin: 0 auto var(--space-5);
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+    .privacy-note a {
+      color: var(--muted);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .privacy-note a:hover { color: var(--clubColor); }
 
     /* Reduced motion support */
     @media (prefers-reduced-motion: reduce) {
