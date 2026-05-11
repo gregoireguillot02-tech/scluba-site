@@ -9,21 +9,34 @@ import { totalPar, scoreType } from '../../../lib/clubs-types';
 import ShareCardModal from '../../../components/ShareCardModal.astro';
 
 const { shortCode } = Astro.params;
-const sb = serviceClient();
 
-const { data: round, error: roundError } = await sb
-  .from('rounds')
-  .select('*, club:clubs(*)')
-  .eq('short_code', shortCode)
-  .maybeSingle();
-
-// DEBUG: surface DB errors in response (temp, to remove once diagnosed)
-if (roundError) {
-  return new Response(
-    `DEBUG roundError: ${roundError.code ?? '?'} ${roundError.message ?? '?'} ${roundError.details ?? ''} ${roundError.hint ?? ''}`,
-    { status: 500, headers: { 'content-type': 'text/plain' } },
-  );
+// DEBUG: catch tout pour surfacer l'erreur runtime
+let __debug_round: unknown = null;
+let __debug_error: string | null = null;
+try {
+  const sb = serviceClient();
+  const r = await sb
+    .from('rounds')
+    .select('*, club:clubs(*)')
+    .eq('short_code', shortCode)
+    .maybeSingle();
+  if (r.error) {
+    __debug_error = `roundError: ${r.error.code ?? '?'} | ${r.error.message ?? '?'} | ${r.error.details ?? ''} | ${r.error.hint ?? ''}`;
+  } else {
+    __debug_round = r.data;
+  }
+} catch (e) {
+  __debug_error = `THROW: ${e instanceof Error ? `${e.name}: ${e.message}` : String(e)}`;
 }
+
+if (__debug_error) {
+  return new Response(`DEBUG ${__debug_error}`, {
+    status: 500,
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  });
+}
+
+const round = __debug_round as { id: string; club: Club; short_code: string; started_at: string | null; created_at: string; finished_at: string | null; share_photo_url: string | null } | null;
 
 if (!round) {
   return Astro.rewrite('/404');
