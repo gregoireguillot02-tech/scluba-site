@@ -6,6 +6,7 @@ import '../../../styles/global.css';
 import { serviceClient } from '../../../lib/supabase';
 import type { Club, Round, RoundPlayer, Score } from '../../../lib/clubs-types';
 import { totalPar, scoreType } from '../../../lib/clubs-types';
+import ShareCardModal from '../../../components/ShareCardModal.astro';
 
 const { shortCode } = Astro.params;
 const sb = serviceClient();
@@ -73,6 +74,17 @@ const myTotal = me ? totalFor(me.id) : { strokes: 0, played: 0, diff: 0 };
 const front9 = r.club.course_data.holes.filter((h) => h.number <= 9);
 const back9 = r.club.course_data.holes.filter((h) => h.number > 9);
 
+const sharePayload = JSON.stringify({
+  player: me ?? null,
+  club: r.club,
+  startedAt: r.started_at ?? r.created_at,
+  holes: r.club.course_data.holes,
+  scoresByHole: myMap,
+  totalDiff: myTotal.diff,
+  totalStrokes: myTotal.strokes,
+  holesPlayed: myTotal.played,
+});
+
 const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
 const clubColor = r.club.primary_color ?? '#1B4332';
 ---
@@ -90,7 +102,12 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 <body>
   <main class="card">
     <header class="masthead">
-      {r.club.photo_url ? (
+      {r.share_photo_url ? (
+        <figure class="photo-card">
+          <img src={r.share_photo_url} alt="" loading="eager" decoding="async" />
+          <span class="photo-card-fade" aria-hidden="true"></span>
+        </figure>
+      ) : r.club.photo_url ? (
         <figure class="photo-card">
           <img src={r.club.photo_url} alt="" loading="eager" decoding="async" />
           <span class="photo-card-fade" aria-hidden="true"></span>
@@ -197,6 +214,14 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       </span>
       <span class="colophon-rail" aria-hidden="true"></span>
     </footer>
+
+    <ShareCardModal
+      initialPhotoUrl={r.share_photo_url}
+      shareTitle={`Carte ${r.club.name}`}
+      fallbackUrl={pageUrl}
+      roundId={r.id}
+      payload={sharePayload}
+    />
   </main>
 
   <script>
@@ -221,19 +246,17 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 
     const shareBtn = document.querySelector<HTMLButtonElement>('[data-share-url]');
     if (shareBtn) {
-      shareBtn.addEventListener('click', async () => {
+      shareBtn.addEventListener('click', () => {
+        const open = (window as unknown as { openShareCardModal?: () => void }).openShareCardModal;
+        if (open) {
+          open();
+          return;
+        }
+        // Fallback ultra-conservateur si le modal n'a pas chargé (JS error, etc.)
         const url = shareBtn.dataset.shareUrl!;
         const title = shareBtn.dataset.shareTitle!;
         if (navigator.share) {
-          try { await navigator.share({ url, title }); return; } catch { /* user cancelled */ }
-        }
-        try {
-          await navigator.clipboard.writeText(url);
-          const prev = shareBtn.textContent;
-          shareBtn.textContent = 'Lien copié ✓';
-          setTimeout(() => { shareBtn.textContent = prev; }, 1500);
-        } catch {
-          window.prompt('Copie ce lien :', url);
+          navigator.share({ url, title }).catch(() => {});
         }
       });
     }
