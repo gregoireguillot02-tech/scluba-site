@@ -2,14 +2,9 @@
   command = "npm run build"
   publish = "dist"
 
-[[edge_functions]]
-  function = "rate-limit"
-  path = "/api/*"
+[build.environment]
+  NODE_VERSION = "22"
 
-[[edge_functions]]
-  function = "rate-limit"
-  path = "/auth/login"
-
-[[edge_functions]]
-  function = "rate-limit"
-  path = "/ops/login"
+# Edge function paths are declared inline via `export const config = {...}`
+# in netlify/edge-functions/rate-limit.ts. No [[edge_functions]] block here
+# to avoid duplicate-declaration warnings.
