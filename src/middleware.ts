@@ -1,5 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 import { authServerClient, isAllowedEmail } from './lib/supabase';
+import { applyRateLimit } from './lib/rate-limit';
 
 const PUBLIC_OPS_PATHS = new Set([
   '/ops/login',
@@ -8,6 +9,10 @@ const PUBLIC_OPS_PATHS = new Set([
 ]);
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  // Rate-limit en premier (ex-Netlify Edge Function rate-limit.ts).
+  const rateLimited = await applyRateLimit(context.request);
+  if (rateLimited) return rateLimited;
+
   const { pathname } = context.url;
 
   const isOpsPage = pathname.startsWith('/ops');

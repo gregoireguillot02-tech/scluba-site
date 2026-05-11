@@ -12,9 +12,9 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/netlify": "^7.0.8",
-    "@netlify/edge-functions": "^3.0.6",
+    "@astrojs/cloudflare": "^13.5.0",
     "@sentry/astro": "^10.52.0",
+    "@shikijs/engine-oniguruma": "^4.0.2",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.1",
     "@types/qrcode": "^1.5.6",
