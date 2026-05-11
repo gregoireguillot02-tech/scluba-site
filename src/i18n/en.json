@@ -41,66 +41,32 @@
       },
       {
         "num": "02",
-        "title": "The player scans",
-        "body": "Instant web app, no install. GPS, score, distance, duration — in real time."
+        "title": "The player scans and plays",
+        "body": "One web app, no install. Multiple players can enter their scores hole by hole from a single QR."
       },
       {
         "num": "03",
-        "title": "Card shared",
-        "body": "Recap card in your club's colors, shared on the player's social networks."
+        "title": "Shared everywhere",
+        "body": "Post-ready image in your club's colors with souvenir photo. Native share on iOS, Android, desktop."
       }
     ]
   },
-  "phone": {
-    "eyebrow": "Magic moment",
-    "phase1Title": "During the round, the app keeps pace.",
-    "phase1Lead": "GPS tracking, hole-by-hole scoring, distance, duration. The player never reaches for a notepad.",
-    "phase1Tag": "Complete plan · $79",
-    "phase2Title": "When it's over, the card is ready.",
-    "phase2Lead": "Branded in your colors, photographic, shareable in one tap. Available from the Essential plan.",
-    "phase2Tag": "Essential plan · $49",
-    "club": "Golf du Soleil",
-    "cardLabel": "Round summary",
-    "date": "Sat. Apr 25, 2026",
-    "time": "2:30 PM",
-    "ref": "N° 04287",
-    "score": "87",
-    "scoreOver": "+15",
-    "par": "Par 72",
-    "holes": "18 holes completed",
-    "playerName": "Antoine Dupré",
-    "stats": {
-      "distance": { "v": "4.0 mi", "l": "Distance" },
-      "steps": { "v": "8,432", "l": "Steps" },
-      "duration": { "v": "3h42", "l": "Duration" }
-    },
-    "live": {
-      "tracking": "Current hole",
-      "currentHole": "8/18",
-      "currentPar": "Par 4",
-      "currentScore": "Live score",
-      "speed": "1.1 mph",
-      "playing": "Antoine is playing"
-    },
-    "share": {
-      "ctaButton": "Share",
-      "sheetTitle": "Share the card",
-      "sheetSubtitle": "scluba.com",
-      "previewLabel": "Round summary · 18 holes",
-      "previewName": "Golf du Soleil — 87 (+15)",
-      "contacts": [
-        { "initials": "SB", "name": "Sophie B.", "color": "#D4A574" },
-        { "initials": "PL", "name": "Paul L.", "color": "#1B4332" },
-        { "initials": "MT", "name": "Marc T.", "color": "#3B6B8E" },
-        { "initials": "LD", "name": "Léa D.", "color": "#7A2E1F" }
-      ],
-      "apps": ["Instagram", "WhatsApp", "Snapchat", "X", "Facebook", "Mail"],
-      "actions": ["Copy link", "AirDrop", "Save photo"],
-      "tapHint": "Tap to share",
-      "linkCopied": "Link copied!"
-    },
-    "gpsLabel": "GPS course track",
-    "footer": "Shared from Scluba · Golf du Soleil · #GolfDuSoleil"
+  "share": {
+    "ctaButton": "Share",
+    "sheetTitle": "Share the card",
+    "sheetSubtitle": "scluba.com",
+    "previewLabel": "Round summary · 18 holes",
+    "previewName": "Golf du Soleil — 87 (+15)",
+    "contacts": [
+      { "initials": "SB", "name": "Sophie B.", "color": "#D4A574" },
+      { "initials": "PL", "name": "Paul L.", "color": "#1B4332" },
+      { "initials": "MT", "name": "Marc T.", "color": "#3B6B8E" },
+      { "initials": "LD", "name": "Léa D.", "color": "#7A2E1F" }
+    ],
+    "apps": ["Instagram", "WhatsApp", "Snapchat", "X", "Facebook", "Mail"],
+    "actions": ["Copy link", "AirDrop", "Save photo"],
+    "tapHint": "Tap to share",
+    "linkCopied": "Link copied!"
   },
   "showcase": {
     "eyebrow": "Made to measure",
@@ -141,42 +107,24 @@
   },
   "pricing": {
     "eyebrow": "Pricing",
-    "title": "Two plans, one promise.",
-    "lead": "$49 gives you the branded recap card. $79 adds the real-time tracking app. No commitment, cancel any month. −20% on 3 years.",
+    "title": "One offer. One promise.",
+    "lead": "Everything you need to turn every round into club visibility. No commitment, cancel any month.",
     "launchBadge": "1ST MONTH FREE",
     "plans": [
       {
-        "name": "Essential",
-        "tagline": "The branded recap card",
+        "name": "Scluba",
+        "tagline": "A branded scorecard, shared by every player.",
         "price": "$49",
         "period": "/month",
         "engagement": "or $39/month with 3-year commitment (−20%)",
         "features": [
-          "Photographic recap card in your colors",
-          "Your club's logo and identity built in",
-          "Downloadable, shareable on socials",
-          "Elegant QR frame provided for the desk",
-          "Mockup delivered and validated in 24h",
-          "Basic monthly reporting (scans, shares)"
-        ],
-        "featured": false
-      },
-      {
-        "name": "Complete",
-        "tagline": "Everything in Essential + the tracking app",
-        "price": "$79",
-        "period": "/month",
-        "engagement": "or $63/month with 3-year commitment (−20%)",
-        "features": [
-          "All Essential features",
-          "Web app + iOS and Android apps",
-          "Real-time GPS, distance, steps, duration",
-          "Optional personal player accounts",
-          "Long-term history and progression",
-          "Detailed monthly club usage reporting"
-        ],
-        "featured": true,
-        "badge": "RECOMMENDED"
+          "Scorecard in your club's colors",
+          "End-of-round souvenir photo",
+          "Post-ready PNG image (Stories, WhatsApp, Mail)",
+          "Multi-player score entry on a single QR",
+          "Elegant QR frame for the desk",
+          "Monthly club visibility reporting"
+        ]
       }
     ]
   },
@@ -186,7 +134,7 @@
     "items": [
       {
         "q": "Does the player need to install an app?",
-        "a": "No by default: a QR scan opens the web app in the browser, no install. For regulars, free iOS and Android apps are available on the App Store and Play Store."
+        "a": "No. A QR scan opens the web app in their browser. No install, no account. Native sharing then works on any phone."
       },
       {
         "q": "Do you need our logo and brand guidelines?",
@@ -198,7 +146,7 @@
       },
       {
         "q": "Is there a commitment?",
-        "a": "None by default, cancel any month. If you want to lock in a rate, the 3-year commitment gives −20% off ($39 or $63 /month)."
+        "a": "None by default, cancel any month. The 3-year commitment gives −20% off ($39/month)."
       },
       {
         "q": "Do you need any specific equipment at the club?",
