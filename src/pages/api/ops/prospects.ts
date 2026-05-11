@@ -1,20 +1,22 @@
 import type { APIRoute } from 'astro';
 import { serviceClient, isAllowedEmail } from '../../../lib/supabase';
 import { PROSPECT_STATUSES, OWNERS, type ProspectStatus, type Owner } from '../../../lib/ops-types';
+import { uuidSchema } from '../../../lib/validation/schemas';
 
 export const prerender = false;
 
-function backTo(url: URL, fallback = '/ops/prospects'): string {
-  return url.searchParams.get('return_to') || fallback;
-}
-
-function nullable(value: FormDataEntryValue | null): string | null {
+function nullable(value: FormDataEntryValue | null, maxLen = 1000): string | null {
   if (value == null) return null;
-  const s = String(value).trim();
+  const s = String(value).trim().slice(0, maxLen);
   return s === '' ? null : s;
 }
 
-export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
+function parseUuid(raw: unknown): string | null {
+  const r = uuidSchema.safeParse(raw);
+  return r.success ? r.data : null;
+}
+
+export const POST: APIRoute = async ({ request, locals, redirect }) => {
   const user = locals.user;
   if (!user || !isAllowedEmail(user.email)) {
     return new Response('Forbidden', { status: 403 });
@@ -26,7 +28,7 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
 
   try {
     if (action === 'create') {
-      const club_name = String(form.get('club_name') ?? '').trim();
+      const club_name = String(form.get('club_name') ?? '').trim().slice(0, 255);
       if (!club_name) return new Response('club_name required', { status: 400 });
 
       const status = (form.get('status') as ProspectStatus | null) ?? 'to_contact';
@@ -38,19 +40,22 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
         .from('prospects')
         .insert({
           club_name,
-          contact_name: nullable(form.get('contact_name')),
-          email: nullable(form.get('email')),
-          phone: nullable(form.get('phone')),
-          city: nullable(form.get('city')),
-          region: nullable(form.get('region')),
+          contact_name: nullable(form.get('contact_name'), 255),
+          email: nullable(form.get('email'), 320),
+          phone: nullable(form.get('phone'), 64),
+          city: nullable(form.get('city'), 120),
+          region: nullable(form.get('region'), 120),
           status,
           owner,
-          source: nullable(form.get('source')),
-          notes: nullable(form.get('notes')),
+          source: nullable(form.get('source'), 255),
+          notes: nullable(form.get('notes'), 4000),
         })
         .select('id')
         .single();
-      if (error) return new Response(`Create failed: ${error.message}`, { status: 500 });
+      if (error) {
+        console.error('[api/ops/prospects] create failed', error);
+        return new Response('Create failed', { status: 500 });
+      }
 
       await sb.from('prospect_events').insert({
         prospect_id: data.id,
@@ -63,27 +68,53 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
     }
 
     if (action === 'update') {
-      const id = String(form.get('id') ?? '');
-      if (!id) return new Response('id required', { status: 400 });
+      const id = parseUuid(form.get('id'));
+      if (!id) return new Response('invalid id', { status: 400 });
+
+      const club_name = String(form.get('club_name') ?? '').trim().slice(0, 255);
+      if (!club_name) return new Response('club_name required', { status: 400 });
+
+      // Form values arrive as strings; `""` is falsy in a truthiness guard
+      // but survives `?? undefined` below (nullish coalescing only fires on
+      // null/undefined), so an empty `status` slipped past the validator and
+      // hit the DB enum CHECK as a 500. Normalize empty/missing to null so
+      // the validator catches non-empty bad values and the spread below
+      // skips the column on empty input.
+      const rawStatus = form.get('status');
+      const newStatus = rawStatus !== null && String(rawStatus) !== ''
+        ? (String(rawStatus) as ProspectStatus)
+        : null;
+      if (newStatus !== null && !PROSPECT_STATUSES.includes(newStatus)) {
+        return new Response('bad status', { status: 400 });
+      }
+      const rawOwner = form.get('owner');
+      const newOwner = rawOwner !== null && String(rawOwner) !== ''
+        ? (String(rawOwner) as Owner)
+        : null;
+      if (newOwner !== null && !OWNERS.includes(newOwner)) {
+        return new Response('bad owner', { status: 400 });
+      }
 
       const { data: prev } = await sb.from('prospects').select('status').eq('id', id).maybeSingle();
-      const newStatus = form.get('status') as ProspectStatus | null;
 
       const updates = {
-        club_name: String(form.get('club_name') ?? '').trim(),
-        contact_name: nullable(form.get('contact_name')),
-        email: nullable(form.get('email')),
-        phone: nullable(form.get('phone')),
-        city: nullable(form.get('city')),
-        region: nullable(form.get('region')),
+        club_name,
+        contact_name: nullable(form.get('contact_name'), 255),
+        email: nullable(form.get('email'), 320),
+        phone: nullable(form.get('phone'), 64),
+        city: nullable(form.get('city'), 120),
+        region: nullable(form.get('region'), 120),
         status: newStatus ?? undefined,
-        owner: (form.get('owner') as Owner | null) ?? undefined,
-        source: nullable(form.get('source')),
-        notes: nullable(form.get('notes')),
+        owner: newOwner ?? undefined,
+        source: nullable(form.get('source'), 255),
+        notes: nullable(form.get('notes'), 4000),
       };
 
       const { error } = await sb.from('prospects').update(updates).eq('id', id);
-      if (error) return new Response(`Update failed: ${error.message}`, { status: 500 });
+      if (error) {
+        console.error('[api/ops/prospects] update failed', error);
+        return new Response('Update failed', { status: 500 });
+      }
 
       if (prev && newStatus && prev.status !== newStatus) {
         await sb.from('prospect_events').insert({
@@ -98,15 +129,19 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
     }
 
     if (action === 'delete') {
-      const id = String(form.get('id') ?? '');
-      if (!id) return new Response('id required', { status: 400 });
+      const id = parseUuid(form.get('id'));
+      if (!id) return new Response('invalid id', { status: 400 });
       const { error } = await sb.from('prospects').delete().eq('id', id);
-      if (error) return new Response(`Delete failed: ${error.message}`, { status: 500 });
+      if (error) {
+        console.error('[api/ops/prospects] delete failed', error);
+        return new Response('Delete failed', { status: 500 });
+      }
       return redirect('/ops/prospects', 302);
     }
 
-    return new Response(`Unknown action: ${action}`, { status: 400 });
+    return new Response('Bad request', { status: 400 });
   } catch (e) {
-    return new Response(`Error: ${(e as Error).message}`, { status: 500 });
+    console.error('[api/ops/prospects] unexpected', e);
+    return new Response('Internal error', { status: 500 });
   }
 };

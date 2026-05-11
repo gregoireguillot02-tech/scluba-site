@@ -61,13 +61,16 @@ export const POST: APIRoute = async ({ request, params, redirect, cookies }) => 
     })
     .select('id')
     .single();
-  if (pErr) return new Response(`Join failed: ${pErr.message}`, { status: 500 });
+  if (pErr) {
+    console.error('[api/rounds/join] insert failed', pErr);
+    return new Response('Join failed', { status: 500 });
+  }
 
   cookies.set(`${PLAYER_COOKIE_PREFIX}${shortCode}`, player.id, {
     path: '/',
     sameSite: 'lax',
     secure: import.meta.env.PROD,
-    httpOnly: false,
+    httpOnly: true,
     maxAge: 60 * 60 * 24 * 7,
   });
 

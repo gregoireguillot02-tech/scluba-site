@@ -51,7 +51,10 @@ export const POST: APIRoute = async ({ request, params, cookies }) => {
       { round_player_id: playerId, hole_number: hole, strokes },
       { onConflict: 'round_player_id,hole_number' },
     );
-  if (error) return new Response(`Save failed: ${error.message}`, { status: 500 });
+  if (error) {
+    console.error('[api/rounds/scores] upsert failed', error);
+    return new Response('Save failed', { status: 500 });
+  }
 
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,

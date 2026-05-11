@@ -7,6 +7,8 @@ import { serviceClient } from '../lib/supabase';
 import type { Club } from '../lib/clubs-types';
 import { totalPar } from '../lib/clubs-types';
 import Honeypot from '../components/Honeypot.astro';
+import { escapeLikePattern } from '../lib/safe-redirect';
+import { displayNameSchema } from '../lib/validation/schemas';
 
 const { slug } = Astro.params;
 const sb = serviceClient();
@@ -30,7 +32,13 @@ const clubColor = c.primary_color ?? '#1B4332';
 const url = new URL(Astro.request.url);
 const recoverErr = url.searchParams.get('recover_err');
 const recoverMode = url.searchParams.get('recover');
-const recoverName = url.searchParams.get('name') ?? '';
+// Validate `name` with the same schema the form uses, otherwise a raw `%`
+// or `_` in the query string would widen the .ilike() match below to "all
+// players" and leak short_codes + display_names for every active round in
+// this club.
+const recoverNameRaw = url.searchParams.get('name') ?? '';
+const recoverNameParsed = displayNameSchema.safeParse(recoverNameRaw);
+const recoverName = recoverNameParsed.success ? recoverNameParsed.data : '';
 
 // Ambiguous case — multiple active rounds match the name. Fetch them so the
 // page can render a disambiguation list (start time + code + player count).
@@ -55,7 +63,7 @@ if (recoverMode === 'ambiguous' && recoverName) {
   if (rounds.length > 0) {
     const roundIds = rounds.map((r) => r.id);
     const [{ data: players }, { data: roster }] = await Promise.all([
-      sb.from('round_players').select('round_id, display_name').in('round_id', roundIds).ilike('display_name', recoverName),
+      sb.from('round_players').select('round_id, display_name').in('round_id', roundIds).ilike('display_name', escapeLikePattern(recoverName)),
       sb.from('round_players').select('round_id').in('round_id', roundIds),
     ]);
     const counts: Record<string, number> = {};

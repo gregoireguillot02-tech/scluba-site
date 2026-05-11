@@ -57,7 +57,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 </head>
 <body>
-  <main class="lobby" data-lobby data-round-id={r.id} data-short-code={shortCode}>
+  <main class="lobby" data-lobby data-round-id={r.id} data-short-code={shortCode} data-player-id={playerId ?? ''}>
     <header class="masthead">
       {r.club.photo_url ? (
         <figure class="photo-card">
@@ -174,12 +174,10 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       const list = root.querySelector<HTMLElement>('[data-players-list]')!;
       const countEl = root.querySelector<HTMLElement>('[data-players-count]')!;
 
-      // Read the cookie to identify the current player (set by /api/rounds[/.../join]).
-      const me = document.cookie
-        .split(';')
-        .map((c) => c.trim())
-        .find((c) => c.startsWith(`scluba_player_${shortCode}=`))
-        ?.split('=')[1];
+      // Player ID is rendered server-side into a data-attribute so the
+      // identifying cookie can stay httpOnly (cookie itself is no longer
+      // readable from JS).
+      const me = root.dataset.playerId || undefined;
 
       function renderPlayer(p: RoundPlayerRow) {
         const li = document.createElement('li');
