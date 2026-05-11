@@ -9,12 +9,13 @@ import { totalPar, scoreType } from '../../../lib/clubs-types';
 import ShareCardModal from '../../../components/ShareCardModal.astro';
 
 const { shortCode } = Astro.params;
-const sb = serviceClient();
 
 // DEBUG: try/catch global pour surfacer l'erreur runtime (à retirer une fois diagnostic terminé)
 let __round: unknown = null;
 let __err: string | null = null;
+let sb!: ReturnType<typeof serviceClient>;
 try {
+  sb = serviceClient();
   const q = await sb.from('rounds').select('*, club:clubs(*)').eq('short_code', shortCode).maybeSingle();
   if (q.error) {
     __err = `roundError: ${q.error.code ?? '?'} | ${q.error.message ?? '?'} | ${q.error.details ?? ''} | ${q.error.hint ?? ''}`;
@@ -22,7 +23,7 @@ try {
     __round = q.data;
   }
 } catch (e) {
-  __err = `THROW round: ${e instanceof Error ? `${e.name}: ${e.message}` : String(e)}`;
+  __err = `THROW serviceClient/round: ${e instanceof Error ? `${e.name}: ${e.message}` : String(e)}`;
 }
 
 if (__err) {
