@@ -34,6 +34,7 @@ export interface Round {
   started_at: string | null;
   finished_at: string | null;
   created_at: string;
+  share_photo_url: string | null;
 }
 
 export interface RoundPlayer {
