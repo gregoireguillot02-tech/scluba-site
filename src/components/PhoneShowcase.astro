@@ -287,7 +287,10 @@ const back9 = [
   .narrative-stack {
     position: relative;
     margin: var(--space-3) 0 var(--space-6);
-    min-height: 260px;
+    min-height: 340px;
+  }
+  @media (min-width: 1024px) {
+    .narrative-stack { min-height: 300px; }
   }
   .narrative-block {
     position: absolute;
