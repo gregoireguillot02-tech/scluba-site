@@ -157,9 +157,9 @@ function buildTemplate(input: ComposeInput): HTMLElement {
   for (const row of [front9, back9]) {
     if (row.length === 0) continue;
     const line = document.createElement('div');
-    line.style.cssText = `display: grid; grid-template-columns: 80px repeat(${row.length}, ${CELL_SIZE}px); gap: 6px; align-items: center;`;
+    line.style.cssText = `display: flex; gap: 6px; align-items: center;`;
     const label = document.createElement('div');
-    label.style.cssText = 'font-size: 18px; color: #999; text-transform: uppercase; letter-spacing: 1px;';
+    label.style.cssText = 'width: 80px; font-size: 18px; color: #999; text-transform: uppercase; letter-spacing: 1px;';
     label.textContent = row === front9 ? 'Aller' : 'Retour';
     line.appendChild(label);
     for (const h of row) {
@@ -243,6 +243,11 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
     });
     if (!blob) throw new Error('html-to-image returned null');
     console.log('[share-card] PNG generated, size:', blob.size, 'bytes');
+    // DEBUG: log object URL so user can open generated PNG in a new tab
+    try {
+      const debugUrl = URL.createObjectURL(blob);
+      console.log('[share-card] DEBUG open PNG in new tab:', debugUrl);
+    } catch { /* noop */ }
     return blob;
   } finally {
     node.remove();
