@@ -25,6 +25,12 @@ export function safeNextPath(next: string | null | undefined, fallback = '/'): s
   try {
     const u = new URL(next, SENTINEL_ORIGIN);
     if (u.origin !== SENTINEL_ORIGIN) return fallback;
+    // After URL normalization, paths like `/foo/..//evil.com` resolve to
+    // pathname `//evil.com` while keeping the sentinel origin — the origin
+    // gate passes but the returned string is protocol-relative, which
+    // browsers follow cross-origin. Reject any normalized pathname that
+    // re-introduces a leading `//`.
+    if (u.pathname.startsWith('//')) return fallback;
     return u.pathname + u.search + u.hash;
   } catch {
     return fallback;

@@ -74,12 +74,24 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       const club_name = String(form.get('club_name') ?? '').trim().slice(0, 255);
       if (!club_name) return new Response('club_name required', { status: 400 });
 
-      const newStatus = form.get('status') as ProspectStatus | null;
-      if (newStatus && !PROSPECT_STATUSES.includes(newStatus)) {
+      // Form values arrive as strings; `""` is falsy in a truthiness guard
+      // but survives `?? undefined` below (nullish coalescing only fires on
+      // null/undefined), so an empty `status` slipped past the validator and
+      // hit the DB enum CHECK as a 500. Normalize empty/missing to null so
+      // the validator catches non-empty bad values and the spread below
+      // skips the column on empty input.
+      const rawStatus = form.get('status');
+      const newStatus = rawStatus !== null && String(rawStatus) !== ''
+        ? (String(rawStatus) as ProspectStatus)
+        : null;
+      if (newStatus !== null && !PROSPECT_STATUSES.includes(newStatus)) {
         return new Response('bad status', { status: 400 });
       }
-      const newOwner = form.get('owner') as Owner | null;
-      if (newOwner && !OWNERS.includes(newOwner)) {
+      const rawOwner = form.get('owner');
+      const newOwner = rawOwner !== null && String(rawOwner) !== ''
+        ? (String(rawOwner) as Owner)
+        : null;
+      if (newOwner !== null && !OWNERS.includes(newOwner)) {
         return new Response('bad owner', { status: 400 });
       }
 
