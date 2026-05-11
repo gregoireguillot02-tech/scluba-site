@@ -41,66 +41,32 @@
       },
       {
         "num": "02",
-        "title": "Le joueur scanne",
-        "body": "Web app instantanée sans installation. GPS, score, distance, durée — en temps réel."
+        "title": "Le joueur scanne et joue",
+        "body": "Une seule web app, sans installation. Plusieurs joueurs peuvent saisir leurs scores trou par trou via un seul QR."
       },
       {
         "num": "03",
-        "title": "Carte partagée",
-        "body": "Carte récap aux couleurs de votre club, partagée sur les réseaux sociaux du joueur."
+        "title": "Carte partagée partout",
+        "body": "Image prête à poster aux couleurs de votre club, photo souvenir incluse. Partage natif iOS, Android, desktop."
       }
     ]
   },
-  "phone": {
-    "eyebrow": "Magic moment",
-    "phase1Title": "Pendant la partie, l'app suit le rythme.",
-    "phase1Lead": "Tracking GPS, scores trou par trou, distance, durée. Le joueur ne sort jamais le carnet.",
-    "phase1Tag": "Plan Complet · 79€",
-    "phase2Title": "À la fin, sa carte est prête.",
-    "phase2Lead": "Brandée à vos couleurs, photographique, partageable en un tap sur les réseaux. Disponible dès l'offre Essentiel.",
-    "phase2Tag": "Plan Essentiel · 49€",
-    "club": "Golf du Soleil",
-    "cardLabel": "Carte récapitulative",
-    "date": "Sam. 25 avr. 2026",
-    "time": "14:30",
-    "ref": "N° 04287",
-    "score": "87",
-    "scoreOver": "+15",
-    "par": "Par 72",
-    "holes": "18 trous complétés",
-    "playerName": "Antoine Dupré",
-    "stats": {
-      "distance": { "v": "6,4 km", "l": "Distance" },
-      "steps": { "v": "8 432", "l": "Pas" },
-      "duration": { "v": "3h42", "l": "Durée" }
-    },
-    "live": {
-      "tracking": "Trou en cours",
-      "currentHole": "8/18",
-      "currentPar": "Par 4",
-      "currentScore": "Score actuel",
-      "speed": "1,8 km/h",
-      "playing": "Antoine joue"
-    },
-    "share": {
-      "ctaButton": "Partager",
-      "sheetTitle": "Partager la carte",
-      "sheetSubtitle": "scluba.com",
-      "previewLabel": "Carte récapitulative · 18 trous",
-      "previewName": "Golf du Soleil — 87 (+15)",
-      "contacts": [
-        { "initials": "SB", "name": "Sophie B.", "color": "#D4A574" },
-        { "initials": "PL", "name": "Paul L.", "color": "#1B4332" },
-        { "initials": "MT", "name": "Marc T.", "color": "#3B6B8E" },
-        { "initials": "LD", "name": "Léa D.", "color": "#7A2E1F" }
-      ],
-      "apps": ["Instagram", "WhatsApp", "Snapchat", "X", "Facebook", "Mail"],
-      "actions": ["Copier le lien", "AirDrop", "Enregistrer la photo"],
-      "tapHint": "Tap pour partager",
-      "linkCopied": "Lien copié !"
-    },
-    "gpsLabel": "Tracé GPS du parcours",
-    "footer": "Partagé depuis Scluba · Golf du Soleil · #GolfDuSoleil"
+  "share": {
+    "ctaButton": "Partager",
+    "sheetTitle": "Partager la carte",
+    "sheetSubtitle": "scluba.com",
+    "previewLabel": "Carte récapitulative · 18 trous",
+    "previewName": "Golf du Soleil — 87 (+15)",
+    "contacts": [
+      { "initials": "SB", "name": "Sophie B.", "color": "#D4A574" },
+      { "initials": "PL", "name": "Paul L.", "color": "#1B4332" },
+      { "initials": "MT", "name": "Marc T.", "color": "#3B6B8E" },
+      { "initials": "LD", "name": "Léa D.", "color": "#7A2E1F" }
+    ],
+    "apps": ["Instagram", "WhatsApp", "Snapchat", "X", "Facebook", "Mail"],
+    "actions": ["Copier le lien", "AirDrop", "Enregistrer la photo"],
+    "tapHint": "Tap pour partager",
+    "linkCopied": "Lien copié !"
   },
   "showcase": {
     "eyebrow": "Sur-mesure",
@@ -141,42 +107,24 @@
   },
   "pricing": {
     "eyebrow": "Tarifs",
-    "title": "Deux plans, une promesse.",
-    "lead": "Le 49€ vous donne la carte récap brandée. Le 79€ ajoute l'app de tracking en temps réel. Sans engagement, résiliable au mois. −20% en 3 ans.",
+    "title": "Une offre. Une promesse.",
+    "lead": "Tout l'essentiel pour transformer chaque partie en visibilité club. Sans engagement, résiliable au mois.",
     "launchBadge": "1ER MOIS OFFERT",
     "plans": [
       {
-        "name": "Essentiel",
-        "tagline": "La carte récap brandée",
+        "name": "Scluba",
+        "tagline": "Une carte de score brandée, partagée par chaque joueur.",
         "price": "49€",
         "period": "/mois",
         "engagement": "ou 39€/mois avec engagement 3 ans (−20%)",
         "features": [
-          "Carte récap photographique à vos couleurs",
-          "Logo et identité de votre club intégrés",
-          "Carte téléchargeable et partageable réseaux",
-          "Cadre QR élégant fourni pour le desk",
-          "Maquette livrée et validée en 24h",
-          "Reporting mensuel basique (scans, partages)"
-        ],
-        "featured": false
-      },
-      {
-        "name": "Complet",
-        "tagline": "Tout l'Essentiel + l'app de tracking",
-        "price": "79€",
-        "period": "/mois",
-        "engagement": "ou 63€/mois avec engagement 3 ans (−20%)",
-        "features": [
-          "Toutes les fonctionnalités Essentiel",
-          "Web app + apps iOS et Android",
-          "Tracking GPS, distance, pas, durée temps réel",
-          "Comptes joueurs personnels (optionnels)",
-          "Historique et progression long terme",
-          "Reporting détaillé d'usage au club"
-        ],
-        "featured": true,
-        "badge": "RECOMMANDÉ"
+          "Carte de score aux couleurs de votre club",
+          "Photo souvenir de fin de partie",
+          "Image PNG prête à poster (Stories, WhatsApp, Mail)",
+          "Saisie multi-joueurs sur un seul QR",
+          "Cadre QR élégant fourni au desk",
+          "Reporting mensuel de visibilité club"
+        ]
       }
     ]
   },
@@ -186,7 +134,7 @@
     "items": [
       {
         "q": "Le joueur doit-il installer une application ?",
-        "a": "Non par défaut : un scan de QR ouvre la web app dans le navigateur, sans installation. Pour les habitués, des apps iOS et Android sont disponibles gratuitement sur l'App Store et le Play Store."
+        "a": "Non. Un scan du QR ouvre la web app dans son navigateur. Pas d'install, pas de compte à créer. Le partage natif fonctionne ensuite sur tous les téléphones."
       },
       {
         "q": "Faut-il vous fournir notre logo et notre charte graphique ?",
@@ -198,7 +146,7 @@
       },
       {
         "q": "Y a-t-il un engagement ?",
-        "a": "Aucun par défaut, résiliable au mois. Si vous souhaitez sécuriser un tarif, l'engagement 3 ans donne −20% de remise (39€ ou 63€ /mois)."
+        "a": "Aucun par défaut, résiliable au mois. L'engagement 3 ans donne −20% de remise (39€/mois)."
       },
       {
         "q": "Faut-il du matériel particulier au club ?",
