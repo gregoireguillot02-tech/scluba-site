@@ -36,6 +36,29 @@ const t = useT(locale);
   <Footer locale={locale} />
 
   <script>
+    // Smooth scroll global via Lenis (~4 KB gzipped). Respecte prefers-reduced-motion.
+    import Lenis from 'lenis';
+
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!prefersReduced) {
+      const lenis = new Lenis({
+        duration: 1.1,
+        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        touchMultiplier: 2,
+      });
+
+      function raf(time: number) {
+        lenis.raf(time);
+        requestAnimationFrame(raf);
+      }
+      requestAnimationFrame(raf);
+
+      (window as unknown as { __lenis?: unknown }).__lenis = lenis;
+    }
+  </script>
+
+  <script>
     import '../scripts/animations';
   </script>
 </body>
