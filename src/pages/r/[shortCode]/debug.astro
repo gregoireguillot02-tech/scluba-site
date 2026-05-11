@@ -29,6 +29,9 @@ try {
 
   const d = await sb.from('clubs').select('id,name,slug').limit(3);
   qClubsTable = d.error ? `error ${d.error.code}: ${d.error.message}` : `rows=${d.data?.length ?? 0}`;
+
+  const cnt = await sb.from('rounds').select('*', { count: 'exact', head: true });
+  qAllRounds += ` | count=${cnt.count ?? '?'} cntErr=${cnt.error?.message ?? 'none'}`;
 } catch (e) {
   svcResult = `THROW: ${e instanceof Error ? e.name + ': ' + e.message : String(e)}`;
 }
