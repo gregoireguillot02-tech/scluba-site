@@ -167,68 +167,119 @@ function drawTrackedText(
 
 const FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
-function drawScoreTable(
+// Couleurs des cells score (alignées sur recap.astro tokens)
+const CELL_BIRDIE_BG = '#F5E6CF';   // --accent-soft
+const CELL_BIRDIE_TXT = '#C0392B';
+const CELL_BOGEY_BG = '#E8E5DD';
+const CELL_BOGEY_TXT = '#6B7280';   // --muted
+const CELL_PAR_BG = '#FFFFFF';
+const CELL_PAR_BORDER = '#E8E1D0';
+const CELL_EMPTY_BG = '#F0EDE3';
+const CELL_EMPTY_TXT = '#B5AE9C';
+
+function drawScoreRow(
   ctx: CanvasRenderingContext2D,
   holes: CourseHole[],
   scoresByHole: Record<number, number>,
+  label: string,
   startY: number,
+  clubColor: string,
 ) {
   const PAD_X = 48;
   const W = 1080;
-  const N = 9;
-  const GAP = 6;
-  const CELL_W = (W - 2 * PAD_X - (N - 1) * GAP) / N; // 104
-  const TROU_H = 35;
-  const PAR_H = 45;
-  const SCORE_H = 60;
+  const N_TOTAL = 10; // 1 label + 9 cells
+  const GAP = 8;
+  const CELL_W = (W - 2 * PAD_X - (N_TOTAL - 1) * GAP) / N_TOTAL; // ~92
+  const CELL_H = 72;
 
-  // Row 1 : Trou (numéros)
-  for (let i = 0; i < holes.length; i++) {
-    const x = PAD_X + i * (CELL_W + GAP);
-    drawRoundedRect(ctx, x, startY, CELL_W, TROU_H, 4);
-    ctx.fillStyle = '#EFEBE0';
-    ctx.fill();
-    ctx.fillStyle = '#888';
-    ctx.font = `700 18px ${FONT_STACK}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(holes[i].number), x + CELL_W / 2, startY + TROU_H / 2);
-  }
+  // Label F9/B9 — fond clubColor
+  drawRoundedRect(ctx, PAD_X, startY, CELL_W, CELL_H, 8);
+  ctx.fillStyle = clubColor;
+  ctx.fill();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `800 24px ${FONT_STACK}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, PAD_X + CELL_W / 2, startY + CELL_H / 2);
 
-  // Row 2 : Par
-  const parY = startY + TROU_H + 2;
+  // 9 score cells
   for (let i = 0; i < holes.length; i++) {
-    const x = PAD_X + i * (CELL_W + GAP);
-    drawRoundedRect(ctx, x, parY, CELL_W, PAR_H, 4);
-    ctx.fillStyle = '#FAF1DC';
-    ctx.fill();
-    ctx.fillStyle = '#5C5340';
-    ctx.font = `500 24px ${FONT_STACK}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(holes[i].par), x + CELL_W / 2, parY + PAR_H / 2);
-  }
-
-  // Row 3 : Score (couleur par scoreType, tiret grisé si non joué)
-  const scoreY = parY + PAR_H + 2;
-  for (let i = 0; i < holes.length; i++) {
-    const x = PAD_X + i * (CELL_W + GAP);
+    const x = PAD_X + (i + 1) * (CELL_W + GAP);
     const s = scoresByHole[holes[i].number];
     const played = s !== undefined;
     const type = played ? scoreType(s, holes[i].par) : null;
-    const bg = type ? (CELL_COLOR[type] ?? '#EEE') : '#ECEAE2';
 
-    drawRoundedRect(ctx, x, scoreY, CELL_W, SCORE_H, 6);
+    let bg: string;
+    let txtColor: string;
+    let hasBorder = false;
+    if (!played) {
+      bg = CELL_EMPTY_BG;
+      txtColor = CELL_EMPTY_TXT;
+    } else if (type === 'birdie' || type === 'eagle') {
+      bg = CELL_BIRDIE_BG;
+      txtColor = CELL_BIRDIE_TXT;
+    } else if (type === 'bogey' || type === 'double') {
+      bg = CELL_BOGEY_BG;
+      txtColor = CELL_BOGEY_TXT;
+    } else {
+      bg = CELL_PAR_BG;
+      txtColor = clubColor;
+      hasBorder = true;
+    }
+
+    drawRoundedRect(ctx, x, startY, CELL_W, CELL_H, 8);
     ctx.fillStyle = bg;
     ctx.fill();
-    ctx.fillStyle = played ? '#1B4332' : '#A8A294';
+    if (hasBorder) {
+      ctx.strokeStyle = CELL_PAR_BORDER;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    ctx.fillStyle = txtColor;
     ctx.font = `800 32px ${FONT_STACK}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(played ? String(s) : '—', x + CELL_W / 2, scoreY + SCORE_H / 2 + 2);
+    ctx.fillText(played ? String(s) : '—', x + CELL_W / 2, startY + CELL_H / 2);
   }
 
-  return TROU_H + 2 + PAR_H + 2 + SCORE_H; // 144 total height (avec micro-gaps)
+  return CELL_H;
+}
+
+function drawLegend(
+  ctx: CanvasRenderingContext2D,
+  cy: number,
+  W: number,
+  clubColor: string,
+) {
+  const items: { label: string; bg: string; border: string | null }[] = [
+    { label: 'Birdie', bg: CELL_BIRDIE_BG, border: null },
+    { label: 'Par', bg: CELL_PAR_BG, border: CELL_PAR_BORDER },
+    { label: 'Bogey', bg: CELL_BOGEY_BG, border: null },
+  ];
+  const SWATCH = 22;
+  const GAP_SWATCH_LABEL = 12;
+  const GAP_ITEMS = 32;
+
+  ctx.font = `500 22px ${FONT_STACK}`;
+  const itemWidths = items.map((it) => SWATCH + GAP_SWATCH_LABEL + ctx.measureText(it.label).width);
+  const totalW = itemWidths.reduce((a, b) => a + b, 0) + GAP_ITEMS * (items.length - 1);
+  let xCursor = (W - totalW) / 2;
+
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < items.length; i++) {
+    drawRoundedRect(ctx, xCursor, cy - SWATCH / 2, SWATCH, SWATCH, 4);
+    ctx.fillStyle = items[i].bg;
+    ctx.fill();
+    if (items[i].border) {
+      ctx.strokeStyle = items[i].border!;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    ctx.fillStyle = clubColor === '#1B4332' ? CELL_BOGEY_TXT : '#6B7280';
+    ctx.textAlign = 'left';
+    ctx.fillText(items[i].label, xCursor + SWATCH + GAP_SWATCH_LABEL, cy);
+    xCursor += itemWidths[i] + GAP_ITEMS;
+  }
 }
 
 function drawLogoOverlay(
@@ -324,37 +375,51 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   const subText = `${input.player?.display_name ?? '—'} · ${fmtDateShort(input.startedAt)} · ${input.holesPlayed} trous`;
   ctx.fillText(subText, W / 2, BAND_Y + 92, W - 2 * PAD_X);
 
-  // Section 3 : Total des coups (795..895, 100px) — fond cream foncé
-  const TOTAL_Y = BAND_Y + 120;
-  const TOTAL_H = 100;
-  ctx.fillStyle = '#F3EFE2';
-  ctx.fillRect(0, TOTAL_Y, W, TOTAL_H);
+  // Section 3 : Score block — eyebrow + gros total + sub (style recap.astro)
+  const SCORE_Y = BAND_Y + 110; // ~785
 
-  // "92 coups" + " (+5)" avec couleur diff
-  const totalLabel = `${input.totalStrokes} coups`;
-  const diffLabel = `  ${formatDiff(input.totalDiff)}`;
-  ctx.font = `800 52px ${FONT_STACK}`;
+  // Eyebrow "SCORE · 18 TROUS" en coral upper letterspaced
+  ctx.fillStyle = '#D4A574'; // --accent
+  ctx.font = `700 22px ${FONT_STACK}`;
   ctx.textBaseline = 'middle';
-  const tW = ctx.measureText(totalLabel).width;
-  const dW = ctx.measureText(diffLabel).width;
-  const startX = (W - tW - dW) / 2;
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#1B4332';
-  ctx.fillText(totalLabel, startX, TOTAL_Y + TOTAL_H / 2);
-  ctx.fillStyle = primaryColor;
-  ctx.fillText(diffLabel, startX + tW, TOTAL_Y + TOTAL_H / 2);
+  drawTrackedText(ctx, `SCORE · ${input.holes.length} TROUS`, W / 2, SCORE_Y, 3);
 
-  // Section 4 + 5 : Score tables (front 9 puis back 9)
+  // Gros total en clubColor — taille adaptée selon nombre de chiffres
+  const totalStr = String(input.totalStrokes);
+  const totalFontSize = totalStr.length >= 3 ? 110 : 130;
+  ctx.fillStyle = primaryColor;
+  ctx.font = `800 ${totalFontSize}px ${FONT_STACK}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(totalStr, W / 2, SCORE_Y + 90);
+
+  // Subtitle "±0 · Par 72"
+  const totalPar2 = input.holes.reduce((s, h) => s + h.par, 0);
+  const diffStr = input.totalDiff === 0
+    ? '±0'
+    : input.totalDiff > 0
+      ? `+${input.totalDiff}`
+      : `${input.totalDiff}`;
+  ctx.fillStyle = '#6B7280';
+  ctx.font = `500 28px ${FONT_STACK}`;
+  ctx.fillText(`${diffStr} · Par ${totalPar2}`, W / 2, SCORE_Y + 170);
+
+  // Section 4 : Grid F9 + B9 (chaque row = label clubColor + 9 cells)
   const front9 = input.holes.filter((h) => h.number <= 9);
   const back9 = input.holes.filter((h) => h.number > 9);
-  let tableY = TOTAL_Y + TOTAL_H + 20; // 915
+  const ROW_GAP = 14;
+  let gridY = SCORE_Y + 220; // ~1005
   if (front9.length) {
-    const usedH = drawScoreTable(ctx, front9, input.scoresByHole, tableY);
-    tableY += usedH + 20;
+    const h = drawScoreRow(ctx, front9, input.scoresByHole, 'F9', gridY, primaryColor);
+    gridY += h + ROW_GAP;
   }
   if (back9.length) {
-    drawScoreTable(ctx, back9, input.scoresByHole, tableY);
+    drawScoreRow(ctx, back9, input.scoresByHole, 'B9', gridY, primaryColor);
+    gridY += 72 + ROW_GAP;
   }
+
+  // Section 5 : Legend (Birdie · Par · Bogey)
+  drawLegend(ctx, gridY + 24, W, primaryColor);
 
   // Section 6 : Footer SCLUBA — discret
   ctx.fillStyle = '#A8A294';
