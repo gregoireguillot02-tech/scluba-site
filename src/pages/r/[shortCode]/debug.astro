@@ -1,5 +1,6 @@
 ---
 export const prerender = false;
+import { serviceClient } from '../../../lib/supabase';
 
 const { shortCode } = Astro.params;
 const env = {
@@ -7,6 +8,21 @@ const env = {
   hasAnon: typeof import.meta.env.PUBLIC_SUPABASE_ANON_KEY === 'string' && import.meta.env.PUBLIC_SUPABASE_ANON_KEY.length > 0,
   hasService: typeof import.meta.env.SUPABASE_SERVICE_ROLE_KEY === 'string' && import.meta.env.SUPABASE_SERVICE_ROLE_KEY.length > 0,
 };
+
+let svcResult = 'not-tried';
+let queryResult = 'not-tried';
+try {
+  const sb = serviceClient();
+  svcResult = 'ok';
+  try {
+    const q = await sb.from('rounds').select('id, short_code').limit(1);
+    queryResult = q.error ? `error: ${q.error.code} ${q.error.message}` : `ok rows=${q.data?.length ?? 0}`;
+  } catch (e) {
+    queryResult = `THROW: ${e instanceof Error ? e.name + ': ' + e.message : String(e)}`;
+  }
+} catch (e) {
+  svcResult = `THROW: ${e instanceof Error ? e.name + ': ' + e.message : String(e)}`;
+}
 ---
 <pre>
 debug page reached
@@ -14,4 +30,6 @@ shortCode = {shortCode}
 env.hasUrl = {String(env.hasUrl)}
 env.hasAnon = {String(env.hasAnon)}
 env.hasService = {String(env.hasService)}
+svcResult = {svcResult}
+queryResult = {queryResult}
 </pre>
