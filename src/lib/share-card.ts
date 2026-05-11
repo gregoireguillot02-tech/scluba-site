@@ -165,11 +165,103 @@ function drawTrackedText(
   ctx.textAlign = prevAlign;
 }
 
+const FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
+function drawScoreTable(
+  ctx: CanvasRenderingContext2D,
+  holes: CourseHole[],
+  scoresByHole: Record<number, number>,
+  startY: number,
+) {
+  const PAD_X = 48;
+  const W = 1080;
+  const N = 9;
+  const GAP = 6;
+  const CELL_W = (W - 2 * PAD_X - (N - 1) * GAP) / N; // 104
+  const TROU_H = 35;
+  const PAR_H = 45;
+  const SCORE_H = 60;
+
+  // Row 1 : Trou (numéros)
+  for (let i = 0; i < holes.length; i++) {
+    const x = PAD_X + i * (CELL_W + GAP);
+    drawRoundedRect(ctx, x, startY, CELL_W, TROU_H, 4);
+    ctx.fillStyle = '#EFEBE0';
+    ctx.fill();
+    ctx.fillStyle = '#888';
+    ctx.font = `700 18px ${FONT_STACK}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(holes[i].number), x + CELL_W / 2, startY + TROU_H / 2);
+  }
+
+  // Row 2 : Par
+  const parY = startY + TROU_H + 2;
+  for (let i = 0; i < holes.length; i++) {
+    const x = PAD_X + i * (CELL_W + GAP);
+    drawRoundedRect(ctx, x, parY, CELL_W, PAR_H, 4);
+    ctx.fillStyle = '#FAF1DC';
+    ctx.fill();
+    ctx.fillStyle = '#5C5340';
+    ctx.font = `500 24px ${FONT_STACK}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(holes[i].par), x + CELL_W / 2, parY + PAR_H / 2);
+  }
+
+  // Row 3 : Score (couleur par scoreType, tiret grisé si non joué)
+  const scoreY = parY + PAR_H + 2;
+  for (let i = 0; i < holes.length; i++) {
+    const x = PAD_X + i * (CELL_W + GAP);
+    const s = scoresByHole[holes[i].number];
+    const played = s !== undefined;
+    const type = played ? scoreType(s, holes[i].par) : null;
+    const bg = type ? (CELL_COLOR[type] ?? '#EEE') : '#ECEAE2';
+
+    drawRoundedRect(ctx, x, scoreY, CELL_W, SCORE_H, 6);
+    ctx.fillStyle = bg;
+    ctx.fill();
+    ctx.fillStyle = played ? '#1B4332' : '#A8A294';
+    ctx.font = `800 32px ${FONT_STACK}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(played ? String(s) : '—', x + CELL_W / 2, scoreY + SCORE_H / 2 + 2);
+  }
+
+  return TROU_H + 2 + PAR_H + 2 + SCORE_H; // 144 total height (avec micro-gaps)
+}
+
+function drawLogoOverlay(
+  ctx: CanvasRenderingContext2D,
+  logoImg: HTMLImageElement,
+  cx: number, cy: number, circleR: number,
+) {
+  // Cercle blanc avec ombre douce
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.25)';
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 4;
+  ctx.beginPath();
+  ctx.arc(cx, cy, circleR, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
+  ctx.restore();
+
+  // Logo fit "contain" centré (pas cover, sinon coupe les bords)
+  const innerR = circleR - 14;
+  const innerD = innerR * 2;
+  const aspect = logoImg.width / logoImg.height;
+  let lw: number, lh: number;
+  if (aspect >= 1) { lw = innerD; lh = innerD / aspect; }
+  else { lh = innerD; lw = innerD * aspect; }
+  ctx.drawImage(logoImg, cx - lw / 2, cy - lh / 2, lw, lh);
+}
+
 export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   const W = 1080;
   const H = 1350;
-  const PHOTO_H = 810;
   const PAD_X = 48;
+  const PHOTO_H = 675; // 50%
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -179,24 +271,31 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
 
   const club = input.club;
   const primaryColor = club.primary_color ?? '#1B4332';
-  const FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
-  // Background
+  // Background global
   ctx.fillStyle = '#FAF7EE';
   ctx.fillRect(0, 0, W, H);
 
-  // Photo (60%) ou gradient
-  let photoOk = false;
-  if (input.photoUrl) {
-    try {
-      const photoImg = await loadImage(input.photoUrl);
-      drawCoverImage(ctx, photoImg, 0, 0, W, PHOTO_H);
-      photoOk = true;
-    } catch (err) {
-      console.error('[share-card] photo load failed, fallback gradient', err);
-    }
-  }
-  if (!photoOk) {
+  // Charger photo et logo en parallèle (les deux peuvent fail indépendamment)
+  let photoImg: HTMLImageElement | null = null;
+  let logoImg: HTMLImageElement | null = null;
+  await Promise.all([
+    input.photoUrl
+      ? loadImage(input.photoUrl).then((img) => { photoImg = img; }, (err) => {
+          console.error('[share-card] photo load failed, fallback gradient', err);
+        })
+      : Promise.resolve(),
+    club.logo_url
+      ? loadImage(club.logo_url).then((img) => { logoImg = img; }, (err) => {
+          console.error('[share-card] logo load failed, skip overlay', err);
+        })
+      : Promise.resolve(),
+  ]);
+
+  // Section 1 : Photo (0..675) ou gradient
+  if (photoImg) {
+    drawCoverImage(ctx, photoImg, 0, 0, W, PHOTO_H);
+  } else {
     const grad = ctx.createLinearGradient(0, 0, W, PHOTO_H);
     grad.addColorStop(0, primaryColor);
     grad.addColorStop(1, '#87B894');
@@ -204,74 +303,64 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
     ctx.fillRect(0, 0, W, PHOTO_H);
   }
 
-  // Header : nom (gauche) + score (droite)
-  const HEADER_Y = PHOTO_H + 32;
+  // Logo overlay coin haut-droit
+  if (logoImg) {
+    const CIRCLE_R = 70; // diamètre 140
+    const CIRCLE_CX = W - 32 - CIRCLE_R;
+    const CIRCLE_CY = 32 + CIRCLE_R;
+    drawLogoOverlay(ctx, logoImg, CIRCLE_CX, CIRCLE_CY, CIRCLE_R);
+  }
+
+  // Section 2 : Bandeau brand (675..795, 120px)
+  const BAND_Y = PHOTO_H;
   ctx.fillStyle = '#1B4332';
-  ctx.font = `800 56px ${FONT_STACK}`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText(input.player?.display_name ?? '—', PAD_X, HEADER_Y, W - 360);
+  ctx.font = `800 38px ${FONT_STACK}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(club.name.toUpperCase(), W / 2, BAND_Y + 48, W - 2 * PAD_X);
 
+  ctx.fillStyle = '#666';
+  ctx.font = `400 22px ${FONT_STACK}`;
+  const subText = `${input.player?.display_name ?? '—'} · ${fmtDateShort(input.startedAt)} · ${input.holesPlayed} trous`;
+  ctx.fillText(subText, W / 2, BAND_Y + 92, W - 2 * PAD_X);
+
+  // Section 3 : Total des coups (795..895, 100px) — fond cream foncé
+  const TOTAL_Y = BAND_Y + 120;
+  const TOTAL_H = 100;
+  ctx.fillStyle = '#F3EFE2';
+  ctx.fillRect(0, TOTAL_Y, W, TOTAL_H);
+
+  // "92 coups" + " (+5)" avec couleur diff
+  const totalLabel = `${input.totalStrokes} coups`;
+  const diffLabel = `  ${formatDiff(input.totalDiff)}`;
+  ctx.font = `800 52px ${FONT_STACK}`;
+  ctx.textBaseline = 'middle';
+  const tW = ctx.measureText(totalLabel).width;
+  const dW = ctx.measureText(diffLabel).width;
+  const startX = (W - tW - dW) / 2;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#1B4332';
+  ctx.fillText(totalLabel, startX, TOTAL_Y + TOTAL_H / 2);
   ctx.fillStyle = primaryColor;
-  ctx.font = `800 64px ${FONT_STACK}`;
-  ctx.textAlign = 'right';
-  ctx.fillText(formatDiff(input.totalDiff), W - PAD_X, HEADER_Y - 6);
+  ctx.fillText(diffLabel, startX + tW, TOTAL_Y + TOTAL_H / 2);
 
-  // Meta : club · date · trous
-  ctx.fillStyle = '#555';
-  ctx.font = `400 24px ${FONT_STACK}`;
-  ctx.textAlign = 'left';
-  ctx.fillText(
-    `${club.name} · ${fmtDateShort(input.startedAt)} · ${input.holesPlayed} trous`,
-    PAD_X, HEADER_Y + 80, W - 2 * PAD_X,
-  );
-
-  // Grille : aller / retour
+  // Section 4 + 5 : Score tables (front 9 puis back 9)
   const front9 = input.holes.filter((h) => h.number <= 9);
   const back9 = input.holes.filter((h) => h.number > 9);
-  const rows: { holes: CourseHole[]; label: string }[] = [];
-  if (front9.length) rows.push({ holes: front9, label: 'ALLER' });
-  if (back9.length) rows.push({ holes: back9, label: 'RETOUR' });
+  let tableY = TOTAL_Y + TOTAL_H + 20; // 915
+  if (front9.length) {
+    const usedH = drawScoreTable(ctx, front9, input.scoresByHole, tableY);
+    tableY += usedH + 20;
+  }
+  if (back9.length) {
+    drawScoreTable(ctx, back9, input.scoresByHole, tableY);
+  }
 
-  const CELL_SIZE = 90;
-  const CELL_GAP = 6;
-  const LABEL_W = 100;
-  const GRID_Y = HEADER_Y + 130;
-
-  rows.forEach((row, idx) => {
-    const y = GRID_Y + idx * (CELL_SIZE + 12);
-
-    // Label (Aller / Retour)
-    ctx.fillStyle = '#999';
-    ctx.font = `700 20px ${FONT_STACK}`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(row.label, PAD_X, y + CELL_SIZE / 2);
-
-    // Cells
-    row.holes.forEach((h, i) => {
-      const s = input.scoresByHole[h.number];
-      const x = PAD_X + LABEL_W + i * (CELL_SIZE + CELL_GAP);
-      const type = s !== undefined ? scoreType(s, h.par) : null;
-      const bg = type ? (CELL_COLOR[type] ?? '#EEE') : '#F3F3F3';
-
-      drawRoundedRect(ctx, x, y, CELL_SIZE, CELL_SIZE, 8);
-      ctx.fillStyle = bg;
-      ctx.fill();
-
-      ctx.fillStyle = '#1B4332';
-      ctx.font = `700 30px ${FONT_STACK}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(s !== undefined ? String(s) : '—', x + CELL_SIZE / 2, y + CELL_SIZE / 2 + 2);
-    });
-  });
-
-  // Footer SCLUBA
-  ctx.fillStyle = '#1B4332';
-  ctx.font = `800 26px ${FONT_STACK}`;
+  // Section 6 : Footer SCLUBA — discret
+  ctx.fillStyle = '#A8A294';
+  ctx.font = `500 16px ${FONT_STACK}`;
   ctx.textBaseline = 'alphabetic';
-  drawTrackedText(ctx, 'SCLUBA', W / 2, H - 36, 8);
+  drawTrackedText(ctx, 'POWERED BY SCLUBA', W / 2, H - 36, 4);
 
   // Export PNG
   const blob = await new Promise<Blob>((resolve, reject) => {
