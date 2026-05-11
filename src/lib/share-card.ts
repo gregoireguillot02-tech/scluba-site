@@ -109,8 +109,11 @@ const CELL_SIZE = 96;
 
 function buildTemplate(input: ComposeInput): HTMLElement {
   const root = document.createElement('div');
+  // Position off-screen above the viewport. opacity:0 cause un PNG transparent
+  // (html-to-image rasterise tel quel) ; negative-left peut être skip-painted
+  // par iOS Safari. Negative-top fonctionne : peint mais hors viewport.
   root.style.cssText = `
-    position: fixed; top: 0; left: 0; opacity: 0; pointer-events: none; z-index: -9999;
+    position: fixed; top: -3000px; left: 0; pointer-events: none;
     width: 1080px; height: 1350px;
     background: #FAF7EE;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -239,6 +242,7 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
       cacheBust: true,
     });
     if (!blob) throw new Error('html-to-image returned null');
+    console.log('[share-card] PNG generated, size:', blob.size, 'bytes');
     return blob;
   } finally {
     node.remove();
