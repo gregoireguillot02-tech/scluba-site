@@ -100,13 +100,13 @@ const t = useT(locale);
                   ))}
                 </div>
 
-                <button class="hero-share-cta" type="button" data-share-open aria-label={t.phone.share.ctaButton}>
+                <button class="hero-share-cta" type="button" data-share-open aria-label={t.share.ctaButton}>
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
                     <polyline points="16 6 12 2 8 6"/>
                     <line x1="12" y1="2" x2="12" y2="15"/>
                   </svg>
-                  <span>{t.phone.share.ctaButton}</span>
+                  <span>{t.share.ctaButton}</span>
                 </button>
 
                 <div class="hero-card-footer">
@@ -129,13 +129,13 @@ const t = useT(locale);
                     </svg>
                   </div>
                   <div class="ios-preview-meta">
-                    <strong>{t.phone.share.previewName}</strong>
-                    <span>{t.phone.share.previewLabel}</span>
+                    <strong>{t.share.previewName}</strong>
+                    <span>{t.share.previewLabel}</span>
                   </div>
                 </div>
 
                 <div class="ios-sheet-row ios-row-contacts">
-                  {t.phone.share.contacts.map((c) => (
+                  {t.share.contacts.map((c) => (
                     <button class="ios-contact" type="button" data-share-action={c.name} style={`--ava-bg: ${c.color}`}>
                       <span class="ios-avatar">
                         <span class="ios-avatar-initials">{c.initials}</span>
@@ -151,7 +151,7 @@ const t = useT(locale);
                 </div>
 
                 <div class="ios-sheet-row ios-row-apps">
-                  {t.phone.share.apps.map((app) => (
+                  {t.share.apps.map((app) => (
                     <button class={`ios-app ios-app-${app.toLowerCase()}`} type="button" data-share-action={app} aria-label={app}>
                       <span class="ios-app-icon">
                         {app === 'Instagram' && (
@@ -194,7 +194,7 @@ const t = useT(locale);
                 </div>
 
                 <ul class="ios-sheet-actions">
-                  {t.phone.share.actions.map((action, i) => (
+                  {t.share.actions.map((action, i) => (
                     <li>
                       <button class="ios-action" type="button" data-share-action={action}>
                         <span>{action}</span>
@@ -229,7 +229,7 @@ const t = useT(locale);
                   {locale === 'fr' ? 'Annuler' : 'Cancel'}
                 </button>
 
-                <div class="ios-sheet-toast" data-share-toast>{t.phone.share.linkCopied}</div>
+                <div class="ios-sheet-toast" data-share-toast>{t.share.linkCopied}</div>
               </aside>
             </div>
           </div>
