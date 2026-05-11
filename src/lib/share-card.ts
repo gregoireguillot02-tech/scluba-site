@@ -1,5 +1,4 @@
 import { createBrowserClient } from '@supabase/ssr';
-import { toBlob } from 'html-to-image';
 import type { Club, CourseHole, RoundPlayer } from './clubs-types';
 import { scoreType } from './clubs-types';
 
@@ -105,153 +104,184 @@ const CELL_COLOR: Record<string, string> = {
   'double': '#D8A8A8',
 };
 
-const CELL_SIZE = 96;
-
-function buildTemplate(input: ComposeInput): HTMLElement {
-  const root = document.createElement('div');
-  // DIAGNOSTIC: template visible on-screen. iOS Safari peut skip le paint des
-  // éléments offscreen (fixed/-3000px) — résultat : PNG transparent.
-  // Une fois confirmé, on masquera derrière un cover element ou via transform.
-  root.style.cssText = `
-    position: absolute; top: 0; left: 0; pointer-events: none; z-index: 999;
-    width: 1080px; height: 1350px;
-    background: #FAF7EE;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    display: flex; flex-direction: column;
-  `;
-
-  // Photo (60%) — <img> direct pour que html-to-image inline le src
-  const photo = document.createElement('div');
-  photo.style.cssText = 'width: 100%; height: 810px; position: relative; overflow: hidden;';
-  if (input.photoUrl) {
-    const img = document.createElement('img');
-    img.src = input.photoUrl;
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; display: block;';
-    photo.appendChild(img);
-  } else {
-    photo.style.cssText += `background: linear-gradient(135deg, ${input.club.primary_color ?? '#1B4332'}, #87B894);`;
-  }
-  root.appendChild(photo);
-
-  // Header (nom + score)
-  const header = document.createElement('div');
-  header.style.cssText = 'padding: 32px 48px 16px; display: flex; justify-content: space-between; align-items: baseline;';
-  header.innerHTML = `
-    <div style="font-size: 56px; font-weight: 800; color: #1B4332;">${escapeHtml(input.player?.display_name ?? '—')}</div>
-    <div style="font-size: 64px; font-weight: 800; color: ${input.club.primary_color ?? '#1B4332'};">${formatDiff(input.totalDiff)}</div>
-  `;
-  root.appendChild(header);
-
-  // Meta (club + date)
-  const meta = document.createElement('div');
-  meta.style.cssText = 'padding: 0 48px 20px; font-size: 24px; color: #555;';
-  meta.textContent = `${input.club.name} · ${fmtDateShort(input.startedAt)} · ${input.holesPlayed} trous`;
-  root.appendChild(meta);
-
-  // Grille (front 9 / back 9)
-  const grid = document.createElement('div');
-  grid.style.cssText = 'padding: 0 48px; display: flex; flex-direction: column; gap: 10px;';
-  const front9 = input.holes.filter(h => h.number <= 9);
-  const back9 = input.holes.filter(h => h.number > 9);
-  for (const row of [front9, back9]) {
-    if (row.length === 0) continue;
-    const line = document.createElement('div');
-    line.style.cssText = `display: flex; gap: 6px; align-items: center;`;
-    const label = document.createElement('div');
-    label.style.cssText = 'width: 80px; font-size: 18px; color: #999; text-transform: uppercase; letter-spacing: 1px;';
-    label.textContent = row === front9 ? 'Aller' : 'Retour';
-    line.appendChild(label);
-    for (const h of row) {
-      const s = input.scoresByHole[h.number];
-      const cell = document.createElement('div');
-      const type = s !== undefined ? scoreType(s, h.par) : null;
-      const bg = type ? (CELL_COLOR[type] ?? '#EEE') : '#F3F3F3';
-      cell.style.cssText = `background: ${bg}; width: ${CELL_SIZE}px; height: ${CELL_SIZE}px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 22px; color: #1B4332;`;
-      cell.textContent = s !== undefined ? String(s) : '—';
-      line.appendChild(cell);
-    }
-    grid.appendChild(line);
-  }
-  root.appendChild(grid);
-
-  // Footer brand
-  const footer = document.createElement('div');
-  footer.style.cssText = 'margin-top: auto; padding: 24px 48px; text-align: center; letter-spacing: 8px; font-size: 22px; font-weight: 700; color: #1B4332;';
-  footer.textContent = 'SCLUBA';
-  root.appendChild(footer);
-
-  return root;
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  }[c] as string));
-}
-
-async function urlToDataUri(url: string): Promise<string> {
-  const resp = await fetch(url);
-  const blob = await resp.blob();
-  return await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('image load failed'));
+    img.src = url;
   });
 }
 
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number, r: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawCoverImage(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  dx: number, dy: number, dw: number, dh: number,
+) {
+  const srcAspect = img.width / img.height;
+  const dstAspect = dw / dh;
+  let sx = 0, sy = 0, sw = img.width, sh = img.height;
+  if (srcAspect > dstAspect) {
+    sw = img.height * dstAspect;
+    sx = (img.width - sw) / 2;
+  } else {
+    sh = img.width / dstAspect;
+    sy = (img.height - sh) / 2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+}
+
+function drawTrackedText(
+  ctx: CanvasRenderingContext2D,
+  text: string, cx: number, y: number, tracking: number,
+) {
+  const widths = Array.from(text).map((c) => ctx.measureText(c).width);
+  const totalW = widths.reduce((a, b) => a + b, 0) + tracking * (text.length - 1);
+  let x = cx - totalW / 2;
+  const prevAlign = ctx.textAlign;
+  ctx.textAlign = 'left';
+  for (let i = 0; i < text.length; i++) {
+    ctx.fillText(text[i], x, y);
+    x += widths[i] + tracking;
+  }
+  ctx.textAlign = prevAlign;
+}
+
 export async function composeShareImage(input: ComposeInput): Promise<Blob> {
-  // Pré-convertir la photo en data URI pour garantir l'inline par html-to-image
-  // (évite les soucis CORS/blob:/cross-context sur iOS Safari)
-  let resolvedPhotoUrl: string | null = input.photoUrl;
-  if (resolvedPhotoUrl) {
+  const W = 1080;
+  const H = 1350;
+  const PHOTO_H = 810;
+  const PAD_X = 48;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('canvas 2d context unavailable');
+
+  const club = input.club;
+  const primaryColor = club.primary_color ?? '#1B4332';
+  const FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
+  // Background
+  ctx.fillStyle = '#FAF7EE';
+  ctx.fillRect(0, 0, W, H);
+
+  // Photo (60%) ou gradient
+  let photoOk = false;
+  if (input.photoUrl) {
     try {
-      resolvedPhotoUrl = await urlToDataUri(resolvedPhotoUrl);
+      const photoImg = await loadImage(input.photoUrl);
+      drawCoverImage(ctx, photoImg, 0, 0, W, PHOTO_H);
+      photoOk = true;
     } catch (err) {
-      console.error('[share-card] urlToDataUri failed, fallback gradient', err);
-      resolvedPhotoUrl = null;
+      console.error('[share-card] photo load failed, fallback gradient', err);
     }
   }
+  if (!photoOk) {
+    const grad = ctx.createLinearGradient(0, 0, W, PHOTO_H);
+    grad.addColorStop(0, primaryColor);
+    grad.addColorStop(1, '#87B894');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, PHOTO_H);
+  }
 
-  const node = buildTemplate({ ...input, photoUrl: resolvedPhotoUrl });
-  document.body.appendChild(node);
-  try {
-    // Attendre que l'<img> dans le template soit décodée avant la capture
-    if (resolvedPhotoUrl) {
-      const img = node.querySelector('img');
-      if (img && !img.complete) {
-        await new Promise<void>((resolve) => {
-          img.onload = () => resolve();
-          img.onerror = () => resolve();
-        });
-      }
-      if (img && 'decode' in img) {
-        try { await img.decode(); } catch { /* ignore decode errors */ }
-      }
-    }
+  // Header : nom (gauche) + score (droite)
+  const HEADER_Y = PHOTO_H + 32;
+  ctx.fillStyle = '#1B4332';
+  ctx.font = `800 56px ${FONT_STACK}`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(input.player?.display_name ?? '—', PAD_X, HEADER_Y, W - 360);
 
-    // 2 frames pour s'assurer que le browser a peint le template avant la capture
-    await new Promise<void>((r) => requestAnimationFrame(() => r()));
-    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+  ctx.fillStyle = primaryColor;
+  ctx.font = `800 64px ${FONT_STACK}`;
+  ctx.textAlign = 'right';
+  ctx.fillText(formatDiff(input.totalDiff), W - PAD_X, HEADER_Y - 6);
 
-    const blob = await toBlob(node, {
-      width: 1080,
-      height: 1350,
-      pixelRatio: 1,
-      cacheBust: true,
+  // Meta : club · date · trous
+  ctx.fillStyle = '#555';
+  ctx.font = `400 24px ${FONT_STACK}`;
+  ctx.textAlign = 'left';
+  ctx.fillText(
+    `${club.name} · ${fmtDateShort(input.startedAt)} · ${input.holesPlayed} trous`,
+    PAD_X, HEADER_Y + 80, W - 2 * PAD_X,
+  );
+
+  // Grille : aller / retour
+  const front9 = input.holes.filter((h) => h.number <= 9);
+  const back9 = input.holes.filter((h) => h.number > 9);
+  const rows: { holes: CourseHole[]; label: string }[] = [];
+  if (front9.length) rows.push({ holes: front9, label: 'ALLER' });
+  if (back9.length) rows.push({ holes: back9, label: 'RETOUR' });
+
+  const CELL_SIZE = 90;
+  const CELL_GAP = 6;
+  const LABEL_W = 100;
+  const GRID_Y = HEADER_Y + 130;
+
+  rows.forEach((row, idx) => {
+    const y = GRID_Y + idx * (CELL_SIZE + 12);
+
+    // Label (Aller / Retour)
+    ctx.fillStyle = '#999';
+    ctx.font = `700 20px ${FONT_STACK}`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(row.label, PAD_X, y + CELL_SIZE / 2);
+
+    // Cells
+    row.holes.forEach((h, i) => {
+      const s = input.scoresByHole[h.number];
+      const x = PAD_X + LABEL_W + i * (CELL_SIZE + CELL_GAP);
+      const type = s !== undefined ? scoreType(s, h.par) : null;
+      const bg = type ? (CELL_COLOR[type] ?? '#EEE') : '#F3F3F3';
+
+      drawRoundedRect(ctx, x, y, CELL_SIZE, CELL_SIZE, 8);
+      ctx.fillStyle = bg;
+      ctx.fill();
+
+      ctx.fillStyle = '#1B4332';
+      ctx.font = `700 30px ${FONT_STACK}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(s !== undefined ? String(s) : '—', x + CELL_SIZE / 2, y + CELL_SIZE / 2 + 2);
     });
-    if (!blob) throw new Error('html-to-image returned null');
-    console.log('[share-card] PNG generated, size:', blob.size, 'bytes');
-    // DEBUG: log object URL so user can open generated PNG in a new tab
-    try {
-      const debugUrl = URL.createObjectURL(blob);
-      console.log('[share-card] DEBUG open PNG in new tab:', debugUrl);
-    } catch { /* noop */ }
-    return blob;
-  } finally {
-    node.remove();
-  }
+  });
+
+  // Footer SCLUBA
+  ctx.fillStyle = '#1B4332';
+  ctx.font = `800 26px ${FONT_STACK}`;
+  ctx.textBaseline = 'alphabetic';
+  drawTrackedText(ctx, 'SCLUBA', W / 2, H - 36, 8);
+
+  // Export PNG
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error('canvas.toBlob returned null'))),
+      'image/png',
+    );
+  });
+  console.log('[share-card] PNG generated, size:', blob.size, 'bytes');
+  return blob;
 }
 
 export interface ShareOptions {
