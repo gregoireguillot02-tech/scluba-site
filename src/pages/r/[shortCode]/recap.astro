@@ -9,50 +9,56 @@ import { totalPar, scoreType } from '../../../lib/clubs-types';
 import ShareCardModal from '../../../components/ShareCardModal.astro';
 
 const { shortCode } = Astro.params;
+const sb = serviceClient();
 
-// DEBUG: catch tout pour surfacer l'erreur runtime
-let __debug_round: unknown = null;
-let __debug_error: string | null = null;
+// DEBUG: try/catch global pour surfacer l'erreur runtime (à retirer une fois diagnostic terminé)
+let __round: unknown = null;
+let __err: string | null = null;
 try {
-  const sb = serviceClient();
-  const r = await sb
-    .from('rounds')
-    .select('*, club:clubs(*)')
-    .eq('short_code', shortCode)
-    .maybeSingle();
-  if (r.error) {
-    __debug_error = `roundError: ${r.error.code ?? '?'} | ${r.error.message ?? '?'} | ${r.error.details ?? ''} | ${r.error.hint ?? ''}`;
+  const q = await sb.from('rounds').select('*, club:clubs(*)').eq('short_code', shortCode).maybeSingle();
+  if (q.error) {
+    __err = `roundError: ${q.error.code ?? '?'} | ${q.error.message ?? '?'} | ${q.error.details ?? ''} | ${q.error.hint ?? ''}`;
   } else {
-    __debug_round = r.data;
+    __round = q.data;
   }
 } catch (e) {
-  __debug_error = `THROW: ${e instanceof Error ? `${e.name}: ${e.message}` : String(e)}`;
+  __err = `THROW round: ${e instanceof Error ? `${e.name}: ${e.message}` : String(e)}`;
 }
 
-if (__debug_error) {
-  return new Response(`DEBUG ${__debug_error}`, {
-    status: 500,
-    headers: { 'content-type': 'text/plain; charset=utf-8' },
-  });
+if (__err) {
+  return new Response(`DEBUG ${__err}`, { status: 500, headers: { 'content-type': 'text/plain; charset=utf-8' } });
 }
 
-const round = __debug_round as { id: string; club: Club; short_code: string; started_at: string | null; created_at: string; finished_at: string | null; share_photo_url: string | null } | null;
-
-if (!round) {
+if (!__round) {
   return Astro.rewrite('/404');
 }
 
-const r = round as Round & { club: Club };
+const r = __round as Round & { club: Club };
 
-const { data: roster } = await sb.from('round_players').select('id').eq('round_id', r.id);
-const playerIds = (roster ?? []).map((p) => p.id);
+let roster: { id: string }[] | null = null;
+let players: RoundPlayer[] | null = null;
+let rawScores: Score[] | null = null;
+try {
+  const q1 = await sb.from('round_players').select('id').eq('round_id', r.id);
+  if (q1.error) {
+    return new Response(`DEBUG rosterError: ${q1.error.code} ${q1.error.message} ${q1.error.details ?? ''}`, { status: 500, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  }
+  roster = q1.data;
+  const playerIds = (roster ?? []).map((p) => p.id);
 
-const [{ data: players }, { data: rawScores }] = await Promise.all([
-  sb.from('round_players').select('*').eq('round_id', r.id).order('joined_at'),
-  playerIds.length
-    ? sb.from('scores').select('*').in('round_player_id', playerIds)
-    : Promise.resolve({ data: [] }),
-]);
+  const [q2, q3] = await Promise.all([
+    sb.from('round_players').select('*').eq('round_id', r.id).order('joined_at'),
+    playerIds.length
+      ? sb.from('scores').select('*').in('round_player_id', playerIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (q2.error) return new Response(`DEBUG playersError: ${q2.error.code} ${q2.error.message} ${q2.error.details ?? ''}`, { status: 500, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  if (q3.error) return new Response(`DEBUG scoresError: ${q3.error.code} ${q3.error.message} ${q3.error.details ?? ''}`, { status: 500, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  players = q2.data as RoundPlayer[];
+  rawScores = q3.data as Score[];
+} catch (e) {
+  return new Response(`DEBUG THROW players/scores: ${e instanceof Error ? `${e.name}: ${e.message}` : String(e)}`, { status: 500, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+}
 
 const allPlayers = (players ?? []) as RoundPlayer[];
 const allScores = (rawScores ?? []) as Score[];
