@@ -220,6 +220,20 @@ function initShowcase() {
     stagger: 0.10,
     ease: 'bounce.out',
   });
+
+  // Mini-cells s'allument en cascade dans chaque carte (signal scorecard)
+  cards.forEach((card) => {
+    const cells = card.querySelectorAll<HTMLElement>('.mini-cell');
+    if (!cells.length) return;
+    gsap.from(cells, {
+      scrollTrigger: { trigger: card, start: 'top 75%' },
+      opacity: 0,
+      scale: 0.4,
+      duration: 0.4,
+      stagger: 0.022,
+      ease: 'back.out(1.5)',
+    });
+  });
 }
 
 /* ---------- HOW IT WORKS — timeline ---------- */
@@ -255,12 +269,26 @@ function initPricing() {
   if (!cards.length) return;
 
   gsap.from(cards, {
-    scrollTrigger: { trigger: cards[0], start: 'top 80%' },
-    y: 50,
+    scrollTrigger: { trigger: cards[0], start: 'top 85%' },
+    y: 40,
     opacity: 0,
-    duration: 0.8,
-    stagger: 0.2,
-    ease: 'power3.out',
+    scale: 0.96,
+    duration: 0.9,
+    stagger: 0.18,
+    ease: 'back.out(1.2)',
+  });
+}
+
+/* ---------- FOOTER — slide-up ---------- */
+function initFooter() {
+  const footer = document.querySelector<HTMLElement>('footer');
+  if (!footer) return;
+  gsap.from(footer, {
+    scrollTrigger: { trigger: footer, start: 'top 95%' },
+    y: 30,
+    opacity: 0,
+    duration: 0.9,
+    ease: 'power2.out',
   });
 }
 
@@ -438,6 +466,7 @@ function initAll() {
   initFAQ();
   initSectionHeaders();
   initCTAForm();
+  initFooter();
 }
 
 if (document.readyState === 'loading') {
