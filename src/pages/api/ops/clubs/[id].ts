@@ -1,12 +1,13 @@
 import type { APIRoute } from 'astro';
 import { serviceClient, isAllowedEmail } from '../../../../lib/supabase';
+import { uuidSchema } from '../../../../lib/validation/schemas';
 import type { CourseData, CourseHole } from '../../../../lib/clubs-types';
 
 export const prerender = false;
 
-function nullable(value: FormDataEntryValue | null): string | null {
+function nullable(value: FormDataEntryValue | null, maxLen = 1000): string | null {
   if (value == null) return null;
-  const s = String(value).trim();
+  const s = String(value).trim().slice(0, maxLen);
   return s === '' ? null : s;
 }
 
@@ -33,8 +34,9 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
     return new Response('Forbidden', { status: 403 });
   }
 
-  const id = params.id;
-  if (!id) return new Response('Missing club id', { status: 400 });
+  const idParsed = uuidSchema.safeParse(params.id ?? '');
+  if (!idParsed.success) return new Response('invalid club id', { status: 400 });
+  const id = idParsed.data;
 
   const sb = serviceClient();
   const form = await request.formData();
@@ -42,11 +44,14 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
 
   if (action === 'delete') {
     const { error } = await sb.from('clubs').delete().eq('id', id);
-    if (error) return new Response(`Delete failed: ${error.message}`, { status: 500 });
+    if (error) {
+      console.error('[api/ops/clubs/[id]] delete failed', error);
+      return new Response('Delete failed', { status: 500 });
+    }
     return redirect('/ops/clubs', 302);
   }
 
-  const name = String(form.get('name') ?? '').trim();
+  const name = String(form.get('name') ?? '').trim().slice(0, 255);
   if (!name) return new Response('name required', { status: 400 });
 
   const primaryColor = parseHexColor(String(form.get('primary_color') ?? ''));
@@ -56,13 +61,16 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
 
   const updates: Record<string, unknown> = {
     name,
-    city: nullable(form.get('city')),
+    city: nullable(form.get('city'), 120),
     primary_color: primaryColor,
     course_data: courseData,
   };
 
   const { error } = await sb.from('clubs').update(updates).eq('id', id);
-  if (error) return new Response(`Update failed: ${error.message}`, { status: 500 });
+  if (error) {
+    console.error('[api/ops/clubs/[id]] update failed', error);
+    return new Response('Update failed', { status: 500 });
+  }
 
   return redirect(`/ops/clubs/${id}/edit?ok=1`, 302);
 };

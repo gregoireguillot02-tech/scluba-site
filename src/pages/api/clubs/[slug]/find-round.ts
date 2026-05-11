@@ -6,6 +6,7 @@ import {
   shortCodeSchema,
   formatZodError,
 } from '../../../../lib/validation/schemas';
+import { escapeLikePattern } from '../../../../lib/safe-redirect';
 
 export const prerender = false;
 
@@ -55,11 +56,13 @@ export const POST: APIRoute = async ({ request, params, redirect, cookies }) => 
   }
 
   const roundIds = activeRounds.map((r) => r.id);
+  // Escape LIKE wildcards (`%`, `_`, `\`) so user input is matched literally,
+  // case-insensitively — `.ilike()` would otherwise treat them as patterns.
   const { data: players } = await sb
     .from('round_players')
     .select('id, round_id, display_name, joined_at')
     .in('round_id', roundIds)
-    .ilike('display_name', display_name);
+    .ilike('display_name', escapeLikePattern(display_name));
   const matches = players ?? [];
 
   if (matches.length === 0) {
@@ -75,7 +78,7 @@ export const POST: APIRoute = async ({ request, params, redirect, cookies }) => 
       path: '/',
       sameSite: 'lax',
       secure: import.meta.env.PROD,
-      httpOnly: false,
+      httpOnly: true,
       maxAge: 60 * 60 * 24 * 7,
     });
 

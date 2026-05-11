@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { serviceClient, isAllowedEmail } from '../../../../lib/supabase';
 import { generateClubSlug } from '../../../../lib/slug';
+import { uuidSchema } from '../../../../lib/validation/schemas';
 
 export const prerender = false;
 
@@ -11,8 +12,9 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
   }
 
   const form = await request.formData();
-  const prospect_id = String(form.get('prospect_id') ?? '').trim();
-  if (!prospect_id) return new Response('prospect_id required', { status: 400 });
+  const prospectParsed = uuidSchema.safeParse(form.get('prospect_id') ?? '');
+  if (!prospectParsed.success) return new Response('invalid prospect_id', { status: 400 });
+  const prospect_id = prospectParsed.data;
 
   const sb = serviceClient();
 
@@ -21,7 +23,10 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
     .select('id, club_name, city')
     .eq('id', prospect_id)
     .maybeSingle();
-  if (pErr) return new Response(`Lookup failed: ${pErr.message}`, { status: 500 });
+  if (pErr) {
+    console.error('[api/ops/clubs/from-prospect] lookup failed', pErr);
+    return new Response('Lookup failed', { status: 500 });
+  }
   if (!prospect) return new Response('Prospect not found', { status: 404 });
 
   const { data: existing } = await sb
@@ -54,7 +59,8 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       break;
     }
     if (cErr && !cErr.message.includes('duplicate key')) {
-      return new Response(`Create failed: ${cErr.message}`, { status: 500 });
+      console.error('[api/ops/clubs/from-prospect] create failed', cErr);
+      return new Response('Create failed', { status: 500 });
     }
   }
   if (!clubId) return new Response('Slug collision exhausted', { status: 500 });

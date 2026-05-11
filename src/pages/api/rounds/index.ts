@@ -26,7 +26,10 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
     .select('id')
     .eq('slug', slug)
     .maybeSingle();
-  if (cErr) return new Response(`Lookup failed: ${cErr.message}`, { status: 500 });
+  if (cErr) {
+    console.error('[api/rounds] club lookup failed', cErr);
+    return new Response('Lookup failed', { status: 500 });
+  }
   if (!club) return new Response('Club not found', { status: 404 });
 
   let short_code = '';
@@ -43,7 +46,8 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
       break;
     }
     if (rErr && !rErr.message.includes('duplicate key')) {
-      return new Response(`Create round failed: ${rErr.message}`, { status: 500 });
+      console.error('[api/rounds] create round failed', rErr);
+      return new Response('Create round failed', { status: 500 });
     }
   }
   if (!roundId) return new Response('short_code collision exhausted', { status: 500 });
@@ -61,13 +65,16 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
     })
     .select('id')
     .single();
-  if (pErr) return new Response(`Create player failed: ${pErr.message}`, { status: 500 });
+  if (pErr) {
+    console.error('[api/rounds] create player failed', pErr);
+    return new Response('Create player failed', { status: 500 });
+  }
 
   cookies.set(`${PLAYER_COOKIE_PREFIX}${short_code}`, player.id, {
     path: '/',
     sameSite: 'lax',
     secure: import.meta.env.PROD,
-    httpOnly: false,
+    httpOnly: true,
     maxAge: 60 * 60 * 24 * 7,
   });
 

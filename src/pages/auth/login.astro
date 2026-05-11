@@ -5,14 +5,23 @@ import '../../styles/tokens.css';
 import '../../styles/global.css';
 import Honeypot from '../../components/Honeypot.astro';
 import { magicLinkSchema, formatZodError } from '../../lib/validation/schemas';
+import { safeNextPath } from '../../lib/safe-redirect';
 
 const url = Astro.url;
-const next = url.searchParams.get('next') || '/';
+const next = safeNextPath(url.searchParams.get('next'), '/');
 const sent = url.searchParams.get('sent') === '1';
 const errMsg = url.searchParams.get('err');
 
+const ERR_MESSAGES: Record<string, string> = {
+  missing_code: 'Lien invalide ou expiré. Redemande un nouveau lien.',
+  auth_failed: 'Échec de la connexion. Redemande un nouveau lien.',
+};
+const safeErr = errMsg && Object.hasOwn(ERR_MESSAGES, errMsg)
+  ? ERR_MESSAGES[errMsg]
+  : (errMsg ? ERR_MESSAGES.auth_failed : null);
+
 let formError: string | null = null;
-let formSent = sent;
+const formSent = sent;
 
 if (Astro.request.method === 'POST') {
   try {
@@ -27,21 +36,24 @@ if (Astro.request.method === 'POST') {
       formError = formatZodError(parsed.error);
     } else {
       const { email, next: nextField = '/' } = parsed.data;
+      const safeNext = safeNextPath(nextField, '/');
       const supabase = Astro.locals.supabase;
       const origin = url.origin;
-      const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(nextField)}`;
+      const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: redirectTo },
       });
       if (error) {
-        formError = `Erreur: ${error.message}`;
+        console.error('[auth/login] signInWithOtp failed', error);
+        formError = "Erreur lors de l'envoi du lien magique. Réessaie dans un instant.";
       } else {
-        return Astro.redirect(`/auth/login?sent=1&next=${encodeURIComponent(nextField)}`, 302);
+        return Astro.redirect(`/auth/login?sent=1&next=${encodeURIComponent(safeNext)}`, 302);
       }
     }
   } catch (e) {
-    formError = `Erreur: ${(e as Error).message}`;
+    console.error('[auth/login] unexpected error', e);
+    formError = 'Erreur inattendue. Réessaie dans un instant.';
   }
 }
 ---
@@ -80,7 +92,7 @@ if (Astro.request.method === 'POST') {
       </div>
     )}
     {formError && <div class="auth-flash err">{formError}</div>}
-    {errMsg && <div class="auth-flash err">{errMsg}</div>}
+    {safeErr && <div class="auth-flash err">{safeErr}</div>}
 
     <form method="POST" class="auth-form">
       <input type="hidden" name="next" value={next} />
