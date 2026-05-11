@@ -2,7 +2,10 @@
 export const prerender = false;
 
 import '../../styles/tokens.css';
+import '../../styles/global.css';
+import Honeypot from '../../components/Honeypot.astro';
 import { isAllowedEmail } from '../../lib/supabase';
+import { magicLinkSchema, formatZodError } from '../../lib/validation/schemas';
 
 const url = Astro.url;
 const next = url.searchParams.get('next') || '/ops';
@@ -15,25 +18,31 @@ let formSent = sent;
 if (Astro.request.method === 'POST') {
   try {
     const formData = await Astro.request.formData();
-    const email = String(formData.get('email') ?? '').trim().toLowerCase();
-    const nextField = String(formData.get('next') ?? '/ops');
+    const parsed = magicLinkSchema.safeParse({
+      email: formData.get('email') ?? '',
+      next: formData.get('next') ?? '/ops',
+      hp_email: formData.get('hp_email') ?? undefined,
+    });
 
-    if (!email) {
-      formError = 'Email requis.';
-    } else if (!isAllowedEmail(email)) {
-      formError = "Cet email n'est pas autorisé. Contacte Grégoire ou Paul.";
+    if (!parsed.success) {
+      formError = formatZodError(parsed.error);
     } else {
-      const supabase = Astro.locals.supabase;
-      const origin = url.origin;
-      const redirectTo = `${origin}/ops/auth/callback?next=${encodeURIComponent(nextField)}`;
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: redirectTo },
-      });
-      if (error) {
-        formError = `Erreur: ${error.message}`;
+      const { email, next: nextField = '/ops' } = parsed.data;
+      if (!isAllowedEmail(email)) {
+        formError = "Cet email n'est pas autorisé. Contacte Grégoire ou Paul.";
       } else {
-        return Astro.redirect(`/ops/login?sent=1&next=${encodeURIComponent(nextField)}`, 302);
+        const supabase = Astro.locals.supabase;
+        const origin = url.origin;
+        const redirectTo = `${origin}/ops/auth/callback?next=${encodeURIComponent(nextField)}`;
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: { emailRedirectTo: redirectTo },
+        });
+        if (error) {
+          formError = `Erreur: ${error.message}`;
+        } else {
+          return Astro.redirect(`/ops/login?sent=1&next=${encodeURIComponent(nextField)}`, 302);
+        }
       }
     }
   } catch (e) {
@@ -70,6 +79,7 @@ if (Astro.request.method === 'POST') {
       {errMsg && <div class="login-flash err">{errMsg}</div>}
 
       <form method="POST" class="login-form">
+        <Honeypot />
         <label class="login-label">
           Email
           <input

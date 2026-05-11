@@ -1,22 +1,31 @@
 import type { APIRoute } from 'astro';
 import { serviceClient } from '../../../../lib/supabase';
+import {
+  shortCodeSchema,
+  scoreSchema,
+  uuidSchema,
+  formatZodError,
+} from '../../../../lib/validation/schemas';
 
 export const prerender = false;
 
 const PLAYER_COOKIE_PREFIX = 'scluba_player_';
 
 export const POST: APIRoute = async ({ request, params, cookies }) => {
-  const shortCode = params.shortCode ?? '';
-  if (!shortCode) return new Response('shortCode required', { status: 400 });
+  const codeParsed = shortCodeSchema.safeParse(params.shortCode ?? '');
+  if (!codeParsed.success) return new Response('code de partie invalide', { status: 400 });
+  const shortCode = codeParsed.data;
 
-  const playerId = cookies.get(`${PLAYER_COOKIE_PREFIX}${shortCode}`)?.value;
-  if (!playerId) return new Response('Not a player in this round', { status: 403 });
+  const playerCookie = cookies.get(`${PLAYER_COOKIE_PREFIX}${shortCode}`)?.value ?? '';
+  const playerParsed = uuidSchema.safeParse(playerCookie);
+  if (!playerParsed.success) return new Response('Not a player in this round', { status: 403 });
+  const playerId = playerParsed.data;
 
-  const body = await request.json().catch(() => null) as { hole: number; strokes: number } | null;
-  if (!body) return new Response('Invalid JSON', { status: 400 });
-  const { hole, strokes } = body;
-  if (typeof hole !== 'number' || hole < 1 || hole > 18) return new Response('hole must be 1..18', { status: 400 });
-  if (typeof strokes !== 'number' || strokes < 1 || strokes > 20) return new Response('strokes must be 1..20', { status: 400 });
+  const body = (await request.json().catch(() => null)) as unknown;
+  if (!body || typeof body !== 'object') return new Response('Invalid JSON', { status: 400 });
+  const parsed = scoreSchema.safeParse(body);
+  if (!parsed.success) return new Response(formatZodError(parsed.error), { status: 400 });
+  const { hole, strokes } = parsed.data;
 
   const sb = serviceClient();
 

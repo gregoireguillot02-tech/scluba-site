@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { authServerClient, serviceClient } from '../../../lib/supabase';
 import { generateRoundShortCode } from '../../../lib/slug';
+import { createRoundSchema, formatZodError } from '../../../lib/validation/schemas';
 
 export const prerender = false;
 
@@ -10,10 +11,13 @@ export const GET: APIRoute = ({ redirect }) => redirect('/', 302);
 
 export const POST: APIRoute = async ({ request, redirect, cookies }) => {
   const form = await request.formData();
-  const slug = String(form.get('slug') ?? '').trim();
-  const display_name = String(form.get('display_name') ?? '').trim().slice(0, 40);
-  if (!slug) return new Response('slug required', { status: 400 });
-  if (!display_name) return new Response('display_name required', { status: 400 });
+  const parsed = createRoundSchema.safeParse({
+    slug: form.get('slug') ?? '',
+    display_name: form.get('display_name') ?? '',
+    hp_email: form.get('hp_email') ?? undefined,
+  });
+  if (!parsed.success) return new Response(formatZodError(parsed.error), { status: 400 });
+  const { slug, display_name } = parsed.data;
 
   const sb = serviceClient();
 
@@ -44,7 +48,6 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
   }
   if (!roundId) return new Response('short_code collision exhausted', { status: 500 });
 
-  // If the creator has a Supabase session, link the round_player to the user.
   const auth = authServerClient(cookies, request.headers);
   const { data: { user } } = await auth.auth.getUser();
 

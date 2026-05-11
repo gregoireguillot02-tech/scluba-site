@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[edge_functions]]
+  function = "rate-limit"
+  path = "/api/*"
+
+[[edge_functions]]
+  function = "rate-limit"
+  path = "/auth/login"
+
+[[edge_functions]]
+  function = "rate-limit"
+  path = "/ops/login"

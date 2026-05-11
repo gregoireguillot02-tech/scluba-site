@@ -1,0 +1,17 @@
+---
+// Hidden form field used to detect bots.
+// Real users never see/focus this — bots that blindly fill every input do.
+// Server-side: any non-empty value → reject the submission.
+---
+<div class="hp-field" aria-hidden="true">
+  <label>
+    Ne pas remplir
+    <input
+      type="text"
+      name="hp_email"
+      tabindex="-1"
+      autocomplete="off"
+      value=""
+    />
+  </label>
+</div>

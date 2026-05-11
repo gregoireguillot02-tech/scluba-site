@@ -3,6 +3,8 @@ export const prerender = false;
 
 import '../../styles/tokens.css';
 import '../../styles/global.css';
+import Honeypot from '../../components/Honeypot.astro';
+import { magicLinkSchema, formatZodError } from '../../lib/validation/schemas';
 
 const url = Astro.url;
 const next = url.searchParams.get('next') || '/';
@@ -15,12 +17,16 @@ let formSent = sent;
 if (Astro.request.method === 'POST') {
   try {
     const formData = await Astro.request.formData();
-    const email = String(formData.get('email') ?? '').trim().toLowerCase();
-    const nextField = String(formData.get('next') ?? '/');
+    const parsed = magicLinkSchema.safeParse({
+      email: formData.get('email') ?? '',
+      next: formData.get('next') ?? '/',
+      hp_email: formData.get('hp_email') ?? undefined,
+    });
 
-    if (!email) {
-      formError = 'Email requis.';
+    if (!parsed.success) {
+      formError = formatZodError(parsed.error);
     } else {
+      const { email, next: nextField = '/' } = parsed.data;
       const supabase = Astro.locals.supabase;
       const origin = url.origin;
       const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(nextField)}`;
@@ -78,6 +84,7 @@ if (Astro.request.method === 'POST') {
 
     <form method="POST" class="auth-form">
       <input type="hidden" name="next" value={next} />
+      <Honeypot />
       <label class="auth-label">
         <span>Email</span>
         <input

@@ -1,32 +1,36 @@
 import type { APIRoute } from 'astro';
 import { serviceClient } from '../../../../lib/supabase';
+import {
+  slugSchema,
+  findRoundSchema,
+  shortCodeSchema,
+  formatZodError,
+} from '../../../../lib/validation/schemas';
 
 export const prerender = false;
 
 const PLAYER_COOKIE_PREFIX = 'scluba_player_';
 
-// "Reprendre ma partie" — given a club slug + first name, restore the player's
-// session cookie so they can rejoin their in-progress round from any device.
-//
-// Designed for the printed tee-side QR codes: a golfer whose phone died (or
-// who switched device) scans the QR at hole 5, types their first name, and
-// the backend reattaches them to their existing round_player.
-//
-// Cases:
-//   0 active rounds match the name → redirect /<slug>?recover_err=not_found
-//   exactly 1 → set scluba_player_<CODE>, redirect /r/<CODE>/play
-//   multiple → redirect /<slug>?recover=ambiguous&name=<encoded>
-//                 the page server-renders a small picker (start time + code)
-//                 each row POSTs back here with `short_code` to disambiguate.
-
 export const POST: APIRoute = async ({ request, params, redirect, cookies }) => {
-  const slug = params.slug;
-  if (!slug) return new Response('Missing slug', { status: 400 });
+  const slugParsed = slugSchema.safeParse(params.slug ?? '');
+  if (!slugParsed.success) return new Response('slug invalide', { status: 400 });
+  const slug = slugParsed.data;
 
   const form = await request.formData();
-  const display_name = String(form.get('display_name') ?? '').trim();
-  const short_code_filter = String(form.get('short_code') ?? '').trim().toUpperCase() || null;
-  if (!display_name) return new Response('display_name required', { status: 400 });
+  const parsed = findRoundSchema.safeParse({
+    display_name: form.get('display_name') ?? '',
+    hp_email: form.get('hp_email') ?? undefined,
+  });
+  if (!parsed.success) return new Response(formatZodError(parsed.error), { status: 400 });
+  const { display_name } = parsed.data;
+
+  const rawShortCode = String(form.get('short_code') ?? '').trim();
+  let short_code_filter: string | null = null;
+  if (rawShortCode) {
+    const scParsed = shortCodeSchema.safeParse(rawShortCode);
+    if (!scParsed.success) return new Response('code de partie invalide', { status: 400 });
+    short_code_filter = scParsed.data;
+  }
 
   const sb = serviceClient();
 
@@ -37,7 +41,6 @@ export const POST: APIRoute = async ({ request, params, redirect, cookies }) => 
     .maybeSingle();
   if (!club) return new Response('Club not found', { status: 404 });
 
-  // Active rounds for this club (lobby + playing — exclude finished).
   let roundsQuery = sb
     .from('rounds')
     .select('id, short_code, status, started_at, created_at')
@@ -51,7 +54,6 @@ export const POST: APIRoute = async ({ request, params, redirect, cookies }) => 
     return redirect(`/${slug}?recover_err=not_found&name=${encodeURIComponent(display_name)}`, 302);
   }
 
-  // Find round_players matching the name (case-insensitive) in any of those rounds.
   const roundIds = activeRounds.map((r) => r.id);
   const { data: players } = await sb
     .from('round_players')
@@ -81,6 +83,5 @@ export const POST: APIRoute = async ({ request, params, redirect, cookies }) => 
     return redirect(dest, 302);
   }
 
-  // Multiple matches → punt to the page for disambiguation.
   return redirect(`/${slug}?recover=ambiguous&name=${encodeURIComponent(display_name)}`, 302);
 };

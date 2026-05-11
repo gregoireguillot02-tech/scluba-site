@@ -1,17 +1,27 @@
 import type { APIRoute } from 'astro';
 import { authServerClient, serviceClient } from '../../../../lib/supabase';
+import {
+  joinRoundSchema,
+  shortCodeSchema,
+  formatZodError,
+} from '../../../../lib/validation/schemas';
 
 export const prerender = false;
 
 const PLAYER_COOKIE_PREFIX = 'scluba_player_';
 
 export const POST: APIRoute = async ({ request, params, redirect, cookies }) => {
-  const shortCode = (params.shortCode ?? '').toUpperCase();
-  if (!shortCode) return new Response('shortCode required', { status: 400 });
+  const codeParsed = shortCodeSchema.safeParse(params.shortCode ?? '');
+  if (!codeParsed.success) return new Response('code de partie invalide', { status: 400 });
+  const shortCode = codeParsed.data;
 
   const form = await request.formData();
-  const display_name = String(form.get('display_name') ?? '').trim().slice(0, 40);
-  if (!display_name) return new Response('display_name required', { status: 400 });
+  const parsed = joinRoundSchema.safeParse({
+    display_name: form.get('display_name') ?? '',
+    hp_email: form.get('hp_email') ?? undefined,
+  });
+  if (!parsed.success) return new Response(formatZodError(parsed.error), { status: 400 });
+  const { display_name } = parsed.data;
 
   const sb = serviceClient();
 
@@ -25,7 +35,6 @@ export const POST: APIRoute = async ({ request, params, redirect, cookies }) => 
     return new Response('Cette partie est déjà terminée.', { status: 409 });
   }
 
-  // If the existing cookie maps to a player already in this round, just redirect.
   const existing = cookies.get(`${PLAYER_COOKIE_PREFIX}${shortCode}`)?.value;
   if (existing) {
     const { data: alreadyIn } = await sb
