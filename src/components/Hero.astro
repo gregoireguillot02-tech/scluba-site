@@ -351,6 +351,33 @@ const t = useT(locale);
     position: relative;
   }
 
+  /* === Progressive enhancement : scroll-driven CSS natif ===
+     Chrome 115+ / Edge 115+ / Safari 18+. Sur les autres browsers, les
+     keyframes ne s'exécutent pas → rendu standard inchangé (aucune régression). */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .hero-tagline,
+      .hero-sub {
+        animation: heroFadeOut linear both;
+        animation-timeline: view();
+        animation-range: cover 40% cover 90%;
+      }
+      @keyframes heroFadeOut {
+        to { opacity: 0.35; transform: translateY(-24px); }
+      }
+
+      .hero-phone-stage {
+        animation: heroPhoneRise linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 30%;
+      }
+      @keyframes heroPhoneRise {
+        from { transform: translateY(28px); }
+        to   { transform: translateY(0); }
+      }
+    }
+  }
+
   /* Balle de golf — point du wordmark "Scluba." */
   .hero-ball {
     display: inline-block;
