@@ -1,0 +1,236 @@
+---
+import LegalLayout from '../../../layouts/LegalLayout.astro';
+---
+
+<LegalLayout
+  locale="en"
+  eyebrow="Privacy"
+  title="Privacy policy"
+  description="Scluba's privacy policy — what data we collect, why, legal basis, retention, recipients and your GDPR rights."
+  altPathname="/legal/confidentialite/"
+  updated="2026-05-06"
+>
+  <p class="legal-callout">
+    <strong>GDPR commitment</strong>
+    Scluba processes personal data in compliance with EU Regulation 2016/679 (GDPR) and the French
+    Data Protection Act of 6 January 1978 as amended. This policy describes, transparently, what we
+    collect, why, and the rights you have.
+  </p>
+
+  <h2>1. Data controller</h2>
+  <p>
+    The controller of personal data collected via <a href="https://scluba.com">scluba.com</a> and
+    the Scluba application (hereinafter <strong>"Scluba"</strong>) is:
+  </p>
+  <p>
+    Grégoire GUILLOT & Paul MICHEL<br />
+    Address available on request at team@scluba.com<br />
+    Email: <a href="mailto:team@scluba.com">team@scluba.com</a><br />
+    Representative: Grégoire GUILLOT & Paul MICHEL — co-founders
+  </p>
+  <p>
+    Scluba does not exceed the thresholds requiring the appointment of a Data Protection Officer
+    (DPO). For any request regarding your data, the single point of contact is:
+    <a href="mailto:team@scluba.com">team@scluba.com</a>.
+  </p>
+
+  <h2>2. Data we collect</h2>
+
+  <h3>2.1 Data collected from website visitors (prospect clubs)</h3>
+  <p>
+    When you request a demo through the contact form, we collect:
+  </p>
+  <ul>
+    <li>your <strong>name</strong> and your <strong>work email</strong>;</li>
+    <li>the <strong>name of your golf club</strong>;</li>
+    <li>the <strong>communications</strong> you initiate with us (emails, calls).</li>
+  </ul>
+
+  <h3>2.2 Data collected from players (end users)</h3>
+  <p>
+    When a player scans a partner club's QR code to use Scluba, we collect, depending on usage:
+  </p>
+  <ul>
+    <li>the <strong>scores</strong> entered (hole by hole, total, par);</li>
+    <li><strong>GPS location</strong> during the round <em>(only if authorized by the browser or app — purpose: course tracking)</em>;</li>
+    <li>the <strong>duration</strong> and <strong>distance</strong> traveled;</li>
+    <li>if you create a player account (optional): <strong>email</strong>, <strong>first name</strong>, and round history;</li>
+    <li><strong>technical data</strong> (device type, system, browser version) for stability purposes.</li>
+  </ul>
+
+  <h3>2.3 Automatically collected data</h3>
+  <p>
+    Like any website, Scluba automatically logs certain technical information: anonymized IP
+    address, pages visited, timestamp, approximate country. This data is used solely for security
+    and aggregated statistics.
+  </p>
+
+  <h2>3. Purposes and legal bases</h2>
+  <table>
+    <thead>
+      <tr><th>Purpose</th><th>Legal basis (GDPR)</th><th>Retention</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Reply to a demo / club contact request</td>
+        <td>Pre-contractual measures (art. 6.1.b)</td>
+        <td>3 years after last contact</td>
+      </tr>
+      <tr>
+        <td>Performance of the contract with the partner club</td>
+        <td>Contract performance (art. 6.1.b)</td>
+        <td>Contract duration + 5 years (commercial limitation period)</td>
+      </tr>
+      <tr>
+        <td>Score entry / GPS tracking for players</td>
+        <td>Consent (art. 6.1.a) — scanning the QR code constitutes acceptance</td>
+        <td>Session duration + 90 days, or until account deletion</td>
+      </tr>
+      <tr>
+        <td>Player account creation and management</td>
+        <td>Consent (art. 6.1.a)</td>
+        <td>Until user-initiated deletion, or 3 years of inactivity</td>
+      </tr>
+      <tr>
+        <td>Aggregated reporting to the club (scans, rounds, shares)</td>
+        <td>Legitimate interest (art. 6.1.f) — anonymized data</td>
+        <td>Club contract duration + 1 year</td>
+      </tr>
+      <tr>
+        <td>Security, logging, fraud prevention</td>
+        <td>Legitimate interest (art. 6.1.f)</td>
+        <td>12 months</td>
+      </tr>
+      <tr>
+        <td>Accounting and tax obligations</td>
+        <td>Legal obligation (art. 6.1.c)</td>
+        <td>10 years</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>4. Recipients</h2>
+  <p>
+    Your data is only accessible to:
+  </p>
+  <ul>
+    <li>authorized <strong>Scluba teams</strong> (support, technical, sales) within the scope of their duties;</li>
+    <li>the <strong>partner golf club</strong> through which you use the service, only for the data needed for reporting (scans, rounds, shares — aggregated);</li>
+    <li>our <strong>technical sub-processors</strong> listed below, acting on documented instructions and bound by contract in accordance with article 28 GDPR;</li>
+    <li><strong>competent authorities</strong> in the event of judicial or administrative requisition.</li>
+  </ul>
+  <p>
+    <strong>We never sell your data.</strong> We do not share it with any third party for commercial or
+    advertising purposes.
+  </p>
+
+  <h2>5. Sub-processors and transfers outside the EU</h2>
+  <table>
+    <thead>
+      <tr><th>Provider</th><th>Purpose</th><th>Location</th><th>Safeguards</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Netlify, Inc.</td>
+        <td>Site hosting and CDN</td>
+        <td>United States</td>
+        <td>EU Standard Contractual Clauses (SCC), Data Privacy Framework</td>
+      </tr>
+      <tr>
+        <td>Supabase Inc.</td>
+        <td>Database and authentication</td>
+        <td>EU — region eu-central-1 (Frankfurt)</td>
+        <td>EU hosting, Supabase DPA</td>
+      </tr>
+      <tr>
+        <td>Resend / Resend (Resend Inc., USA) — transit only, no storage</td>
+        <td>Sending transactional emails (demo, notifications)</td>
+        <td>EU / United States</td>
+        <td>EU Standard Contractual Clauses</td>
+      </tr>
+      <tr>
+        <td>Functional Software, Inc. ("Sentry")</td>
+        <td>Production error monitoring (no PII: no email, no plaintext IP)</td>
+        <td>United States / EU</td>
+        <td>EU Standard Contractual Clauses, Sentry DPA</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    When data is transferred outside the European Union, it is transferred to countries with an
+    adequate level of protection (Commission decision) or covered by appropriate safeguards
+    (Standard Contractual Clauses, Data Privacy Framework).
+  </p>
+
+  <h2>6. Security</h2>
+  <p>
+    Scluba implements appropriate technical and organizational measures to protect your data: TLS
+    encryption on all communications, secure hosting, role-based access control, logging of
+    sensitive accesses, regular backups, security updates, and a strong password policy for our
+    team.
+  </p>
+  <p>
+    In the event of a data breach posing a risk to your rights and freedoms, Scluba will notify
+    the CNIL within 72 hours and, where applicable, will inform you directly.
+  </p>
+
+  <h2>7. Your rights</h2>
+  <p>
+    In accordance with articles 15 to 22 of the GDPR, you have the following rights over your data:
+  </p>
+  <ul>
+    <li><strong>Right of access</strong> — to know whether we process your data and obtain a copy;</li>
+    <li><strong>Right to rectification</strong> — to correct inaccurate or incomplete data;</li>
+    <li><strong>Right to erasure</strong> ("right to be forgotten") — to request deletion of your data;</li>
+    <li><strong>Right to restriction</strong> — to restrict processing in certain situations;</li>
+    <li><strong>Right to data portability</strong> — to receive your data in a structured, readable format;</li>
+    <li><strong>Right to object</strong> — to object to processing based on legitimate interest;</li>
+    <li><strong>Right to withdraw consent</strong> at any time, without affecting the lawfulness of prior processing;</li>
+    <li><strong>Right to set post-mortem directives</strong> on the fate of your data after your death.</li>
+  </ul>
+  <p>
+    To exercise these rights, write to <a href="mailto:team@scluba.com">team@scluba.com</a>
+    specifying your request. We will reply within one month, extendable by two months for complex
+    requests. Proof of identity may be requested in the event of reasonable doubt about the
+    identity of the requester.
+  </p>
+  <p>
+    If you believe that the processing of your data does not comply with the regulations, you have
+    the right to lodge a complaint with the French data protection authority (<strong>CNIL</strong>):
+    <a href="https://www.cnil.fr" target="_blank" rel="noopener">www.cnil.fr</a> — 3 Place de
+    Fontenoy, TSA 80715, 75334 Paris Cedex 07.
+  </p>
+
+  <h2>8. Automated decisions and profiling</h2>
+  <p>
+    Scluba does not carry out any automated decision-making producing legal effects on you, nor any
+    profiling for advertising targeting purposes. Usage statistics generated for the partner club
+    are aggregated and do not allow your individual identification.
+  </p>
+
+  <h2>9. Minors</h2>
+  <p>
+    Scluba is not intended for persons under 15 years of age (digital consent threshold in France).
+    We do not knowingly collect data from minors without the authorization of those holding
+    parental responsibility. If you believe a minor has provided us with data without such
+    authorization, contact us: we will proceed with deletion.
+  </p>
+
+  <h2>10. Cookies</h2>
+  <p>
+    The use of cookies on the Site is detailed in our dedicated
+    <a href="/en/legal/cookies/">Cookie policy</a>.
+  </p>
+
+  <h2>11. Policy changes</h2>
+  <p>
+    Scluba may update this policy to reflect legal, technical or organizational changes. The
+    applicable version is the one in force when you visit, dated at the top of the page. Any
+    substantial change will be notified to you if we have a contact channel.
+  </p>
+
+  <h2>12. Contact</h2>
+  <p>
+    For any questions about your data: <a href="mailto:team@scluba.com">team@scluba.com</a>.
+  </p>
+</LegalLayout>

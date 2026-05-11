@@ -1,0 +1,740 @@
+---
+export const prerender = false;
+
+import '../../../styles/tokens.css';
+import '../../../styles/global.css';
+import { serviceClient } from '../../../lib/supabase';
+import type { Club, Round, RoundPlayer, Score } from '../../../lib/clubs-types';
+import { totalPar } from '../../../lib/clubs-types';
+
+const { shortCode } = Astro.params;
+const sb = serviceClient();
+
+const { data: round } = await sb
+  .from('rounds')
+  .select('*, club:clubs(*)')
+  .eq('short_code', shortCode)
+  .maybeSingle();
+
+if (!round) {
+  return Astro.rewrite('/404');
+}
+
+const r = round as Round & { club: Club };
+
+if (r.status === 'finished') {
+  return Astro.redirect(`/r/${shortCode}/recap`, 302);
+}
+
+const playerId = Astro.cookies.get(`scluba_player_${shortCode}`)?.value ?? null;
+
+const { data: allPlayersRaw } = await sb
+  .from('round_players')
+  .select('*')
+  .eq('round_id', r.id)
+  .order('joined_at');
+const allPlayers = (allPlayersRaw ?? []) as RoundPlayer[];
+
+const me = allPlayers.find((p) => p.id === playerId);
+if (!me) {
+  return new Response('Tu n\'es pas joueur dans cette partie. Reviens depuis la page du club pour démarrer.', { status: 403 });
+}
+
+const playerIds = allPlayers.map((p) => p.id);
+const { data: allScoresRaw } = playerIds.length
+  ? await sb.from('scores').select('*').in('round_player_id', playerIds)
+  : { data: [] as Score[] };
+const allScores = (allScoresRaw ?? []) as Score[];
+
+const par = totalPar(r.club.course_data);
+const clubColor = r.club.primary_color ?? '#1B4332';
+
+const scoresByHole: Record<number, number> = {};
+for (const s of allScores) {
+  if (s.round_player_id === me.id) scoresByHole[s.hole_number] = s.strokes;
+}
+
+const holesByNumber: Record<number, number> = {};
+for (const h of r.club.course_data.holes) holesByNumber[h.number] = h.par;
+---
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>{r.club.name} — Saisie en cours · Scluba</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content={clubColor} />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style define:vars={{ clubColor }}>
+    body {
+      background: #FAF7EE;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      overscroll-behavior-y: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="play">
+    <header class="play-header" style={`background: ${clubColor}`}>
+      <div class="play-header-inner">
+        {r.club.logo_url && (
+          <img class="play-header-logo" src={r.club.logo_url} alt="" />
+        )}
+        <div class="play-header-text">
+          <p class="play-club">{r.club.name}</p>
+          <p class="play-player">{me.display_name}</p>
+        </div>
+      </div>
+    </header>
+
+    <section
+      class="live-board"
+      aria-label="Classement en direct"
+      data-live-board
+      data-round-id={r.id}
+      data-me-id={me.id}
+      data-holes={JSON.stringify(holesByNumber)}
+      data-players={JSON.stringify(allPlayers.map((p) => ({ id: p.id, name: p.display_name })))}
+      data-scores={JSON.stringify(allScores.map((s) => ({ pid: s.round_player_id, hole: s.hole_number, strokes: s.strokes })))}
+    >
+      <ul class="live-list" data-live-list></ul>
+    </section>
+
+    <section
+      class="hole-card"
+      data-play-root
+      data-short-code={r.short_code}
+      data-course={JSON.stringify(r.club.course_data)}
+      data-scores={JSON.stringify(scoresByHole)}
+      data-par={String(par)}
+      data-hole-count={String(r.club.course_data.holes.length)}
+    >
+      <div class="hole-meta">
+        <span class="hole-meta-label">Trou</span>
+        <span class="hole-meta-count">
+          <span data-hole-number>1</span> / {r.club.course_data.holes.length}
+        </span>
+      </div>
+
+      <div class="hole-par-block">
+        <div class="hole-par-label">PAR</div>
+        <div class="hole-par-value" data-par-value>4</div>
+      </div>
+
+      <div class="score-control">
+        <button type="button" class="score-step" data-step="-1" aria-label="Diminuer">−</button>
+        <div class="score-display" data-strokes-display>—</div>
+        <button type="button" class="score-step" data-step="+1" aria-label="Augmenter">+</button>
+      </div>
+
+      <p class="score-hint" data-score-hint>Choisis ton score</p>
+
+      <div class="quick-buttons">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+          <button type="button" class="quick-btn" data-quick={n}>{n}</button>
+        ))}
+      </div>
+
+      <div class="nav-buttons">
+        <button type="button" class="nav-btn nav-prev" data-nav="prev">← Précédent</button>
+        <button type="button" class="nav-btn nav-next" data-nav="next">Suivant →</button>
+      </div>
+    </section>
+
+    <section class="leaderboard">
+      <header class="leaderboard-head">
+        <span>Carte</span>
+        <span data-total-strokes>—</span>
+      </header>
+      <div class="grid">
+        <div class="grid-row">
+          <span class="grid-label">F9</span>
+          {Array.from({ length: 9 }).map((_, i) => (
+            <span class="grid-cell" data-cell-hole={i + 1}>—</span>
+          ))}
+        </div>
+        <div class="grid-row">
+          <span class="grid-label">B9</span>
+          {Array.from({ length: 9 }).map((_, i) => (
+            <span class="grid-cell" data-cell-hole={i + 10}>—</span>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <form method="POST" action={`/api/rounds/${r.short_code}/finish`} class="finish-form" data-finish-form hidden>
+      <button type="submit" class="finish-btn">Terminer la partie</button>
+    </form>
+
+    <p class="play-status" data-status></p>
+  </main>
+
+  <script>
+    import { subscribeToRound, unsubscribeFromRound } from '../../../lib/realtime';
+
+    type CourseData = { holes: { number: number; par: number }[] };
+    type LivePlayer = { id: string; name: string };
+    type LiveScore = { pid: string; hole: number; strokes: number };
+
+    /* === Live leaderboard ============================================== */
+    const board = document.querySelector<HTMLElement>('[data-live-board]');
+    if (board) {
+      const roundId = board.dataset.roundId!;
+      const meId = board.dataset.meId!;
+      const holes = JSON.parse(board.dataset.holes!) as Record<number, number>;
+      const players: Map<string, LivePlayer> = new Map(
+        (JSON.parse(board.dataset.players!) as LivePlayer[]).map((p) => [p.id, p]),
+      );
+      const scoresByPlayer: Map<string, Map<number, number>> = new Map();
+      for (const s of JSON.parse(board.dataset.scores!) as LiveScore[]) {
+        if (!scoresByPlayer.has(s.pid)) scoresByPlayer.set(s.pid, new Map());
+        scoresByPlayer.get(s.pid)!.set(s.hole, s.strokes);
+      }
+      const list = board.querySelector<HTMLElement>('[data-live-list]')!;
+
+      function totalsFor(pid: string): { strokes: number; played: number; diff: number } {
+        const map = scoresByPlayer.get(pid);
+        if (!map) return { strokes: 0, played: 0, diff: 0 };
+        let strokes = 0;
+        let played = 0;
+        let diff = 0;
+        for (const [hole, s] of map) {
+          strokes += s;
+          played++;
+          diff += s - (holes[hole] ?? 0);
+        }
+        return { strokes, played, diff };
+      }
+
+      function fmtDiff(diff: number, played: number): string {
+        if (played === 0) return '—';
+        if (diff === 0) return '±0';
+        return diff > 0 ? `+${diff}` : String(diff);
+      }
+
+      function renderBoard() {
+        list.replaceChildren();
+        const ordered = Array.from(players.values()).sort((a, b) => {
+          const ta = totalsFor(a.id);
+          const tb = totalsFor(b.id);
+          if (ta.played === 0 && tb.played === 0) return 0;
+          if (ta.played === 0) return 1;
+          if (tb.played === 0) return -1;
+          return ta.diff - tb.diff;
+        });
+        for (const p of ordered) {
+          const t = totalsFor(p.id);
+          const li = document.createElement('li');
+          li.className = 'live-item' + (p.id === meId ? ' is-me' : '');
+          li.innerHTML = `
+            <span class="live-name"></span>
+            <span class="live-strokes"></span>
+            <span class="live-diff"></span>
+          `;
+          li.querySelector('.live-name')!.textContent = p.name + (p.id === meId ? ' (vous)' : '');
+          li.querySelector('.live-strokes')!.textContent = t.played === 0 ? '—' : String(t.strokes);
+          const diffEl = li.querySelector<HTMLElement>('.live-diff')!;
+          diffEl.textContent = fmtDiff(t.diff, t.played);
+          if (t.played > 0) {
+            if (t.diff < 0) diffEl.classList.add('under');
+            else if (t.diff > 0) diffEl.classList.add('over');
+          }
+          list.appendChild(li);
+        }
+      }
+
+      renderBoard();
+
+      const channel = subscribeToRound(roundId, {
+        onPlayersChange: (event, row) => {
+          const p = row as { id: string; round_id: string; display_name: string };
+          if (p.round_id !== roundId) return;
+          if (event === 'DELETE') {
+            players.delete(p.id);
+            scoresByPlayer.delete(p.id);
+          } else {
+            players.set(p.id, { id: p.id, name: p.display_name });
+          }
+          renderBoard();
+        },
+        onScoresChange: (event, row) => {
+          const s = row as { round_player_id: string; hole_number: number; strokes: number };
+          if (!players.has(s.round_player_id)) return;
+          const map = scoresByPlayer.get(s.round_player_id) ?? new Map<number, number>();
+          if (event === 'DELETE') {
+            map.delete(s.hole_number);
+          } else {
+            map.set(s.hole_number, s.strokes);
+          }
+          scoresByPlayer.set(s.round_player_id, map);
+          renderBoard();
+        },
+        onRoundUpdate: (row) => {
+          if ((row as { status?: string }).status === 'finished') {
+            window.location.href = window.location.pathname.replace(/\/play$/, '/recap');
+          }
+        },
+      });
+
+      window.addEventListener('beforeunload', () => unsubscribeFromRound(channel));
+    }
+
+    /* === Score entry (existing logic, unchanged) ======================== */
+    const root = document.querySelector<HTMLElement>('[data-play-root]');
+    if (root) {
+      const shortCode = root.dataset.shortCode!;
+      const course = JSON.parse(root.dataset.course!) as CourseData;
+      const initialScores = JSON.parse(root.dataset.scores!) as Record<number, number>;
+      const totalPar = Number(root.dataset.par);
+      const holeCount = Number(root.dataset.holeCount);
+
+      const scores: Record<number, number> = { ...initialScores };
+      let currentHole = nextEmptyHole();
+
+      const holeNumberEl = root.querySelector<HTMLElement>('[data-hole-number]')!;
+      const parValueEl = root.querySelector<HTMLElement>('[data-par-value]')!;
+      const strokesEl = root.querySelector<HTMLElement>('[data-strokes-display]')!;
+      const hintEl = root.querySelector<HTMLElement>('[data-score-hint]')!;
+      const totalStrokesEl = document.querySelector<HTMLElement>('[data-total-strokes]')!;
+      const finishForm = document.querySelector<HTMLFormElement>('[data-finish-form]')!;
+      const statusEl = document.querySelector<HTMLElement>('[data-status]')!;
+      const cells = Array.from(document.querySelectorAll<HTMLElement>('[data-cell-hole]'));
+
+      function nextEmptyHole(): number {
+        for (let h = 1; h <= holeCount; h++) {
+          if (scores[h] === undefined) return h;
+        }
+        return holeCount;
+      }
+
+      function holeAt(n: number) {
+        return course.holes.find((h) => h.number === n) ?? course.holes[0];
+      }
+
+      function diffLabel(strokes: number, par: number): string {
+        const d = strokes - par;
+        if (d <= -2) return 'Eagle';
+        if (d === -1) return 'Birdie';
+        if (d === 0) return 'Par';
+        if (d === 1) return 'Bogey';
+        if (d === 2) return 'Double bogey';
+        return `+${d}`;
+      }
+
+      function diffClass(strokes: number, par: number): string {
+        const d = strokes - par;
+        if (d <= -1) return 'cell-birdie';
+        if (d === 0) return 'cell-par';
+        if (d === 1) return 'cell-bogey';
+        return 'cell-double';
+      }
+
+      function render() {
+        const hole = holeAt(currentHole);
+        holeNumberEl.textContent = String(currentHole);
+        parValueEl.textContent = String(hole.par);
+
+        const s = scores[currentHole];
+        if (s === undefined) {
+          strokesEl.textContent = '—';
+          hintEl.textContent = 'Choisis ton score';
+        } else {
+          strokesEl.textContent = String(s);
+          hintEl.textContent = diffLabel(s, hole.par);
+        }
+
+        let total = 0;
+        let played = 0;
+        for (let h = 1; h <= holeCount; h++) {
+          const cell = cells.find((c) => Number(c.dataset.cellHole) === h);
+          if (!cell) continue;
+          cell.className = 'grid-cell';
+          if (scores[h] !== undefined) {
+            cell.textContent = String(scores[h]);
+            cell.classList.add(diffClass(scores[h], holeAt(h).par));
+            total += scores[h];
+            played++;
+          } else {
+            cell.textContent = '—';
+          }
+        }
+        totalStrokesEl.textContent = played === 0 ? '—' : `${total} (par ${totalPar})`;
+
+        const allDone = played === holeCount;
+        finishForm.hidden = !allDone;
+
+        const prevBtn = root!.querySelector<HTMLButtonElement>('[data-nav="prev"]')!;
+        const nextBtn = root!.querySelector<HTMLButtonElement>('[data-nav="next"]')!;
+        prevBtn.disabled = currentHole === 1;
+        nextBtn.disabled = currentHole === holeCount;
+      }
+
+      async function saveScore(strokes: number) {
+        scores[currentHole] = strokes;
+        render();
+        statusEl.textContent = 'Sauvegarde…';
+        try {
+          const res = await fetch(`/api/rounds/${shortCode}/scores`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hole: currentHole, strokes }),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          statusEl.textContent = '✓ Enregistré';
+          setTimeout(() => { statusEl.textContent = ''; }, 1200);
+        } catch (e) {
+          statusEl.textContent = `Erreur : ${(e as Error).message}`;
+        }
+      }
+
+      root.querySelectorAll<HTMLElement>('[data-quick]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const n = Number(btn.dataset.quick);
+          saveScore(n);
+        });
+      });
+
+      root.querySelectorAll<HTMLElement>('[data-step]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const delta = Number(btn.dataset.step);
+          const current = scores[currentHole] ?? holeAt(currentHole).par;
+          const next = Math.max(1, Math.min(20, current + delta));
+          saveScore(next);
+        });
+      });
+
+      root.querySelectorAll<HTMLElement>('[data-nav]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const dir = btn.dataset.nav;
+          if (dir === 'prev' && currentHole > 1) currentHole--;
+          if (dir === 'next' && currentHole < holeCount) currentHole++;
+          render();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      });
+
+      render();
+    }
+  </script>
+
+  <style>
+    .play {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      background: linear-gradient(180deg, #FAF7EE 0%, #F4F8F5 100%);
+      box-shadow: 0 32px 80px rgba(27, 67, 50, 0.18);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* === Live leaderboard === */
+    .live-board {
+      padding: var(--space-3) var(--space-4);
+      background: rgba(212, 165, 116, 0.10);
+      border-bottom: 1px solid rgba(212, 165, 116, 0.4);
+    }
+    .live-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .live-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
+      align-items: baseline;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      transition: background 200ms ease-out;
+    }
+    .live-item.is-me {
+      background: rgba(212, 165, 116, 0.20);
+    }
+    .live-name {
+      font-weight: 600;
+      color: var(--ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .live-strokes {
+      font-family: var(--font-serif);
+      font-weight: 700;
+      color: var(--clubColor);
+      font-variant-numeric: tabular-nums;
+      min-width: 28px;
+      text-align: right;
+    }
+    .live-diff {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      min-width: 32px;
+      text-align: right;
+    }
+    .live-diff.over { color: #C0392B; }
+    .live-diff.under { color: #1B4332; }
+
+    .play-header {
+      color: #FAF7EE;
+      padding: var(--space-4) var(--space-5);
+    }
+    .play-header-inner {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    .play-header-logo {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      background: rgba(250, 247, 238, 0.92);
+      border-radius: 50%;
+      padding: 4px;
+      flex-shrink: 0;
+    }
+    .play-header-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .play-club {
+      margin: 0;
+      font-family: var(--font-serif);
+      font-size: var(--text-md);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .play-player {
+      margin: 0;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+
+    .hole-card {
+      padding: var(--space-7) var(--space-5) var(--space-6);
+      text-align: center;
+    }
+    .hole-meta {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: var(--space-2);
+      color: var(--accent);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .hole-meta-count {
+      font-family: var(--font-serif);
+      font-size: var(--text-md);
+      color: var(--clubColor);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .hole-meta-count > span { font-size: var(--text-lg, 22px); }
+
+    .hole-par-block {
+      margin: var(--space-5) 0 var(--space-6);
+    }
+    .hole-par-label {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .hole-par-value {
+      font-family: var(--font-serif);
+      font-size: clamp(3rem, 14vw, 4.5rem);
+      font-weight: 800;
+      color: var(--clubColor);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .score-control {
+      display: grid;
+      grid-template-columns: 56px 1fr 56px;
+      gap: var(--space-4);
+      align-items: center;
+      max-width: 320px;
+      margin: 0 auto;
+    }
+    .score-step {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 1.5px solid var(--line);
+      background: #fff;
+      color: var(--clubColor);
+      font-size: 28px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, border-color 0.15s;
+    }
+    .score-step:hover { border-color: var(--primary-soft); }
+    .score-step:active { transform: scale(0.95); }
+    .score-display {
+      font-family: var(--font-serif);
+      font-size: clamp(4rem, 18vw, 6rem);
+      font-weight: 800;
+      color: var(--clubColor);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .score-hint {
+      margin: var(--space-4) 0 0;
+      font-size: var(--text-sm);
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    .quick-buttons {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 6px;
+      max-width: 360px;
+      margin: var(--space-6) auto 0;
+    }
+    .quick-btn {
+      aspect-ratio: 1;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+    }
+    .quick-btn:hover { background: var(--bg-soft); }
+    .quick-btn:active { transform: scale(0.96); }
+
+    .nav-buttons {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin-top: var(--space-6);
+    }
+    .nav-btn {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--clubColor);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .leaderboard {
+      margin: 0 var(--space-5) var(--space-5);
+      padding: var(--space-4);
+      background: rgba(212, 165, 116, 0.08);
+      border-top: 1px solid rgba(212, 165, 116, 0.3);
+      border-bottom: 1px solid rgba(212, 165, 116, 0.3);
+    }
+    .leaderboard-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: var(--space-3);
+    }
+    .leaderboard-head span:last-child {
+      font-family: var(--font-serif);
+      color: var(--clubColor);
+      font-size: var(--text-sm);
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .grid-row {
+      display: grid;
+      grid-template-columns: 28px repeat(9, 1fr);
+      gap: 4px;
+    }
+    .grid-label {
+      background: var(--clubColor);
+      color: var(--bg);
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .grid-cell {
+      aspect-ratio: 1;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+    .grid-cell.cell-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
+    .grid-cell.cell-par { color: var(--clubColor); }
+    .grid-cell.cell-bogey { color: var(--muted); }
+    .grid-cell.cell-double { color: #6B7280; background: rgba(107,114,128,0.08); }
+
+    .finish-form {
+      padding: 0 var(--space-5);
+    }
+    .finish-btn {
+      width: 100%;
+      padding: 16px 24px;
+      border-radius: 12px;
+      border: none;
+      background: var(--clubColor);
+      color: #FAF7EE;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(27, 67, 50, 0.18);
+    }
+
+    .play-status {
+      text-align: center;
+      padding: var(--space-3);
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 1.2em;
+    }
+  </style>
+</body>
+</html>

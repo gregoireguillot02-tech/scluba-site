@@ -1,0 +1,35 @@
+/*
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Cross-Origin-Opener-Policy: same-origin
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://*.ingest.us.sentry.io; object-src 'none'; manifest-src 'self'
+
+# Ops dashboard — internal only, never indexed, never cached.
+# `/ops*` matches /ops, /ops/, /ops/anything. Netlify merges blocks
+# additively, so the base headers above still apply; we only add the
+# overrides we need.
+/ops*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+
+# Player-facing rounds — never cache the live state of a round.
+/r/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+
+# All API endpoints — never cache, never index.
+/api/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+
+# Auth flows — never cache, never index (login forms, callback exchanges).
+/auth/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+
+# Legacy redirect path — keep but never cache (so the 301 is always fresh).
+/c/*
+  Cache-Control: no-store

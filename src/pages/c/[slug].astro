@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+// Backward-compat redirect — the club landing page used to live at
+// /c/<slug>. We dropped the /c/ prefix in favor of cleaner short URLs
+// (scluba.com/<slug>). Keep this 301 around so any old QR codes or
+// pitch links don't break.
+
+const { slug } = Astro.params;
+return new Response(null, {
+  status: 301,
+  headers: { Location: `/${slug ?? ''}` },
+});
+---

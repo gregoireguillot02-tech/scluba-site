@@ -1,5 +1,8 @@
 User-agent: *
 Disallow: /ops/
 Disallow: /api/ops/
+Disallow: /c/
+Disallow: /r/
+Disallow: /api/rounds/
 
 Sitemap: https://scluba.com/sitemap-index.xml
