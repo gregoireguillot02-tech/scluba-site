@@ -105,25 +105,30 @@ const CELL_COLOR: Record<string, string> = {
   'double': '#D8A8A8',
 };
 
+const CELL_SIZE = 96;
+
 function buildTemplate(input: ComposeInput): HTMLElement {
   const root = document.createElement('div');
   root.style.cssText = `
-    position: fixed; left: -99999px; top: 0;
+    position: fixed; top: 0; left: 0; opacity: 0; pointer-events: none; z-index: -9999;
     width: 1080px; height: 1350px;
     background: #FAF7EE;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     display: flex; flex-direction: column;
   `;
 
-  // Photo (60%)
+  // Photo (60%) — <img> direct pour que html-to-image inline le src
   const photo = document.createElement('div');
-  photo.style.cssText = `
-    width: 100%; height: 810px;
-    background-size: cover; background-position: center;
-    ${input.photoUrl
-      ? `background-image: url("${input.photoUrl}");`
-      : `background: linear-gradient(135deg, ${input.club.primary_color ?? '#1B4332'}, #87B894);`}
-  `;
+  photo.style.cssText = 'width: 100%; height: 810px; position: relative; overflow: hidden;';
+  if (input.photoUrl) {
+    const img = document.createElement('img');
+    img.src = input.photoUrl;
+    img.crossOrigin = 'anonymous';
+    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; display: block;';
+    photo.appendChild(img);
+  } else {
+    photo.style.cssText += `background: linear-gradient(135deg, ${input.club.primary_color ?? '#1B4332'}, #87B894);`;
+  }
   root.appendChild(photo);
 
   // Header (nom + score)
@@ -149,7 +154,7 @@ function buildTemplate(input: ComposeInput): HTMLElement {
   for (const row of [front9, back9]) {
     if (row.length === 0) continue;
     const line = document.createElement('div');
-    line.style.cssText = `display: grid; grid-template-columns: 80px repeat(${row.length}, 1fr); gap: 6px; align-items: center;`;
+    line.style.cssText = `display: grid; grid-template-columns: 80px repeat(${row.length}, ${CELL_SIZE}px); gap: 6px; align-items: center;`;
     const label = document.createElement('div');
     label.style.cssText = 'font-size: 18px; color: #999; text-transform: uppercase; letter-spacing: 1px;';
     label.textContent = row === front9 ? 'Aller' : 'Retour';
@@ -159,7 +164,7 @@ function buildTemplate(input: ComposeInput): HTMLElement {
       const cell = document.createElement('div');
       const type = s !== undefined ? scoreType(s, h.par) : null;
       const bg = type ? (CELL_COLOR[type] ?? '#EEE') : '#F3F3F3';
-      cell.style.cssText = `background: ${bg}; aspect-ratio: 1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 22px; color: #1B4332;`;
+      cell.style.cssText = `background: ${bg}; width: ${CELL_SIZE}px; height: ${CELL_SIZE}px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 22px; color: #1B4332;`;
       cell.textContent = s !== undefined ? String(s) : '—';
       line.appendChild(cell);
     }
@@ -182,20 +187,50 @@ function escapeHtml(s: string): string {
   }[c] as string));
 }
 
+async function urlToDataUri(url: string): Promise<string> {
+  const resp = await fetch(url);
+  const blob = await resp.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
 export async function composeShareImage(input: ComposeInput): Promise<Blob> {
-  const node = buildTemplate(input);
+  // Pré-convertir la photo en data URI pour garantir l'inline par html-to-image
+  // (évite les soucis CORS/blob:/cross-context sur iOS Safari)
+  let resolvedPhotoUrl: string | null = input.photoUrl;
+  if (resolvedPhotoUrl) {
+    try {
+      resolvedPhotoUrl = await urlToDataUri(resolvedPhotoUrl);
+    } catch (err) {
+      console.error('[share-card] urlToDataUri failed, fallback gradient', err);
+      resolvedPhotoUrl = null;
+    }
+  }
+
+  const node = buildTemplate({ ...input, photoUrl: resolvedPhotoUrl });
   document.body.appendChild(node);
   try {
-    // Si photo distante, attendre qu'elle se charge pour éviter image cassée dans le PNG
-    if (input.photoUrl) {
-      await new Promise<void>((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve();
-        img.onerror = () => resolve(); // on continue même si fail → fond par défaut
-        img.src = input.photoUrl!;
-      });
+    // Attendre que l'<img> dans le template soit décodée avant la capture
+    if (resolvedPhotoUrl) {
+      const img = node.querySelector('img');
+      if (img && !img.complete) {
+        await new Promise<void>((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+        });
+      }
+      if (img && 'decode' in img) {
+        try { await img.decode(); } catch { /* ignore decode errors */ }
+      }
     }
+
+    // 2 frames pour s'assurer que le browser a peint le template avant la capture
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
 
     const blob = await toBlob(node, {
       width: 1080,
