@@ -79,7 +79,15 @@
     "sharePreviewTitle": "Golf du Soleil card",
     "shareCopyLink": "Copy link",
     "shareSavePhoto": "Save image",
-    "shareToast": "Shared on Instagram ✓"
+    "shareToast": "Shared on Instagram ✓",
+    "cardPlayer": "Player",
+    "cardShareCta": "Share",
+    "legendBirdie": "Birdie",
+    "legendPar": "Par",
+    "legendBogey": "Bogey",
+    "poweredBy": "POWERED BY SCLUBA",
+    "sharePlayerName": "Grégoire",
+    "shareDateShort": "Mon. May 11"
   },
   "share": {
     "ctaButton": "Share",

@@ -185,6 +185,29 @@ const back9 = [
                       <span class={`card-grid-cell card-cell-${h.type}`} data-flow-cell={i + 9}>{h.score}</span>
                     ))}
                   </div>
+
+                  <!-- Légende cellules — fidèle au vrai recap.astro -->
+                  <ul class="card-legend">
+                    <li><span class="legend-sw legend-sw-birdie"></span>{t.flow.legendBirdie}</li>
+                    <li><span class="legend-sw legend-sw-par"></span>{t.flow.legendPar}</li>
+                    <li><span class="legend-sw legend-sw-bogey"></span>{t.flow.legendBogey}</li>
+                  </ul>
+                </div>
+
+                <!-- Player row + Partager (mimic recap.astro) -->
+                <div class="card-player-row">
+                  <div class="card-player">
+                    <span class="meta-l">{t.flow.cardPlayer}</span>
+                    <span class="player-name">{t.flow.sharePlayerName}</span>
+                  </div>
+                  <button type="button" class="card-share-cta" tabindex="-1">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                      <polyline points="16 6 12 2 8 6"/>
+                      <line x1="12" y1="2" x2="12" y2="15"/>
+                    </svg>
+                    <span>{t.flow.cardShareCta}</span>
+                  </button>
                 </div>
 
                 <!-- Footer brand -->
@@ -195,16 +218,42 @@ const back9 = [
 
               <!-- ====== ÉCRAN 3 — PARTAGE NATIF (overlay sur écran 2) ====== -->
               <div class="screen screen-share" data-flow-screen="3">
-                <!-- Card en arrière-plan (réduite) -->
-                <div class="share-card-bg">
-                  <div class="share-card-photo">
-                    <img src="/photos/golf-du-soleil.jpg" alt="" width="280" height="160" loading="lazy" decoding="async" />
+                <!-- Vignette 4:5 fidèle au vrai PNG composeShareImage() -->
+                <div class="share-png-mini">
+                  <!-- Photo top 60% : selfie joueur -->
+                  <div class="png-photo">
+                    <img src="/photos/demo-player.jpg" alt="" width="280" height="170" loading="lazy" decoding="async" />
+                    <div class="png-club-badge">
+                      <img src="/logos/golf-du-soleil.svg" alt="" width="22" height="22" loading="lazy" />
+                    </div>
                   </div>
-                  <div class="share-card-score">87 <em>+15 · Par 72</em></div>
-                  <div class="share-card-grid">
-                    {Array.from({length: 18}, (_, i) => (
-                      <span class={`mini-cell mini-${[...front9, ...back9][i].type}`}></span>
-                    ))}
+
+                  <!-- Body : club + meta + score + grid + powered by -->
+                  <div class="png-body">
+                    <div class="png-title">Golf du Soleil</div>
+                    <div class="png-meta">{t.flow.sharePlayerName} · {t.flow.shareDateShort} · 18 trous</div>
+
+                    <div class="png-score-wrap">
+                      <div class="png-score">87</div>
+                      <div class="png-score-meta"><span class="score-diff over">+15</span> · Par 72</div>
+                    </div>
+
+                    <div class="png-grid">
+                      <div class="png-grid-row">
+                        <span class="png-grid-label">{t.flow.gridFront}</span>
+                        {front9.map((h) => (
+                          <span class={`png-grid-cell png-cell-${h.type}`}>{h.score}</span>
+                        ))}
+                      </div>
+                      <div class="png-grid-row">
+                        <span class="png-grid-label">{t.flow.gridBack}</span>
+                        {back9.map((h) => (
+                          <span class={`png-grid-cell png-cell-${h.type}`}>{h.score}</span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div class="png-powered">{t.flow.poweredBy}</div>
                   </div>
                 </div>
 
@@ -222,17 +271,42 @@ const back9 = [
                   </div>
 
                   <div class="share-apps">
-                    {[
-                      { name: 'Instagram', cls: 'app-ig' },
-                      { name: 'WhatsApp', cls: 'app-wa' },
-                      { name: 'Stories', cls: 'app-st' },
-                      { name: 'Mail', cls: 'app-ma' },
-                    ].map((app, i) => (
-                      <button class={`share-app ${app.cls}`} type="button" data-share-app={i}>
-                        <span class="share-app-icon"></span>
-                        <span class="share-app-label">{app.name}</span>
-                      </button>
-                    ))}
+                    <button class="share-app app-ig" type="button" data-share-app="0" tabindex="-1">
+                      <span class="share-app-icon">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <rect x="3" y="3" width="18" height="18" rx="5" ry="5"/>
+                          <circle cx="12" cy="12" r="4"/>
+                          <circle cx="17.5" cy="6.5" r="0.6" fill="#fff" stroke="none"/>
+                        </svg>
+                      </span>
+                      <span class="share-app-label">Instagram</span>
+                    </button>
+                    <button class="share-app app-wa" type="button" data-share-app="1" tabindex="-1">
+                      <span class="share-app-icon">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff" aria-hidden="true">
+                          <path d="M17.6 14.3c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.9-.7-1.4-1.7-1.6-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.2-.5.1-.2 0-.4 0-.5 0-.1-.7-1.7-.9-2.3-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1.1 1.1-1.1 2.6 1.1 3 1.3 3.2c.2.2 2.2 3.4 5.4 4.7.8.3 1.4.5 1.8.7.8.2 1.4.2 2 .1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.1-1.3c1.4.8 3.1 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2z"/>
+                        </svg>
+                      </span>
+                      <span class="share-app-label">WhatsApp</span>
+                    </button>
+                    <button class="share-app app-st" type="button" data-share-app="2" tabindex="-1">
+                      <span class="share-app-icon">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <circle cx="12" cy="12" r="8.5"/>
+                          <path d="M12 5v3"/>
+                        </svg>
+                      </span>
+                      <span class="share-app-label">Stories</span>
+                    </button>
+                    <button class="share-app app-ma" type="button" data-share-app="3" tabindex="-1">
+                      <span class="share-app-icon">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <rect x="3" y="5" width="18" height="14" rx="2"/>
+                          <path d="M3 7l9 7 9-7"/>
+                        </svg>
+                      </span>
+                      <span class="share-app-label">Mail</span>
+                    </button>
                   </div>
 
                   <div class="share-actions">
@@ -772,6 +846,68 @@ const back9 = [
   .card-cell-par { color: var(--primary); }
   .card-cell-bogey { color: var(--muted); }
 
+  /* Légende cellules — fidèle au recap.astro réel */
+  .card-legend {
+    list-style: none;
+    padding: 0;
+    margin: 6px 0 0;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    font-size: 7px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .card-legend li { display: flex; align-items: center; gap: 3px; }
+  .legend-sw {
+    display: inline-block;
+    width: 8px;
+    height: 6px;
+    border-radius: 2px;
+    border: 1px solid var(--line);
+  }
+  .legend-sw-birdie { background: var(--accent-soft); border-color: var(--accent); }
+  .legend-sw-par { background: var(--bg); }
+  .legend-sw-bogey { background: var(--bg); border-color: var(--muted); }
+
+  /* Player row + bouton Partager */
+  .card-player-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+  }
+  .card-player { display: flex; flex-direction: column; }
+  .card-player .meta-l {
+    font-size: 6.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .card-player .player-name {
+    font-family: var(--font-serif);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 1px;
+  }
+  .card-share-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--primary);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius-full);
+    padding: 5px 10px;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: default;
+  }
+  .card-share-cta svg { display: block; }
+
   .card-footer {
     margin-top: auto;
     text-align: center;
@@ -785,59 +921,126 @@ const back9 = [
     font-weight: 700;
   }
 
-  /* ====== SCREEN 3 — PARTAGE ====== */
-  .share-card-bg {
+  /* ====== SCREEN 3 — PARTAGE ======
+     Vignette 4:5 fidèle au vrai PNG composeShareImage() output :
+     photo 60% top + body avec club/score/grid/powered-by. */
+  .share-png-mini {
     position: absolute;
-    inset: 50px 18px auto 18px;
-    bottom: 280px;
-    background: var(--bg);
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 178px;          /* ratio 4:5 → height 222px */
+    height: 222px;
+    background: #FAF7EE;
     border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .png-photo {
+    position: relative;
+    flex: 0 0 60%;
     overflow: hidden;
   }
-  .share-card-photo {
-    height: 90px;
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: 8px;
-  }
-  .share-card-photo img {
+  .png-photo img {
     width: 100%; height: 100%;
     object-fit: cover;
-    object-position: center 55%;
+    object-position: center 35%;
+    display: block;
   }
-  .share-card-score {
+  .png-club-badge {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 22px; height: 22px;
+    background: var(--bg);
+    border-radius: 50%;
+    padding: 2px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  }
+  .png-club-badge img { width: 100%; height: 100%; }
+
+  .png-body {
+    flex: 1;
+    padding: 6px 8px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .png-title {
     font-family: var(--font-serif);
-    font-size: 24px;
+    font-size: 10px;
     font-weight: 800;
     color: var(--primary);
-    text-align: center;
-    line-height: 1;
+    line-height: 1.1;
+    margin-bottom: 1px;
   }
-  .share-card-score em {
-    display: block;
-    font-style: normal;
-    font-size: 9px;
+  .png-meta {
+    font-size: 6.5px;
     color: var(--muted);
-    margin-top: 2px;
-    font-family: var(--font-sans);
-    font-weight: 400;
+    letter-spacing: 0.02em;
   }
-  .share-card-grid {
+  .png-score-wrap {
+    margin: 3px 0 4px;
+  }
+  .png-score {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .png-score-meta {
+    font-size: 7px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .png-grid {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5px;
+    margin-bottom: 3px;
+  }
+  .png-grid-row {
     display: grid;
-    grid-template-columns: repeat(18, 1fr);
-    gap: 2px;
-    margin-top: 8px;
+    grid-template-columns: 10px repeat(9, 1fr);
+    gap: 1px;
   }
-  .mini-cell {
-    height: 7px;
+  .png-grid-label {
+    background: var(--primary);
+    color: #fff;
+    font-size: 5px;
+    font-weight: 700;
     border-radius: 1.5px;
-    background: var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .mini-cell.mini-birdie { background: var(--accent); }
-  .mini-cell.mini-par { background: var(--primary); }
-  .mini-cell.mini-bogey { background: var(--muted-soft); }
+  .png-grid-cell {
+    background: var(--bg);
+    border: 0.5px solid var(--line);
+    border-radius: 1.5px;
+    text-align: center;
+    padding: 1px 0;
+    font-size: 6px;
+    font-weight: 700;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .png-cell-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
+  .png-cell-par { color: var(--primary); }
+  .png-cell-bogey { color: var(--muted); }
+
+  .png-powered {
+    margin-top: auto;
+    font-size: 5.5px;
+    color: var(--muted);
+    letter-spacing: 0.25em;
+    font-weight: 600;
+  }
 
   /* Share sheet */
   .share-sheet {
@@ -922,13 +1125,21 @@ const back9 = [
     border-radius: 11px;
     flex-shrink: 0;
     background: var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
+  .share-app-icon svg { display: block; }
   .app-ig .share-app-icon {
-    background: conic-gradient(from 220deg at 30% 100%, #E1306C, #F77737, #FCAF45, #E1306C);
+    background: linear-gradient(135deg, #FCAF45 0%, #F77737 25%, #E1306C 60%, #833AB4 100%);
   }
   .app-wa .share-app-icon { background: #25D366; }
-  .app-st .share-app-icon { background: radial-gradient(circle at 50% 50%, #fff 22%, transparent 23%), conic-gradient(from 220deg at 30% 100%, #E1306C, #F77737, #FCAF45, #E1306C); }
-  .app-ma .share-app-icon { background: #1E90FF; }
+  .app-st .share-app-icon {
+    background:
+      radial-gradient(circle at 50% 50%, transparent 35%, rgba(0,0,0,0.04) 36%, transparent 38%),
+      linear-gradient(135deg, #FCAF45 0%, #F77737 25%, #E1306C 60%, #833AB4 100%);
+  }
+  .app-ma .share-app-icon { background: linear-gradient(180deg, #1E90FF 0%, #0066CC 100%); }
   .share-app-label {
     font-size: 8.5px;
     color: var(--ink);
