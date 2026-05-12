@@ -1,13 +1,16 @@
 # scluba-site
 
-Marketing site (`scluba.com`) and internal ops dashboard (`scluba.com/ops`).
-Astro + Supabase, deployed on Netlify.
+Marketing site (`scluba.com`), public scorecard app (`/r/[shortCode]/*`) and
+internal ops dashboard (`/ops`). Astro + Supabase, deployed on **Cloudflare
+Workers** (Static Assets + on-demand SSR via `@astrojs/cloudflare`).
 
 ## Stack
 
-- Astro 6 (static for the public pages, on-demand SSR for `/ops/*` and `/api/ops/*` via the Netlify adapter)
-- Supabase (auth via magic link + Postgres for the CRM)
-- GSAP for the hero animations
+- Astro 6 (static for the public pages, on-demand SSR for `/ops/*`, `/api/*`
+  and `/r/*` via the Cloudflare adapter)
+- Supabase (auth via magic link + Postgres for the CRM and rounds)
+- GSAP for the hero animations, Lenis for smooth scroll
+- Sentry (optional) for error monitoring
 
 ## Local dev
 
@@ -17,8 +20,11 @@ cp .env.example .env       # fill in Supabase keys + the ops allowlist
 npm run dev                # → http://localhost:4321
 ```
 
-Public pages are at `/`, `/demo`, `/en`, `/variants`. The internal dashboard
-is at `/ops` (login via magic link).
+For Workers-bound bindings (KV `SESSION`, etc.) during local dev, mirror your
+prod secrets into `.dev.vars` (gitignored) — `wrangler dev` will pick them up.
+
+Public pages live at `/`, `/demo`, `/en`, `/variants`. The scorecard app is at
+`/r/[shortCode]/*` and the internal dashboard at `/ops` (magic-link login).
 
 ## Internal dashboard (`/ops`)
 
@@ -27,37 +33,61 @@ Hidden, noindex, login-gated. Authorized emails are whitelisted via the
 
 Surfaces:
 
-- `/ops` — KPIs (pipeline, MRR théorique, signups CTA, démos prévues) + todo en cours
-- `/ops/prospects` — kanban CRM (8 statuts, filtres, recherche, modale "nouveau club")
-- `/ops/prospects/[id]` — fiche club (édition, timeline d'événements, tâches liées)
+- `/ops` — KPIs (pipeline, MRR théorique, signups CTA, démos prévues) + todo
+- `/ops/prospects` — kanban CRM (8 statuts, filtres, recherche, modale)
+- `/ops/prospects/[id]` — fiche club (édition, timeline d'événements, tâches)
 - `/ops/todo` — todo partagée greg/paul, filtres par owner, dates d'échéance
-- `/ops/signups` — leads remontés par le formulaire CTA public, conversion en prospect 1-clic
+- `/ops/signups` — leads du CTA public, conversion en prospect 1-clic
+- `/ops/clubs/[id]/print` — feuille A4 imprimable (QR + flyers)
 
 ### First-time setup
 
-1. **Apply the SQL migration** to your Supabase project (SQL editor):
+1. **Apply the SQL migrations** to your Supabase project (SQL editor):
 
-   Copy/paste `supabase/migrations/0001_ops_schema.sql` and run it.
-   Creates `prospects`, `prospect_events`, `tasks` (RLS denies all by default —
-   the dashboard uses the service role to bypass).
+   Run every file in `supabase/migrations/` in order. RLS denies all by
+   default — the dashboard and API use the service role to bypass.
 
-2. **Configure env vars** in Netlify (`Site settings → Environment variables`):
+2. **Configure Cloudflare Workers env vars** (Dashboard → Workers & Pages →
+   `scluba-site` → Settings → Variables and Secrets):
 
-   | Var | Where | Value |
+   | Var | Type | Value |
    |---|---|---|
-   | `PUBLIC_SUPABASE_URL` | public | Supabase project URL |
-   | `PUBLIC_SUPABASE_ANON_KEY` | public | Supabase anon/public key |
-   | `SUPABASE_SERVICE_ROLE_KEY` | **server-only** | Supabase service role key |
-   | `OPS_ALLOWED_EMAILS` | server-only | `greg@…,paul@…` |
+   | `PUBLIC_SUPABASE_URL` | Variable (plain) | Supabase project URL |
+   | `PUBLIC_SUPABASE_ANON_KEY` | Variable (plain) | Supabase anon/public key |
+   | `PUBLIC_DEMO_URL` | Variable (plain) | `https://scluba.com/demo` |
+   | `SUPABASE_SERVICE_ROLE_KEY` | **Secret (encrypted)** | Supabase service role key |
+   | `OPS_ALLOWED_EMAILS` | **Secret (encrypted)** | `greg@…,paul@…` |
+   | `SENTRY_DSN` | **Secret (encrypted)** | (optional) Sentry DSN |
+   | `PUBLIC_SENTRY_DSN` | Variable (plain) | (optional) same Sentry DSN |
 
-3. **Configure Supabase Auth redirect URLs** (Supabase dashboard →
+   Equivalent via CLI:
+
+   ```bash
+   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+   npx wrangler secret put OPS_ALLOWED_EMAILS
+   npx wrangler secret put SENTRY_DSN          # optional
+   # Plain vars go via the dashboard or `[vars]` in wrangler.toml — never
+   # put secrets in wrangler.toml (it gets committed).
+   ```
+
+3. **Create the KV namespace** for sessions (Dashboard → Storage & Databases
+   → KV → Create namespace "SESSION"), then bind it under Settings → Bindings
+   on the `scluba-site` Worker.
+
+4. **Configure Supabase Auth redirect URLs** (Supabase dashboard →
    Authentication → URL Configuration):
 
    - Site URL: `https://scluba.com`
-   - Add to redirect allowlist: `https://scluba.com/ops/auth/callback`
-     and `http://localhost:4321/ops/auth/callback` for local dev.
+   - Redirect allowlist: `https://scluba.com/ops/auth/callback` and
+     `http://localhost:4321/ops/auth/callback` for local dev.
 
-4. **Deploy**: push to `main` → Netlify auto-builds with the SSR adapter.
+5. **Deploy**: push to `main` → CI builds the Worker. Manual deploy from a
+   local build:
+
+   ```bash
+   npm run build                              # → dist/server/wrangler.json
+   npx wrangler deploy -c dist/server/wrangler.json
+   ```
 
 ### Auth flow
 
@@ -74,9 +104,22 @@ The form on the homepage writes to the existing `leads` table in Supabase
 (direct REST POST from the browser, anon key). Leads show up in `/ops/signups`
 where they can be promoted to a CRM prospect in one click.
 
+## Tests
+
+```bash
+npm test                   # vitest run
+npm run test:watch
+```
+
 ## Build / preview
 
 ```bash
-npm run build              # → dist/ + .netlify/functions-internal/
+npm run build              # → dist/ + dist/server/wrangler.json
 npm run preview            # serve the build locally
 ```
+
+## Security
+
+See [`SECURITY.md`](SECURITY.md) for vulnerability reporting. A `gitleaks`
+GitHub Action scans every PR and push to `main` for accidentally committed
+secrets.
