@@ -10,10 +10,11 @@ interface Props {
 const { locale } = Astro.props;
 const t = useT(locale);
 
-// QR du landing — pointe sur la page club "vitrine" (Golf de Caen-La-Mer
-// pour le pitch en cours). Override via PUBLIC_DEMO_URL en env Netlify si on
-// veut faire pointer vers un autre club d'exemple plus tard.
-const demoUrl = (import.meta.env.PUBLIC_DEMO_URL as string | undefined) ?? 'https://scluba.com/caen-la-mer';
+// QR du landing — pointe sur /demo, une page teaser générique (pas le club
+// réel). On expose juste le résultat visuel final (carte récap brandée) pour
+// le prospect qui scanne, sans rien révéler des fonctionnalités sous-jacentes
+// (multi-joueurs, saisie, génération PNG, reporting back-office).
+const demoUrl = (import.meta.env.PUBLIC_DEMO_URL as string | undefined) ?? 'https://scluba.com/demo';
 const qrSvg = await QRCode.toString(demoUrl, {
   type: 'svg',
   errorCorrectionLevel: 'M',
@@ -60,7 +61,7 @@ const qrSvg = await QRCode.toString(demoUrl, {
         </form>
       </div>
 
-      <a href="/caen-la-mer" class="cta-qr" aria-label={t.cta.qrLabel} target="_blank" rel="noopener">
+      <a href="/demo" class="cta-qr" aria-label={t.cta.qrLabel} target="_blank" rel="noopener">
         <div class="cta-qr-frame" set:html={qrSvg}></div>
         <p class="cta-qr-label">{t.cta.qrLabel}</p>
       </a>

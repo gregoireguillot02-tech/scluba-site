@@ -210,10 +210,6 @@ const back9 = [
                   </button>
                 </div>
 
-                <!-- Footer brand -->
-                <div class="card-footer">
-                  <span class="card-footer-l">SCLUBA</span>
-                </div>
               </div>
 
               <!-- ====== ÉCRAN 3 — PARTAGE NATIF (overlay sur écran 2) ====== -->
@@ -700,13 +696,13 @@ const back9 = [
     border: none;
   }
 
-  /* ====== SCREEN 2 — CARD ====== */
+  /* ====== SCREEN 2 — CARD (compressé pour tenir dans 70vh phone) ====== */
   .card-photo {
     position: relative;
-    height: 130px;
-    border-radius: 8px;
+    height: 92px;
+    border-radius: 6px;
     overflow: hidden;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     flex-shrink: 0;
   }
   .card-photo img {
@@ -718,76 +714,77 @@ const back9 = [
   .card-photo-fade {
     position: absolute;
     bottom: 0; left: 0; right: 0;
-    height: 50px;
+    height: 36px;
     background: linear-gradient(180deg, transparent, #FAF7EE);
   }
 
   .card-logo-frame {
     position: relative;
-    width: 56px; height: 56px;
-    margin: -40px auto 6px;
+    width: 42px; height: 42px;
+    margin: -28px auto 2px;
     background: var(--bg);
     border-radius: 50%;
-    padding: 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    padding: 3px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
     z-index: 2;
   }
   .card-logo-frame img { width: 100%; height: 100%; }
 
   .card-eyebrow {
-    font-size: 8px;
+    font-size: 6.5px;
     color: var(--accent);
     text-transform: uppercase;
     letter-spacing: 0.18em;
     font-weight: 700;
     text-align: center;
-    margin: 0 0 4px;
+    margin: 0 0 2px;
   }
   .card-rail {
-    width: 36px;
+    width: 26px;
     height: 1px;
     background: var(--accent);
     opacity: 0.5;
-    margin: 0 auto 4px;
+    margin: 0 auto 2px;
   }
   .card-title {
     font-family: var(--font-serif);
-    font-size: 16px;
+    font-size: 12px;
     font-weight: 800;
     color: var(--primary);
     text-align: center;
-    margin: 2px 0;
+    margin: 1px 0 2px;
+    line-height: 1.1;
   }
 
   .card-meta {
     display: flex;
     justify-content: space-around;
     list-style: none;
-    padding: 6px 0;
-    margin: 4px 0 6px;
+    padding: 3px 0;
+    margin: 3px 0 4px;
     border-top: 1px solid var(--line);
     border-bottom: 1px solid var(--line);
   }
   .card-meta li { text-align: center; }
   .card-meta .meta-l {
     display: block;
-    font-size: 7.5px;
+    font-size: 6px;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.1em;
   }
   .card-meta .meta-v {
     display: block;
-    font-size: 9.5px;
+    font-size: 7.5px;
     font-weight: 700;
     color: var(--ink);
     font-family: var(--font-serif);
     margin-top: 1px;
   }
 
-  .card-score-block { text-align: center; margin: 6px 0 8px; }
+  .card-score-block { text-align: center; margin: 3px 0 4px; }
   .card-score-eyebrow {
-    font-size: 8px;
+    font-size: 6.5px;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.16em;
@@ -795,15 +792,15 @@ const back9 = [
   }
   .card-score-value {
     font-family: var(--font-serif);
-    font-size: 48px;
+    font-size: 30px;
     font-weight: 800;
     color: var(--primary);
     line-height: 1;
-    margin: 4px 0;
+    margin: 2px 0;
     font-variant-numeric: tabular-nums;
   }
   .card-score-meta {
-    font-size: 10px;
+    font-size: 8px;
     color: var(--muted);
     margin: 0;
   }
@@ -812,20 +809,20 @@ const back9 = [
   .card-grid {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    margin-bottom: 6px;
+    gap: 2px;
+    margin-bottom: 3px;
   }
   .card-grid-row {
     display: grid;
-    grid-template-columns: 16px repeat(9, 1fr);
-    gap: 2px;
+    grid-template-columns: 12px repeat(9, 1fr);
+    gap: 1.5px;
   }
   .card-grid-label {
     background: var(--primary);
     color: #fff;
-    font-size: 7px;
+    font-size: 6px;
     font-weight: 700;
-    border-radius: 3px;
+    border-radius: 2.5px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -833,10 +830,10 @@ const back9 = [
   .card-grid-cell {
     background: var(--bg);
     border: 1px solid var(--line);
-    border-radius: 3px;
+    border-radius: 2.5px;
     text-align: center;
-    padding: 3px 0;
-    font-size: 9px;
+    padding: 2px 0;
+    font-size: 7.5px;
     font-weight: 700;
     color: var(--ink);
     font-variant-numeric: tabular-nums;
@@ -850,11 +847,11 @@ const back9 = [
   .card-legend {
     list-style: none;
     padding: 0;
-    margin: 6px 0 0;
+    margin: 3px 0 0;
     display: flex;
     justify-content: center;
-    gap: 8px;
-    font-size: 7px;
+    gap: 6px;
+    font-size: 6px;
     color: var(--muted);
     letter-spacing: 0.04em;
   }
@@ -875,20 +872,20 @@ const back9 = [
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 6px;
-    padding-top: 6px;
+    margin-top: 3px;
+    padding-top: 3px;
     border-top: 1px solid var(--line);
   }
   .card-player { display: flex; flex-direction: column; }
   .card-player .meta-l {
-    font-size: 6.5px;
+    font-size: 5.5px;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.12em;
   }
   .card-player .player-name {
     font-family: var(--font-serif);
-    font-size: 10px;
+    font-size: 8.5px;
     font-weight: 700;
     color: var(--ink);
     margin-top: 1px;
@@ -896,17 +893,17 @@ const back9 = [
   .card-share-cta {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     background: var(--primary);
     color: var(--bg);
     border: none;
     border-radius: var(--radius-full);
-    padding: 5px 10px;
-    font-size: 9px;
+    padding: 4px 8px;
+    font-size: 7.5px;
     font-weight: 700;
     cursor: default;
   }
-  .card-share-cta svg { display: block; }
+  .card-share-cta svg { display: block; width: 10px; height: 10px; }
 
   .card-footer {
     margin-top: auto;
