@@ -105,6 +105,9 @@ export interface ComposeInput {
   // Optional override for the par sum displayed in the subtitle. Used when a
   // 9-hole format would otherwise show "Par 72" computed from the full club.
   totalPar?: number;
+  // Optional label rendered above the big score number on the PNG (e.g.
+  // "LE BOIS", "PLAINE + VALLON"). Falls back to "{n} TROUS" when absent.
+  formatLabel?: string;
   // Optional mini-leaderboard rendered between the scorecard grid and the
   // legend. Only set for multiplayer rounds; solo rounds omit it.
   leaderboard?: LeaderboardEntry[];
@@ -550,7 +553,10 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   ctx.fillStyle = '#D4A574'; // --accent
   ctx.font = `700 22px ${FONT_STACK}`;
   ctx.textBaseline = 'middle';
-  drawTrackedText(ctx, `SCORE · ${input.holes.length} TROUS`, W / 2, SCORE_Y, 3);
+  const eyebrow = input.formatLabel
+    ? `SCORE · ${input.formatLabel.toUpperCase()}`
+    : `SCORE · ${input.holes.length} TROUS`;
+  drawTrackedText(ctx, eyebrow, W / 2, SCORE_Y, 3);
 
   // Gros total en clubColor — taille adaptée selon nombre de chiffres
   const totalStr = String(input.totalStrokes);

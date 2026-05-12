@@ -86,6 +86,14 @@ if (!me) {
 const myMap = scoresFor(me.id);
 const myTotal = totalFor(me.id);
 
+// Label shown above the big score number. Prefer the loop name(s) over a
+// generic "X trous" so a 9-hole Bois round doesn't read like "18 trous".
+// The F9/B9 fallback (no real loops in course_data) reverts to the count.
+const isRealSections = roundSections.some((s) => s.loop_id !== 'f9' && s.loop_id !== 'b9');
+const formatLabel = isRealSections
+  ? roundSections.map((s) => s.loop_name).join(' + ')
+  : `${holesCount} trous`;
+
 // Multiplayer mini-leaderboard. Solo rounds skip this entirely.
 const isMultiplayer = allPlayers.length > 1;
 
@@ -136,6 +144,8 @@ const sharePayload = JSON.stringify({
   // (e.g. "La Plaine", "Le Vallon") instead of the legacy F9/B9.
   sections: roundSections.map((s) => ({ label: s.loop_name, holes: s.holes })),
   totalPar: par,
+  // Title above the big score on the PNG (mirrors the on-screen eyebrow).
+  formatLabel,
   scoresByHole: myMap,
   totalDiff: myTotal.diff,
   totalStrokes: myTotal.strokes,
@@ -213,7 +223,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       <p id="score-title" class="sr-only">
         Score final {myTotal.strokes}, {myTotal.diff >= 0 ? '+' : ''}{myTotal.diff} par rapport au par {par}.
       </p>
-      <p class="score-eyebrow">Score · {r.club.course_data.holes.length} trous</p>
+      <p class="score-eyebrow">Score · {formatLabel}</p>
       <div class="score-value" data-card-score data-target={String(myTotal.strokes)}>0</div>
       <p class="score-meta">
         <span class={`score-diff${myTotal.diff > 0 ? ' over' : myTotal.diff < 0 ? ' under' : ''}`}>
