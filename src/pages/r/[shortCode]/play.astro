@@ -5,7 +5,7 @@ import '../../../styles/tokens.css';
 import '../../../styles/global.css';
 import { serviceClient } from '../../../lib/supabase';
 import type { Club, Round, RoundPlayer, Score } from '../../../lib/clubs-types';
-import { resolveRoundHoles } from '../../../lib/clubs-types';
+import { resolveRoundHoles, resolveRoundSections } from '../../../lib/clubs-types';
 
 const { shortCode } = Astro.params;
 const sb = serviceClient();
@@ -49,6 +49,7 @@ const allScores = (allScoresRaw ?? []) as Score[];
 // Resolve which holes this round actually plays based on its format_id.
 // Falls back to course_data.holes when no format is set (legacy rounds).
 const roundHoles = resolveRoundHoles(r, r.club);
+const roundSections = resolveRoundSections(r, r.club);
 const par = roundHoles.reduce((sum, h) => sum + h.par, 0);
 const clubColor = r.club.primary_color ?? '#1B4332';
 
@@ -153,18 +154,14 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
         <span data-total-strokes>—</span>
       </header>
       <div class="grid">
-        <div class="grid-row">
-          <span class="grid-label">F9</span>
-          {Array.from({ length: 9 }).map((_, i) => (
-            <span class="grid-cell" data-cell-hole={i + 1}>—</span>
-          ))}
-        </div>
-        <div class="grid-row">
-          <span class="grid-label">B9</span>
-          {Array.from({ length: 9 }).map((_, i) => (
-            <span class="grid-cell" data-cell-hole={i + 10}>—</span>
-          ))}
-        </div>
+        {roundSections.map((section) => (
+          <div class="grid-row">
+            <span class="grid-label">{section.loop_name}</span>
+            {section.holes.map((h) => (
+              <span class="grid-cell" data-cell-hole={h.number}>—</span>
+            ))}
+          </div>
+        ))}
       </div>
     </section>
 
@@ -684,18 +681,23 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
     }
     .grid-row {
       display: grid;
-      grid-template-columns: 28px repeat(9, 1fr);
+      /* Loop names ("La Plaine"…) need more room than the legacy F9/B9 chip. */
+      grid-template-columns: minmax(56px, auto) repeat(9, 1fr);
       gap: 4px;
     }
     .grid-label {
       background: var(--clubColor);
       color: var(--bg);
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 2px 8px;
       border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
       justify-content: center;
+      white-space: nowrap;
+      text-transform: uppercase;
     }
     .grid-cell {
       aspect-ratio: 1;
