@@ -1,14 +1,242 @@
 ---
-export const prerender = false;
+// Page démo publique servie au scan du QR sur scluba.com.
+// Stratégie protection idée : on montre UNIQUEMENT le résultat visuel final
+// (la carte récap brandée — ce qu'un prospect voit déjà dans le pitch), pas
+// les fonctionnalités sous-jacentes (multi-joueurs, saisie, génération PNG,
+// reporting back-office).
+// Aucun lien vers d'autres pages produit. Aucune mention de fonctionnalités.
 
-// /demo was the original hardcoded "Golf du Soleil" mockup. PR A replaced
-// it with the data-driven /[slug] flow, and the live demo seed is at
-// /caen-la-mer (renamed from scluba-test → golf-de-caen → caen-la-mer
-// across migrations 0003/0007/0008). Redirect anything still pointing at
-// /demo so old QR codes, pitch links, etc. land on the right page.
+import '../styles/global.css';
 
-return new Response(null, {
-  status: 301,
-  headers: { Location: '/caen-la-mer' },
-});
+// Données mockées génériques — pas de DB, pas de Caen-la-Mer.
+const front9 = [
+  { n: 1, score: 5, type: 'bogey' },
+  { n: 2, score: 5, type: 'par' },
+  { n: 3, score: 2, type: 'birdie' },
+  { n: 4, score: 4, type: 'par' },
+  { n: 5, score: 5, type: 'bogey' },
+  { n: 6, score: 6, type: 'bogey' },
+  { n: 7, score: 3, type: 'par' },
+  { n: 8, score: 5, type: 'bogey' },
+  { n: 9, score: 5, type: 'bogey' },
+];
+const back9 = [
+  { n: 10, score: 4, type: 'par' },
+  { n: 11, score: 3, type: 'par' },
+  { n: 12, score: 6, type: 'bogey' },
+  { n: 13, score: 5, type: 'bogey' },
+  { n: 14, score: 4, type: 'par' },
+  { n: 15, score: 4, type: 'par' },
+  { n: 16, score: 6, type: 'bogey' },
+  { n: 17, score: 4, type: 'par' },
+  { n: 18, score: 5, type: 'bogey' },
+];
 ---
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Aperçu Scluba</title>
+  <meta name="description" content="Aperçu d'une carte de score brandée Scluba." />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#FAF7EE" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body class="demo-body">
+  <main class="demo-card">
+    <header class="demo-head">
+      <span class="demo-eyebrow">Aperçu Scluba</span>
+    </header>
+
+    <figure class="demo-photo">
+      <img src="/photos/demo-player.jpg" alt="" width="800" height="480" loading="eager" decoding="async" fetchpriority="high" />
+      <span class="demo-photo-fade" aria-hidden="true"></span>
+    </figure>
+
+    <h1 class="demo-title">Golf du Soleil</h1>
+    <p class="demo-meta">Grégoire · lun. 11 mai · 18 trous</p>
+
+    <section class="demo-score">
+      <p class="demo-score-l">Score · 18 trous</p>
+      <div class="demo-score-v">87</div>
+      <p class="demo-score-meta"><span class="demo-diff">+15</span> · Par 72</p>
+    </section>
+
+    <section class="demo-grid" aria-label="Score par trou">
+      <div class="demo-grid-row">
+        <span class="demo-grid-label">F9</span>
+        {front9.map((h) => <span class={`demo-cell demo-cell-${h.type}`}>{h.score}</span>)}
+      </div>
+      <div class="demo-grid-row">
+        <span class="demo-grid-label">B9</span>
+        {back9.map((h) => <span class={`demo-cell demo-cell-${h.type}`}>{h.score}</span>)}
+      </div>
+      <ul class="demo-legend">
+        <li><span class="lsw lsw-birdie"></span>Birdie</li>
+        <li><span class="lsw lsw-par"></span>Par</li>
+        <li><span class="lsw lsw-bogey"></span>Bogey</li>
+      </ul>
+    </section>
+
+    <footer class="demo-footer">
+      <span>POWERED BY <strong>SCLUBA</strong></span>
+    </footer>
+  </main>
+
+  <style>
+    .demo-body {
+      background: #FAF7EE;
+      min-height: 100dvh;
+      padding: 24px 0;
+    }
+    .demo-card {
+      max-width: 440px;
+      margin: 0 auto;
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .demo-head { text-align: center; margin-bottom: 12px; }
+    .demo-eyebrow {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .demo-photo {
+      position: relative;
+      margin: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 4 / 3;
+    }
+    .demo-photo img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center 38%;
+      display: block;
+    }
+    .demo-photo-fade {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 60px;
+      background: linear-gradient(180deg, transparent, #FAF7EE);
+    }
+    .demo-title {
+      font-family: var(--font-serif);
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--primary);
+      text-align: center;
+      margin: 18px 0 4px;
+      line-height: 1.05;
+    }
+    .demo-meta {
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 14px;
+    }
+    .demo-score {
+      text-align: center;
+      margin: 8px 0 18px;
+    }
+    .demo-score-l {
+      font-size: 11px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      margin: 0;
+    }
+    .demo-score-v {
+      font-family: var(--font-serif);
+      font-size: 64px;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+      margin: 6px 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .demo-score-meta {
+      font-size: 14px;
+      color: var(--muted);
+      margin: 0;
+    }
+    .demo-diff {
+      color: #C0392B;
+      font-weight: 700;
+    }
+    .demo-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 24px;
+    }
+    .demo-grid-row {
+      display: grid;
+      grid-template-columns: 26px repeat(9, 1fr);
+      gap: 4px;
+    }
+    .demo-grid-label {
+      background: var(--primary);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .demo-cell {
+      background: var(--bg);
+      border: 1.5px solid var(--line);
+      border-radius: 5px;
+      text-align: center;
+      padding: 8px 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+    .demo-cell-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
+    .demo-cell-par { color: var(--primary); }
+    .demo-cell-bogey { color: var(--muted); }
+    .demo-legend {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0;
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .demo-legend li { display: flex; align-items: center; gap: 4px; }
+    .lsw {
+      display: inline-block;
+      width: 12px; height: 8px;
+      border-radius: 2px;
+      border: 1px solid var(--line);
+    }
+    .lsw-birdie { background: var(--accent-soft); border-color: var(--accent); }
+    .lsw-par { background: var(--bg); }
+    .lsw-bogey { background: var(--bg); border-color: var(--muted); }
+    .demo-footer {
+      text-align: center;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.28em;
+      margin-top: 12px;
+    }
+    .demo-footer strong {
+      color: var(--primary);
+      font-family: var(--font-serif);
+      letter-spacing: 0.25em;
+    }
+  </style>
+</body>
+</html>

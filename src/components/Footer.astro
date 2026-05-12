@@ -9,6 +9,9 @@ const { locale } = Astro.props;
 const t = useT(locale);
 const altHref = altLocaleHref(locale);
 const altLabel = locale === 'fr' ? 'English' : 'Français';
+
+const legalHref = locale === 'fr' ? '/legal/mentions-legales/' : '/en/legal/legal-notice/';
+const privacyHref = locale === 'fr' ? '/legal/confidentialite/' : '/en/legal/privacy/';
 ---
 
 <footer class="footer">
@@ -19,8 +22,8 @@ const altLabel = locale === 'fr' ? 'English' : 'Français';
     </div>
 
     <ul class="footer-links">
-      <li><a href="#">{t.footer.legal}</a></li>
-      <li><a href="#">{t.footer.privacy}</a></li>
+      <li><a href={legalHref}>{t.footer.legal}</a></li>
+      <li><a href={privacyHref}>{t.footer.privacy}</a></li>
       <li><a href="#cta">{t.footer.contact}</a></li>
       <li><a href={altHref} class="lang-link">{altLabel}</a></li>
     </ul>
