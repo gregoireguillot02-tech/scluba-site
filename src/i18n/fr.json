@@ -79,7 +79,15 @@
     "sharePreviewTitle": "Carte Golf du Soleil",
     "shareCopyLink": "Copier le lien",
     "shareSavePhoto": "Enregistrer l'image",
-    "shareToast": "Partagé sur Instagram ✓"
+    "shareToast": "Partagé sur Instagram ✓",
+    "cardPlayer": "Joueur",
+    "cardShareCta": "Partager",
+    "legendBirdie": "Birdie",
+    "legendPar": "Par",
+    "legendBogey": "Bogey",
+    "poweredBy": "POWERED BY SCLUBA",
+    "sharePlayerName": "Grégoire",
+    "shareDateShort": "lun. 11 mai"
   },
   "share": {
     "ctaButton": "Partager",
