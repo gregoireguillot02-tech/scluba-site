@@ -82,6 +82,13 @@ export interface LeaderboardEntry {
   finished: boolean;
 }
 
+export interface ComposeSection {
+  // Label drawn on the chip at the left of the row (e.g. "La Plaine",
+  // "Le Vallon", or legacy "F9"/"B9").
+  label: string;
+  holes: CourseHole[];
+}
+
 export interface ComposeInput {
   photoUrl: string | null;
   player: RoundPlayer | null;
@@ -92,8 +99,14 @@ export interface ComposeInput {
   totalDiff: number;
   totalStrokes: number;
   holesPlayed: number;
-  // Optional mini-leaderboard rendered between the F9/B9 grid and the legend.
-  // Only set for multiplayer rounds; solo rounds omit it.
+  // Optional scorecard sections, one per loop. If omitted, the canvas falls
+  // back to the legacy F9/B9 split (holes ≤ 9, holes > 9).
+  sections?: ComposeSection[];
+  // Optional override for the par sum displayed in the subtitle. Used when a
+  // 9-hole format would otherwise show "Par 72" computed from the full club.
+  totalPar?: number;
+  // Optional mini-leaderboard rendered between the scorecard grid and the
+  // legend. Only set for multiplayer rounds; solo rounds omit it.
   leaderboard?: LeaderboardEntry[];
 }
 
@@ -198,24 +211,32 @@ function drawScoreRow(
 ) {
   const PAD_X = 48;
   const W = 1080;
-  const N_TOTAL = 10; // 1 label + 9 cells
   const GAP = 8;
-  const CELL_W = (W - 2 * PAD_X - (N_TOTAL - 1) * GAP) / N_TOTAL; // ~92
+  // Loop names like "La Plaine" / "Le Vallon" need a wider chip than the
+  // legacy two-char "F9"/"B9". The 9 score cells share the remaining width
+  // evenly. The font auto-shrinks if the label is unusually long.
+  const LABEL_W = 180;
+  const CELL_W = (W - 2 * PAD_X - LABEL_W - 9 * GAP) / 9;
   const CELL_H = 72;
 
-  // Label F9/B9 — fond clubColor
-  drawRoundedRect(ctx, PAD_X, startY, CELL_W, CELL_H, 8);
+  // Label chip — fond clubColor, font auto-fit
+  drawRoundedRect(ctx, PAD_X, startY, LABEL_W, CELL_H, 8);
   ctx.fillStyle = clubColor;
   ctx.fill();
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `800 24px ${FONT_STACK}`;
+  let labelFont = 24;
+  ctx.font = `800 ${labelFont}px ${FONT_STACK}`;
+  while (ctx.measureText(label).width > LABEL_W - 16 && labelFont > 12) {
+    labelFont -= 1;
+    ctx.font = `800 ${labelFont}px ${FONT_STACK}`;
+  }
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, PAD_X + CELL_W / 2, startY + CELL_H / 2);
+  ctx.fillText(label, PAD_X + LABEL_W / 2, startY + CELL_H / 2);
 
   // 9 score cells
   for (let i = 0; i < holes.length; i++) {
-    const x = PAD_X + (i + 1) * (CELL_W + GAP);
+    const x = PAD_X + LABEL_W + GAP + i * (CELL_W + GAP);
     const s = scoresByHole[holes[i].number];
     const played = s !== undefined;
     const type = played ? scoreType(s, holes[i].par) : null;
@@ -541,7 +562,7 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   ctx.fillText(totalStr, W / 2, SCORE_Y + 90);
 
   // Subtitle "±0 · Par 72"
-  const totalPar2 = input.holes.reduce((s, h) => s + h.par, 0);
+  const totalParValue = input.totalPar ?? input.holes.reduce((s, h) => s + h.par, 0);
   const diffStr = input.totalDiff === 0
     ? '±0'
     : input.totalDiff > 0
@@ -549,20 +570,27 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
       : `${input.totalDiff}`;
   ctx.fillStyle = '#6B7280';
   ctx.font = `500 28px ${FONT_STACK}`;
-  ctx.fillText(`${diffStr} · Par ${totalPar2}`, W / 2, SCORE_Y + 170);
+  ctx.fillText(`${diffStr} · Par ${totalParValue}`, W / 2, SCORE_Y + 170);
 
-  // Section 4 : Grid F9 + B9 (chaque row = label clubColor + 9 cells)
-  const front9 = input.holes.filter((h) => h.number <= 9);
-  const back9 = input.holes.filter((h) => h.number > 9);
+  // Section 4 : Scorecard rows. If the caller provided named sections (loops),
+  // draw one row per section with its loop name. Otherwise fall back to the
+  // legacy F9/B9 split for backward compat with older payloads.
+  const sections: ComposeSection[] = input.sections && input.sections.length > 0
+    ? input.sections
+    : (() => {
+        const front9 = input.holes.filter((h) => h.number <= 9);
+        const back9 = input.holes.filter((h) => h.number > 9);
+        const out: ComposeSection[] = [];
+        if (front9.length) out.push({ label: 'F9', holes: front9 });
+        if (back9.length) out.push({ label: 'B9', holes: back9 });
+        return out;
+      })();
+
   const ROW_GAP = 14;
   let gridY = SCORE_Y + 220; // ~1005
-  if (front9.length) {
-    const h = drawScoreRow(ctx, front9, input.scoresByHole, 'F9', gridY, primaryColor);
+  for (const section of sections) {
+    const h = drawScoreRow(ctx, section.holes, input.scoresByHole, section.label, gridY, primaryColor);
     gridY += h + ROW_GAP;
-  }
-  if (back9.length) {
-    drawScoreRow(ctx, back9, input.scoresByHole, 'B9', gridY, primaryColor);
-    gridY += 72 + ROW_GAP;
   }
 
   // Section 4b : Mini-leaderboard (multiplayer only). The grid sat on the

@@ -5,7 +5,7 @@ import '../../../styles/tokens.css';
 import '../../../styles/global.css';
 import { serviceClient } from '../../../lib/supabase';
 import type { Club, Round, RoundPlayer, Score } from '../../../lib/clubs-types';
-import { totalPar } from '../../../lib/clubs-types';
+import { resolveRoundHoles } from '../../../lib/clubs-types';
 
 const { shortCode } = Astro.params;
 const sb = serviceClient();
@@ -46,7 +46,10 @@ const { data: allScoresRaw } = playerIds.length
   : { data: [] as Score[] };
 const allScores = (allScoresRaw ?? []) as Score[];
 
-const par = totalPar(r.club.course_data);
+// Resolve which holes this round actually plays based on its format_id.
+// Falls back to course_data.holes when no format is set (legacy rounds).
+const roundHoles = resolveRoundHoles(r, r.club);
+const par = roundHoles.reduce((sum, h) => sum + h.par, 0);
 const clubColor = r.club.primary_color ?? '#1B4332';
 
 const scoresByHole: Record<number, number> = {};
@@ -55,7 +58,7 @@ for (const s of allScores) {
 }
 
 const holesByNumber: Record<number, number> = {};
-for (const h of r.club.course_data.holes) holesByNumber[h.number] = h.par;
+for (const h of roundHoles) holesByNumber[h.number] = h.par;
 ---
 
 <!doctype html>
@@ -107,15 +110,15 @@ for (const h of r.club.course_data.holes) holesByNumber[h.number] = h.par;
       class="hole-card"
       data-play-root
       data-short-code={r.short_code}
-      data-course={JSON.stringify(r.club.course_data)}
+      data-course={JSON.stringify({ holes: roundHoles })}
       data-scores={JSON.stringify(scoresByHole)}
       data-par={String(par)}
-      data-hole-count={String(r.club.course_data.holes.length)}
+      data-hole-count={String(roundHoles.length)}
     >
       <div class="hole-meta">
         <span class="hole-meta-label">Trou</span>
         <span class="hole-meta-count">
-          <span data-hole-number>1</span> / {r.club.course_data.holes.length}
+          <span data-hole-number>1</span> / {roundHoles.length}
         </span>
       </div>
 

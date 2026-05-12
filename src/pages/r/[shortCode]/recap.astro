@@ -5,7 +5,7 @@ import '../../../styles/tokens.css';
 import '../../../styles/global.css';
 import { serviceClient } from '../../../lib/supabase';
 import type { Club, Round, RoundPlayer, Score } from '../../../lib/clubs-types';
-import { totalPar, scoreType } from '../../../lib/clubs-types';
+import { resolveRoundHoles, resolveRoundSections, scoreType } from '../../../lib/clubs-types';
 import ShareCardModal from '../../../components/ShareCardModal.astro';
 
 const { shortCode } = Astro.params;
@@ -35,7 +35,13 @@ const [{ data: players }, { data: rawScores }] = await Promise.all([
 
 const allPlayers = (players ?? []) as RoundPlayer[];
 const allScores = (rawScores ?? []) as Score[];
-const par = totalPar(r.club.course_data);
+
+// Hole list this round actually plays (9 or 18), and the section breakdown
+// for the scorecard grid (one section per loop).
+const roundHoles = resolveRoundHoles(r, r.club);
+const roundSections = resolveRoundSections(r, r.club);
+const par = roundHoles.reduce((sum, h) => sum + h.par, 0);
+const holesCount = roundHoles.length;
 
 function scoresFor(playerId: string): Record<number, number> {
   const out: Record<number, number> = {};
@@ -48,7 +54,7 @@ function totalFor(playerId: string): { strokes: number; played: number; diff: nu
   let played = 0;
   let diff = 0;
   const map = scoresFor(playerId);
-  for (const h of r.club.course_data.holes) {
+  for (const h of roundHoles) {
     const s = map[h.number];
     if (s !== undefined) {
       strokes += s;
@@ -80,12 +86,8 @@ if (!me) {
 const myMap = scoresFor(me.id);
 const myTotal = totalFor(me.id);
 
-const front9 = r.club.course_data.holes.filter((h) => h.number <= 9);
-const back9 = r.club.course_data.holes.filter((h) => h.number > 9);
-
 // Multiplayer mini-leaderboard. Solo rounds skip this entirely.
 const isMultiplayer = allPlayers.length > 1;
-const holesCount = r.club.course_data.holes.length;
 
 interface LeaderboardRow {
   player_id: string;
@@ -129,7 +131,11 @@ const sharePayload = JSON.stringify({
   player: me,
   club: r.club,
   startedAt: r.started_at ?? r.created_at,
-  holes: r.club.course_data.holes,
+  holes: roundHoles,
+  // The share-card uses sections to label each row with the loop name
+  // (e.g. "La Plaine", "Le Vallon") instead of the legacy F9/B9.
+  sections: roundSections.map((s) => ({ label: s.loop_name, holes: s.holes })),
+  totalPar: par,
   scoresByHole: myMap,
   totalDiff: myTotal.diff,
   totalStrokes: myTotal.strokes,
@@ -219,30 +225,20 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     </section>
 
     <section class="grid-block" aria-label="Score par trou">
-      <div class="grid-row">
-        <span class="grid-label">F9</span>
-        {front9.map((h) => {
-          const s = myMap[h.number];
-          const t = s !== undefined ? scoreType(s, h.par) : null;
-          return (
-            <span class={`grid-cell${t ? ` cell-${t}` : ' cell-empty'}`} aria-label={`Trou ${h.number}: ${s ?? '—'}`}>
-              {s ?? '—'}
-            </span>
-          );
-        })}
-      </div>
-      <div class="grid-row">
-        <span class="grid-label">B9</span>
-        {back9.map((h) => {
-          const s = myMap[h.number];
-          const t = s !== undefined ? scoreType(s, h.par) : null;
-          return (
-            <span class={`grid-cell${t ? ` cell-${t}` : ' cell-empty'}`} aria-label={`Trou ${h.number}: ${s ?? '—'}`}>
-              {s ?? '—'}
-            </span>
-          );
-        })}
-      </div>
+      {roundSections.map((section) => (
+        <div class="grid-row">
+          <span class="grid-label">{section.loop_name}</span>
+          {section.holes.map((h) => {
+            const s = myMap[h.number];
+            const t = s !== undefined ? scoreType(s, h.par) : null;
+            return (
+              <span class={`grid-cell${t ? ` cell-${t}` : ' cell-empty'}`} aria-label={`Trou ${h.number}: ${s ?? '—'}`}>
+                {s ?? '—'}
+              </span>
+            );
+          })}
+        </div>
+      ))}
       <ul class="grid-legend" aria-hidden="true">
         <li><span class="legend-swatch cell-birdie"></span>Birdie</li>
         <li><span class="legend-swatch cell-par"></span>Par</li>
@@ -527,16 +523,22 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     }
     .grid-row {
       display: grid;
-      grid-template-columns: 28px repeat(9, 1fr);
+      /* Loop names ("La Plaine", "Le Vallon") need more room than the old
+         "F9"/"B9" chip, so the label column is auto with a minimum. */
+      grid-template-columns: minmax(56px, auto) repeat(9, 1fr);
       gap: 4px;
     }
     .grid-label {
       background: var(--clubColor);
       color: var(--bg);
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 2px 8px;
       border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center;
+      white-space: nowrap;
+      text-transform: uppercase;
     }
     .grid-cell {
       aspect-ratio: 1;

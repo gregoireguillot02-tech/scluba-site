@@ -45,10 +45,21 @@ export const additionalPlayersSchema = z
   .max(7, 'trop de joueurs (7 max en plus de toi)')
   .optional();
 
+// Identifier of a row in clubs.course_data.formats (e.g. "18", "9-plaine").
+// Validity against that array is checked lazily at render time via
+// resolveRoundHoles — a stale/unknown id falls back to the flat course holes.
+export const formatIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(32)
+  .regex(/^[a-z0-9-]+$/, 'format invalide');
+
 export const createRoundSchema = z.object({
   slug: slugSchema,
   display_name: displayNameSchema,
   additional_players: additionalPlayersSchema,
+  format_id: formatIdSchema.optional(),
   hp_email: honeypotSchema,
 });
 

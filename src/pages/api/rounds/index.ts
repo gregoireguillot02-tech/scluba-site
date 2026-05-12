@@ -28,15 +28,18 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
     additional_players.push(name);
   }
 
+  const rawFormatId = form.get('format_id');
   const parsed = createRoundSchema.safeParse({
     slug: form.get('slug') ?? '',
     display_name: form.get('display_name') ?? '',
     additional_players: additional_players.length > 0 ? additional_players : undefined,
+    format_id: typeof rawFormatId === 'string' && rawFormatId.length > 0 ? rawFormatId : undefined,
     hp_email: form.get('hp_email') ?? undefined,
   });
   if (!parsed.success) return new Response(formatZodError(parsed.error), { status: 400 });
   const { slug, display_name } = parsed.data;
   const placeholders = parsed.data.additional_players ?? [];
+  const formatId = parsed.data.format_id ?? null;
 
   const sb = serviceClient();
 
@@ -57,7 +60,7 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
     short_code = generateRoundShortCode();
     const { data: created, error: rErr } = await sb
       .from('rounds')
-      .insert({ club_id: club.id, short_code, status: 'lobby' })
+      .insert({ club_id: club.id, short_code, status: 'lobby', format_id: formatId })
       .select('id')
       .single();
     if (!rErr && created) {
