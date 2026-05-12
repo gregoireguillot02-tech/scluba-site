@@ -159,8 +159,15 @@ const clubColor = r.club.primary_color ?? '#1B4332';
               {isMe && <span class="player-tag">vous</span>}
               {!isMe && p.is_creator && <span class="player-tag muted">créateur</span>}
               {isPlaceholder && <span class="player-tag pending">en attente</span>}
-              {isCreator && isPlaceholder && (
-                <button type="button" class="player-remove" data-remove-player={p.id} aria-label={`Retirer ${p.display_name}`}>
+              {isCreator && !p.is_creator && (
+                <button
+                  type="button"
+                  class={`player-remove${isPlaceholder ? '' : ' is-claimed'}`}
+                  data-remove-player={p.id}
+                  data-claimed={isPlaceholder ? '0' : '1'}
+                  data-player-name={p.display_name}
+                  aria-label={`Retirer ${p.display_name}`}
+                >
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
                   </svg>
@@ -278,21 +285,26 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 
       function renderPlayer(p: RoundPlayerRow): HTMLLIElement {
         const li = document.createElement('li');
-        li.dataset.playerId = p.id;
-        li.dataset.isCreator = p.is_creator ? '1' : '0';
-        li.dataset.isClaimed = p.claimed_at ? '1' : '0';
         applyPlayerRow(li, p);
         return li;
       }
 
       function applyPlayerRow(li: HTMLElement, p: RoundPlayerRow) {
-        const isPlaceholder = !p.claimed_at;
-        const isMe = p.id === me;
+        // Be strict against undefined/missing fields — Supabase Realtime can
+        // occasionally deliver a payload missing the newest column right after
+        // a migration (stale schema cache). Treat anything but a non-empty
+        // string as "not claimed" so the row still gets a visible style.
+        const isPlaceholder = !(typeof p.claimed_at === 'string' && p.claimed_at.length > 0);
+        const isMe = !!me && p.id === me;
+        const isRowCreator = p.is_creator === true;
         const classes = ['player-item'];
         if (isPlaceholder) classes.push('is-pending');
         if (isMe) classes.push('is-me');
-        if (p.is_creator) classes.push('is-creator');
+        if (isRowCreator) classes.push('is-creator');
+        // Always rewrite identity attributes so a re-applied row never loses them.
         li.className = classes.join(' ');
+        li.dataset.playerId = p.id;
+        li.dataset.isCreator = isRowCreator ? '1' : '0';
         li.dataset.isClaimed = isPlaceholder ? '0' : '1';
 
         // Clear then re-render the row content (cheaper than diffing in JS).
@@ -313,7 +325,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
           tag.className = 'player-tag';
           tag.textContent = 'vous';
           li.appendChild(tag);
-        } else if (p.is_creator) {
+        } else if (isRowCreator) {
           const tag = document.createElement('span');
           tag.className = 'player-tag muted';
           tag.textContent = 'créateur';
@@ -325,11 +337,16 @@ const clubColor = r.club.primary_color ?? '#1B4332';
           tag.textContent = 'en attente';
           li.appendChild(tag);
         }
-        if (isCreator && isPlaceholder) {
+        // Organizer can remove ANY non-creator player while the round is in
+        // lobby (claimed players too — same gating as the API). The creator
+        // cannot remove themselves.
+        if (isCreator && !isRowCreator) {
           const btn = document.createElement('button');
           btn.type = 'button';
-          btn.className = 'player-remove';
+          btn.className = isPlaceholder ? 'player-remove' : 'player-remove is-claimed';
           btn.dataset.removePlayer = p.id;
+          btn.dataset.claimed = isPlaceholder ? '0' : '1';
+          btn.dataset.playerName = p.display_name;
           btn.setAttribute('aria-label', `Retirer ${p.display_name}`);
           btn.innerHTML = `
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -349,13 +366,21 @@ const clubColor = r.club.primary_color ?? '#1B4332';
         onPlayersChange: (event, row) => {
           const p = row as RoundPlayerRow;
           if (p.round_id !== roundId) return;
+          // Diagnostic log — helps spot stale-schema payloads if a row ever
+          // arrives without the claimed_at column.
+          console.debug('[lobby] player change', event, p);
           const existing = list.querySelector<HTMLElement>(`[data-player-id="${p.id}"]`);
           if (event === 'DELETE') {
             existing?.remove();
           } else if (existing) {
             applyPlayerRow(existing, p);
           } else {
-            list.appendChild(renderPlayer(p));
+            const li = renderPlayer(p);
+            list.appendChild(li);
+            // Smooth scroll the new row into view so the orga sees the addition.
+            requestAnimationFrame(() => {
+              li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
           }
           updateCountsAndStart();
         },
@@ -363,15 +388,21 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 
       window.addEventListener('beforeunload', () => unsubscribeFromRound(channel));
 
-      // Remove placeholder (creator only). The DOM optimistically removes the
-      // row; if the API rejects (e.g. someone just claimed it), the realtime
-      // INSERT/UPDATE will restore it via the channel above.
+      // Remove a player (creator only, lobby only). Placeholders are removed
+      // silently; claimed players need a confirmation (the orga is evicting a
+      // teammate who already joined). The realtime DELETE event removes the
+      // row from the DOM — the optimistic flow is intentionally minimal.
       if (isCreator) {
         list.addEventListener('click', async (e) => {
           const target = e.target as HTMLElement;
           const btn = target.closest<HTMLButtonElement>('[data-remove-player]');
           if (!btn) return;
           const id = btn.dataset.removePlayer!;
+          const isClaimed = btn.dataset.claimed === '1';
+          const name = btn.dataset.playerName || 'ce joueur';
+          if (isClaimed && !window.confirm(`Retirer ${name} de la partie ?`)) {
+            return;
+          }
           btn.disabled = true;
           try {
             const res = await fetch(`/api/rounds/${shortCode}/players?id=${encodeURIComponent(id)}`, {
@@ -383,7 +414,6 @@ const clubColor = r.club.primary_color ?? '#1B4332';
               alert(text || 'Suppression impossible');
               btn.disabled = false;
             }
-            // On success the realtime DELETE event will remove the row.
           } catch (err) {
             console.error(err);
             btn.disabled = false;
@@ -648,7 +678,24 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       color: #DC2626;
       border-color: #FECACA;
     }
+    /* Removing a claimed player is a heavier action — slightly more visible
+       so the orga thinks twice (a confirm() also intercepts the click). */
+    .player-remove.is-claimed { color: #B91C1C; }
+    .player-remove.is-claimed:hover { background: #FEE2E2; border-color: #FCA5A5; }
     .player-remove:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Defensive fallback: if a future change to renderPlayer() ever leaves an
+       <li> without `.player-item`, at least keep it boxed and aligned so it
+       looks like part of the list rather than a stray text node. */
+    .players-list > li:not(.player-item) {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
 
     .add-player-form {
       display: flex;

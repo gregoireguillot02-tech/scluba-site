@@ -99,14 +99,15 @@ export const DELETE: APIRoute = async ({ request, params, cookies }) => {
   if (!idParsed.success) return new Response('id manquant', { status: 400 });
 
   const sb = serviceClient();
-  // Only allow deletion of placeholder rows (not yet claimed) and never the
-  // creator, to avoid evicting a real player by mistake.
+  // The orga can remove any non-creator row while the round is in lobby
+  // (requireCreator already enforced status === 'lobby'). Claimed players
+  // get evicted along with their scores via the FK `on delete cascade`.
+  // The creator can't remove themselves: blocked by .eq('is_creator', false).
   const { data: deleted, error } = await sb
     .from('round_players')
     .delete()
     .eq('id', idParsed.data)
     .eq('round_id', guard.roundId)
-    .is('claimed_at', null)
     .eq('is_creator', false)
     .select('id')
     .maybeSingle();
@@ -115,7 +116,7 @@ export const DELETE: APIRoute = async ({ request, params, cookies }) => {
     return new Response('Suppression impossible', { status: 500 });
   }
   if (!deleted) {
-    return new Response('Ce joueur ne peut plus être retiré (déjà connecté ou inconnu)', { status: 409 });
+    return new Response('Ce joueur ne peut pas être retiré.', { status: 409 });
   }
   return new Response(null, { status: 204 });
 };
