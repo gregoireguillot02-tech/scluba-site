@@ -67,15 +67,66 @@ function fmtTime(iso: string | null): string {
   return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 
-const me = allPlayers[0];
-const myMap = me ? scoresFor(me.id) : {};
-const myTotal = me ? totalFor(me.id) : { strokes: 0, played: 0, diff: 0 };
+// Identify the visitor via cookie (same as play.astro). Without this, every
+// player downloading their recap was getting the creator's scorecard.
+const playerId = Astro.cookies.get(`scluba_player_${shortCode}`)?.value ?? null;
+const me = allPlayers.find((p) => p.id === playerId) ?? null;
+if (!me) {
+  // Stranger / stale cookie / shared link: bounce to the claim page so they
+  // pick a name before seeing a recap that isn't theirs.
+  return Astro.redirect(`/r/${shortCode}/join`, 302);
+}
+
+const myMap = scoresFor(me.id);
+const myTotal = totalFor(me.id);
 
 const front9 = r.club.course_data.holes.filter((h) => h.number <= 9);
 const back9 = r.club.course_data.holes.filter((h) => h.number > 9);
 
+// Multiplayer mini-leaderboard. Solo rounds skip this entirely.
+const isMultiplayer = allPlayers.length > 1;
+const holesCount = r.club.course_data.holes.length;
+
+interface LeaderboardRow {
+  player_id: string;
+  display_name: string;
+  is_me: boolean;
+  strokes: number;
+  diff: number;
+  played: number;
+  finished: boolean;
+}
+
+const leaderboard: LeaderboardRow[] = allPlayers.map((p) => {
+  const t = totalFor(p.id);
+  return {
+    player_id: p.id,
+    display_name: p.display_name,
+    is_me: p.id === me.id,
+    strokes: t.strokes,
+    diff: t.diff,
+    played: t.played,
+    finished: t.played === holesCount,
+  };
+});
+
+// Finished players first (sorted by diff asc), unfinished/NC last (sorted by name).
+leaderboard.sort((a, b) => {
+  if (a.finished !== b.finished) return a.finished ? -1 : 1;
+  if (a.finished && b.finished) return a.diff - b.diff;
+  return a.display_name.localeCompare(b.display_name);
+});
+
+// Pre-compute the visible rank (1, 2, 3, …) for finished players only.
+let rankCounter = 0;
+const rankByIndex = leaderboard.map((row) => {
+  if (!row.finished) return null;
+  rankCounter += 1;
+  return rankCounter;
+});
+
 const sharePayload = JSON.stringify({
-  player: me ?? null,
+  player: me,
   club: r.club,
   startedAt: r.started_at ?? r.created_at,
   holes: r.club.course_data.holes,
@@ -83,6 +134,15 @@ const sharePayload = JSON.stringify({
   totalDiff: myTotal.diff,
   totalStrokes: myTotal.strokes,
   holesPlayed: myTotal.played,
+  leaderboard: isMultiplayer
+    ? leaderboard.map((row) => ({
+        display_name: row.display_name,
+        is_me: row.is_me,
+        strokes: row.strokes,
+        diff: row.diff,
+        finished: row.finished,
+      }))
+    : undefined,
 });
 
 const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
@@ -189,6 +249,34 @@ const clubColor = r.club.primary_color ?? '#1B4332';
         <li><span class="legend-swatch cell-bogey"></span>Bogey</li>
       </ul>
     </section>
+
+    {isMultiplayer && (
+      <section class="leaderboard" aria-labelledby="lb-title">
+        <header class="leaderboard-head">
+          <p class="leaderboard-eyebrow">Multijoueur</p>
+          <h2 id="lb-title" class="leaderboard-title">Classement</h2>
+        </header>
+        <ol class="leaderboard-list">
+          {leaderboard.map((row, i) => {
+            const rank = rankByIndex[i];
+            return (
+              <li class={`lb-row${row.is_me ? ' is-me' : ''}${!row.finished ? ' is-nc' : ''}`}>
+                <span class="lb-rank">{rank !== null ? rank : '—'}</span>
+                <span class="lb-name">{row.display_name}</span>
+                {row.finished ? (
+                  <span class="lb-score">
+                    <strong>{row.strokes}</strong>
+                    <em>({row.diff === 0 ? '±0' : row.diff > 0 ? `+${row.diff}` : row.diff})</em>
+                  </span>
+                ) : (
+                  <span class="lb-score lb-nc">NC</span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+    )}
 
     <section class="player-row">
       <div>
@@ -483,6 +571,98 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       width: 14px; height: 14px;
       border-radius: var(--radius-sm);
       border: 1px solid var(--line);
+    }
+
+    /* === Mini leaderboard (multiplayer only) === */
+    .leaderboard {
+      margin: var(--space-5) 0;
+      padding: var(--space-4);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+    .leaderboard-head {
+      text-align: center;
+      margin-bottom: var(--space-3);
+    }
+    .leaderboard-eyebrow {
+      margin: 0 0 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .leaderboard-title {
+      margin: 0;
+      font-family: var(--font-serif);
+      font-size: var(--text-md);
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: 0.02em;
+    }
+    .leaderboard-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .lb-row {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border-left: 3px solid transparent;
+    }
+    .lb-row.is-me {
+      background: rgba(212, 165, 116, 0.10);
+      border-left-color: var(--accent);
+    }
+    .lb-rank {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--clubColor);
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+    }
+    .lb-row.is-nc .lb-rank { color: var(--muted-soft); }
+    .lb-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lb-row.is-nc .lb-name { color: var(--muted); }
+    .lb-score {
+      font-variant-numeric: tabular-nums;
+      font-size: 14px;
+      color: var(--ink);
+    }
+    .lb-score strong {
+      font-family: var(--font-serif);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--clubColor);
+      margin-right: 4px;
+    }
+    .lb-score em {
+      font-style: normal;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .lb-score.lb-nc {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-transform: uppercase;
     }
 
     /* === Player row + share === */
