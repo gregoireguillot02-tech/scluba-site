@@ -44,6 +44,10 @@ export interface RoundPlayer {
   user_id: string | null;
   is_creator: boolean;
   joined_at: string;
+  // null = placeholder name typed by organizer, waiting for a device to claim it.
+  // not-null = a player device has scanned the QR and selected this name (or
+  // self-added). Start gating requires every row to have claimed_at set.
+  claimed_at: string | null;
 }
 
 export interface Score {

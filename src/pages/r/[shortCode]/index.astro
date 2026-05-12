@@ -5,6 +5,7 @@ import '../../../styles/tokens.css';
 import '../../../styles/global.css';
 import { serviceClient } from '../../../lib/supabase';
 import { qrSvg } from '../../../lib/qr';
+import Honeypot from '../../../components/Honeypot.astro';
 import type { Club, Round, RoundPlayer } from '../../../lib/clubs-types';
 
 const { shortCode: rawShortCode } = Astro.params;
@@ -40,8 +41,21 @@ const { data: players } = await sb
   .order('joined_at');
 const initialPlayers = (players ?? []) as RoundPlayer[];
 
-const inviteUrl = `${Astro.url.origin}/r/${shortCode}`;
-const inviteQr = await qrSvg(inviteUrl, { errorCorrectionLevel: 'M' });
+// Anyone who isn't yet a player in this round (no cookie, or stale cookie)
+// gets sent to the join/claim page so they pick a name instead of staring
+// at someone else's lobby.
+const me = initialPlayers.find((p) => p.id === playerId) ?? null;
+const pendingCount = initialPlayers.filter((p) => p.claimed_at === null).length;
+if (!me) {
+  return Astro.redirect(`/r/${shortCode}/join`, 302);
+}
+
+const isCreator = me?.is_creator === true;
+const canStart = isCreator && pendingCount === 0;
+
+// QR encodes the join URL so scanners land directly on the claim flow.
+const joinUrl = `${Astro.url.origin}/r/${shortCode}/join`;
+const inviteQr = await qrSvg(joinUrl, { errorCorrectionLevel: 'M' });
 
 const clubColor = r.club.primary_color ?? '#1B4332';
 ---
@@ -57,7 +71,14 @@ const clubColor = r.club.primary_color ?? '#1B4332';
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 </head>
 <body>
-  <main class="lobby" data-lobby data-round-id={r.id} data-short-code={shortCode} data-player-id={playerId ?? ''}>
+  <main
+    class="lobby"
+    data-lobby
+    data-round-id={r.id}
+    data-short-code={shortCode}
+    data-player-id={playerId ?? ''}
+    data-is-creator={isCreator ? '1' : '0'}
+  >
     <header class="masthead">
       {r.club.photo_url ? (
         <figure class="photo-card">
@@ -83,17 +104,17 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     <section class="code-block" aria-labelledby="code-title">
       <p id="code-title" class="code-eyebrow">Code de la partie</p>
       <p class="code-value" aria-label={`Code ${shortCode}`}>{shortCode}</p>
-      <p class="code-hint">Partage ce code à tes copains pour qu'ils rejoignent.</p>
+      <p class="code-hint">Partage ce code ou montre le QR à tes copains.</p>
 
       <div class="invite-actions">
-        <button type="button" class="btn-secondary" data-copy-link data-url={inviteUrl}>
+        <button type="button" class="btn-secondary" data-copy-link data-url={joinUrl}>
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
           </svg>
           <span>Copier le lien</span>
         </button>
-        <button type="button" class="btn-secondary" data-toggle-qr>
+        <button type="button" class="btn-secondary" data-toggle-qr aria-expanded="false">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
             <rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 18h3"/>
@@ -104,33 +125,85 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 
       <div class="qr-popover" data-qr-popover hidden>
         <div class="qr-frame" set:html={inviteQr}></div>
-        <p class="qr-popover-hint">Scanne avec un autre tel pour rejoindre.</p>
+        <p class="qr-popover-hint">Scanne avec l'appareil photo de ton tel pour rejoindre.</p>
       </div>
     </section>
 
     <section class="players-block" aria-labelledby="players-title">
       <header class="players-head">
         <h2 id="players-title" class="players-title">Joueurs</h2>
-        <span class="players-count" data-players-count>{initialPlayers.length}</span>
+        <span class="players-count" data-players-count>
+          <span data-claimed-count>{initialPlayers.length - pendingCount}</span>
+          <span class="players-count-sep">/</span>
+          <span data-total-count>{initialPlayers.length}</span>
+        </span>
       </header>
       <ul class="players-list" data-players-list>
-        {initialPlayers.map((p) => (
-          <li
-            class={`player-item${p.id === playerId ? ' is-me' : ''}${p.is_creator ? ' is-creator' : ''}`}
-            data-player-id={p.id}
-          >
-            <span class="player-dot" aria-hidden="true"></span>
-            <span class="player-name">{p.display_name}</span>
-            {p.id === playerId && <span class="player-tag">vous</span>}
-            {p.is_creator && p.id !== playerId && <span class="player-tag muted">créateur</span>}
-          </li>
-        ))}
+        {initialPlayers.map((p) => {
+          const isPlaceholder = p.claimed_at === null;
+          const isMe = p.id === playerId;
+          return (
+            <li
+              class={[
+                'player-item',
+                isPlaceholder && 'is-pending',
+                isMe && 'is-me',
+                p.is_creator && 'is-creator',
+              ].filter(Boolean).join(' ')}
+              data-player-id={p.id}
+              data-is-creator={p.is_creator ? '1' : '0'}
+              data-is-claimed={isPlaceholder ? '0' : '1'}
+            >
+              <span class="player-dot" aria-hidden="true"></span>
+              <span class="player-name">{p.display_name}</span>
+              {isMe && <span class="player-tag">vous</span>}
+              {!isMe && p.is_creator && <span class="player-tag muted">créateur</span>}
+              {isPlaceholder && <span class="player-tag pending">en attente</span>}
+              {isCreator && isPlaceholder && (
+                <button type="button" class="player-remove" data-remove-player={p.id} aria-label={`Retirer ${p.display_name}`}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                  </svg>
+                </button>
+              )}
+            </li>
+          );
+        })}
       </ul>
+
+      {isCreator && (
+        <form class="add-player-form" data-add-player-form novalidate>
+          <Honeypot />
+          <input
+            type="text"
+            name="display_name"
+            class="add-player-input"
+            placeholder="Ajouter un joueur oublié"
+            maxlength="40"
+            autocomplete="off"
+            data-add-player-input
+          />
+          <button type="submit" class="add-player-btn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 5v14"/><path d="M5 12h14"/>
+            </svg>
+            <span>Ajouter</span>
+          </button>
+        </form>
+      )}
+      <p class="add-player-error" data-add-player-error hidden></p>
     </section>
 
-    <form method="POST" action={`/api/rounds/${shortCode}/start`} class="start-form">
-      <button type="submit" class="start-btn">
-        C'est parti
+    <form method="POST" action={`/api/rounds/${shortCode}/start`} class="start-form" data-start-form>
+      <button
+        type="submit"
+        class="start-btn"
+        data-start-btn
+        disabled={!canStart}
+      >
+        <span data-start-label>
+          {canStart ? "C'est parti" : pendingCount > 0 ? `En attente de ${pendingCount} joueur${pendingCount > 1 ? 's' : ''}…` : "Seul l'organisateur peut démarrer"}
+        </span>
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
         </svg>
@@ -165,32 +238,77 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       user_id: string | null;
       is_creator: boolean;
       joined_at: string;
+      claimed_at: string | null;
     };
 
     const root = document.querySelector<HTMLElement>('[data-lobby]');
     if (root) {
       const roundId = root.dataset.roundId!;
       const shortCode = root.dataset.shortCode!;
-      const list = root.querySelector<HTMLElement>('[data-players-list]')!;
-      const countEl = root.querySelector<HTMLElement>('[data-players-count]')!;
-
-      // Player ID is rendered server-side into a data-attribute so the
-      // identifying cookie can stay httpOnly (cookie itself is no longer
-      // readable from JS).
       const me = root.dataset.playerId || undefined;
+      const isCreator = root.dataset.isCreator === '1';
+      const list = root.querySelector<HTMLElement>('[data-players-list]')!;
+      const claimedCountEl = root.querySelector<HTMLElement>('[data-claimed-count]')!;
+      const totalCountEl = root.querySelector<HTMLElement>('[data-total-count]')!;
+      const startBtn = root.querySelector<HTMLButtonElement>('[data-start-btn]')!;
+      const startLabel = root.querySelector<HTMLElement>('[data-start-label]')!;
 
-      function renderPlayer(p: RoundPlayerRow) {
+      function updateCountsAndStart() {
+        const items = list.querySelectorAll<HTMLElement>('[data-player-id]');
+        const total = items.length;
+        let claimed = 0;
+        for (const it of items) {
+          if (it.dataset.isClaimed === '1') claimed += 1;
+        }
+        const pending = total - claimed;
+        claimedCountEl.textContent = String(claimed);
+        totalCountEl.textContent = String(total);
+
+        if (!isCreator) {
+          startBtn.disabled = true;
+          startLabel.textContent = "Seul l'organisateur peut démarrer";
+        } else if (pending > 0) {
+          startBtn.disabled = true;
+          startLabel.textContent = `En attente de ${pending} joueur${pending > 1 ? 's' : ''}…`;
+        } else {
+          startBtn.disabled = false;
+          startLabel.textContent = "C'est parti";
+        }
+      }
+
+      function renderPlayer(p: RoundPlayerRow): HTMLLIElement {
         const li = document.createElement('li');
-        li.className = 'player-item';
-        if (p.id === me) li.classList.add('is-me');
-        if (p.is_creator) li.classList.add('is-creator');
         li.dataset.playerId = p.id;
-        li.innerHTML = `
-          <span class="player-dot" aria-hidden="true"></span>
-          <span class="player-name"></span>
-        `;
-        li.querySelector('.player-name')!.textContent = p.display_name;
-        if (p.id === me) {
+        li.dataset.isCreator = p.is_creator ? '1' : '0';
+        li.dataset.isClaimed = p.claimed_at ? '1' : '0';
+        applyPlayerRow(li, p);
+        return li;
+      }
+
+      function applyPlayerRow(li: HTMLElement, p: RoundPlayerRow) {
+        const isPlaceholder = !p.claimed_at;
+        const isMe = p.id === me;
+        const classes = ['player-item'];
+        if (isPlaceholder) classes.push('is-pending');
+        if (isMe) classes.push('is-me');
+        if (p.is_creator) classes.push('is-creator');
+        li.className = classes.join(' ');
+        li.dataset.isClaimed = isPlaceholder ? '0' : '1';
+
+        // Clear then re-render the row content (cheaper than diffing in JS).
+        li.innerHTML = '';
+
+        const dot = document.createElement('span');
+        dot.className = 'player-dot';
+        dot.setAttribute('aria-hidden', 'true');
+        li.appendChild(dot);
+
+        const name = document.createElement('span');
+        name.className = 'player-name';
+        name.textContent = p.display_name;
+        li.appendChild(name);
+
+        if (isMe) {
           const tag = document.createElement('span');
           tag.className = 'player-tag';
           tag.textContent = 'vous';
@@ -201,7 +319,25 @@ const clubColor = r.club.primary_color ?? '#1B4332';
           tag.textContent = 'créateur';
           li.appendChild(tag);
         }
-        return li;
+        if (isPlaceholder) {
+          const tag = document.createElement('span');
+          tag.className = 'player-tag pending';
+          tag.textContent = 'en attente';
+          li.appendChild(tag);
+        }
+        if (isCreator && isPlaceholder) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'player-remove';
+          btn.dataset.removePlayer = p.id;
+          btn.setAttribute('aria-label', `Retirer ${p.display_name}`);
+          btn.innerHTML = `
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+            </svg>
+          `;
+          li.appendChild(btn);
+        }
       }
 
       const channel = subscribeToRound(roundId, {
@@ -217,19 +353,94 @@ const clubColor = r.club.primary_color ?? '#1B4332';
           if (event === 'DELETE') {
             existing?.remove();
           } else if (existing) {
-            existing.querySelector<HTMLElement>('.player-name')!.textContent = p.display_name;
+            applyPlayerRow(existing, p);
           } else {
             list.appendChild(renderPlayer(p));
           }
-          const items = list.querySelectorAll('[data-player-id]');
-          countEl.textContent = String(items.length);
+          updateCountsAndStart();
         },
       });
 
       window.addEventListener('beforeunload', () => unsubscribeFromRound(channel));
+
+      // Remove placeholder (creator only). The DOM optimistically removes the
+      // row; if the API rejects (e.g. someone just claimed it), the realtime
+      // INSERT/UPDATE will restore it via the channel above.
+      if (isCreator) {
+        list.addEventListener('click', async (e) => {
+          const target = e.target as HTMLElement;
+          const btn = target.closest<HTMLButtonElement>('[data-remove-player]');
+          if (!btn) return;
+          const id = btn.dataset.removePlayer!;
+          btn.disabled = true;
+          try {
+            const res = await fetch(`/api/rounds/${shortCode}/players?id=${encodeURIComponent(id)}`, {
+              method: 'DELETE',
+              credentials: 'same-origin',
+            });
+            if (!res.ok) {
+              const text = await res.text();
+              alert(text || 'Suppression impossible');
+              btn.disabled = false;
+            }
+            // On success the realtime DELETE event will remove the row.
+          } catch (err) {
+            console.error(err);
+            btn.disabled = false;
+          }
+        });
+      }
+
+      // Organizer: add a missing teammate from the lobby.
+      const addForm = root.querySelector<HTMLFormElement>('[data-add-player-form]');
+      const addInput = root.querySelector<HTMLInputElement>('[data-add-player-input]');
+      const addErr = root.querySelector<HTMLElement>('[data-add-player-error]');
+      if (addForm && addInput && addErr) {
+        addForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = addInput.value.trim();
+          if (!name) return;
+          addErr.hidden = true;
+          const fd = new FormData();
+          fd.append('display_name', name);
+          try {
+            const res = await fetch(`/api/rounds/${shortCode}/players`, {
+              method: 'POST',
+              body: fd,
+              credentials: 'same-origin',
+            });
+            if (!res.ok) {
+              const text = await res.text();
+              addErr.textContent = text || 'Ajout impossible';
+              addErr.hidden = false;
+              return;
+            }
+            addInput.value = '';
+            // The realtime INSERT will render the row.
+          } catch (err) {
+            console.error(err);
+            addErr.textContent = 'Réseau indisponible';
+            addErr.hidden = false;
+          }
+        });
+      }
+
+      // Surface server-side gating errors on the start form (e.g. someone
+      // hasn't joined yet but the user clicked anyway via a stale cache).
+      const startForm = root.querySelector<HTMLFormElement>('[data-start-form]');
+      if (startForm) {
+        startForm.addEventListener('submit', async (e) => {
+          if (!isCreator) {
+            e.preventDefault();
+            return;
+          }
+          // Let it submit; on error, the API returns a non-redirect response
+          // that the browser will display. (Standard form submit semantics.)
+        });
+      }
     }
 
-    // Copy invite link
+    // Copy invite link.
     document.querySelector<HTMLElement>('[data-copy-link]')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget as HTMLElement;
       const url = btn.dataset.url!;
@@ -244,10 +455,14 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       }
     });
 
-    // Toggle QR popover
-    document.querySelector<HTMLElement>('[data-toggle-qr]')?.addEventListener('click', () => {
+    // Toggle QR popover.
+    document.querySelector<HTMLElement>('[data-toggle-qr]')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget as HTMLElement;
       const popover = document.querySelector<HTMLElement>('[data-qr-popover]');
-      if (popover) popover.hidden = !popover.hidden;
+      if (popover) {
+        popover.hidden = !popover.hidden;
+        btn.setAttribute('aria-expanded', String(!popover.hidden));
+      }
     });
   </script>
 
@@ -268,7 +483,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       padding: 0 var(--space-4);
     }
 
-    /* Masthead — same as /c/[slug] */
+    /* Masthead — same as /[slug] */
     .masthead { text-align: center; padding: var(--space-5) 0; }
     .photo-card {
       position: relative;
@@ -362,6 +577,9 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     .players-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-3); }
     .players-title { font-family: var(--font-serif); font-size: var(--text-md); font-weight: 700; color: var(--ink); margin: 0; letter-spacing: 0.02em; }
     .players-count {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 2px;
       font-family: var(--font-serif); font-size: var(--text-sm); font-weight: 700; color: var(--clubColor);
       background: rgba(212, 165, 116, 0.15);
       border: 1px solid var(--accent);
@@ -369,6 +587,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       border-radius: 999px;
       font-variant-numeric: tabular-nums;
     }
+    .players-count-sep { opacity: 0.5; }
     .players-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
     .player-item {
       display: flex; align-items: center; gap: 10px;
@@ -379,11 +598,24 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       animation: player-in 240ms ease-out;
     }
     .player-item.is-me { border-color: var(--accent); background: rgba(212, 165, 116, 0.06); }
+    .player-item.is-pending {
+      background: rgba(15, 42, 30, 0.02);
+      border-style: dashed;
+    }
+    .player-item.is-pending .player-name {
+      color: var(--muted);
+      font-style: italic;
+    }
+    .player-item.is-pending .player-dot {
+      background: transparent;
+      border: 1.5px dashed var(--muted-soft);
+    }
     .player-dot {
-      width: 8px; height: 8px;
+      width: 10px; height: 10px;
       border-radius: 50%;
       background: var(--clubColor);
       flex-shrink: 0;
+      box-sizing: border-box;
     }
     .player-name { flex: 1; font-size: 15px; font-weight: 500; color: var(--ink); }
     .player-tag {
@@ -397,6 +629,70 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       border-radius: 4px;
     }
     .player-tag.muted { color: var(--muted); background: var(--line-soft); }
+    .player-tag.pending { color: #92400E; background: #FEF3C7; }
+    .player-remove {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .player-remove:hover {
+      background: #FEF2F2;
+      color: #DC2626;
+      border-color: #FECACA;
+    }
+    .player-remove:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .add-player-form {
+      display: flex;
+      gap: 6px;
+      margin-top: var(--space-3);
+    }
+    .add-player-input {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 14px;
+      font-family: var(--font-sans);
+      color: var(--ink);
+    }
+    .add-player-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.15);
+    }
+    .add-player-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px;
+      border-radius: 10px;
+      border: 1px solid var(--clubColor);
+      background: transparent;
+      color: var(--clubColor);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .add-player-btn:hover {
+      background: var(--clubColor);
+      color: #FAF7EE;
+    }
+    .add-player-error {
+      margin: var(--space-2) 0 0;
+      font-size: 12px;
+      color: #DC2626;
+    }
 
     @keyframes player-in {
       from { opacity: 0; transform: translateY(-4px); }
@@ -418,11 +714,16 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       font-size: 16px; font-weight: 600; letter-spacing: 0.01em;
       cursor: pointer;
       box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 20px rgba(27, 67, 50, 0.18);
-      transition: filter 0.15s, transform 0.12s;
+      transition: filter 0.15s, transform 0.12s, opacity 0.15s;
     }
-    .start-btn:hover { filter: brightness(0.92); }
-    .start-btn:active { transform: translateY(1px); }
+    .start-btn:hover:not(:disabled) { filter: brightness(0.92); }
+    .start-btn:active:not(:disabled) { transform: translateY(1px); }
     .start-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .start-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
 
     .auth-hint {
       margin: var(--space-4) 0 0;
@@ -432,7 +733,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     }
     .auth-hint a { color: var(--clubColor); text-decoration: underline; text-underline-offset: 2px; }
 
-    /* Colophon — copied from /c/[slug] for consistency */
+    /* Colophon — copied from /[slug] for consistency */
     .colophon {
       display: flex; align-items: center; justify-content: center; gap: var(--space-3);
       padding: var(--space-6) 0 var(--space-7);

@@ -150,7 +150,16 @@ function fmtTime(iso: string | null): string {
       <p class="cta-eyebrow">Scorecard digitale</p>
       <h2 id="cta-title" class="cta-title">Démarrer une partie</h2>
 
-      <form method="POST" action="/api/rounds" class="start-form">
+      <div class="mode-tabs" role="tablist" aria-label="Type de partie">
+        <button type="button" class="mode-tab is-active" role="tab" aria-selected="true" data-mode-tab="solo" data-mode-target="solo">
+          <span>En solo</span>
+        </button>
+        <button type="button" class="mode-tab" role="tab" aria-selected="false" data-mode-tab="group" data-mode-target="group">
+          <span>À plusieurs</span>
+        </button>
+      </div>
+
+      <form method="POST" action="/api/rounds" class="start-form" data-mode-panel="solo">
         <input type="hidden" name="slug" value={c.slug} />
         <Honeypot />
         <label class="start-label">
@@ -166,6 +175,53 @@ function fmtTime(iso: string | null): string {
             autofocus
           />
         </label>
+        <button type="submit" class="start-btn">
+          Créer la partie
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+          </svg>
+        </button>
+      </form>
+
+      <form method="POST" action="/api/rounds" class="start-form" data-mode-panel="group" hidden data-group-form>
+        <input type="hidden" name="slug" value={c.slug} />
+        <Honeypot />
+        <label class="start-label">
+          <span>Ton prénom</span>
+          <input
+            class="start-input"
+            type="text"
+            name="display_name"
+            placeholder="Antoine"
+            maxlength="40"
+            required
+            autocomplete="given-name"
+          />
+        </label>
+        <fieldset class="party-fieldset">
+          <legend>Avec qui tu joues&nbsp;?</legend>
+          <p class="party-hint">Tape les prénoms des autres joueurs. Chacun scannera ensuite le QR pour rejoindre.</p>
+          <div class="party-list" data-party-list>
+            <label class="party-row">
+              <span class="party-row-label">Joueur 2</span>
+              <input
+                class="start-input party-input"
+                type="text"
+                name="additional_players"
+                placeholder="Marc"
+                maxlength="40"
+                autocomplete="off"
+                required
+              />
+            </label>
+          </div>
+          <button type="button" class="party-add-btn" data-party-add>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 5v14"/><path d="M5 12h14"/>
+            </svg>
+            <span>Ajouter un joueur</span>
+          </button>
+        </fieldset>
         <button type="submit" class="start-btn">
           Créer la partie
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -312,6 +368,92 @@ function fmtTime(iso: string | null): string {
             return;
           }
           form.action = `/api/rounds/${encodeURIComponent(code)}/join`;
+        });
+      }
+
+      // Mode tabs: Solo vs Groupe. Show/hide the matching form and mark the
+      // hidden form's inputs as disabled so they don't submit by mistake.
+      const tabs = document.querySelectorAll<HTMLButtonElement>('[data-mode-tab]');
+      const panels = document.querySelectorAll<HTMLElement>('[data-mode-panel]');
+      function setMode(mode: string) {
+        for (const t of tabs) {
+          const on = t.dataset.modeTab === mode;
+          t.classList.toggle('is-active', on);
+          t.setAttribute('aria-selected', String(on));
+        }
+        for (const p of panels) {
+          const on = p.dataset.modePanel === mode;
+          p.hidden = !on;
+          // Disable inputs in the hidden panel so HTML5 'required' on the
+          // off-screen form doesn't block submission of the visible one.
+          p.querySelectorAll<HTMLInputElement>('input, button').forEach((el) => {
+            if (el.type === 'hidden') return;
+            el.disabled = !on;
+          });
+        }
+      }
+      for (const t of tabs) {
+        t.addEventListener('click', () => setMode(t.dataset.modeTab!));
+      }
+      // Initialise: ensure off-panel inputs are disabled from the start.
+      setMode('solo');
+
+      // "Ajouter un joueur" — append another input to the party list, cap at
+      // 7 extras (matches the server schema additionalPlayersSchema.max(7)).
+      const partyList = document.querySelector<HTMLElement>('[data-party-list]');
+      const partyAddBtn = document.querySelector<HTMLButtonElement>('[data-party-add]');
+      const MAX_EXTRAS = 7;
+      function renumberPartyRows() {
+        if (!partyList) return;
+        const rows = partyList.querySelectorAll<HTMLElement>('.party-row');
+        rows.forEach((row, i) => {
+          const label = row.querySelector<HTMLElement>('.party-row-label');
+          if (label) label.textContent = `Joueur ${i + 2}`;
+        });
+      }
+      if (partyList && partyAddBtn) {
+        partyAddBtn.addEventListener('click', () => {
+          const current = partyList.querySelectorAll('.party-row').length;
+          if (current >= MAX_EXTRAS) return;
+          const row = document.createElement('label');
+          row.className = 'party-row';
+          row.innerHTML = `
+            <span class="party-row-label"></span>
+            <span class="party-row-fields">
+              <input
+                class="start-input party-input"
+                type="text"
+                name="additional_players"
+                placeholder="Prénom"
+                maxlength="40"
+                autocomplete="off"
+                required
+              />
+              <button type="button" class="party-remove-btn" aria-label="Retirer ce joueur">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                </svg>
+              </button>
+            </span>
+          `;
+          partyList.appendChild(row);
+          renumberPartyRows();
+          row.querySelector<HTMLInputElement>('input')?.focus();
+          if (partyList.querySelectorAll('.party-row').length >= MAX_EXTRAS) {
+            partyAddBtn.disabled = true;
+          }
+        });
+        partyList.addEventListener('click', (e) => {
+          const target = e.target as HTMLElement;
+          const btn = target.closest<HTMLButtonElement>('.party-remove-btn');
+          if (!btn) return;
+          const row = btn.closest('.party-row');
+          if (!row) return;
+          // Always keep at least one extra-player row in group mode.
+          if (partyList.querySelectorAll('.party-row').length <= 1) return;
+          row.remove();
+          renumberPartyRows();
+          partyAddBtn.disabled = false;
         });
       }
     </script>
@@ -495,6 +637,122 @@ function fmtTime(iso: string | null): string {
       color: var(--clubColor);
       line-height: 1.15;
       letter-spacing: -0.005em;
+    }
+
+    /* === Mode tabs: solo vs group === */
+    .mode-tabs {
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      margin: 0 auto var(--space-5);
+      background: var(--line-soft);
+      border-radius: 999px;
+    }
+    .mode-tab {
+      appearance: none;
+      border: none;
+      background: transparent;
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+    .mode-tab.is-active {
+      background: #fff;
+      color: var(--clubColor);
+      box-shadow: 0 1px 2px rgba(15, 42, 30, 0.10);
+    }
+    .mode-tab:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* === Group party fieldset === */
+    .party-fieldset {
+      border: none;
+      padding: 0;
+      margin: 0;
+      text-align: left;
+    }
+    .party-fieldset legend {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .party-hint {
+      margin: 0 0 var(--space-3);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .party-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+    .party-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .party-row-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+    .party-row-fields {
+      display: flex;
+      gap: 6px;
+      align-items: stretch;
+    }
+    .party-row-fields .party-input { flex: 1; }
+    .party-remove-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      flex-shrink: 0;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .party-remove-btn:hover {
+      border-color: #DC2626;
+      color: #DC2626;
+      background: #FEF2F2;
+    }
+    .party-add-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      align-self: flex-start;
+      margin-top: var(--space-3);
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px dashed var(--accent);
+      background: transparent;
+      color: var(--clubColor);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .party-add-btn:hover { background: rgba(212, 165, 116, 0.10); }
+    .party-add-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
     }
 
     .start-form {

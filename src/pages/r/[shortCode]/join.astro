@@ -1,0 +1,444 @@
+---
+export const prerender = false;
+
+import '../../../styles/tokens.css';
+import '../../../styles/global.css';
+import { serviceClient } from '../../../lib/supabase';
+import Honeypot from '../../../components/Honeypot.astro';
+import type { Club, Round, RoundPlayer } from '../../../lib/clubs-types';
+
+const { shortCode: rawShortCode } = Astro.params;
+const shortCode = (rawShortCode ?? '').toUpperCase();
+const sb = serviceClient();
+
+const { data: round } = await sb
+  .from('rounds')
+  .select('*, club:clubs(*)')
+  .eq('short_code', shortCode)
+  .maybeSingle();
+
+if (!round) {
+  return Astro.rewrite('/404');
+}
+
+const r = round as Round & { club: Club };
+
+if (r.status === 'finished') {
+  return Astro.redirect(`/r/${shortCode}/recap`, 302);
+}
+
+// If this device already has a player cookie for this round, skip the claim
+// page — they're already in.
+const cookieKey = `scluba_player_${shortCode}`;
+const playerId = Astro.cookies.get(cookieKey)?.value ?? null;
+if (playerId) {
+  const { data: existing } = await sb
+    .from('round_players')
+    .select('id')
+    .eq('id', playerId)
+    .eq('round_id', r.id)
+    .maybeSingle();
+  if (existing) {
+    return Astro.redirect(r.status === 'playing' ? `/r/${shortCode}/play` : `/r/${shortCode}`, 302);
+  }
+}
+
+const { data: players } = await sb
+  .from('round_players')
+  .select('*')
+  .eq('round_id', r.id)
+  .order('joined_at');
+const allPlayers = (players ?? []) as RoundPlayer[];
+const placeholders = allPlayers.filter((p) => p.claimed_at === null);
+const creator = allPlayers.find((p) => p.is_creator) ?? null;
+
+const clubColor = r.club.primary_color ?? '#1B4332';
+---
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Rejoindre — {r.club.name} · Scluba</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#FAF7EE" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+  <main class="join-page" data-join-page data-short-code={shortCode} data-round-id={r.id} data-status={r.status}>
+    <header class="masthead">
+      {r.club.photo_url ? (
+        <figure class="photo-card">
+          <img src={r.club.photo_url} alt="" loading="eager" decoding="async" />
+          <span class="photo-card-fade" aria-hidden="true"></span>
+        </figure>
+      ) : (
+        <div class="photo-card photo-card-placeholder" aria-hidden="true"></div>
+      )}
+      {r.club.logo_url && (
+        <div class="logo-frame">
+          <img src={r.club.logo_url} alt="" />
+        </div>
+      )}
+      <p class="masthead-eyebrow">Rejoindre</p>
+      <div class="title-rail" aria-hidden="true"></div>
+      <h1 class="masthead-title">{r.club.name}</h1>
+      <div class="title-rail" aria-hidden="true"></div>
+      {creator && (
+        <p class="join-context">
+          Partie lancée par <strong>{creator.display_name}</strong>
+        </p>
+      )}
+    </header>
+
+    {placeholders.length > 0 ? (
+      <section class="claim-block" aria-labelledby="claim-title">
+        <h2 id="claim-title" class="claim-title">C'est qui toi&nbsp;?</h2>
+        <p class="claim-hint">Choisis ton prénom dans la liste.</p>
+        <ul class="claim-list" data-claim-list>
+          {placeholders.map((p) => (
+            <li>
+              <form method="POST" action={`/api/rounds/${shortCode}/claim`} class="claim-form">
+                <input type="hidden" name="placeholder_id" value={p.id} />
+                <Honeypot />
+                <button type="submit" class="claim-btn">
+                  <span class="claim-name">{p.display_name}</span>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                  </svg>
+                </button>
+              </form>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ) : (
+      <section class="claim-block">
+        <h2 class="claim-title">Bienvenue&nbsp;!</h2>
+        <p class="claim-hint">Indique ton prénom pour rejoindre la partie.</p>
+      </section>
+    )}
+
+    <details class="selfadd-block" open={placeholders.length === 0}>
+      <summary class="selfadd-summary">
+        <span>{placeholders.length > 0 ? "Mon prénom n'est pas dans la liste" : "Ajouter mon prénom"}</span>
+        <svg class="selfadd-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </summary>
+      <form method="POST" action={`/api/rounds/${shortCode}/claim`} class="selfadd-form">
+        <Honeypot />
+        <label class="selfadd-label">
+          <span>Ton prénom</span>
+          <input
+            class="selfadd-input"
+            type="text"
+            name="display_name"
+            placeholder="Antoine"
+            maxlength="40"
+            required
+            autocomplete="given-name"
+          />
+        </label>
+        <button type="submit" class="selfadd-btn">
+          Rejoindre la partie
+        </button>
+      </form>
+    </details>
+
+    <footer class="colophon">
+      <span class="colophon-rail" aria-hidden="true"></span>
+      <span class="colophon-text">
+        <span>carte by</span>
+        <strong>SCLUBA</strong>
+        <span class="colophon-dot" aria-hidden="true"></span>
+      </span>
+      <span class="colophon-rail" aria-hidden="true"></span>
+    </footer>
+  </main>
+
+  <script>
+    import { subscribeToRound, unsubscribeFromRound } from '../../../lib/realtime';
+
+    type RoundPlayerRow = {
+      id: string;
+      round_id: string;
+      display_name: string;
+      is_creator: boolean;
+      claimed_at: string | null;
+    };
+
+    const root = document.querySelector<HTMLElement>('[data-join-page]');
+    if (root) {
+      const roundId = root.dataset.roundId!;
+      const shortCode = root.dataset.shortCode!;
+      const list = document.querySelector<HTMLElement>('[data-claim-list]');
+
+      function removeClaimItem(placeholderId: string) {
+        if (!list) return;
+        const input = list.querySelector<HTMLInputElement>(`input[name="placeholder_id"][value="${placeholderId}"]`);
+        const li = input?.closest('li');
+        li?.remove();
+      }
+
+      function appendClaimItem(p: RoundPlayerRow) {
+        if (!list) return;
+        // Don't duplicate if already in the DOM (e.g. server-rendered).
+        const existing = list.querySelector<HTMLInputElement>(`input[name="placeholder_id"][value="${p.id}"]`);
+        if (existing) return;
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <form method="POST" action="/api/rounds/${shortCode}/claim" class="claim-form">
+            <input type="hidden" name="placeholder_id" value="${p.id}" />
+            <input type="text" name="hp_email" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;" aria-hidden="true" />
+            <button type="submit" class="claim-btn">
+              <span class="claim-name"></span>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+              </svg>
+            </button>
+          </form>
+        `;
+        li.querySelector('.claim-name')!.textContent = p.display_name;
+        list.appendChild(li);
+      }
+
+      const channel = subscribeToRound(roundId, {
+        onRoundUpdate: (row) => {
+          const status = (row as { status?: string }).status;
+          if (status === 'playing') {
+            // The round started — go straight to the play page; the API will
+            // 403 if this device has no cookie and bounce them, that's fine.
+            window.location.href = `/r/${shortCode}/play`;
+          } else if (status === 'finished') {
+            window.location.href = `/r/${shortCode}/recap`;
+          }
+        },
+        onPlayersChange: (event, row) => {
+          const p = row as RoundPlayerRow;
+          if (p.round_id !== roundId) return;
+          if (event === 'DELETE') {
+            removeClaimItem(p.id);
+          } else if (event === 'UPDATE') {
+            // A placeholder got claimed by someone else — drop it from the list.
+            if (p.claimed_at) removeClaimItem(p.id);
+          } else if (event === 'INSERT') {
+            // Organizer added a new teammate name after we opened the page.
+            if (!p.claimed_at && !p.is_creator) appendClaimItem(p);
+          }
+        },
+      });
+
+      window.addEventListener('beforeunload', () => unsubscribeFromRound(channel));
+    }
+  </script>
+
+  <style define:vars={{ clubColor }}>
+    body {
+      background: #FAF7EE;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      margin: 0;
+    }
+    .join-page {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 0 var(--space-4);
+    }
+
+    /* Masthead (slimmer than the lobby) */
+    .masthead { text-align: center; padding: var(--space-5) 0 var(--space-3); }
+    .photo-card {
+      position: relative;
+      margin: 0;
+      aspect-ratio: 16 / 9;
+      max-height: 160px;
+      width: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #E8E0CB;
+      box-shadow: 0 1px 2px rgba(15, 42, 30, 0.06), 0 12px 32px rgba(27, 67, 50, 0.10);
+    }
+    .photo-card img { width: 100%; height: 100%; object-fit: cover; object-position: center 55%; display: block; }
+    .photo-card-fade { position: absolute; inset: auto 0 0 0; height: 40%; background: linear-gradient(180deg, transparent, rgba(15, 42, 30, 0.35)); pointer-events: none; }
+    .photo-card-placeholder { background: linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%); }
+    .logo-frame {
+      position: relative; z-index: 2;
+      margin: -32px auto 0;
+      width: 68px; height: 68px;
+      border-radius: 50%;
+      background: #FAF7EE; border: 2px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 20px rgba(27, 67, 50, 0.10);
+      padding: 8px;
+    }
+    .logo-frame img { width: 100%; height: 100%; object-fit: contain; }
+    .masthead-eyebrow { margin: var(--space-3) 0 var(--space-2); font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); }
+    .title-rail { width: 64px; height: 1px; margin: 0 auto; background: var(--accent); opacity: 0.55; }
+    .masthead-title { margin: var(--space-2) auto var(--space-3); font-family: var(--font-serif); font-weight: 700; font-size: clamp(1.4rem, 5vw, 1.85rem); line-height: 1.15; letter-spacing: 0.04em; text-transform: uppercase; color: var(--clubColor); max-width: 22ch; }
+    .join-context {
+      margin: var(--space-2) 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .join-context strong { color: var(--clubColor); font-weight: 600; }
+
+    /* Claim list */
+    .claim-block {
+      padding: var(--space-5) 0 var(--space-3);
+      text-align: center;
+    }
+    .claim-title {
+      margin: 0 0 var(--space-2);
+      font-family: var(--font-serif);
+      font-size: clamp(1.4rem, 5vw, 1.7rem);
+      color: var(--clubColor);
+    }
+    .claim-hint {
+      margin: 0 0 var(--space-4);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .claim-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      max-width: 360px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .claim-form { margin: 0; }
+    .claim-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font-size: 17px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.12s;
+    }
+    .claim-btn:hover {
+      border-color: var(--clubColor);
+      background: var(--bg-soft);
+    }
+    .claim-btn:active { transform: translateY(1px); }
+    .claim-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .claim-name {
+      font-family: var(--font-sans);
+      text-align: left;
+      flex: 1;
+    }
+    .claim-btn svg {
+      color: var(--clubColor);
+      flex-shrink: 0;
+    }
+
+    /* Self-add (collapsible) */
+    .selfadd-block {
+      max-width: 360px;
+      margin: var(--space-4) auto 0;
+    }
+    .selfadd-summary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: transparent;
+      cursor: pointer;
+      list-style: none;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--clubColor);
+      transition: background 0.15s;
+    }
+    .selfadd-summary::-webkit-details-marker { display: none; }
+    .selfadd-summary:hover { background: rgba(212, 165, 116, 0.10); }
+    .selfadd-block[open] .selfadd-chevron { transform: rotate(180deg); }
+    .selfadd-chevron { transition: transform 0.2s ease-out; }
+
+    .selfadd-form {
+      margin-top: var(--space-3);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+    .selfadd-label { display: block; text-align: left; }
+    .selfadd-label > span {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .selfadd-input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 16px;
+      font-family: var(--font-sans);
+      color: var(--ink);
+    }
+    .selfadd-input:focus {
+      outline: none;
+      border-color: var(--primary-soft);
+      box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15);
+    }
+    .selfadd-btn {
+      min-height: 48px;
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 1px solid var(--clubColor);
+      background: transparent;
+      color: var(--clubColor);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .selfadd-btn:hover {
+      background: var(--clubColor);
+      color: #FAF7EE;
+    }
+
+    /* Colophon */
+    .colophon {
+      display: flex; align-items: center; justify-content: center; gap: var(--space-3);
+      padding: var(--space-6) 0 var(--space-7);
+      max-width: 320px;
+      margin: 0 auto;
+    }
+    .colophon-rail { flex: 1; height: 1px; background: var(--accent); opacity: 0.45; }
+    .colophon-text {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-serif); font-size: 12px; letter-spacing: 0.04em;
+      color: var(--muted); white-space: nowrap;
+    }
+    .colophon-text strong { font-family: var(--font-serif); font-weight: 700; color: var(--clubColor); letter-spacing: 0.08em; }
+    .colophon-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 1px; }
+  </style>
+</body>
+</html>

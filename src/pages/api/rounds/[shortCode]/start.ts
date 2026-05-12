@@ -25,15 +25,39 @@ export const POST: APIRoute = async ({ params, redirect, cookies }) => {
     .maybeSingle();
   if (!round) return new Response('Round not found', { status: 404 });
 
+  // Only the creator can press "C'est parti" — others see the button but a
+  // direct POST from a non-creator must be refused.
   const { data: player } = await sb
     .from('round_players')
-    .select('id')
+    .select('id, is_creator')
     .eq('id', playerId)
     .eq('round_id', round.id)
     .maybeSingle();
   if (!player) return new Response('Not a player in this round', { status: 403 });
+  if (!player.is_creator) {
+    return new Response('Seul l\'organisateur peut démarrer la partie.', { status: 403 });
+  }
 
   if (round.status === 'lobby') {
+    // Gating: no placeholder name may remain unclaimed. The organizer can
+    // remove a no-show via DELETE /api/rounds/[code]/players?id=... if
+    // someone never scans.
+    const { count: pendingCount, error: cntErr } = await sb
+      .from('round_players')
+      .select('id', { count: 'exact', head: true })
+      .eq('round_id', round.id)
+      .is('claimed_at', null);
+    if (cntErr) {
+      console.error('[api/rounds/start] count failed', cntErr);
+      return new Response('Vérification impossible', { status: 500 });
+    }
+    if ((pendingCount ?? 0) > 0) {
+      return new Response(
+        `Encore ${pendingCount} joueur(s) à rejoindre. Patiente ou retire les absents.`,
+        { status: 409 },
+      );
+    }
+
     await sb
       .from('rounds')
       .update({ status: 'playing', started_at: new Date().toISOString() })
