@@ -5,7 +5,7 @@ import '../../../styles/tokens.css';
 import '../../../styles/global.css';
 import { serviceClient } from '../../../lib/supabase';
 import type { Club, Round, RoundPlayer, Score } from '../../../lib/clubs-types';
-import { totalPar } from '../../../lib/clubs-types';
+import { resolveRoundHoles, resolveRoundSections } from '../../../lib/clubs-types';
 
 const { shortCode } = Astro.params;
 const sb = serviceClient();
@@ -46,7 +46,11 @@ const { data: allScoresRaw } = playerIds.length
   : { data: [] as Score[] };
 const allScores = (allScoresRaw ?? []) as Score[];
 
-const par = totalPar(r.club.course_data);
+// Resolve which holes this round actually plays based on its format_id.
+// Falls back to course_data.holes when no format is set (legacy rounds).
+const roundHoles = resolveRoundHoles(r, r.club);
+const roundSections = resolveRoundSections(r, r.club);
+const par = roundHoles.reduce((sum, h) => sum + h.par, 0);
 const clubColor = r.club.primary_color ?? '#1B4332';
 
 const scoresByHole: Record<number, number> = {};
@@ -55,7 +59,7 @@ for (const s of allScores) {
 }
 
 const holesByNumber: Record<number, number> = {};
-for (const h of r.club.course_data.holes) holesByNumber[h.number] = h.par;
+for (const h of roundHoles) holesByNumber[h.number] = h.par;
 ---
 
 <!doctype html>
@@ -107,15 +111,15 @@ for (const h of r.club.course_data.holes) holesByNumber[h.number] = h.par;
       class="hole-card"
       data-play-root
       data-short-code={r.short_code}
-      data-course={JSON.stringify(r.club.course_data)}
+      data-course={JSON.stringify({ holes: roundHoles })}
       data-scores={JSON.stringify(scoresByHole)}
       data-par={String(par)}
-      data-hole-count={String(r.club.course_data.holes.length)}
+      data-hole-count={String(roundHoles.length)}
     >
       <div class="hole-meta">
         <span class="hole-meta-label">Trou</span>
         <span class="hole-meta-count">
-          <span data-hole-number>1</span> / {r.club.course_data.holes.length}
+          <span data-hole-number>1</span> / {roundHoles.length}
         </span>
       </div>
 
@@ -150,23 +154,19 @@ for (const h of r.club.course_data.holes) holesByNumber[h.number] = h.par;
         <span data-total-strokes>—</span>
       </header>
       <div class="grid">
-        <div class="grid-row">
-          <span class="grid-label">F9</span>
-          {Array.from({ length: 9 }).map((_, i) => (
-            <span class="grid-cell" data-cell-hole={i + 1}>—</span>
-          ))}
-        </div>
-        <div class="grid-row">
-          <span class="grid-label">B9</span>
-          {Array.from({ length: 9 }).map((_, i) => (
-            <span class="grid-cell" data-cell-hole={i + 10}>—</span>
-          ))}
-        </div>
+        {roundSections.map((section) => (
+          <div class="grid-row">
+            <span class="grid-label">{section.loop_name}</span>
+            {section.holes.map((h) => (
+              <span class="grid-cell" data-cell-hole={h.number}>—</span>
+            ))}
+          </div>
+        ))}
       </div>
     </section>
 
-    <form method="POST" action={`/api/rounds/${r.short_code}/finish`} class="finish-form" data-finish-form hidden>
-      <button type="submit" class="finish-btn">Terminer la partie</button>
+    <form method="POST" action={`/api/rounds/${r.short_code}/finish`} class="finish-form" data-finish-form>
+      <button type="submit" class="finish-btn" data-finish-btn>Terminer maintenant</button>
     </form>
 
     <p class="play-status" data-status></p>
@@ -364,13 +364,35 @@ for (const h of r.club.course_data.holes) holesByNumber[h.number] = h.par;
         totalStrokesEl.textContent = played === 0 ? '—' : `${total} (par ${totalPar})`;
 
         const allDone = played === holeCount;
-        finishForm.hidden = !allDone;
+        // Finish form is always visible: lets the player stop early (the
+        // remaining holes show as NC on the recap). Label adapts so a partial
+        // submission gets a confirmation prompt.
+        finishForm.hidden = false;
+        const finishBtn = finishForm.querySelector<HTMLButtonElement>('[data-finish-btn]');
+        if (finishBtn) {
+          finishBtn.textContent = allDone ? 'Terminer la partie' : 'Terminer maintenant';
+          finishBtn.dataset.allDone = allDone ? '1' : '0';
+          finishBtn.dataset.played = String(played);
+          finishBtn.dataset.holeCount = String(holeCount);
+        }
 
         const prevBtn = root!.querySelector<HTMLButtonElement>('[data-nav="prev"]')!;
         const nextBtn = root!.querySelector<HTMLButtonElement>('[data-nav="next"]')!;
         prevBtn.disabled = currentHole === 1;
         nextBtn.disabled = currentHole === holeCount;
       }
+
+      // Intercept the early-finish submission to confirm. Skip the confirm
+      // when the card is already complete (regular flow).
+      finishForm.addEventListener('submit', (e) => {
+        const btn = finishForm.querySelector<HTMLButtonElement>('[data-finish-btn]');
+        if (!btn || btn.dataset.allDone === '1') return;
+        const remaining = Number(btn.dataset.holeCount) - Number(btn.dataset.played);
+        const msg = remaining > 0
+          ? `Tu n'as saisi que ${btn.dataset.played} trou(s) sur ${btn.dataset.holeCount}. Les trous restants seront marqués NC. Terminer ?`
+          : 'Terminer la partie maintenant ?';
+        if (!window.confirm(msg)) e.preventDefault();
+      });
 
       async function saveScore(strokes: number) {
         scores[currentHole] = strokes;
@@ -681,18 +703,23 @@ for (const h of r.club.course_data.holes) holesByNumber[h.number] = h.par;
     }
     .grid-row {
       display: grid;
-      grid-template-columns: 28px repeat(9, 1fr);
+      /* Loop names ("La Plaine"…) need more room than the legacy F9/B9 chip. */
+      grid-template-columns: minmax(56px, auto) repeat(9, 1fr);
       gap: 4px;
     }
     .grid-label {
       background: var(--clubColor);
       color: var(--bg);
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 2px 8px;
       border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
       justify-content: center;
+      white-space: nowrap;
+      text-transform: uppercase;
     }
     .grid-cell {
       aspect-ratio: 1;

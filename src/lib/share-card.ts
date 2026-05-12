@@ -74,6 +74,21 @@ export async function uploadSharePhoto(roundId: string, blob: Blob): Promise<str
   return url;
 }
 
+export interface LeaderboardEntry {
+  display_name: string;
+  is_me: boolean;
+  strokes: number;
+  diff: number;
+  finished: boolean;
+}
+
+export interface ComposeSection {
+  // Label drawn on the chip at the left of the row (e.g. "La Plaine",
+  // "Le Vallon", or legacy "F9"/"B9").
+  label: string;
+  holes: CourseHole[];
+}
+
 export interface ComposeInput {
   photoUrl: string | null;
   player: RoundPlayer | null;
@@ -84,6 +99,18 @@ export interface ComposeInput {
   totalDiff: number;
   totalStrokes: number;
   holesPlayed: number;
+  // Optional scorecard sections, one per loop. If omitted, the canvas falls
+  // back to the legacy F9/B9 split (holes ≤ 9, holes > 9).
+  sections?: ComposeSection[];
+  // Optional override for the par sum displayed in the subtitle. Used when a
+  // 9-hole format would otherwise show "Par 72" computed from the full club.
+  totalPar?: number;
+  // Optional label rendered above the big score number on the PNG (e.g.
+  // "LE BOIS", "PLAINE + VALLON"). Falls back to "{n} TROUS" when absent.
+  formatLabel?: string;
+  // Optional mini-leaderboard rendered between the scorecard grid and the
+  // legend. Only set for multiplayer rounds; solo rounds omit it.
+  leaderboard?: LeaderboardEntry[];
 }
 
 function fmtDateShort(iso: string | null): string {
@@ -187,24 +214,32 @@ function drawScoreRow(
 ) {
   const PAD_X = 48;
   const W = 1080;
-  const N_TOTAL = 10; // 1 label + 9 cells
   const GAP = 8;
-  const CELL_W = (W - 2 * PAD_X - (N_TOTAL - 1) * GAP) / N_TOTAL; // ~92
+  // Loop names like "La Plaine" / "Le Vallon" need a wider chip than the
+  // legacy two-char "F9"/"B9". The 9 score cells share the remaining width
+  // evenly. The font auto-shrinks if the label is unusually long.
+  const LABEL_W = 180;
+  const CELL_W = (W - 2 * PAD_X - LABEL_W - 9 * GAP) / 9;
   const CELL_H = 72;
 
-  // Label F9/B9 — fond clubColor
-  drawRoundedRect(ctx, PAD_X, startY, CELL_W, CELL_H, 8);
+  // Label chip — fond clubColor, font auto-fit
+  drawRoundedRect(ctx, PAD_X, startY, LABEL_W, CELL_H, 8);
   ctx.fillStyle = clubColor;
   ctx.fill();
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `800 24px ${FONT_STACK}`;
+  let labelFont = 24;
+  ctx.font = `800 ${labelFont}px ${FONT_STACK}`;
+  while (ctx.measureText(label).width > LABEL_W - 16 && labelFont > 12) {
+    labelFont -= 1;
+    ctx.font = `800 ${labelFont}px ${FONT_STACK}`;
+  }
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, PAD_X + CELL_W / 2, startY + CELL_H / 2);
+  ctx.fillText(label, PAD_X + LABEL_W / 2, startY + CELL_H / 2);
 
   // 9 score cells
   for (let i = 0; i < holes.length; i++) {
-    const x = PAD_X + (i + 1) * (CELL_W + GAP);
+    const x = PAD_X + LABEL_W + GAP + i * (CELL_W + GAP);
     const s = scoresByHole[holes[i].number];
     const played = s !== undefined;
     const type = played ? scoreType(s, holes[i].par) : null;
@@ -308,11 +343,147 @@ function drawLogoOverlay(
   ctx.drawImage(logoImg, cx - lw / 2, cy - lh / 2, lw, lh);
 }
 
+// Helper: draw a single leaderboard row inside a given rect (x, y, w, h).
+// rank == 0 means "no rank" (NC). Extracted from drawLeaderboard so it can
+// be reused for both 1-column and 2-column layouts.
+function drawLeaderboardRow(
+  ctx: CanvasRenderingContext2D,
+  row: LeaderboardEntry,
+  rank: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  primaryColor: string,
+  compact: boolean,
+) {
+  const displayRank = row.finished ? String(rank) : '—';
+
+  // Row background highlight + accent stripe for the current player.
+  if (row.is_me) {
+    ctx.fillStyle = 'rgba(212, 165, 116, 0.18)';
+    drawRoundedRect(ctx, x, y, w, h, 10);
+    ctx.fill();
+    ctx.fillStyle = '#D4A574';
+    ctx.fillRect(x, y, 4, h);
+  }
+
+  const rankSize = compact ? 22 : 28;
+  const nameSize = compact ? 22 : 26;
+  const strokesSize = compact ? 26 : 30;
+  const diffSize = compact ? 19 : 22;
+  const ncSize = compact ? 16 : 18;
+  const rankPadX = compact ? 14 : 22;
+  const namePadX = compact ? 52 : 70;
+  const scorePadR = compact ? 12 : 16;
+  const scoreReserve = compact ? 140 : 220;
+
+  // Rank (left)
+  ctx.fillStyle = row.finished ? primaryColor : '#A8A294';
+  ctx.font = `800 ${rankSize}px ${FONT_STACK}`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(displayRank, x + rankPadX, y + h / 2);
+
+  // Name with ellipsis when it overflows the available width.
+  ctx.fillStyle = row.finished ? '#1B4332' : '#6B7280';
+  ctx.font = `600 ${nameSize}px ${FONT_STACK}`;
+  const nameX = x + namePadX;
+  const nameMax = w - namePadX - scoreReserve;
+  let name = row.display_name;
+  if (ctx.measureText(name).width > nameMax) {
+    while (name.length > 1 && ctx.measureText(name + '…').width > nameMax) {
+      name = name.slice(0, -1);
+    }
+    name += '…';
+  }
+  ctx.fillText(name, nameX, y + h / 2);
+
+  // Score on the right. Finished → strokes + diff. Unfinished → "NC".
+  ctx.textAlign = 'right';
+  const scoreX = x + w - scorePadR;
+  if (row.finished) {
+    const diffStr = row.diff === 0
+      ? '±0'
+      : row.diff > 0 ? `+${row.diff}` : `${row.diff}`;
+    ctx.fillStyle = '#6B7280';
+    ctx.font = `500 ${diffSize}px ${FONT_STACK}`;
+    ctx.fillText(`(${diffStr})`, scoreX, y + h / 2);
+    const diffW = ctx.measureText(`(${diffStr})`).width;
+    ctx.fillStyle = primaryColor;
+    ctx.font = `800 ${strokesSize}px ${FONT_STACK}`;
+    ctx.fillText(String(row.strokes), scoreX - diffW - 8, y + h / 2);
+  } else {
+    ctx.fillStyle = '#A8A294';
+    ctx.font = `700 ${ncSize}px ${FONT_STACK}`;
+    drawTrackedText(ctx, 'NC', scoreX - 14, y + h / 2, 2);
+  }
+}
+
+// Multiplayer mini-leaderboard. 1 column for ≤3 players, 2 columns for 4+
+// to keep the share-card compact. Returns the total height drawn.
+function drawLeaderboard(
+  ctx: CanvasRenderingContext2D,
+  entries: LeaderboardEntry[],
+  startY: number,
+  W: number,
+  primaryColor: string,
+): number {
+  const PAD_X = 72;
+  const ROW_GAP = 6;
+  const COL_GAP = 12;
+  const TITLE_H = 50;
+  const twoCols = entries.length >= 4;
+  const ROW_H = twoCols ? 48 : 56;
+
+  // Title "CLASSEMENT" — accent uppercase tracked, same vibe as the score eyebrow.
+  ctx.fillStyle = '#D4A574';
+  ctx.font = `700 22px ${FONT_STACK}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  drawTrackedText(ctx, 'CLASSEMENT', W / 2, startY, 3);
+
+  const innerW = W - 2 * PAD_X;
+  const rowsPerCol = twoCols ? Math.ceil(entries.length / 2) : entries.length;
+  const cellW = twoCols ? (innerW - COL_GAP) / 2 : innerW;
+
+  // Assign visible rank to finished players first, then iterate in order.
+  let rank = 0;
+  const ranks = entries.map((row) => (row.finished ? ++rank : 0));
+
+  // Row-major fill: rank 1 top-left, rank 2 top-right, rank 3 mid-left…
+  // Matches the recap HTML and keeps the podium feeling at the top.
+  for (let i = 0; i < entries.length; i++) {
+    const colIdx = twoCols ? i % 2 : 0;
+    const rowIdx = twoCols ? Math.floor(i / 2) : i;
+    const x = PAD_X + colIdx * (cellW + COL_GAP);
+    const y = startY + TITLE_H + rowIdx * (ROW_H + ROW_GAP);
+    drawLeaderboardRow(ctx, entries[i], ranks[i], x, y, cellW, ROW_H, primaryColor, twoCols);
+  }
+
+  return TITLE_H + rowsPerCol * (ROW_H + ROW_GAP);
+}
+
 export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   const W = 1080;
-  const H = 1350;
   const PAD_X = 48;
   const PHOTO_H = 675; // 50%
+
+  // The canvas grows vertically when a leaderboard is included so the new
+  // section fits between the F9/B9 grid and the legend. Width stays 1080 to
+  // keep WhatsApp / Instagram Story compatibility. 4+ players → 2 columns,
+  // halving the row count and the added height.
+  const lbEntries = input.leaderboard ?? [];
+  const lbTwoCols = lbEntries.length >= 4;
+  const lbRowsPerCol = lbTwoCols ? Math.ceil(lbEntries.length / 2) : lbEntries.length;
+  const LB_TITLE_H = 50;
+  const LB_ROW_H = lbTwoCols ? 48 : 56;
+  const LB_ROW_GAP = 6;
+  const LB_BOTTOM_PAD = 24;
+  const leaderboardHeight = lbEntries.length > 0
+    ? LB_TITLE_H + lbRowsPerCol * (LB_ROW_H + LB_ROW_GAP) + LB_BOTTOM_PAD
+    : 0;
+  const H = 1350 + leaderboardHeight;
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -382,7 +553,10 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   ctx.fillStyle = '#D4A574'; // --accent
   ctx.font = `700 22px ${FONT_STACK}`;
   ctx.textBaseline = 'middle';
-  drawTrackedText(ctx, `SCORE · ${input.holes.length} TROUS`, W / 2, SCORE_Y, 3);
+  const eyebrow = input.formatLabel
+    ? `SCORE · ${input.formatLabel.toUpperCase()}`
+    : `SCORE · ${input.holes.length} TROUS`;
+  drawTrackedText(ctx, eyebrow, W / 2, SCORE_Y, 3);
 
   // Gros total en clubColor — taille adaptée selon nombre de chiffres
   const totalStr = String(input.totalStrokes);
@@ -394,7 +568,7 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   ctx.fillText(totalStr, W / 2, SCORE_Y + 90);
 
   // Subtitle "±0 · Par 72"
-  const totalPar2 = input.holes.reduce((s, h) => s + h.par, 0);
+  const totalParValue = input.totalPar ?? input.holes.reduce((s, h) => s + h.par, 0);
   const diffStr = input.totalDiff === 0
     ? '±0'
     : input.totalDiff > 0
@@ -402,24 +576,39 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
       : `${input.totalDiff}`;
   ctx.fillStyle = '#6B7280';
   ctx.font = `500 28px ${FONT_STACK}`;
-  ctx.fillText(`${diffStr} · Par ${totalPar2}`, W / 2, SCORE_Y + 170);
+  ctx.fillText(`${diffStr} · Par ${totalParValue}`, W / 2, SCORE_Y + 170);
 
-  // Section 4 : Grid F9 + B9 (chaque row = label clubColor + 9 cells)
-  const front9 = input.holes.filter((h) => h.number <= 9);
-  const back9 = input.holes.filter((h) => h.number > 9);
+  // Section 4 : Scorecard rows. If the caller provided named sections (loops),
+  // draw one row per section with its loop name. Otherwise fall back to the
+  // legacy F9/B9 split for backward compat with older payloads.
+  const sections: ComposeSection[] = input.sections && input.sections.length > 0
+    ? input.sections
+    : (() => {
+        const front9 = input.holes.filter((h) => h.number <= 9);
+        const back9 = input.holes.filter((h) => h.number > 9);
+        const out: ComposeSection[] = [];
+        if (front9.length) out.push({ label: 'F9', holes: front9 });
+        if (back9.length) out.push({ label: 'B9', holes: back9 });
+        return out;
+      })();
+
   const ROW_GAP = 14;
   let gridY = SCORE_Y + 220; // ~1005
-  if (front9.length) {
-    const h = drawScoreRow(ctx, front9, input.scoresByHole, 'F9', gridY, primaryColor);
+  for (const section of sections) {
+    const h = drawScoreRow(ctx, section.holes, input.scoresByHole, section.label, gridY, primaryColor);
     gridY += h + ROW_GAP;
   }
-  if (back9.length) {
-    drawScoreRow(ctx, back9, input.scoresByHole, 'B9', gridY, primaryColor);
-    gridY += 72 + ROW_GAP;
+
+  // Section 4b : Mini-leaderboard (multiplayer only). The grid sat on the
+  // 1350 layout, so we resume from gridY and let drawLeaderboard advance it.
+  let postGridY = gridY + 24;
+  if (lbEntries.length > 0) {
+    postGridY += drawLeaderboard(ctx, lbEntries, postGridY, W, primaryColor);
+    postGridY += LB_BOTTOM_PAD;
   }
 
   // Section 5 : Legend (Birdie · Par · Bogey)
-  drawLegend(ctx, gridY + 24, W, primaryColor);
+  drawLegend(ctx, postGridY, W, primaryColor);
 
   // Section 6 : Footer SCLUBA — discret
   ctx.fillStyle = '#A8A294';
