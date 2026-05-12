@@ -256,7 +256,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
           <p class="leaderboard-eyebrow">Multijoueur</p>
           <h2 id="lb-title" class="leaderboard-title">Classement</h2>
         </header>
-        <ol class="leaderboard-list">
+        <ol class={`leaderboard-list${leaderboard.length >= 4 ? ' cols-2' : ''}`}>
           {leaderboard.map((row, i) => {
             const rank = rankByIndex[i];
             return (
@@ -609,6 +609,15 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       flex-direction: column;
       gap: 4px;
     }
+    /* 4+ players → 2 columns, row-major (rank 1|2 on top, 3|4 below). Keeps
+       the card compact on the recap page without sacrificing legibility. */
+    .leaderboard-list.cols-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 8px;
+      row-gap: 4px;
+      grid-auto-flow: row;
+    }
     .lb-row {
       display: grid;
       grid-template-columns: 28px 1fr auto;
@@ -617,7 +626,17 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       padding: 8px 10px;
       border-radius: 8px;
       border-left: 3px solid transparent;
+      min-width: 0;
     }
+    .leaderboard-list.cols-2 .lb-row {
+      gap: 8px;
+      padding: 6px 8px;
+    }
+    .leaderboard-list.cols-2 .lb-rank { font-size: 14px; }
+    .leaderboard-list.cols-2 .lb-name { font-size: 13px; }
+    .leaderboard-list.cols-2 .lb-score { font-size: 12px; }
+    .leaderboard-list.cols-2 .lb-score strong { font-size: 15px; margin-right: 2px; }
+    .leaderboard-list.cols-2 .lb-score em { font-size: 11px; }
     .lb-row.is-me {
       background: rgba(212, 165, 116, 0.10);
       border-left-color: var(--accent);
