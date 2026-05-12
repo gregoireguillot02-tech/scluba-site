@@ -389,9 +389,10 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       window.addEventListener('beforeunload', () => unsubscribeFromRound(channel));
 
       // Remove a player (creator only, lobby only). Placeholders are removed
-      // silently; claimed players need a confirmation (the orga is evicting a
-      // teammate who already joined). The realtime DELETE event removes the
-      // row from the DOM — the optimistic flow is intentionally minimal.
+      // silently; claimed players need a confirmation. We remove the row from
+      // the DOM optimistically on a 2xx response because the realtime DELETE
+      // event has been observed to miss this case (likely a publication or
+      // RLS filter quirk), and waiting on it leaves stale rows on screen.
       if (isCreator) {
         list.addEventListener('click', async (e) => {
           const target = e.target as HTMLElement;
@@ -409,7 +410,11 @@ const clubColor = r.club.primary_color ?? '#1B4332';
               method: 'DELETE',
               credentials: 'same-origin',
             });
-            if (!res.ok) {
+            if (res.ok) {
+              const li = btn.closest<HTMLElement>('[data-player-id]');
+              li?.remove();
+              updateCountsAndStart();
+            } else {
               const text = await res.text();
               alert(text || 'Suppression impossible');
               btn.disabled = false;
