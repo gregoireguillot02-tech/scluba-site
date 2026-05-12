@@ -34,3 +34,8 @@ supabase/.temp/
 
 # Cloudflare Workers local dev state
 .wrangler/
+
+# Cloudflare Workers local secrets (wrangler dev reads .dev.vars at runtime).
+# NEVER commit — use `wrangler secret put <NAME>` for prod.
+.dev.vars
+.dev.vars.*
