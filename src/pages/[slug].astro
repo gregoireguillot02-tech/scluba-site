@@ -762,6 +762,9 @@ function fmtTime(iso: string | null): string {
       max-width: 340px;
       margin: 0 auto;
     }
+    /* Astro renders both panels server-side; the `hidden` attribute must beat
+       `display: flex` so the inactive form is invisible before JS runs. */
+    .start-form[hidden] { display: none; }
     .start-label {
       display: block;
       text-align: left;
