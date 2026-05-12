@@ -623,37 +623,41 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       font-variant-numeric: tabular-nums;
     }
     .players-count-sep { opacity: 0.5; }
+    /* Player rows are inserted dynamically via JS (after a scan/add/remove)
+       so the styles below must NOT be Astro-scoped — a fresh document.createElement
+       node has no data-astro-cid-* attribute and would otherwise miss every
+       scoped selector. Wrapping each selector in :global() exempts the rule
+       from scoping while keeping the rest of the component's CSS local. */
     .players-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-    .player-item {
+    :global(.player-item) {
       display: flex; align-items: center; gap: 10px;
       padding: 12px 14px;
       background: #fff;
       border: 1px solid var(--line);
       border-radius: 12px;
-      animation: player-in 240ms ease-out;
     }
-    .player-item.is-me { border-color: var(--accent); background: rgba(212, 165, 116, 0.06); }
-    .player-item.is-pending {
+    :global(.player-item.is-me) { border-color: var(--accent); background: rgba(212, 165, 116, 0.06); }
+    :global(.player-item.is-pending) {
       background: rgba(15, 42, 30, 0.02);
       border-style: dashed;
     }
-    .player-item.is-pending .player-name {
+    :global(.player-item.is-pending .player-name) {
       color: var(--muted);
       font-style: italic;
     }
-    .player-item.is-pending .player-dot {
+    :global(.player-item.is-pending .player-dot) {
       background: transparent;
       border: 1.5px dashed var(--muted-soft);
     }
-    .player-dot {
+    :global(.player-dot) {
       width: 10px; height: 10px;
       border-radius: 50%;
       background: var(--clubColor);
       flex-shrink: 0;
       box-sizing: border-box;
     }
-    .player-name { flex: 1; font-size: 15px; font-weight: 500; color: var(--ink); }
-    .player-tag {
+    :global(.player-name) { flex: 1; font-size: 15px; font-weight: 500; color: var(--ink); }
+    :global(.player-tag) {
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 0.16em;
@@ -663,9 +667,9 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       padding: 3px 8px;
       border-radius: 4px;
     }
-    .player-tag.muted { color: var(--muted); background: var(--line-soft); }
-    .player-tag.pending { color: #92400E; background: #FEF3C7; }
-    .player-remove {
+    :global(.player-tag.muted) { color: var(--muted); background: var(--line-soft); }
+    :global(.player-tag.pending) { color: #92400E; background: #FEF3C7; }
+    :global(.player-remove) {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -678,21 +682,21 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       cursor: pointer;
       transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
-    .player-remove:hover {
+    :global(.player-remove:hover) {
       background: #FEF2F2;
       color: #DC2626;
       border-color: #FECACA;
     }
     /* Removing a claimed player is a heavier action — slightly more visible
        so the orga thinks twice (a confirm() also intercepts the click). */
-    .player-remove.is-claimed { color: #B91C1C; }
-    .player-remove.is-claimed:hover { background: #FEE2E2; border-color: #FCA5A5; }
-    .player-remove:disabled { opacity: 0.5; cursor: not-allowed; }
+    :global(.player-remove.is-claimed) { color: #B91C1C; }
+    :global(.player-remove.is-claimed:hover) { background: #FEE2E2; border-color: #FCA5A5; }
+    :global(.player-remove:disabled) { opacity: 0.5; cursor: not-allowed; }
 
     /* Defensive fallback: if a future change to renderPlayer() ever leaves an
        <li> without `.player-item`, at least keep it boxed and aligned so it
        looks like part of the list rather than a stray text node. */
-    .players-list > li:not(.player-item) {
+    .players-list > :global(li:not(.player-item)) {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -746,13 +750,9 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       color: #DC2626;
     }
 
-    @keyframes player-in {
-      from { opacity: 0; transform: translateY(-4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .player-item { animation: none; }
-    }
+    /* (Player-row fade-in animation was removed because the .player-item
+       rule is now global and Astro's @keyframes can't be mixed with :global().
+       Visual fade-in is non-essential; the row simply pops in.) */
 
     /* Start CTA */
     .start-form { padding: 0 var(--space-2); }
