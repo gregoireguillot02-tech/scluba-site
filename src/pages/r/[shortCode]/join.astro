@@ -52,6 +52,12 @@ const allPlayers = (players ?? []) as RoundPlayer[];
 const placeholders = allPlayers.filter((p) => p.claimed_at === null);
 const creator = allPlayers.find((p) => p.is_creator) ?? null;
 
+// Si l'utilisateur arrive depuis le form « rejoindre par code » sur /[slug],
+// son prénom est passé en query string. On le pré-remplit dans le champ
+// self-add pour éviter qu'il le retape. Trim + max-len pour cohérence avec
+// le validator (40 chars).
+const prefillName = (Astro.url.searchParams.get('name') ?? '').trim().slice(0, 40);
+
 const clubColor = r.club.primary_color ?? '#1B4332';
 ---
 
@@ -120,7 +126,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       </section>
     )}
 
-    <details class="selfadd-block" open={placeholders.length === 0}>
+    <details class="selfadd-block" open={placeholders.length === 0 || prefillName.length > 0}>
       <summary class="selfadd-summary">
         <span>{placeholders.length > 0 ? "Mon prénom n'est pas dans la liste" : "Ajouter mon prénom"}</span>
         <svg class="selfadd-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -139,6 +145,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
             maxlength="40"
             required
             autocomplete="given-name"
+            value={prefillName}
           />
         </label>
         <button type="submit" class="selfadd-btn">

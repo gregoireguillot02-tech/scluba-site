@@ -334,8 +334,7 @@ function fmtTime(iso: string | null): string {
           </svg>
         </summary>
         <form
-          method="POST"
-          action="/api/rounds/__CODE__/join"
+          method="GET"
           class="join-form"
           data-join-form
           novalidate
@@ -357,17 +356,20 @@ function fmtTime(iso: string | null): string {
             />
           </label>
           <label class="start-label">
-            <span>Ton prénom</span>
+            <span>Ton prénom <em class="opt">(facultatif)</em></span>
             <input
               class="start-input"
               type="text"
               name="display_name"
               placeholder="Antoine"
               maxlength="40"
-              required
               autocomplete="given-name"
+              data-join-name
             />
           </label>
+          <p class="join-hint">
+            Tu pourras choisir ton prénom dans la liste si l'organisateur l'a déjà saisi — ou ajouter le tien si besoin.
+          </p>
           <button type="submit" class="join-btn">
             Rejoindre
           </button>
@@ -376,22 +378,32 @@ function fmtTime(iso: string | null): string {
     </section>
 
     <script>
-      // Rewrite the join form action with the typed code on submit so we can
-      // POST to /api/rounds/<CODE>/join (a path param, not a form field).
+      // Le form « rejoindre par code » redirige vers /r/<CODE>/join (la page
+      // qui affiche la liste des placeholders à claim). Ça évite le bug de
+      // doublon : avant on auto-claimait via ilike sur display_name côté
+      // /api/rounds/.../join, ce qui créait un nouveau joueur dès que le
+      // nom ne matchait pas exactement un placeholder libre. La page
+      // /r/<code>/join laisse l'utilisateur SÉLECTIONNER son prénom dans
+      // la liste — ou s'auto-ajouter si rien ne correspond.
       const form = document.querySelector<HTMLFormElement>('[data-join-form]');
       const codeInput = document.querySelector<HTMLInputElement>('[data-join-code]');
+      const nameInput = document.querySelector<HTMLInputElement>('[data-join-name]');
       if (form && codeInput) {
         codeInput.addEventListener('input', () => {
           codeInput.value = codeInput.value.toUpperCase();
         });
         form.addEventListener('submit', (e) => {
+          e.preventDefault();
           const code = codeInput.value.trim().toUpperCase();
           if (!code) {
-            e.preventDefault();
             codeInput.focus();
             return;
           }
-          form.action = `/api/rounds/${encodeURIComponent(code)}/join`;
+          const name = nameInput?.value.trim() ?? '';
+          const url = name.length > 0
+            ? `/r/${encodeURIComponent(code)}/join?name=${encodeURIComponent(name)}`
+            : `/r/${encodeURIComponent(code)}/join`;
+          window.location.href = url;
         });
       }
 
@@ -927,6 +939,18 @@ function fmtTime(iso: string | null): string {
       display: flex;
       flex-direction: column;
       gap: var(--space-3);
+    }
+    .join-form .opt {
+      font-style: normal;
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 0.85em;
+    }
+    .join-hint {
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
     }
     .join-code-input {
       font-family: var(--font-serif);
