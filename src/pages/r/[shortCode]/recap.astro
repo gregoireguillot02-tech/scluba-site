@@ -5,7 +5,7 @@ import '../../../styles/tokens.css';
 import '../../../styles/global.css';
 import { serviceClient } from '../../../lib/supabase';
 import type { Club, Round, RoundPlayer, Score } from '../../../lib/clubs-types';
-import { resolveRoundHoles, resolveRoundSections, scoreType } from '../../../lib/clubs-types';
+import { resolveRoundHoles, resolveRoundSections, scoreType, effectiveStrokes } from '../../../lib/clubs-types';
 import ShareCardModal from '../../../components/ShareCardModal.astro';
 
 const { shortCode } = Astro.params;
@@ -43,26 +43,51 @@ const roundSections = resolveRoundSections(r, r.club);
 const par = roundHoles.reduce((sum, h) => sum + h.par, 0);
 const holesCount = roundHoles.length;
 
-function scoresFor(playerId: string): Record<number, number> {
-  const out: Record<number, number> = {};
-  for (const s of allScores) if (s.round_player_id === playerId) out[s.hole_number] = s.strokes;
+// Score saisi pour chaque trou. `strokes` est null si le trou a été
+// abandonné (picked_up = true). Les trous non saisis sont absents.
+interface ScoreEntry {
+  strokes: number | null;
+  picked_up: boolean;
+}
+
+function scoresFor(playerId: string): Record<number, ScoreEntry> {
+  const out: Record<number, ScoreEntry> = {};
+  for (const s of allScores) {
+    if (s.round_player_id !== playerId) continue;
+    out[s.hole_number] = { strokes: s.strokes, picked_up: s.picked_up };
+  }
   return out;
 }
 
-function totalFor(playerId: string): { strokes: number; played: number; diff: number } {
+// Total + diff calculés avec la règle Maximum Score (Rules of Golf 2023) :
+// un trou abandonné compte comme par(trou) + 2. Le `diff` est calculé sur
+// la somme des par des trous JOUÉS uniquement (pas le par total du parcours)
+// — sans ça, jouer 15/18 trous donne un écart trompeur vs Par 71.
+function totalFor(playerId: string): {
+  strokes: number;
+  played: number;
+  pickedUp: number;
+  playedPar: number;
+  diff: number;
+} {
   let strokes = 0;
   let played = 0;
+  let pickedUp = 0;
+  let playedPar = 0;
   let diff = 0;
   const map = scoresFor(playerId);
   for (const h of roundHoles) {
-    const s = map[h.number];
-    if (s !== undefined) {
-      strokes += s;
-      played++;
-      diff += s - h.par;
-    }
+    const entry = map[h.number];
+    if (!entry) continue;
+    const eff = effectiveStrokes(entry, h.par);
+    if (eff === null) continue;
+    strokes += eff;
+    played++;
+    if (entry.picked_up) pickedUp++;
+    playedPar += h.par;
+    diff += eff - h.par;
   }
-  return { strokes, played, diff };
+  return { strokes, played, pickedUp, playedPar, diff };
 }
 
 function fmtDate(iso: string): string {
@@ -83,8 +108,18 @@ if (!me) {
   return Astro.redirect(`/r/${shortCode}/join`, 302);
 }
 
-const myMap = scoresFor(me.id);
+const myScoreMap = scoresFor(me.id);
 const myTotal = totalFor(me.id);
+
+// Vue numérique pour l'affichage (rétro-compat avec share-card.ts).
+// Les trous abandonnés sont dans `myPickedUpHoles`, pas dans `myMap`.
+const myMap: Record<number, number> = {};
+const myPickedUpHoles: number[] = [];
+for (const [holeNum, entry] of Object.entries(myScoreMap)) {
+  const n = Number(holeNum);
+  if (entry.picked_up) myPickedUpHoles.push(n);
+  else if (entry.strokes !== null) myMap[n] = entry.strokes;
+}
 
 // Label shown above the big score number. Prefer the loop name(s) over a
 // generic "X trous" so a 9-hole Bois round doesn't read like "18 trous".
@@ -147,9 +182,14 @@ const sharePayload = JSON.stringify({
   // Title above the big score on the PNG (mirrors the on-screen eyebrow).
   formatLabel,
   scoresByHole: myMap,
+  pickedUpHoles: myPickedUpHoles,
   totalDiff: myTotal.diff,
   totalStrokes: myTotal.strokes,
   holesPlayed: myTotal.played,
+  // Par cumulé des seuls trous joués (utile pour afficher un écart cohérent
+  // quand la carte est incomplète : "−1 / Par 28" sur 8 trous au lieu de
+  // "−1 / Par 71" pour le parcours complet).
+  playedPar: myTotal.playedPar,
   leaderboard: isMultiplayer
     ? leaderboard.map((row) => ({
         display_name: row.display_name,
@@ -221,7 +261,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 
     <section class="score-block" aria-labelledby="score-title">
       <p id="score-title" class="sr-only">
-        Score final {myTotal.strokes}, {myTotal.diff >= 0 ? '+' : ''}{myTotal.diff} par rapport au par {par}.
+        Score final {myTotal.strokes}, {myTotal.diff >= 0 ? '+' : ''}{myTotal.diff} par rapport au par {myTotal.played === holesCount ? par : myTotal.playedPar}.
       </p>
       <p class="score-eyebrow">Score · {formatLabel}</p>
       <div class="score-value" data-card-score data-target={String(myTotal.strokes)}>0</div>
@@ -230,8 +270,19 @@ const clubColor = r.club.primary_color ?? '#1B4332';
           {myTotal.diff > 0 ? `+${myTotal.diff}` : myTotal.diff < 0 ? String(myTotal.diff) : '±0'}
         </span>
         <span class="score-sep" aria-hidden="true">·</span>
-        <span>Par {par}</span>
+        <span>Par {myTotal.played === holesCount ? par : myTotal.playedPar}</span>
+        {myTotal.played < holesCount && (
+          <>
+            <span class="score-sep" aria-hidden="true">·</span>
+            <span>{myTotal.played}/{holesCount} trous</span>
+          </>
+        )}
       </p>
+      {myTotal.pickedUp > 0 && (
+        <p class="score-note">
+          {myTotal.pickedUp === 1 ? '1 trou abandonné' : `${myTotal.pickedUp} trous abandonnés`} compté{myTotal.pickedUp > 1 ? 's' : ''} Par + 2 (Maximum Score)
+        </p>
+      )}
     </section>
 
     <section class="grid-block" aria-label="Score par trou">
@@ -239,8 +290,16 @@ const clubColor = r.club.primary_color ?? '#1B4332';
         <div class="grid-row">
           <span class="grid-label">{section.loop_name}</span>
           {section.holes.map((h) => {
-            const s = myMap[h.number];
-            const t = s !== undefined ? scoreType(s, h.par) : null;
+            const entry = myScoreMap[h.number];
+            if (entry?.picked_up) {
+              return (
+                <span class="grid-cell cell-pickup" aria-label={`Trou ${h.number}: abandonné, compté ${h.par + 2}`}>
+                  C
+                </span>
+              );
+            }
+            const s = entry?.strokes ?? undefined;
+            const t = s !== undefined && s !== null ? scoreType(s, h.par) : null;
             return (
               <span class={`grid-cell${t ? ` cell-${t}` : ' cell-empty'}`} aria-label={`Trou ${h.number}: ${s ?? '—'}`}>
                 {s ?? '—'}
@@ -253,6 +312,9 @@ const clubColor = r.club.primary_color ?? '#1B4332';
         <li><span class="legend-swatch cell-birdie"></span>Birdie</li>
         <li><span class="legend-swatch cell-par"></span>Par</li>
         <li><span class="legend-swatch cell-bogey"></span>Bogey</li>
+        {myPickedUpHoles.length > 0 && (
+          <li><span class="legend-swatch cell-pickup">C</span>Abandonné</li>
+        )}
       </ul>
     </section>
 
@@ -523,6 +585,13 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     .score-diff.over { color: #C0392B; }
     .score-diff.under { color: var(--clubColor); }
     .score-sep { color: var(--accent); font-weight: 700; }
+    .score-note {
+      margin: var(--space-2) 0 0;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+      text-align: center;
+    }
 
     /* === Grid block === */
     .grid-block {
@@ -566,6 +635,27 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     .cell-bogey { color: var(--muted); }
     .cell-double { color: #6B7280; background: rgba(107,114,128,0.08); }
     .cell-empty { color: var(--muted-soft); opacity: 0.5; }
+    .grid-cell.cell-pickup {
+      color: var(--muted);
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(107,114,128,0.08) 0,
+        rgba(107,114,128,0.08) 4px,
+        transparent 4px,
+        transparent 8px
+      );
+      border-style: dashed;
+      font-family: var(--font-serif);
+    }
+    .legend-swatch.cell-pickup {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-family: var(--font-serif);
+      font-weight: 800;
+      color: var(--muted);
+    }
 
     .grid-legend {
       list-style: none;

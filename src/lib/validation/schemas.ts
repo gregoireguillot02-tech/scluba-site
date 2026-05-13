@@ -93,10 +93,23 @@ export const findRoundSchema = z.object({
   hp_email: honeypotSchema,
 });
 
-export const scoreSchema = z.object({
-  hole: holeSchema,
-  strokes: strokesSchema,
-});
+// Saisie d'un score sur un trou. Deux modes possibles :
+//   (a) score normal — `strokes` est fourni (1..20), `picked_up` est false ou absent
+//   (b) trou abandonné — `picked_up: true`, `strokes` est null/absent
+export const scoreSchema = z
+  .object({
+    hole: holeSchema,
+    strokes: strokesSchema.nullable().optional(),
+    picked_up: z.boolean().optional(),
+  })
+  .refine(
+    (v) => {
+      const hasStrokes = typeof v.strokes === 'number';
+      const isPickup = v.picked_up === true;
+      return hasStrokes !== isPickup; // XOR : exactement un des deux
+    },
+    { message: 'strokes ou picked_up requis (pas les deux)' },
+  );
 
 export const magicLinkSchema = z.object({
   email: emailSchema,

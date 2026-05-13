@@ -80,8 +80,24 @@ export interface Score {
   id: string;
   round_player_id: string;
   hole_number: number;
-  strokes: number;
+  // null quand le trou a été abandonné (picked_up = true).
+  strokes: number | null;
+  // true = trou abandonné ("chablis"). Compté comme par(trou) + 2 dans les
+  // calculs de total et d'écart au par (Maximum Score, Rules of Golf 2023).
+  picked_up: boolean;
   updated_at: string;
+}
+
+// Coup effectif utilisé pour les calculs de total/diff. Pour un trou
+// abandonné, retourne par + 2 (Maximum Score). Pour un trou joué, retourne
+// les coups saisis. Retourne null si aucun score n'a été saisi.
+export function effectiveStrokes(
+  score: Pick<Score, 'strokes' | 'picked_up'> | undefined,
+  par: number,
+): number | null {
+  if (!score) return null;
+  if (score.picked_up) return par + 2;
+  return score.strokes;
 }
 
 export function totalPar(course: CourseData): number {

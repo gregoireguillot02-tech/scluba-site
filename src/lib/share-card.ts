@@ -96,6 +96,10 @@ export interface ComposeInput {
   startedAt: string | null;
   holes: CourseHole[];
   scoresByHole: Record<number, number>;
+  // Numéros des trous abandonnés (picked_up = true). Affichés "C" dans la
+  // grille et comptés Par(trou) + 2 dans le total (Maximum Score, Rules of
+  // Golf 2023). Absent ou tableau vide = aucun trou abandonné.
+  pickedUpHoles?: number[];
   totalDiff: number;
   totalStrokes: number;
   holesPlayed: number;
@@ -105,6 +109,11 @@ export interface ComposeInput {
   // Optional override for the par sum displayed in the subtitle. Used when a
   // 9-hole format would otherwise show "Par 72" computed from the full club.
   totalPar?: number;
+  // Par cumulé des seuls trous joués (utile quand la carte est incomplète :
+  // on affiche "Par 28" pour 8 trous joués plutôt que "Par 71" pour le
+  // parcours complet). Si absent ou si holesPlayed = holes.length, on utilise
+  // totalPar/sum(holes.par).
+  playedPar?: number;
   // Optional label rendered above the big score number on the PNG (e.g.
   // "LE BOIS", "PLAINE + VALLON"). Falls back to "{n} TROUS" when absent.
   formatLabel?: string;
@@ -208,6 +217,7 @@ function drawScoreRow(
   ctx: CanvasRenderingContext2D,
   holes: CourseHole[],
   scoresByHole: Record<number, number>,
+  pickedUpSet: Set<number>,
   label: string,
   startY: number,
   clubColor: string,
@@ -240,41 +250,56 @@ function drawScoreRow(
   // 9 score cells
   for (let i = 0; i < holes.length; i++) {
     const x = PAD_X + LABEL_W + GAP + i * (CELL_W + GAP);
-    const s = scoresByHole[holes[i].number];
+    const holeNum = holes[i].number;
+    const s = scoresByHole[holeNum];
+    const isPickup = pickedUpSet.has(holeNum);
     const played = s !== undefined;
     const type = played ? scoreType(s, holes[i].par) : null;
 
     let bg: string;
     let txtColor: string;
     let hasBorder = false;
-    if (!played) {
+    let dashedBorder = false;
+    let cellText: string;
+    if (isPickup) {
+      bg = '#F0EDE3';
+      txtColor = '#8A8270';
+      dashedBorder = true;
+      cellText = 'C';
+    } else if (!played) {
       bg = CELL_EMPTY_BG;
       txtColor = CELL_EMPTY_TXT;
+      cellText = '—';
     } else if (type === 'birdie' || type === 'eagle') {
       bg = CELL_BIRDIE_BG;
       txtColor = CELL_BIRDIE_TXT;
+      cellText = String(s);
     } else if (type === 'bogey' || type === 'double') {
       bg = CELL_BOGEY_BG;
       txtColor = CELL_BOGEY_TXT;
+      cellText = String(s);
     } else {
       bg = CELL_PAR_BG;
       txtColor = clubColor;
       hasBorder = true;
+      cellText = String(s);
     }
 
     drawRoundedRect(ctx, x, startY, CELL_W, CELL_H, 8);
     ctx.fillStyle = bg;
     ctx.fill();
-    if (hasBorder) {
-      ctx.strokeStyle = CELL_PAR_BORDER;
+    if (hasBorder || dashedBorder) {
+      ctx.strokeStyle = dashedBorder ? '#A8A294' : CELL_PAR_BORDER;
       ctx.lineWidth = 1.5;
+      if (dashedBorder) ctx.setLineDash([4, 4]);
       ctx.stroke();
+      if (dashedBorder) ctx.setLineDash([]);
     }
     ctx.fillStyle = txtColor;
     ctx.font = `800 32px ${FONT_STACK}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(played ? String(s) : '—', x + CELL_W / 2, startY + CELL_H / 2);
+    ctx.fillText(cellText, x + CELL_W / 2, startY + CELL_H / 2);
   }
 
   return CELL_H;
@@ -285,12 +310,16 @@ function drawLegend(
   cy: number,
   W: number,
   clubColor: string,
+  hasPickup: boolean,
 ) {
   const items: { label: string; bg: string; border: string | null }[] = [
     { label: 'Birdie', bg: CELL_BIRDIE_BG, border: null },
     { label: 'Par', bg: CELL_PAR_BG, border: CELL_PAR_BORDER },
     { label: 'Bogey', bg: CELL_BOGEY_BG, border: null },
   ];
+  if (hasPickup) {
+    items.push({ label: 'Abandonné', bg: '#F0EDE3', border: '#A8A294' });
+  }
   const SWATCH = 22;
   const GAP_SWATCH_LABEL = 12;
   const GAP_ITEMS = 32;
@@ -567,8 +596,12 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   ctx.textBaseline = 'middle';
   ctx.fillText(totalStr, W / 2, SCORE_Y + 90);
 
-  // Subtitle "±0 · Par 72"
-  const totalParValue = input.totalPar ?? input.holes.reduce((s, h) => s + h.par, 0);
+  // Subtitle "±0 · Par 72" — quand la carte est incomplète on affiche le
+  // par des trous JOUÉS (input.playedPar) plutôt que le par total, sinon
+  // l'écart est trompeur (-1 contre Par 71 alors qu'on a fait 8/18).
+  const fullPar = input.totalPar ?? input.holes.reduce((s, h) => s + h.par, 0);
+  const isComplete = input.holesPlayed >= input.holes.length;
+  const parDisplayed = isComplete ? fullPar : (input.playedPar ?? fullPar);
   const diffStr = input.totalDiff === 0
     ? '±0'
     : input.totalDiff > 0
@@ -576,7 +609,10 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
       : `${input.totalDiff}`;
   ctx.fillStyle = '#6B7280';
   ctx.font = `500 28px ${FONT_STACK}`;
-  ctx.fillText(`${diffStr} · Par ${totalParValue}`, W / 2, SCORE_Y + 170);
+  const subSubText = isComplete
+    ? `${diffStr} · Par ${parDisplayed}`
+    : `${diffStr} · Par ${parDisplayed} · ${input.holesPlayed}/${input.holes.length} trous`;
+  ctx.fillText(subSubText, W / 2, SCORE_Y + 170);
 
   // Section 4 : Scorecard rows. If the caller provided named sections (loops),
   // draw one row per section with its loop name. Otherwise fall back to the
@@ -592,10 +628,11 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
         return out;
       })();
 
+  const pickedUpSet = new Set<number>(input.pickedUpHoles ?? []);
   const ROW_GAP = 14;
   let gridY = SCORE_Y + 220; // ~1005
   for (const section of sections) {
-    const h = drawScoreRow(ctx, section.holes, input.scoresByHole, section.label, gridY, primaryColor);
+    const h = drawScoreRow(ctx, section.holes, input.scoresByHole, pickedUpSet, section.label, gridY, primaryColor);
     gridY += h + ROW_GAP;
   }
 
@@ -608,7 +645,7 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   }
 
   // Section 5 : Legend (Birdie · Par · Bogey)
-  drawLegend(ctx, postGridY, W, primaryColor);
+  drawLegend(ctx, postGridY, W, primaryColor, pickedUpSet.size > 0);
 
   // Section 6 : Footer SCLUBA — discret
   ctx.fillStyle = '#A8A294';
