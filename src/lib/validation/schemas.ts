@@ -96,11 +96,18 @@ export const findRoundSchema = z.object({
 // Saisie d'un score sur un trou. Deux modes possibles :
 //   (a) score normal — `strokes` est fourni (1..20), `picked_up` est false ou absent
 //   (b) trou abandonné — `picked_up: true`, `strokes` est null/absent
+//
+// `player_id` est optionnel : par défaut, le score est attribué au joueur
+// identifié par le cookie. Le host (créateur de la partie) peut le fournir
+// pour saisir au nom d'un autre joueur (mode multi-joueurs sur un seul
+// téléphone). La vérification que l'appelant est bien le créateur est faite
+// côté API — voir `src/pages/api/rounds/[shortCode]/scores.ts`.
 export const scoreSchema = z
   .object({
     hole: holeSchema,
     strokes: strokesSchema.nullable().optional(),
     picked_up: z.boolean().optional(),
+    player_id: uuidSchema.optional(),
   })
   .refine(
     (v) => {
