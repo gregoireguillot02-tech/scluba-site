@@ -64,6 +64,25 @@ for (const s of allScores) {
   }
 }
 
+// État par joueur pour le mode host (saisie sur un seul téléphone). Le host
+// (créateur) voit des tabs pour switcher entre les joueurs et saisir au nom
+// de chacun. Les non-host gardent leur expérience actuelle (un seul player).
+const allScoresByPlayer: Record<string, Record<number, number>> = {};
+const allPickedUpByPlayer: Record<string, number[]> = {};
+for (const p of allPlayers) {
+  allScoresByPlayer[p.id] = {};
+  allPickedUpByPlayer[p.id] = [];
+}
+for (const s of allScores) {
+  const bucket = allScoresByPlayer[s.round_player_id];
+  const pickups = allPickedUpByPlayer[s.round_player_id];
+  if (!bucket || !pickups) continue;
+  if (s.picked_up) pickups.push(s.hole_number);
+  else if (s.strokes !== null) bucket[s.hole_number] = s.strokes;
+}
+
+const canHostSwitch = me.is_creator && allPlayers.length > 1;
+
 const holesByNumber: Record<number, number> = {};
 for (const h of roundHoles) holesByNumber[h.number] = h.par;
 ---
@@ -113,13 +132,32 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       <ul class="live-list" data-live-list></ul>
     </section>
 
+    {canHostSwitch && (
+      <nav class="player-tabs" data-player-tabs aria-label="Saisir le score d'un joueur">
+        {allPlayers.map((p) => (
+          <button
+            type="button"
+            class={`player-tab${p.id === me.id ? ' is-me is-active' : ''}`}
+            data-player-id={p.id}
+            data-player-name={p.display_name}
+          >
+            {p.display_name}{p.id === me.id ? ' (toi)' : ''}
+          </button>
+        ))}
+      </nav>
+    )}
+
     <section
       class="hole-card"
       data-play-root
       data-short-code={r.short_code}
+      data-me-id={me.id}
+      data-can-host-switch={String(canHostSwitch)}
       data-course={JSON.stringify({ holes: roundHoles })}
       data-scores={JSON.stringify(scoresByHole)}
       data-picked-up={JSON.stringify(pickedUpHoles)}
+      data-all-scores={JSON.stringify(allScoresByPlayer)}
+      data-all-picked-up={JSON.stringify(allPickedUpByPlayer)}
       data-par={String(par)}
       data-hole-count={String(roundHoles.length)}
     >
@@ -313,14 +351,44 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
     const root = document.querySelector<HTMLElement>('[data-play-root]');
     if (root) {
       const shortCode = root.dataset.shortCode!;
+      const meIdEntry = root.dataset.meId!;
+      const canHostSwitch = root.dataset.canHostSwitch === 'true';
       const course = JSON.parse(root.dataset.course!) as CourseData;
-      const initialScores = JSON.parse(root.dataset.scores!) as Record<number, number>;
-      const initialPickedUp = JSON.parse(root.dataset.pickedUp ?? '[]') as number[];
       const totalPar = Number(root.dataset.par);
       const holeCount = Number(root.dataset.holeCount);
 
-      const scores: Record<number, number> = { ...initialScores };
-      const pickedUp = new Set<number>(initialPickedUp);
+      // En mode host on tient un état par joueur. Sinon on utilise juste
+      // les scores du joueur courant (rétro-compat avec le mode mono-tel).
+      const allInitialScores = JSON.parse(root.dataset.allScores ?? '{}') as Record<string, Record<number, number>>;
+      const allInitialPickedUp = JSON.parse(root.dataset.allPickedUp ?? '{}') as Record<string, number[]>;
+      // Fallback : si les data-attrs all-* sont absents (ne devrait pas
+      // arriver), on hydrate depuis les anciens data-attrs mono-joueur.
+      const initialScores = JSON.parse(root.dataset.scores ?? '{}') as Record<number, number>;
+      const initialPickedUp = JSON.parse(root.dataset.pickedUp ?? '[]') as number[];
+
+      const scoresByPlayer: Map<string, Record<number, number>> = new Map();
+      const pickedUpByPlayer: Map<string, Set<number>> = new Map();
+      // Hydrate from all-* if present, else fall back to me.
+      const knownIds = new Set<string>(Object.keys(allInitialScores));
+      knownIds.add(meIdEntry);
+      for (const pid of knownIds) {
+        scoresByPlayer.set(pid, { ...(allInitialScores[pid] ?? (pid === meIdEntry ? initialScores : {})) });
+        pickedUpByPlayer.set(pid, new Set(allInitialPickedUp[pid] ?? (pid === meIdEntry ? initialPickedUp : [])));
+      }
+
+      let currentPlayerId = meIdEntry;
+
+      function scoresOf(pid: string): Record<number, number> {
+        let m = scoresByPlayer.get(pid);
+        if (!m) { m = {}; scoresByPlayer.set(pid, m); }
+        return m;
+      }
+      function pickedUpOf(pid: string): Set<number> {
+        let s = pickedUpByPlayer.get(pid);
+        if (!s) { s = new Set<number>(); pickedUpByPlayer.set(pid, s); }
+        return s;
+      }
+
       let currentHole = nextEmptyHole();
 
       const holeNumberEl = root.querySelector<HTMLElement>('[data-hole-number]')!;
@@ -331,8 +399,11 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       const finishForm = document.querySelector<HTMLFormElement>('[data-finish-form]')!;
       const statusEl = document.querySelector<HTMLElement>('[data-status]')!;
       const cells = Array.from(document.querySelectorAll<HTMLElement>('[data-cell-hole]'));
+      const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-player-tabs] [data-player-id]'));
 
       function nextEmptyHole(): number {
+        const scores = scoresOf(currentPlayerId);
+        const pickedUp = pickedUpOf(currentPlayerId);
         for (let h = 1; h <= holeCount; h++) {
           if (scores[h] === undefined && !pickedUp.has(h)) return h;
         }
@@ -362,6 +433,8 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       }
 
       function render() {
+        const scores = scoresOf(currentPlayerId);
+        const pickedUp = pickedUpOf(currentPlayerId);
         const hole = holeAt(currentHole);
         holeNumberEl.textContent = String(currentHole);
         parValueEl.textContent = String(hole.par);
@@ -428,6 +501,11 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
         const nextBtn = root!.querySelector<HTMLButtonElement>('[data-nav="next"]')!;
         prevBtn.disabled = currentHole === 1;
         nextBtn.disabled = currentHole === holeCount;
+
+        // Met à jour l'état actif des tabs (mode host).
+        for (const tab of tabs) {
+          tab.classList.toggle('is-active', tab.dataset.playerId === currentPlayerId);
+        }
       }
 
       // Intercept the early-finish submission to confirm. Skip the confirm
@@ -442,16 +520,26 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
         if (!window.confirm(msg)) e.preventDefault();
       });
 
+      function targetPlayerHint(): string | null {
+        if (!canHostSwitch) return null;
+        return currentPlayerId === meIdEntry ? null : currentPlayerId;
+      }
+
       async function saveScore(strokes: number) {
+        const scores = scoresOf(currentPlayerId);
+        const pickedUp = pickedUpOf(currentPlayerId);
         scores[currentHole] = strokes;
         pickedUp.delete(currentHole); // saisir un score annule l'abandon
         render();
         statusEl.textContent = 'Sauvegarde…';
         try {
+          const body: Record<string, unknown> = { hole: currentHole, strokes };
+          const hint = targetPlayerHint();
+          if (hint) body.player_id = hint;
           const res = await fetch(`/api/rounds/${shortCode}/scores`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hole: currentHole, strokes }),
+            body: JSON.stringify(body),
           });
           if (!res.ok) throw new Error(await res.text());
           statusEl.textContent = '✓ Enregistré';
@@ -462,15 +550,20 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       }
 
       async function savePickup() {
+        const scores = scoresOf(currentPlayerId);
+        const pickedUp = pickedUpOf(currentPlayerId);
         delete scores[currentHole];
         pickedUp.add(currentHole);
         render();
         statusEl.textContent = 'Sauvegarde…';
         try {
+          const body: Record<string, unknown> = { hole: currentHole, picked_up: true };
+          const hint = targetPlayerHint();
+          if (hint) body.player_id = hint;
           const res = await fetch(`/api/rounds/${shortCode}/scores`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hole: currentHole, picked_up: true }),
+            body: JSON.stringify(body),
           });
           if (!res.ok) throw new Error(await res.text());
           statusEl.textContent = '✓ Trou abandonné';
@@ -490,7 +583,7 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       root.querySelectorAll<HTMLElement>('[data-step]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const delta = Number(btn.dataset.step);
-          const current = scores[currentHole] ?? holeAt(currentHole).par;
+          const current = scoresOf(currentPlayerId)[currentHole] ?? holeAt(currentHole).par;
           const next = Math.max(1, Math.min(20, current + delta));
           saveScore(next);
         });
@@ -498,7 +591,7 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
 
       const pickupBtn = root.querySelector<HTMLButtonElement>('[data-pickup]');
       pickupBtn?.addEventListener('click', () => {
-        if (pickedUp.has(currentHole)) return; // déjà abandonné
+        if (pickedUpOf(currentPlayerId).has(currentHole)) return; // déjà abandonné
         savePickup();
       });
 
@@ -511,6 +604,18 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
           window.scrollTo({ top: 0, behavior: 'smooth' });
         });
       });
+
+      // Tabs joueurs (mode host) : switch currentPlayerId + reset currentHole
+      // au prochain trou vide du joueur sélectionné.
+      for (const tab of tabs) {
+        tab.addEventListener('click', () => {
+          const pid = tab.dataset.playerId;
+          if (!pid || pid === currentPlayerId) return;
+          currentPlayerId = pid;
+          currentHole = nextEmptyHole();
+          render();
+        });
+      }
 
       render();
     }
@@ -580,6 +685,36 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
     }
     .live-diff.over { color: #C0392B; }
     .live-diff.under { color: #1B4332; }
+
+    /* === Player tabs (host mode only) === */
+    .player-tabs {
+      display: flex;
+      gap: 6px;
+      padding: var(--space-3) var(--space-4) 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .player-tabs::-webkit-scrollbar { display: none; }
+    .player-tab {
+      flex-shrink: 0;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .player-tab:hover { border-color: var(--clubColor); }
+    .player-tab.is-active {
+      background: var(--clubColor);
+      color: #FAF7EE;
+      border-color: var(--clubColor);
+    }
+    .player-tab.is-me { font-style: italic; }
 
     .play-header {
       color: #FAF7EE;
