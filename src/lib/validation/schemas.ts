@@ -55,11 +55,25 @@ export const formatIdSchema = z
   .max(32)
   .regex(/^[a-z0-9-]+$/, 'format invalide');
 
+// ISO 8601 datetime from the client (browser converts the local time picker
+// to UTC before submission). Optional — falls back to server-side now().
+// Use a permissive regex so we don't depend on the Zod 4 .datetime() helper
+// which moved between minor versions.
+export const startedAtSchema = z
+  .string()
+  .regex(
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:?\d{2})$/,
+    'started_at doit être au format ISO 8601',
+  )
+  .max(40)
+  .optional();
+
 export const createRoundSchema = z.object({
   slug: slugSchema,
   display_name: displayNameSchema,
   additional_players: additionalPlayersSchema,
   format_id: formatIdSchema.optional(),
+  started_at: startedAtSchema,
   hp_email: honeypotSchema,
 });
 

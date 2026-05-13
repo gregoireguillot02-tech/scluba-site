@@ -193,6 +193,15 @@ function fmtTime(iso: string | null): string {
             </div>
           </fieldset>
         )}
+        <label class="start-label">
+          <span>Heure de départ</span>
+          <input
+            class="start-input"
+            type="time"
+            name="start_time"
+            data-start-time
+          />
+        </label>
         <button type="submit" class="start-btn">
           Créer la partie
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -253,6 +262,15 @@ function fmtTime(iso: string | null): string {
             <span>Ajouter un joueur</span>
           </button>
         </fieldset>
+        <label class="start-label">
+          <span>Heure de départ</span>
+          <input
+            class="start-input"
+            type="time"
+            name="start_time"
+            data-start-time
+          />
+        </label>
         <button type="submit" class="start-btn">
           Créer la partie
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -478,6 +496,29 @@ function fmtTime(iso: string | null): string {
           row.remove();
           renumberPartyRows();
           partyAddBtn.disabled = false;
+        });
+      }
+
+      // Heure de départ : prefill avec l'heure courante, et à la soumission
+      // convertir le HH:MM (tz locale du navigateur) en ISO UTC pour le serveur.
+      const startTimeInputs = document.querySelectorAll<HTMLInputElement>('[data-start-time]');
+      for (const input of startTimeInputs) {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        input.value = `${hh}:${mm}`;
+        const parentForm = input.closest('form');
+        parentForm?.addEventListener('submit', () => {
+          if (!input.value) return;
+          const [h, m] = input.value.split(':').map(Number);
+          if (Number.isNaN(h) || Number.isNaN(m)) return;
+          const d = new Date();
+          d.setHours(h, m, 0, 0);
+          const hidden = document.createElement('input');
+          hidden.type = 'hidden';
+          hidden.name = 'started_at';
+          hidden.value = d.toISOString();
+          parentForm.appendChild(hidden);
         });
       }
     </script>

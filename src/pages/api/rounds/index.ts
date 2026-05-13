@@ -29,17 +29,20 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
   }
 
   const rawFormatId = form.get('format_id');
+  const rawStartedAt = form.get('started_at');
   const parsed = createRoundSchema.safeParse({
     slug: form.get('slug') ?? '',
     display_name: form.get('display_name') ?? '',
     additional_players: additional_players.length > 0 ? additional_players : undefined,
     format_id: typeof rawFormatId === 'string' && rawFormatId.length > 0 ? rawFormatId : undefined,
+    started_at: typeof rawStartedAt === 'string' && rawStartedAt.length > 0 ? rawStartedAt : undefined,
     hp_email: form.get('hp_email') ?? undefined,
   });
   if (!parsed.success) return new Response(formatZodError(parsed.error), { status: 400 });
   const { slug, display_name } = parsed.data;
   const placeholders = parsed.data.additional_players ?? [];
   const formatId = parsed.data.format_id ?? null;
+  const startedAt = parsed.data.started_at ?? new Date().toISOString();
 
   const sb = serviceClient();
 
@@ -60,7 +63,7 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
     short_code = generateRoundShortCode();
     const { data: created, error: rErr } = await sb
       .from('rounds')
-      .insert({ club_id: club.id, short_code, status: 'lobby', format_id: formatId })
+      .insert({ club_id: club.id, short_code, status: 'lobby', format_id: formatId, started_at: startedAt })
       .select('id')
       .single();
     if (!rErr && created) {

@@ -118,6 +118,11 @@ function fmtDateShort(iso: string | null): string {
   return new Date(iso).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' });
 }
 
+function fmtTimeShort(iso: string | null): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h');
+}
+
 function formatDiff(diff: number): string {
   if (diff === 0) return 'E';
   return diff > 0 ? `+${diff}` : `${diff}`;
@@ -543,7 +548,14 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
 
   ctx.fillStyle = '#666';
   ctx.font = `400 22px ${FONT_STACK}`;
-  const subText = `${input.player?.display_name ?? '—'} · ${fmtDateShort(input.startedAt)} · ${input.holesPlayed} trous`;
+  const timeStr = fmtTimeShort(input.startedAt);
+  const subParts = [
+    input.player?.display_name ?? '—',
+    fmtDateShort(input.startedAt),
+    timeStr,
+    `${input.holesPlayed} trous`,
+  ].filter((s) => s.length > 0);
+  const subText = subParts.join(' · ');
   ctx.fillText(subText, W / 2, BAND_Y + 92, W - 2 * PAD_X);
 
   // Section 3 : Score block — eyebrow + gros total + sub (style recap.astro)
