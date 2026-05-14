@@ -170,6 +170,22 @@ const rankByIndex = leaderboard.map((row) => {
   return rankCounter;
 });
 
+// Diff du leader (= meilleur score parmi finished) pour calculer l'écart
+// affiché en sub-line de chaque joueur non-leader.
+const leaderRow = leaderboard.find((row) => row.finished) ?? null;
+const leaderboardLeaderDiff = leaderRow?.diff ?? 0;
+
+// Helpers de génération d'avatar — cohérence visuelle avec play.astro.
+function hueFromId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
+  return h;
+}
+function initialOf(name: string): string {
+  return (name.trim()[0] ?? '?').toUpperCase();
+}
+const MEDALS = ['🥇', '🥈', '🥉'];
+
 const sharePayload = JSON.stringify({
   player: me,
   club: r.club,
@@ -322,17 +338,41 @@ const clubColor = r.club.primary_color ?? '#1B4332';
           <p class="leaderboard-eyebrow">Multijoueur</p>
           <h2 id="lb-title" class="leaderboard-title">Classement</h2>
         </header>
-        <ol class={`leaderboard-list${leaderboard.length >= 4 ? ' cols-2' : ''}`}>
+        <ol class="leaderboard-list">
           {leaderboard.map((row, i) => {
             const rank = rankByIndex[i];
+            const isLeader = rank === 1;
+            const medal = rank !== null && rank >= 1 && rank < 4 ? MEDALS[rank - 1] : '';
+            const hue = hueFromId(row.player_id);
+            const initial = initialOf(row.display_name);
+            const gap = row.finished && !isLeader ? row.diff - leaderboardLeaderDiff : 0;
+            const subLine = !row.finished
+              ? 'partie non terminée'
+              : isLeader
+                ? `${row.strokes} coups`
+                : `+${gap} vs leader`;
+            const classes = [
+              'lb-row',
+              row.is_me ? 'is-me' : '',
+              !row.finished ? 'is-nc' : '',
+              isLeader ? 'is-leader' : '',
+              rank === 2 ? 'is-second' : '',
+              rank === 3 ? 'is-third' : '',
+            ].filter(Boolean).join(' ');
             return (
-              <li class={`lb-row${row.is_me ? ' is-me' : ''}${!row.finished ? ' is-nc' : ''}`}>
-                <span class="lb-rank">{rank !== null ? rank : '—'}</span>
-                <span class="lb-name">{row.display_name}</span>
+              <li class={classes}>
+                <span class="lb-avatar" aria-hidden="true" style={`background: hsl(${hue}, 55%, 55%)`}>{initial}</span>
+                <div class="lb-info">
+                  <span class="lb-name">{row.display_name}{row.is_me && <em> (vous)</em>}</span>
+                  <span class="lb-sub">{subLine}</span>
+                </div>
+                <span class="lb-medal" aria-hidden="true">{medal}</span>
                 {row.finished ? (
                   <span class="lb-score">
                     <strong>{row.strokes}</strong>
-                    <em>({row.diff === 0 ? '±0' : row.diff > 0 ? `+${row.diff}` : row.diff})</em>
+                    <span class={`lb-diff${row.diff < 0 ? ' under' : row.diff > 0 ? ' over' : ''}`}>
+                      {row.diff === 0 ? '±0' : row.diff > 0 ? `+${row.diff}` : String(row.diff)}
+                    </span>
                   </span>
                 ) : (
                   <span class="lb-score lb-nc">NC</span>
@@ -751,7 +791,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       border: 1px solid var(--line);
     }
 
-    /* === Mini leaderboard (multiplayer only) === */
+    /* === Mini leaderboard (multiplayer only) — cards alignées sur play.astro === */
     .leaderboard {
       margin: var(--space-5) 0;
       padding: var(--space-4);
@@ -785,75 +825,96 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       padding: 0;
       display: flex;
       flex-direction: column;
-      gap: 4px;
-    }
-    /* 4+ players → 2 columns, row-major (rank 1|2 on top, 3|4 below). Keeps
-       the card compact on the recap page without sacrificing legibility. */
-    .leaderboard-list.cols-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      column-gap: 8px;
-      row-gap: 4px;
-      grid-auto-flow: row;
+      gap: 8px;
     }
     .lb-row {
       display: grid;
-      grid-template-columns: 28px 1fr auto;
+      grid-template-columns: 36px 1fr auto auto;
       align-items: center;
       gap: 12px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border-left: 3px solid transparent;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid var(--line);
+      border-radius: 12px;
       min-width: 0;
     }
-    .leaderboard-list.cols-2 .lb-row {
-      gap: 8px;
-      padding: 6px 8px;
+    .lb-row.is-leader {
+      background: rgba(212, 165, 116, 0.14);
+      border-color: rgba(212, 165, 116, 0.55);
     }
-    .leaderboard-list.cols-2 .lb-rank { font-size: 14px; }
-    .leaderboard-list.cols-2 .lb-name { font-size: 13px; }
-    .leaderboard-list.cols-2 .lb-score { font-size: 12px; }
-    .leaderboard-list.cols-2 .lb-score strong { font-size: 15px; margin-right: 2px; }
-    .leaderboard-list.cols-2 .lb-score em { font-size: 11px; }
     .lb-row.is-me {
-      background: rgba(212, 165, 116, 0.10);
-      border-left-color: var(--accent);
+      border-color: var(--clubColor);
+      border-width: 1.5px;
     }
-    .lb-rank {
+    .lb-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
       font-family: var(--font-serif);
+      font-weight: 800;
       font-size: 16px;
-      font-weight: 700;
-      color: var(--clubColor);
-      font-variant-numeric: tabular-nums;
-      text-align: center;
+      flex-shrink: 0;
+      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
     }
-    .lb-row.is-nc .lb-rank { color: var(--muted-soft); }
+    .lb-row.is-nc .lb-avatar { opacity: 0.5; }
+    .lb-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      gap: 2px;
+    }
     .lb-name {
-      font-size: 15px;
-      font-weight: 500;
-      color: var(--ink);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .lb-row.is-nc .lb-name { color: var(--muted); }
-    .lb-score {
-      font-variant-numeric: tabular-nums;
+      font-weight: 600;
       font-size: 14px;
       color: var(--ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .lb-name em {
+      font-style: normal;
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 12px;
+    }
+    .lb-sub {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+    .lb-medal {
+      font-size: 22px;
+      line-height: 1;
+      min-width: 22px;
+      text-align: center;
+    }
+    .lb-score {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      font-variant-numeric: tabular-nums;
+      min-width: 60px;
+      justify-content: flex-end;
     }
     .lb-score strong {
       font-family: var(--font-serif);
-      font-size: 18px;
-      font-weight: 700;
+      font-size: 22px;
+      font-weight: 800;
       color: var(--clubColor);
-      margin-right: 4px;
     }
-    .lb-score em {
-      font-style: normal;
+    .lb-diff {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
       color: var(--muted);
-      font-size: 13px;
+      min-width: 28px;
+      text-align: right;
     }
+    .lb-diff.under { color: #1B4332; }
+    .lb-diff.over { color: #C0392B; }
     .lb-score.lb-nc {
       font-size: 12px;
       font-weight: 700;
