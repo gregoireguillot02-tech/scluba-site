@@ -55,11 +55,14 @@ export const formatIdSchema = z
   .max(32)
   .regex(/^[a-z0-9-]+$/, 'format invalide');
 
+export const scoringModeSchema = z.enum(['self', 'host']);
+
 export const createRoundSchema = z.object({
   slug: slugSchema,
   display_name: displayNameSchema,
   additional_players: additionalPlayersSchema,
   format_id: formatIdSchema.optional(),
+  scoring_mode: scoringModeSchema.optional(),
   hp_email: honeypotSchema,
 });
 
