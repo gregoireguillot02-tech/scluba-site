@@ -221,11 +221,38 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       </div>
     </section>
 
-    <form method="POST" action={`/api/rounds/${r.short_code}/finish`} class="finish-form" data-finish-form>
-      <button type="submit" class="finish-btn" data-finish-btn>Terminer maintenant</button>
-    </form>
+    <div class="play-actions" data-short-code={r.short_code}>
+      {me.is_creator && (
+        <button type="button" class="finish-btn" data-finish-btn>
+          Terminer la partie
+        </button>
+      )}
+      <button type="button" class="leave-btn" data-leave-btn>
+        {me.is_creator ? 'Quitter (les autres continuent)' : 'Quitter la partie'}
+      </button>
+    </div>
 
     <p class="play-status" data-status></p>
+
+    <div
+      class="finish-modal"
+      data-finish-modal
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="finish-modal-title"
+      hidden
+    >
+      <div class="finish-modal-card">
+        <h2 id="finish-modal-title" class="finish-modal-title">Trous sans score</h2>
+        <p class="finish-modal-body" data-finish-modal-body></p>
+        <div class="finish-modal-actions">
+          <button type="button" class="finish-modal-btn is-cancel" data-finish-cancel>Annuler</button>
+          <button type="button" class="finish-modal-btn is-confirm" data-finish-confirm>
+            Marquer en abandonné et terminer
+          </button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script>
@@ -505,7 +532,9 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       const strokesEl = root.querySelector<HTMLElement>('[data-strokes-display]')!;
       const hintEl = root.querySelector<HTMLElement>('[data-score-hint]')!;
       const totalStrokesEl = document.querySelector<HTMLElement>('[data-total-strokes]')!;
-      const finishForm = document.querySelector<HTMLFormElement>('[data-finish-form]')!;
+      const finishBtn = document.querySelector<HTMLButtonElement>('[data-finish-btn]');
+      const leaveBtn = document.querySelector<HTMLButtonElement>('[data-leave-btn]');
+      const finishModal = document.querySelector<HTMLElement>('[data-finish-modal]');
       const statusEl = document.querySelector<HTMLElement>('[data-status]')!;
       const cells = Array.from(document.querySelectorAll<HTMLElement>('[data-cell-hole]'));
       const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-player-tabs] [data-player-id]'));
@@ -593,19 +622,6 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
             ? `${total} (${diffLbl} · Par ${totalPar})`
             : `${total} sur ${played}/${holeCount} (${diffLbl})`;
 
-        const allDone = played === holeCount;
-        // Finish form is always visible: lets the player stop early (the
-        // remaining holes show as NC on the recap). Label adapts so a partial
-        // submission gets a confirmation prompt.
-        finishForm.hidden = false;
-        const finishBtn = finishForm.querySelector<HTMLButtonElement>('[data-finish-btn]');
-        if (finishBtn) {
-          finishBtn.textContent = allDone ? 'Terminer la partie' : 'Terminer maintenant';
-          finishBtn.dataset.allDone = allDone ? '1' : '0';
-          finishBtn.dataset.played = String(played);
-          finishBtn.dataset.holeCount = String(holeCount);
-        }
-
         const prevBtn = root!.querySelector<HTMLButtonElement>('[data-nav="prev"]')!;
         const nextBtn = root!.querySelector<HTMLButtonElement>('[data-nav="next"]')!;
         prevBtn.disabled = currentHole === 1;
@@ -617,17 +633,109 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
         }
       }
 
-      // Intercept the early-finish submission to confirm. Skip the confirm
-      // when the card is already complete (regular flow).
-      finishForm.addEventListener('submit', (e) => {
-        const btn = finishForm.querySelector<HTMLButtonElement>('[data-finish-btn]');
-        if (!btn || btn.dataset.allDone === '1') return;
-        const remaining = Number(btn.dataset.holeCount) - Number(btn.dataset.played);
-        const msg = remaining > 0
-          ? `Tu n'as saisi que ${btn.dataset.played} trou(s) sur ${btn.dataset.holeCount}. Les trous restants seront marqués NC. Terminer ?`
-          : 'Terminer la partie maintenant ?';
-        if (!window.confirm(msg)) e.preventDefault();
-      });
+      // Bouton "Terminer la partie" (host uniquement). Tente d'abord sans
+      // confirm — si des trous manquent, l'API renvoie 409 avec la liste
+      // des trous manquants par joueur ; on affiche alors un modal puis
+      // on re-POST avec `confirm_incomplete: true`.
+      async function postFinish(confirmIncomplete: boolean): Promise<Response> {
+        return fetch(`/api/rounds/${shortCode}/finish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ confirm_incomplete: confirmIncomplete }),
+        });
+      }
+
+      function openFinishModal(missing: { display_name: string; holes: number[] }[]) {
+        if (!finishModal) return;
+        const total = missing.reduce((s, m) => s + m.holes.length, 0);
+        const body = finishModal.querySelector<HTMLElement>('[data-finish-modal-body]')!;
+        const parts = missing.map((m) => {
+          const n = m.holes.length;
+          return `${m.display_name} (${n} trou${n > 1 ? 's' : ''})`;
+        });
+        body.textContent =
+          `${total} trou${total > 1 ? 's' : ''} sans score : ${parts.join(', ')}. ` +
+          `${total > 1 ? 'Ils seront marqués' : 'Il sera marqué'} comme abandonné${total > 1 ? 's' : ''} (Par + 2). Continuer ?`;
+        finishModal.hidden = false;
+      }
+
+      function closeFinishModal() {
+        if (finishModal) finishModal.hidden = true;
+      }
+
+      async function navigateToRecap(res: Response): Promise<void> {
+        try {
+          const data = (await res.json()) as { redirectTo?: string };
+          window.location.href = data.redirectTo ?? window.location.pathname.replace(/\/play$/, '/recap');
+        } catch {
+          window.location.href = window.location.pathname.replace(/\/play$/, '/recap');
+        }
+      }
+
+      if (finishBtn) {
+        finishBtn.addEventListener('click', async () => {
+          if (finishBtn.disabled) return;
+          finishBtn.disabled = true;
+          try {
+            const res = await postFinish(false);
+            if (res.status === 409) {
+              const data = (await res.json()) as { missing: { display_name: string; holes: number[] }[] };
+              openFinishModal(data.missing ?? []);
+              return;
+            }
+            if (res.ok) {
+              await navigateToRecap(res);
+              return;
+            }
+            statusEl.textContent = 'Erreur en terminant la partie. Réessaie.';
+          } catch {
+            statusEl.textContent = 'Erreur réseau. Réessaie.';
+          } finally {
+            finishBtn.disabled = false;
+          }
+        });
+      }
+
+      if (finishModal) {
+        const cancelBtn = finishModal.querySelector<HTMLButtonElement>('[data-finish-cancel]');
+        const confirmBtn = finishModal.querySelector<HTMLButtonElement>('[data-finish-confirm]');
+        cancelBtn?.addEventListener('click', closeFinishModal);
+        finishModal.addEventListener('click', (e) => {
+          if (e.target === finishModal) closeFinishModal();
+        });
+        confirmBtn?.addEventListener('click', async () => {
+          confirmBtn.disabled = true;
+          try {
+            const res = await postFinish(true);
+            if (res.ok) {
+              await navigateToRecap(res);
+              return;
+            }
+            statusEl.textContent = 'Erreur en terminant la partie. Réessaie.';
+            closeFinishModal();
+          } catch {
+            statusEl.textContent = 'Erreur réseau. Réessaie.';
+            closeFinishModal();
+          } finally {
+            confirmBtn.disabled = false;
+          }
+        });
+      }
+
+      // Bouton "Quitter" : pas d'appel serveur — fermer l'onglet/naviguer suffit.
+      // Le cookie joueur reste en place, donc "Reprendre ma partie" depuis
+      // l'accueil permet de revenir. Les autres joueurs continuent à jouer
+      // via Realtime, totalement indépendamment.
+      if (leaveBtn) {
+        leaveBtn.addEventListener('click', () => {
+          const msg = leaveBtn.textContent?.includes('continuent')
+            ? 'Quitter la partie ? Les autres joueurs continuent à jouer. Tu pourras la reprendre depuis ton lien.'
+            : 'Quitter la partie ? Tu pourras la reprendre depuis ton lien.';
+          if (window.confirm(msg)) {
+            window.location.href = '/';
+          }
+        });
+      }
 
       function targetPlayerHint(): string | null {
         if (!canHostSwitch) return null;
@@ -1164,8 +1272,11 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       font-family: var(--font-serif);
     }
 
-    .finish-form {
+    .play-actions {
       padding: 0 var(--space-5);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
     .finish-btn {
       width: 100%;
@@ -1179,6 +1290,25 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       cursor: pointer;
       box-shadow: 0 8px 24px rgba(27, 67, 50, 0.18);
     }
+    .finish-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .leave-btn {
+      width: 100%;
+      padding: 12px 24px;
+      border-radius: 12px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .leave-btn:hover {
+      background: rgba(27, 67, 50, 0.04);
+      color: var(--ink);
+    }
 
     .play-status {
       text-align: center;
@@ -1186,6 +1316,77 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       font-size: 13px;
       color: var(--muted);
       min-height: 1.2em;
+    }
+
+    .finish-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(27, 67, 50, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-4);
+      z-index: 100;
+      backdrop-filter: blur(2px);
+    }
+    .finish-modal[hidden] {
+      display: none;
+    }
+    .finish-modal-card {
+      background: #FAF7EE;
+      border-radius: 16px;
+      padding: var(--space-5);
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 24px 64px rgba(27, 67, 50, 0.3);
+    }
+    .finish-modal-title {
+      margin: 0 0 var(--space-2);
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--ink);
+    }
+    .finish-modal-body {
+      margin: 0 0 var(--space-4);
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--ink);
+    }
+    .finish-modal-actions {
+      display: flex;
+      gap: 8px;
+      flex-direction: column;
+    }
+    .finish-modal-btn {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+    }
+    .finish-modal-btn.is-confirm {
+      background: var(--clubColor);
+      color: #FAF7EE;
+    }
+    .finish-modal-btn.is-cancel {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--line);
+    }
+    .finish-modal-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    @media (min-width: 480px) {
+      .finish-modal-actions {
+        flex-direction: row-reverse;
+        justify-content: flex-start;
+      }
+      .finish-modal-btn {
+        flex: 0 0 auto;
+      }
     }
   </style>
 </body>
