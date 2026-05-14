@@ -196,19 +196,33 @@ function fmtTime(iso: string | null): string {
         <label class="start-label">
           <span>Heure de départ</span>
           <div class="time-picker">
-            <select class="start-input time-picker-field" name="start_hour" data-start-hour aria-label="Heure">
-              {Array.from({ length: 24 }, (_, i) => {
-                const v = String(i).padStart(2, '0');
-                return <option value={v}>{v}</option>;
-              })}
-            </select>
+            <input
+              class="start-input time-picker-field"
+              type="number"
+              name="start_hour"
+              min="0"
+              max="23"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              autocomplete="off"
+              aria-label="Heure"
+              data-start-hour
+              required
+            />
             <span class="time-picker-sep" aria-hidden="true">h</span>
-            <select class="start-input time-picker-field" name="start_minute" data-start-minute aria-label="Minute">
-              {Array.from({ length: 60 }, (_, i) => {
-                const v = String(i).padStart(2, '0');
-                return <option value={v}>{v}</option>;
-              })}
-            </select>
+            <input
+              class="start-input time-picker-field"
+              type="number"
+              name="start_minute"
+              min="0"
+              max="59"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              autocomplete="off"
+              aria-label="Minute"
+              data-start-minute
+              required
+            />
           </div>
         </label>
         <button type="submit" class="start-btn">
@@ -274,19 +288,33 @@ function fmtTime(iso: string | null): string {
         <label class="start-label">
           <span>Heure de départ</span>
           <div class="time-picker">
-            <select class="start-input time-picker-field" name="start_hour" data-start-hour aria-label="Heure">
-              {Array.from({ length: 24 }, (_, i) => {
-                const v = String(i).padStart(2, '0');
-                return <option value={v}>{v}</option>;
-              })}
-            </select>
+            <input
+              class="start-input time-picker-field"
+              type="number"
+              name="start_hour"
+              min="0"
+              max="23"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              autocomplete="off"
+              aria-label="Heure"
+              data-start-hour
+              required
+            />
             <span class="time-picker-sep" aria-hidden="true">h</span>
-            <select class="start-input time-picker-field" name="start_minute" data-start-minute aria-label="Minute">
-              {Array.from({ length: 60 }, (_, i) => {
-                const v = String(i).padStart(2, '0');
-                return <option value={v}>{v}</option>;
-              })}
-            </select>
+            <input
+              class="start-input time-picker-field"
+              type="number"
+              name="start_minute"
+              min="0"
+              max="59"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              autocomplete="off"
+              aria-label="Minute"
+              data-start-minute
+              required
+            />
           </div>
         </label>
         <button type="submit" class="start-btn">
@@ -529,24 +557,27 @@ function fmtTime(iso: string | null): string {
         });
       }
 
-      // Heure de départ : on prérempli les 2 selects HH/MM avec l'heure
-      // courante. Les selects sont envoyés en form data native par le
+      // Heure de départ : on prérempli les 2 number inputs HH/MM avec
+      // l'heure courante. Les inputs sont envoyés nativement par le
       // browser (name="start_hour", name="start_minute") et le serveur
       // calcule l'ISO Europe/Paris dans `parisTimeToISO()` (cf.
       // `src/lib/time.ts` et `api/rounds/index.ts`).
       //
-      // PAS DE JS DE CALCUL D'ISO ICI : iOS Safari peut laisser
-      // `select.value` stale via l'API JS au submit quand le wheel picker
-      // a été utilisé, ce qui faussait le hidden field qu'on construisait
-      // ici. La form data native, elle, envoie bien la valeur visible.
+      // Pourquoi `<input type="number">` plutôt que `<select>` ou
+      // `<input type="time">` : iOS Safari présente un wheel picker pour
+      // les selects et le time picker, et ce picker ne commit JAMAIS sa
+      // valeur (ni via JS, ni en form data native) si l'utilisateur clique
+      // direct sur "Créer la partie" sans dismisser. Avec number inputs,
+      // iOS ouvre juste un clavier numérique et la valeur commit à chaque
+      // chiffre tapé.
       const startForms = document.querySelectorAll<HTMLFormElement>('form.start-form');
       for (const form of startForms) {
-        const hourSel = form.querySelector<HTMLSelectElement>('[data-start-hour]');
-        const minSel = form.querySelector<HTMLSelectElement>('[data-start-minute]');
-        if (!hourSel || !minSel) continue;
+        const hourInput = form.querySelector<HTMLInputElement>('[data-start-hour]');
+        const minInput = form.querySelector<HTMLInputElement>('[data-start-minute]');
+        if (!hourInput || !minInput) continue;
         const now = new Date();
-        hourSel.value = String(now.getHours()).padStart(2, '0');
-        minSel.value = String(now.getMinutes()).padStart(2, '0');
+        hourInput.value = String(now.getHours()).padStart(2, '0');
+        minInput.value = String(now.getMinutes()).padStart(2, '0');
       }
     </script>
 
@@ -925,26 +956,29 @@ function fmtTime(iso: string | null): string {
       border-color: var(--primary-soft);
       box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15);
     }
-    /* Heure de départ : 2 selects HH + MM séparés par "h". Les selects
-       héritent de `.start-input` (padding, bordure) mais on neutralise
-       l'appearance native + on ajoute une flèche custom pour matcher la
-       sobriété des autres champs. */
+    /* Heure de départ : 2 number inputs HH + MM séparés par "h".
+       Number inputs car iOS Safari wheel picker (`<select>` ou
+       `<input type="time">`) ne commit pas sa valeur quand l'utilisateur
+       passe direct au submit sans dismisser. Avec type=number, le clavier
+       numérique mobile commit chaque chiffre, et le visuel = la valeur. */
     .time-picker {
       display: flex;
       align-items: center;
       gap: 8px;
     }
     .time-picker-field {
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      appearance: none;
       flex: 1;
       min-width: 0;
-      padding-right: 36px;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 16px center;
-      cursor: pointer;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      /* Masque les arrows up/down de l'input number (peu utiles en mobile) */
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    .time-picker-field::-webkit-outer-spin-button,
+    .time-picker-field::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
     .time-picker-sep {
       font-family: var(--font-serif);
