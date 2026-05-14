@@ -282,7 +282,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       </p>
       {myTotal.pickedUp > 0 && (
         <p class="score-note">
-          {myTotal.pickedUp === 1 ? '1 trou abandonné' : `${myTotal.pickedUp} trous abandonnés`} compté{myTotal.pickedUp > 1 ? 's' : ''} Par + 2 (Maximum Score)
+          {myTotal.pickedUp === 1 ? '1 trou abandonné' : `${myTotal.pickedUp} trous abandonnés`} : +{myTotal.pickedUp * 2} coup{myTotal.pickedUp * 2 > 1 ? 's' : ''} ajouté{myTotal.pickedUp * 2 > 1 ? 's' : ''} (Par + 2 chacun, règle Maximum Score)
         </p>
       )}
     </section>

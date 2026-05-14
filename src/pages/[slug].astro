@@ -511,27 +511,46 @@ function fmtTime(iso: string | null): string {
         });
       }
 
-      // Heure de départ : prefill avec l'heure courante, et à la soumission
-      // convertir le HH:MM (tz locale du navigateur) en ISO UTC pour le serveur.
+      // Heure de départ : prefill avec l'heure courante, et synchronise un
+      // hidden `started_at` (ISO UTC) au DOM en continu (change + blur), pas
+      // juste au submit — iOS Safari ne commit pas toujours `input.value` à
+      // temps quand le picker reste ouvert au clic sur "Créer la partie".
       const startTimeInputs = document.querySelectorAll<HTMLInputElement>('[data-start-time]');
       for (const input of startTimeInputs) {
         const now = new Date();
         const hh = String(now.getHours()).padStart(2, '0');
         const mm = String(now.getMinutes()).padStart(2, '0');
         input.value = `${hh}:${mm}`;
+
         const parentForm = input.closest('form');
-        parentForm?.addEventListener('submit', () => {
-          if (!input.value) return;
-          const [h, m] = input.value.split(':').map(Number);
-          if (Number.isNaN(h) || Number.isNaN(m)) return;
+        if (!parentForm) continue;
+
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'started_at';
+        parentForm.appendChild(hidden);
+
+        function syncHidden() {
+          const raw = input.value;
+          if (!raw) {
+            hidden.value = new Date().toISOString();
+            return;
+          }
+          const [h, m] = raw.split(':').map(Number);
+          if (Number.isNaN(h) || Number.isNaN(m)) {
+            hidden.value = new Date().toISOString();
+            return;
+          }
           const d = new Date();
           d.setHours(h, m, 0, 0);
-          const hidden = document.createElement('input');
-          hidden.type = 'hidden';
-          hidden.name = 'started_at';
           hidden.value = d.toISOString();
-          parentForm.appendChild(hidden);
-        });
+        }
+
+        input.addEventListener('change', syncHidden);
+        input.addEventListener('input', syncHidden);
+        input.addEventListener('blur', syncHidden);
+        parentForm.addEventListener('submit', syncHidden); // filet final
+        syncHidden(); // valeur initiale (= heure prerempli)
       }
     </script>
 
@@ -909,6 +928,28 @@ function fmtTime(iso: string | null): string {
       outline: none;
       border-color: var(--primary-soft);
       box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15);
+    }
+    /* input[type="time"] : neutraliser le style natif iOS Safari pour aligner
+       la hauteur, le padding et la typo avec les autres `.start-input` (l'input
+       texte ci-dessus et les radio cards de format). Sans ces overrides, sur
+       iOS le picker affiche un texte trop grand qui déborde de la box. */
+    .start-input[type="time"] {
+      -webkit-appearance: none;
+      appearance: none;
+      min-height: 52px;
+      line-height: 1.2;
+      font-family: var(--font-sans);
+      font-size: 16px;
+      text-align: left;
+    }
+    .start-input[type="time"]::-webkit-date-and-time-value {
+      text-align: left;
+      font-family: var(--font-sans);
+      font-size: 16px;
+    }
+    .start-input[type="time"]::-webkit-calendar-picker-indicator {
+      margin-left: auto;
+      opacity: 0.6;
     }
     .start-btn {
       display: inline-flex;
