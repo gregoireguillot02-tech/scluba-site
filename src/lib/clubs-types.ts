@@ -39,10 +39,22 @@ export interface Club {
   logo_url: string | null;
   photo_url: string | null;
   primary_color: string | null;
+  // Latitude/longitude du clubhouse (utilisé pour fetcher la météo
+  // Open-Meteo lors de la création d'une partie). Nullable : un club créé
+  // sans coords ne casse rien, la météo est juste skippée.
+  latitude: number | null;
+  longitude: number | null;
   course_data: CourseData;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface WeatherSnapshot {
+  temp_c: number;
+  code: number;
+  label: string;
+  emoji: string;
 }
 
 export const ROUND_STATUSES = ['lobby', 'playing', 'finished'] as const;
@@ -61,6 +73,12 @@ export interface Round {
   // which loops this round plays. Null means "play the flat course_data.holes
   // array" (legacy behaviour, before multi-loop clubs existed).
   format_id: string | null;
+  // Snapshot Open-Meteo récupéré à la création (température + code WMO +
+  // label/emoji). Null si pas de coords club ou si Open-Meteo a échoué.
+  weather: WeatherSnapshot | null;
+  // Commentaire libre saisi par le joueur en fin de partie (page recap).
+  // Affiché sur la scorecard partagée.
+  comment: string | null;
 }
 
 export interface RoundPlayer {

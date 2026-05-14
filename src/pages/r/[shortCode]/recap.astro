@@ -190,6 +190,8 @@ const sharePayload = JSON.stringify({
   // quand la carte est incomplète : "−1 / Par 28" sur 8 trous au lieu de
   // "−1 / Par 71" pour le parcours complet).
   playedPar: myTotal.playedPar,
+  weather: r.weather,
+  comment: r.comment,
   leaderboard: isMultiplayer
     ? leaderboard.map((row) => ({
         display_name: row.display_name,
@@ -346,6 +348,33 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       </section>
     )}
 
+    {r.weather && (
+      <section class="weather-strip" aria-label="Météo à la création de la partie">
+        <span class="weather-emoji" aria-hidden="true">{r.weather.emoji}</span>
+        <span class="weather-temp">{r.weather.temp_c}°C</span>
+        <span class="weather-label">{r.weather.label}</span>
+      </section>
+    )}
+
+    <section class="comment-block">
+      <p class="comment-eyebrow">Ton commentaire</p>
+      <form class="comment-form" data-comment-form data-short-code={r.short_code}>
+        <textarea
+          class="comment-input"
+          name="comment"
+          maxlength="200"
+          rows="2"
+          placeholder="Soleil, terrain gras, partie de fou…"
+          data-comment-input
+        >{r.comment ?? ''}</textarea>
+        <div class="comment-actions">
+          <span class="comment-count" data-comment-count>{r.comment?.length ?? 0}/200</span>
+          <button type="submit" class="comment-btn" data-comment-btn>Enregistrer</button>
+        </div>
+        <p class="comment-status" data-comment-status></p>
+      </form>
+    </section>
+
     <section class="player-row">
       <div>
         <span class="meta-l">Joueur</span>
@@ -413,6 +442,56 @@ const clubColor = r.club.primary_color ?? '#1B4332';
         const title = shareBtn.dataset.shareTitle!;
         if (navigator.share) {
           navigator.share({ url, title }).catch(() => {});
+        }
+      });
+    }
+
+    // Commentaire libre — POST asynchrone au /api/rounds/[code]/comment, met
+    // à jour le sharePayload de ShareCardModal pour que le PNG suivant
+    // intègre le commentaire fraîchement saisi.
+    const commentForm = document.querySelector<HTMLFormElement>('[data-comment-form]');
+    if (commentForm) {
+      const input = commentForm.querySelector<HTMLTextAreaElement>('[data-comment-input]')!;
+      const counter = commentForm.querySelector<HTMLElement>('[data-comment-count]')!;
+      const status = commentForm.querySelector<HTMLElement>('[data-comment-status]')!;
+      const btn = commentForm.querySelector<HTMLButtonElement>('[data-comment-btn]')!;
+      const shortCode = commentForm.dataset.shortCode!;
+
+      input.addEventListener('input', () => {
+        counter.textContent = `${input.value.length}/200`;
+      });
+
+      commentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const value = input.value.trim();
+        btn.disabled = true;
+        status.textContent = 'Enregistrement…';
+        try {
+          const res = await fetch(`/api/rounds/${shortCode}/comment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comment: value }),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          status.textContent = '✓ Enregistré';
+
+          // Sync le commentaire dans le payload du ShareCardModal pour que
+          // la prochaine génération de PNG l'inclue.
+          const modal = document.getElementById('share-card-modal');
+          if (modal && modal.dataset.payload) {
+            try {
+              const payload = JSON.parse(modal.dataset.payload);
+              payload.comment = value.length > 0 ? value : null;
+              modal.dataset.payload = JSON.stringify(payload);
+            } catch (parseErr) {
+              console.warn('[recap] failed to sync comment into share payload', parseErr);
+            }
+          }
+          setTimeout(() => { status.textContent = ''; }, 1500);
+        } catch (err) {
+          status.textContent = `Erreur : ${(err as Error).message}`;
+        } finally {
+          btn.disabled = false;
         }
       });
     }
@@ -786,6 +865,74 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       color: var(--muted);
       text-transform: uppercase;
     }
+
+    /* === Weather strip === */
+    .weather-strip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: var(--space-3) auto 0;
+      padding: 6px 12px;
+      background: rgba(212, 165, 116, 0.08);
+      border: 1px solid rgba(212, 165, 116, 0.4);
+      border-radius: 999px;
+      align-self: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .weather-emoji { font-size: 18px; line-height: 1; }
+    .weather-temp { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .weather-label { font-size: 12px; }
+
+    /* === Comment block === */
+    .comment-block {
+      padding: var(--space-4) 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+    .comment-eyebrow {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .comment-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font: inherit;
+      font-size: 14px;
+      color: var(--ink);
+      resize: vertical;
+      min-height: 60px;
+    }
+    .comment-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+    .comment-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    .comment-count { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .comment-btn {
+      padding: 8px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--clubColor);
+      background: transparent;
+      color: var(--clubColor);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .comment-btn:hover { background: var(--clubColor); color: var(--bg); }
+    .comment-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .comment-status { margin: 0; font-size: 12px; color: var(--muted); min-height: 16px; }
 
     /* === Player row + share === */
     .player-row {

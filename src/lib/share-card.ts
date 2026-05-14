@@ -89,6 +89,13 @@ export interface ComposeSection {
   holes: CourseHole[];
 }
 
+export interface WeatherInput {
+  temp_c: number;
+  code: number;
+  label: string;
+  emoji: string;
+}
+
 export interface ComposeInput {
   photoUrl: string | null;
   player: RoundPlayer | null;
@@ -120,6 +127,12 @@ export interface ComposeInput {
   // Optional mini-leaderboard rendered between the scorecard grid and the
   // legend. Only set for multiplayer rounds; solo rounds omit it.
   leaderboard?: LeaderboardEntry[];
+  // Snapshot météo Open-Meteo capturé à la création de partie. Affiché
+  // discrètement en bas du PNG si présent.
+  weather?: WeatherInput | null;
+  // Commentaire libre saisi par le joueur (200 chars max). Affiché en
+  // italique sous le classement / légende du PNG.
+  comment?: string | null;
 }
 
 function fmtDateShort(iso: string | null): string {
@@ -517,7 +530,12 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   const leaderboardHeight = lbEntries.length > 0
     ? LB_TITLE_H + lbRowsPerCol * (LB_ROW_H + LB_ROW_GAP) + LB_BOTTOM_PAD
     : 0;
-  const H = 1350 + leaderboardHeight;
+  // Bloc commentaire (1-2 lignes en italique). Hauteur calculée selon
+  // longueur du texte : ~70px par ligne. Max 2 lignes pour ne pas faire
+  // déborder. Si vide → 0.
+  const commentText = (input.comment ?? '').trim();
+  const commentHeight = commentText.length > 0 ? 80 : 0;
+  const H = 1350 + leaderboardHeight + commentHeight;
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -584,6 +602,9 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
     timeStr,
     `${input.holesPlayed} trous`,
   ].filter((s) => s.length > 0);
+  if (input.weather) {
+    subParts.push(`${input.weather.emoji} ${input.weather.temp_c}°`);
+  }
   const subText = subParts.join(' · ');
   ctx.fillText(subText, W / 2, BAND_Y + 92, W - 2 * PAD_X);
 
@@ -654,6 +675,36 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   if (lbEntries.length > 0) {
     postGridY += drawLeaderboard(ctx, lbEntries, postGridY, W, primaryColor);
     postGridY += LB_BOTTOM_PAD;
+  }
+
+  // Section 4c : Commentaire libre du joueur (italique, max 2 lignes
+  // tronquées). Affiché si non vide.
+  if (commentText.length > 0) {
+    ctx.fillStyle = '#6B7280';
+    ctx.font = `italic 500 22px ${FONT_STACK}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const maxLineWidth = W - 2 * PAD_X;
+    const quoted = `« ${commentText} »`;
+    // Mesure : si ça tient sur une ligne, on dessine direct. Sinon on coupe
+    // grossièrement en deux lignes (suffisant pour 200 chars max).
+    const fullWidth = ctx.measureText(quoted).width;
+    if (fullWidth <= maxLineWidth) {
+      ctx.fillText(quoted, W / 2, postGridY + 30);
+    } else {
+      const mid = Math.floor(quoted.length / 2);
+      // Cherche un espace proche du milieu pour couper proprement.
+      let splitAt = mid;
+      for (let i = 0; i < 30; i++) {
+        if (quoted[mid + i] === ' ') { splitAt = mid + i; break; }
+        if (quoted[mid - i] === ' ') { splitAt = mid - i; break; }
+      }
+      const line1 = quoted.slice(0, splitAt).trim();
+      const line2 = quoted.slice(splitAt).trim();
+      ctx.fillText(line1, W / 2, postGridY + 18, maxLineWidth);
+      ctx.fillText(line2, W / 2, postGridY + 50, maxLineWidth);
+    }
+    postGridY += commentHeight;
   }
 
   // Section 5 : Legend (Birdie · Par · Bogey)

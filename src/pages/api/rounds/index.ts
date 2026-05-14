@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { authServerClient, serviceClient } from '../../../lib/supabase';
 import { generateRoundShortCode } from '../../../lib/slug';
 import { createRoundSchema, formatZodError } from '../../../lib/validation/schemas';
+import { fetchCurrentWeather } from '../../../lib/weather';
 
 export const prerender = false;
 
@@ -48,7 +49,7 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
 
   const { data: club, error: cErr } = await sb
     .from('clubs')
-    .select('id')
+    .select('id, latitude, longitude')
     .eq('slug', slug)
     .maybeSingle();
   if (cErr) {
@@ -57,13 +58,31 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
   }
   if (!club) return new Response('Club not found', { status: 404 });
 
+  // Snapshot météo Open-Meteo si on a les coords. Best-effort (3s timeout) :
+  // si l'API est down ou lente, on crée la partie sans météo plutôt que
+  // bloquer le user.
+  let weatherSnapshot: Awaited<ReturnType<typeof fetchCurrentWeather>> = null;
+  if (typeof club.latitude === 'number' && typeof club.longitude === 'number') {
+    const ac = new AbortController();
+    const timeout = setTimeout(() => ac.abort(), 3000);
+    weatherSnapshot = await fetchCurrentWeather(club.latitude, club.longitude, ac.signal);
+    clearTimeout(timeout);
+  }
+
   let short_code = '';
   let roundId = '';
   for (let attempt = 0; attempt < 4; attempt++) {
     short_code = generateRoundShortCode();
     const { data: created, error: rErr } = await sb
       .from('rounds')
-      .insert({ club_id: club.id, short_code, status: 'lobby', format_id: formatId, started_at: startedAt })
+      .insert({
+        club_id: club.id,
+        short_code,
+        status: 'lobby',
+        format_id: formatId,
+        started_at: startedAt,
+        weather: weatherSnapshot,
+      })
       .select('id')
       .single();
     if (!rErr && created) {
