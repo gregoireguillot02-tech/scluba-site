@@ -529,43 +529,24 @@ function fmtTime(iso: string | null): string {
         });
       }
 
-      // Heure de départ : 2 `<select>` (heure + minute) au lieu d'un
-      // `<input type="time">`. Sur iOS Safari le picker natif ne commit pas
-      // `input.value` au submit quand il reste ouvert — les selects, eux,
-      // committent leur `value` immédiatement au changement de sélection.
-      // On préremplit avec l'heure courante, on calcule un ISO UTC dans un
-      // hidden `started_at` à chaque change + au submit (filet final).
+      // Heure de départ : on prérempli les 2 selects HH/MM avec l'heure
+      // courante. Les selects sont envoyés en form data native par le
+      // browser (name="start_hour", name="start_minute") et le serveur
+      // calcule l'ISO Europe/Paris dans `parisTimeToISO()` (cf.
+      // `src/lib/time.ts` et `api/rounds/index.ts`).
+      //
+      // PAS DE JS DE CALCUL D'ISO ICI : iOS Safari peut laisser
+      // `select.value` stale via l'API JS au submit quand le wheel picker
+      // a été utilisé, ce qui faussait le hidden field qu'on construisait
+      // ici. La form data native, elle, envoie bien la valeur visible.
       const startForms = document.querySelectorAll<HTMLFormElement>('form.start-form');
       for (const form of startForms) {
         const hourSel = form.querySelector<HTMLSelectElement>('[data-start-hour]');
         const minSel = form.querySelector<HTMLSelectElement>('[data-start-minute]');
         if (!hourSel || !minSel) continue;
-
         const now = new Date();
         hourSel.value = String(now.getHours()).padStart(2, '0');
         minSel.value = String(now.getMinutes()).padStart(2, '0');
-
-        const hidden = document.createElement('input');
-        hidden.type = 'hidden';
-        hidden.name = 'started_at';
-        form.appendChild(hidden);
-
-        function syncHidden() {
-          const h = Number(hourSel!.value);
-          const m = Number(minSel!.value);
-          if (Number.isNaN(h) || Number.isNaN(m)) {
-            hidden.value = new Date().toISOString();
-            return;
-          }
-          const d = new Date();
-          d.setHours(h, m, 0, 0);
-          hidden.value = d.toISOString();
-        }
-
-        hourSel.addEventListener('change', syncHidden);
-        minSel.addEventListener('change', syncHidden);
-        form.addEventListener('submit', syncHidden);
-        syncHidden();
       }
     </script>
 

@@ -68,12 +68,24 @@ export const startedAtSchema = z
   .max(40)
   .optional();
 
+// Heure/minute saisies via les 2 selects HH/MM. Source de vérité pour
+// l'heure de départ (cf. iOS Safari où `select.value` est stale via JS au
+// submit, mais la form data native envoie quand même la valeur visible).
+// Le serveur les combine en ISO Paris-locale via `parisTimeToISO()`.
+export const startHourSchema = z.coerce.number().int().min(0).max(23).optional();
+export const startMinuteSchema = z.coerce.number().int().min(0).max(59).optional();
+
 export const createRoundSchema = z.object({
   slug: slugSchema,
   display_name: displayNameSchema,
   additional_players: additionalPlayersSchema,
   format_id: formatIdSchema.optional(),
+  // Legacy : certains clients peuvent encore envoyer un ISO directement
+  // (anciens build cachés). On l'accepte comme fallback si start_hour/minute
+  // sont absents.
   started_at: startedAtSchema,
+  start_hour: startHourSchema,
+  start_minute: startMinuteSchema,
   hp_email: honeypotSchema,
 });
 

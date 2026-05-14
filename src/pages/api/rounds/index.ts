@@ -3,6 +3,7 @@ import { authServerClient, serviceClient } from '../../../lib/supabase';
 import { generateRoundShortCode } from '../../../lib/slug';
 import { createRoundSchema, formatZodError } from '../../../lib/validation/schemas';
 import { fetchCurrentWeather } from '../../../lib/weather';
+import { parisTimeToISO } from '../../../lib/time';
 
 export const prerender = false;
 
@@ -31,19 +32,29 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
 
   const rawFormatId = form.get('format_id');
   const rawStartedAt = form.get('started_at');
+  const rawStartHour = form.get('start_hour');
+  const rawStartMinute = form.get('start_minute');
   const parsed = createRoundSchema.safeParse({
     slug: form.get('slug') ?? '',
     display_name: form.get('display_name') ?? '',
     additional_players: additional_players.length > 0 ? additional_players : undefined,
     format_id: typeof rawFormatId === 'string' && rawFormatId.length > 0 ? rawFormatId : undefined,
     started_at: typeof rawStartedAt === 'string' && rawStartedAt.length > 0 ? rawStartedAt : undefined,
+    start_hour: typeof rawStartHour === 'string' && rawStartHour.length > 0 ? rawStartHour : undefined,
+    start_minute: typeof rawStartMinute === 'string' && rawStartMinute.length > 0 ? rawStartMinute : undefined,
     hp_email: form.get('hp_email') ?? undefined,
   });
   if (!parsed.success) return new Response(formatZodError(parsed.error), { status: 400 });
   const { slug, display_name } = parsed.data;
   const placeholders = parsed.data.additional_players ?? [];
   const formatId = parsed.data.format_id ?? null;
-  const startedAt = parsed.data.started_at ?? new Date().toISOString();
+  // Source de vérité : les selects HH/MM envoyés en form data native par
+  // le browser (contournement iOS Safari). Fallback sur le started_at ISO
+  // (legacy clients cachés), sinon now().
+  const hasHM = typeof parsed.data.start_hour === 'number' && typeof parsed.data.start_minute === 'number';
+  const startedAt = hasHM
+    ? parisTimeToISO(parsed.data.start_hour!, parsed.data.start_minute!)
+    : (parsed.data.started_at ?? new Date().toISOString());
 
   const sb = serviceClient();
 
