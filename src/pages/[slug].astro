@@ -193,38 +193,6 @@ function fmtTime(iso: string | null): string {
             </div>
           </fieldset>
         )}
-        <label class="start-label">
-          <span>Heure de départ</span>
-          <div class="time-picker">
-            <input
-              class="start-input time-picker-field"
-              type="number"
-              name="start_hour"
-              min="0"
-              max="23"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              autocomplete="off"
-              aria-label="Heure"
-              data-start-hour
-              required
-            />
-            <span class="time-picker-sep" aria-hidden="true">h</span>
-            <input
-              class="start-input time-picker-field"
-              type="number"
-              name="start_minute"
-              min="0"
-              max="59"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              autocomplete="off"
-              aria-label="Minute"
-              data-start-minute
-              required
-            />
-          </div>
-        </label>
         <button type="submit" class="start-btn">
           Créer la partie
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -285,38 +253,6 @@ function fmtTime(iso: string | null): string {
             <span>Ajouter un joueur</span>
           </button>
         </fieldset>
-        <label class="start-label">
-          <span>Heure de départ</span>
-          <div class="time-picker">
-            <input
-              class="start-input time-picker-field"
-              type="number"
-              name="start_hour"
-              min="0"
-              max="23"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              autocomplete="off"
-              aria-label="Heure"
-              data-start-hour
-              required
-            />
-            <span class="time-picker-sep" aria-hidden="true">h</span>
-            <input
-              class="start-input time-picker-field"
-              type="number"
-              name="start_minute"
-              min="0"
-              max="59"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              autocomplete="off"
-              aria-label="Minute"
-              data-start-minute
-              required
-            />
-          </div>
-        </label>
         <button type="submit" class="start-btn">
           Créer la partie
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -557,28 +493,6 @@ function fmtTime(iso: string | null): string {
         });
       }
 
-      // Heure de départ : on prérempli les 2 number inputs HH/MM avec
-      // l'heure courante. Les inputs sont envoyés nativement par le
-      // browser (name="start_hour", name="start_minute") et le serveur
-      // calcule l'ISO Europe/Paris dans `parisTimeToISO()` (cf.
-      // `src/lib/time.ts` et `api/rounds/index.ts`).
-      //
-      // Pourquoi `<input type="number">` plutôt que `<select>` ou
-      // `<input type="time">` : iOS Safari présente un wheel picker pour
-      // les selects et le time picker, et ce picker ne commit JAMAIS sa
-      // valeur (ni via JS, ni en form data native) si l'utilisateur clique
-      // direct sur "Créer la partie" sans dismisser. Avec number inputs,
-      // iOS ouvre juste un clavier numérique et la valeur commit à chaque
-      // chiffre tapé.
-      const startForms = document.querySelectorAll<HTMLFormElement>('form.start-form');
-      for (const form of startForms) {
-        const hourInput = form.querySelector<HTMLInputElement>('[data-start-hour]');
-        const minInput = form.querySelector<HTMLInputElement>('[data-start-minute]');
-        if (!hourInput || !minInput) continue;
-        const now = new Date();
-        hourInput.value = String(now.getHours()).padStart(2, '0');
-        minInput.value = String(now.getMinutes()).padStart(2, '0');
-      }
     </script>
 
     <footer class="colophon">
@@ -955,36 +869,6 @@ function fmtTime(iso: string | null): string {
       outline: none;
       border-color: var(--primary-soft);
       box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15);
-    }
-    /* Heure de départ : 2 number inputs HH + MM séparés par "h".
-       Number inputs car iOS Safari wheel picker (`<select>` ou
-       `<input type="time">`) ne commit pas sa valeur quand l'utilisateur
-       passe direct au submit sans dismisser. Avec type=number, le clavier
-       numérique mobile commit chaque chiffre, et le visuel = la valeur. */
-    .time-picker {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .time-picker-field {
-      flex: 1;
-      min-width: 0;
-      text-align: center;
-      font-variant-numeric: tabular-nums;
-      /* Masque les arrows up/down de l'input number (peu utiles en mobile) */
-      -moz-appearance: textfield;
-      appearance: textfield;
-    }
-    .time-picker-field::-webkit-outer-spin-button,
-    .time-picker-field::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    .time-picker-sep {
-      font-family: var(--font-serif);
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--muted);
     }
     .start-btn {
       display: inline-flex;
