@@ -128,7 +128,13 @@ const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.pro
     const shareTitle = root.dataset.shareTitle ?? '';
     const fallbackUrl = root.dataset.fallbackUrl ?? '';
     const roundId = root.dataset.roundId ?? '';
-    const composeBase = JSON.parse(root.dataset.payload ?? '{}') as Omit<ComposeInput, 'photoUrl'>;
+    // Le payload est re-parsé à chaque génération de PNG (cf. readComposeBase
+    // ci-dessous) plutôt que figé à l'init — sinon une mise à jour du
+    // dataset.payload après init (ex. saisie de commentaire sur recap.astro)
+    // n'apparaît jamais dans le PNG généré.
+    function readComposeBase(): Omit<ComposeInput, 'photoUrl'> {
+      return JSON.parse(root!.dataset.payload ?? '{}') as Omit<ComposeInput, 'photoUrl'>;
+    }
 
     let state: State = initialPhoto ? 'previewing' : 'idle';
     let currentPhotoUrl: string | null = initialPhoto || null;
@@ -244,7 +250,7 @@ const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.pro
           }
         }
 
-        const blob = await composeShareImage({ ...composeBase, photoUrl });
+        const blob = await composeShareImage({ ...readComposeBase(), photoUrl });
         clearPngPreview();
         pngBlob = blob;
         pngObjectUrl = URL.createObjectURL(blob);
