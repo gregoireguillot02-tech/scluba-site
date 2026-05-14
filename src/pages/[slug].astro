@@ -511,11 +511,20 @@ function fmtTime(iso: string | null): string {
         });
       }
 
-      // Heure de départ : prefill avec l'heure courante, et synchronise un
-      // hidden `started_at` (ISO UTC) au DOM en continu (change + blur), pas
-      // juste au submit — iOS Safari ne commit pas toujours `input.value` à
-      // temps quand le picker reste ouvert au clic sur "Créer la partie".
+      // Heure de départ. iOS Safari : le `<input type="time">` ne commit
+      // `input.value` à la nouvelle heure que sur blur du picker — pas via
+      // `change`/`input`. Si l'utilisateur pick 12:40 et tape direct sur
+      // « Créer la partie », `input.value` reste à la valeur prerempli et
+      // le hidden `started_at` est faux.
+      //
+      // Stratégie béton : sur submit, on intercepte (preventDefault), on
+      // force `blur()` sur tous les inputs time (qui commit la valeur côté
+      // iOS), on attend 1 tick pour que le browser propage, on re-sync le
+      // hidden, puis on resoumet programmatiquement avec un flag de garde.
       const startTimeInputs = document.querySelectorAll<HTMLInputElement>('[data-start-time]');
+      type FormState = { hidden: HTMLInputElement; sync: () => void };
+      const formStates = new Map<HTMLFormElement, FormState[]>();
+
       for (const input of startTimeInputs) {
         const now = new Date();
         const hh = String(now.getHours()).padStart(2, '0');
@@ -532,10 +541,7 @@ function fmtTime(iso: string | null): string {
 
         function syncHidden() {
           const raw = input.value;
-          if (!raw) {
-            hidden.value = new Date().toISOString();
-            return;
-          }
+          if (!raw) { hidden.value = new Date().toISOString(); return; }
           const [h, m] = raw.split(':').map(Number);
           if (Number.isNaN(h) || Number.isNaN(m)) {
             hidden.value = new Date().toISOString();
@@ -549,8 +555,32 @@ function fmtTime(iso: string | null): string {
         input.addEventListener('change', syncHidden);
         input.addEventListener('input', syncHidden);
         input.addEventListener('blur', syncHidden);
-        parentForm.addEventListener('submit', syncHidden); // filet final
-        syncHidden(); // valeur initiale (= heure prerempli)
+        syncHidden();
+
+        const list = formStates.get(parentForm) ?? [];
+        list.push({ hidden, sync: syncHidden });
+        formStates.set(parentForm, list);
+      }
+
+      // Un seul submit handler par form, qui force blur sur tous les inputs
+      // time du form avant de laisser la requête partir.
+      const submitting = new WeakSet<HTMLFormElement>();
+      for (const [form, states] of formStates) {
+        form.addEventListener('submit', (e) => {
+          if (submitting.has(form)) return; // resubmit programmatique : passe au natif
+          e.preventDefault();
+          // Force iOS picker à commit en blurrant chaque input time du form
+          form.querySelectorAll<HTMLInputElement>('[data-start-time]').forEach((el) => {
+            if (typeof el.blur === 'function') el.blur();
+          });
+          // Laisse iOS propager le commit (1 tick suffit en général ; 80 ms
+          // par sécurité), puis re-sync les hidden et resoumets le form.
+          setTimeout(() => {
+            states.forEach((s) => s.sync());
+            submitting.add(form);
+            form.submit();
+          }, 80);
+        });
       }
     </script>
 
