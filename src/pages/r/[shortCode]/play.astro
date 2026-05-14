@@ -551,13 +551,17 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
     }
 
     .hole-card {
+      position: relative;
       padding: var(--space-7) var(--space-5) var(--space-6);
       text-align: center;
     }
     .hole-meta {
+      position: absolute;
+      top: var(--space-3);
+      right: var(--space-4);
       display: flex;
       align-items: baseline;
-      justify-content: center;
+      justify-content: flex-end;
       gap: var(--space-2);
       color: var(--accent);
       font-size: 11px;

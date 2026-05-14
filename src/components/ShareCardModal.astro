@@ -35,6 +35,10 @@ const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.pro
         <div class="scm-empty-icon">📷</div>
         <p>Ajoute une photo pour personnaliser ta carte</p>
       </div>
+      <div class="scm-png-preview" data-role="png-preview" hidden>
+        <img alt="Aperçu de la carte avant partage" data-role="png-preview-img" />
+        <p class="scm-png-caption">Voici ta carte. Vérifie avant de partager.</p>
+      </div>
       <p class="scm-error" data-role="error" hidden></p>
     </div>
 
@@ -46,6 +50,9 @@ const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.pro
       </button>
       <button type="button" class="scm-btn scm-btn-secondary" data-action="replace-photo" hidden>
         Remplacer la photo
+      </button>
+      <button type="button" class="scm-btn scm-btn-secondary" data-action="back-to-photo" hidden>
+        Modifier la photo
       </button>
       <button type="button" class="scm-btn scm-btn-primary" data-action="share">
         Partager
@@ -80,6 +87,9 @@ const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.pro
   .scm-body { margin-bottom: 20px; }
   .scm-preview { aspect-ratio: 4/5; background: #ddd; border-radius: 12px; overflow: hidden; }
   .scm-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .scm-png-preview { display: flex; flex-direction: column; gap: 8px; }
+  .scm-png-preview img { width: 100%; height: auto; max-height: 60vh; object-fit: contain; border-radius: 12px; background: #FAF7EE; display: block; }
+  .scm-png-caption { margin: 0; font-size: 13px; color: #666; text-align: center; }
   .scm-empty { aspect-ratio: 4/5; border: 2px dashed #ccc; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; padding: 24px; text-align: center; }
   .scm-empty-icon { font-size: 36px; margin-bottom: 8px; }
   .scm-empty p { margin: 0; font-size: 14px; }
@@ -95,7 +105,7 @@ const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.pro
 <script>
   import { compressPhoto, uploadSharePhoto, composeShareImage, sharePngFile, type ComposeInput } from '../lib/share-card';
 
-  type State = 'idle' | 'previewing' | 'generating' | 'error';
+  type State = 'idle' | 'previewing' | 'generating' | 'png-review' | 'error';
 
   function init() {
     const root = document.getElementById('share-card-modal');
@@ -104,10 +114,13 @@ const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.pro
     const previewBox = root.querySelector<HTMLDivElement>('[data-role="preview"]')!;
     const previewImg = root.querySelector<HTMLImageElement>('[data-role="preview-img"]')!;
     const emptyBox = root.querySelector<HTMLDivElement>('[data-role="empty"]')!;
+    const pngPreviewBox = root.querySelector<HTMLDivElement>('[data-role="png-preview"]')!;
+    const pngPreviewImg = root.querySelector<HTMLImageElement>('[data-role="png-preview-img"]')!;
     const errorBox = root.querySelector<HTMLParagraphElement>('[data-role="error"]')!;
     const fileInput = root.querySelector<HTMLInputElement>('[data-role="file-input"]')!;
     const btnPick = root.querySelector<HTMLButtonElement>('[data-action="pick-photo"]')!;
     const btnReplace = root.querySelector<HTMLButtonElement>('[data-action="replace-photo"]')!;
+    const btnBack = root.querySelector<HTMLButtonElement>('[data-action="back-to-photo"]')!;
     const btnShare = root.querySelector<HTMLButtonElement>('[data-action="share"]')!;
     const btnClose = root.querySelector<HTMLButtonElement>('[data-action="close"]')!;
 
@@ -120,22 +133,33 @@ const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.pro
     let state: State = initialPhoto ? 'previewing' : 'idle';
     let currentPhotoUrl: string | null = initialPhoto || null;
     let pendingBlob: Blob | null = null; // photo prise mais pas encore uploadée
+    let pngBlob: Blob | null = null;
+    let pngObjectUrl: string | null = null;
+
+    function clearPngPreview() {
+      if (pngObjectUrl) {
+        URL.revokeObjectURL(pngObjectUrl);
+        pngObjectUrl = null;
+      }
+      pngBlob = null;
+    }
 
     function render() {
       errorBox.hidden = state !== 'error';
-      if (state === 'previewing' || state === 'generating') {
-        previewBox.hidden = false;
-        emptyBox.hidden = true;
-        btnPick.hidden = true;
-        btnReplace.hidden = false;
-      } else {
-        previewBox.hidden = true;
-        emptyBox.hidden = false;
-        btnPick.hidden = false;
-        btnReplace.hidden = true;
-      }
+      const isPhotoState = state === 'previewing' || state === 'generating';
+      const isPngState = state === 'png-review';
+      previewBox.hidden = !isPhotoState;
+      emptyBox.hidden = isPhotoState || isPngState;
+      pngPreviewBox.hidden = !isPngState;
+      btnPick.hidden = isPhotoState || isPngState;
+      btnReplace.hidden = !isPhotoState;
+      btnBack.hidden = !isPngState;
       btnShare.disabled = state === 'generating';
-      btnShare.textContent = state === 'generating' ? 'Génération…' : 'Partager';
+      btnShare.textContent = state === 'generating'
+        ? 'Génération…'
+        : state === 'png-review'
+          ? 'Partager maintenant'
+          : 'Partager';
     }
 
     function showError(msg: string) {
@@ -145,11 +169,18 @@ const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.pro
     }
 
     btnClose.addEventListener('click', () => {
+      clearPngPreview();
       root.hidden = true;
     });
 
     btnPick.addEventListener('click', () => fileInput.click());
     btnReplace.addEventListener('click', () => fileInput.click());
+
+    btnBack.addEventListener('click', () => {
+      clearPngPreview();
+      state = currentPhotoUrl ? 'previewing' : 'idle';
+      render();
+    });
 
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files?.[0];
@@ -171,6 +202,30 @@ const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.pro
     });
 
     btnShare.addEventListener('click', async () => {
+      // 2e click : on a déjà l'aperçu PNG, on déclenche le vrai partage
+      if (state === 'png-review' && pngBlob) {
+        try {
+          const result = await sharePngFile(pngBlob, {
+            title: shareTitle,
+            fallbackUrl,
+            filename: `carte-${roundId.slice(0, 8)}.png`,
+          });
+          if (result === 'shared' || result === 'downloaded' || result === 'url-shared') {
+            clearPngPreview();
+            root.hidden = true;
+          }
+        } catch (err) {
+          if ((err as DOMException)?.name === 'AbortError') {
+            // L'utilisateur a annulé le partage natif — on reste sur l'aperçu
+            return;
+          }
+          console.error(err);
+          showError('Le partage a échoué. Réessaye.');
+        }
+        return;
+      }
+
+      // 1er click : on génère le PNG et on affiche l'aperçu
       state = 'generating';
       render();
       try {
@@ -189,31 +244,22 @@ const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.pro
           }
         }
 
-        const pngBlob = await composeShareImage({ ...composeBase, photoUrl });
-        const result = await sharePngFile(pngBlob, {
-          title: shareTitle,
-          fallbackUrl,
-          filename: `carte-${roundId.slice(0, 8)}.png`,
-        });
-
-        state = 'previewing';
+        const blob = await composeShareImage({ ...composeBase, photoUrl });
+        clearPngPreview();
+        pngBlob = blob;
+        pngObjectUrl = URL.createObjectURL(blob);
+        pngPreviewImg.src = pngObjectUrl;
+        state = 'png-review';
         render();
-        if (result === 'shared' || result === 'downloaded' || result === 'url-shared') {
-          root.hidden = true;
-        }
       } catch (err) {
-        if ((err as DOMException)?.name === 'AbortError') {
-          state = currentPhotoUrl ? 'previewing' : 'idle';
-          render();
-          return;
-        }
         console.error(err);
-        showError('Le partage a échoué. Réessaye.');
+        showError('La génération de la carte a échoué. Réessaye.');
       }
     });
 
     // expose l'ouverture pour le parent
     (window as unknown as { openShareCardModal: () => void }).openShareCardModal = () => {
+      clearPngPreview();
       state = currentPhotoUrl ? 'previewing' : 'idle';
       if (currentPhotoUrl) previewImg.src = currentPhotoUrl;
       errorBox.hidden = true;
