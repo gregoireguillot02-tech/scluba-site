@@ -595,11 +595,9 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
 
   ctx.fillStyle = '#666';
   ctx.font = `400 22px ${FONT_STACK}`;
-  const timeStr = fmtTimeShort(input.startedAt);
   const subParts = [
     input.player?.display_name ?? '—',
     fmtDateShort(input.startedAt),
-    timeStr,
     `${input.holesPlayed} trous`,
   ].filter((s) => s.length > 0);
   if (input.weather) {

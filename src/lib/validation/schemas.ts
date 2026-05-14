@@ -55,37 +55,11 @@ export const formatIdSchema = z
   .max(32)
   .regex(/^[a-z0-9-]+$/, 'format invalide');
 
-// ISO 8601 datetime from the client (browser converts the local time picker
-// to UTC before submission). Optional — falls back to server-side now().
-// Use a permissive regex so we don't depend on the Zod 4 .datetime() helper
-// which moved between minor versions.
-export const startedAtSchema = z
-  .string()
-  .regex(
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:?\d{2})$/,
-    'started_at doit être au format ISO 8601',
-  )
-  .max(40)
-  .optional();
-
-// Heure/minute saisies via les 2 selects HH/MM. Source de vérité pour
-// l'heure de départ (cf. iOS Safari où `select.value` est stale via JS au
-// submit, mais la form data native envoie quand même la valeur visible).
-// Le serveur les combine en ISO Paris-locale via `parisTimeToISO()`.
-export const startHourSchema = z.coerce.number().int().min(0).max(23).optional();
-export const startMinuteSchema = z.coerce.number().int().min(0).max(59).optional();
-
 export const createRoundSchema = z.object({
   slug: slugSchema,
   display_name: displayNameSchema,
   additional_players: additionalPlayersSchema,
   format_id: formatIdSchema.optional(),
-  // Legacy : certains clients peuvent encore envoyer un ISO directement
-  // (anciens build cachés). On l'accepte comme fallback si start_hour/minute
-  // sont absents.
-  started_at: startedAtSchema,
-  start_hour: startHourSchema,
-  start_minute: startMinuteSchema,
   hp_email: honeypotSchema,
 });
 
