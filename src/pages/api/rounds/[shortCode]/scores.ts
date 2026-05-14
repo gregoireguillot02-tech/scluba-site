@@ -25,7 +25,9 @@ export const POST: APIRoute = async ({ request, params, cookies }) => {
   if (!body || typeof body !== 'object') return new Response('Invalid JSON', { status: 400 });
   const parsed = scoreSchema.safeParse(body);
   if (!parsed.success) return new Response(formatZodError(parsed.error), { status: 400 });
-  const { hole, strokes } = parsed.data;
+  const { hole } = parsed.data;
+  const pickedUp = parsed.data.picked_up === true;
+  const strokes = pickedUp ? null : (parsed.data.strokes ?? null);
 
   const sb = serviceClient();
 
@@ -48,7 +50,7 @@ export const POST: APIRoute = async ({ request, params, cookies }) => {
   const { error } = await sb
     .from('scores')
     .upsert(
-      { round_player_id: playerId, hole_number: hole, strokes },
+      { round_player_id: playerId, hole_number: hole, strokes, picked_up: pickedUp },
       { onConflict: 'round_player_id,hole_number' },
     );
   if (error) {

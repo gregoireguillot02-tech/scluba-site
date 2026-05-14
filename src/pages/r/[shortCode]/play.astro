@@ -54,8 +54,14 @@ const par = roundHoles.reduce((sum, h) => sum + h.par, 0);
 const clubColor = r.club.primary_color ?? '#1B4332';
 
 const scoresByHole: Record<number, number> = {};
+const pickedUpHoles: number[] = [];
 for (const s of allScores) {
-  if (s.round_player_id === me.id) scoresByHole[s.hole_number] = s.strokes;
+  if (s.round_player_id !== me.id) continue;
+  if (s.picked_up) {
+    pickedUpHoles.push(s.hole_number);
+  } else if (s.strokes !== null) {
+    scoresByHole[s.hole_number] = s.strokes;
+  }
 }
 
 const holesByNumber: Record<number, number> = {};
@@ -102,7 +108,7 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       data-me-id={me.id}
       data-holes={JSON.stringify(holesByNumber)}
       data-players={JSON.stringify(allPlayers.map((p) => ({ id: p.id, name: p.display_name })))}
-      data-scores={JSON.stringify(allScores.map((s) => ({ pid: s.round_player_id, hole: s.hole_number, strokes: s.strokes })))}
+      data-scores={JSON.stringify(allScores.map((s) => ({ pid: s.round_player_id, hole: s.hole_number, strokes: s.strokes, pickedUp: s.picked_up })))}
     >
       <ul class="live-list" data-live-list></ul>
     </section>
@@ -113,6 +119,7 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       data-short-code={r.short_code}
       data-course={JSON.stringify({ holes: roundHoles })}
       data-scores={JSON.stringify(scoresByHole)}
+      data-picked-up={JSON.stringify(pickedUpHoles)}
       data-par={String(par)}
       data-hole-count={String(roundHoles.length)}
     >
@@ -141,6 +148,17 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
           <button type="button" class="quick-btn" data-quick={n}>{n}</button>
         ))}
       </div>
+
+      <button
+        type="button"
+        class="pickup-btn"
+        data-pickup
+        aria-label="Marquer ce trou comme abandonné (chablis)"
+        title="Trou abandonné — compté Par + 2 (Maximum Score)"
+      >
+        <span class="pickup-letter">C</span>
+        <span class="pickup-text">Abandonner ce trou</span>
+      </button>
 
       <div class="nav-buttons">
         <button type="button" class="nav-btn nav-prev" data-nav="prev">← Précédent</button>
@@ -177,7 +195,8 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
 
     type CourseData = { holes: { number: number; par: number }[] };
     type LivePlayer = { id: string; name: string };
-    type LiveScore = { pid: string; hole: number; strokes: number };
+    type LiveScore = { pid: string; hole: number; strokes: number | null; pickedUp: boolean };
+    type LiveEntry = { strokes: number | null; pickedUp: boolean };
 
     /* === Live leaderboard ============================================== */
     const board = document.querySelector<HTMLElement>('[data-live-board]');
@@ -188,12 +207,17 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       const players: Map<string, LivePlayer> = new Map(
         (JSON.parse(board.dataset.players!) as LivePlayer[]).map((p) => [p.id, p]),
       );
-      const scoresByPlayer: Map<string, Map<number, number>> = new Map();
+      const scoresByPlayer: Map<string, Map<number, LiveEntry>> = new Map();
       for (const s of JSON.parse(board.dataset.scores!) as LiveScore[]) {
         if (!scoresByPlayer.has(s.pid)) scoresByPlayer.set(s.pid, new Map());
-        scoresByPlayer.get(s.pid)!.set(s.hole, s.strokes);
+        scoresByPlayer.get(s.pid)!.set(s.hole, { strokes: s.strokes, pickedUp: s.pickedUp });
       }
       const list = board.querySelector<HTMLElement>('[data-live-list]')!;
+
+      function effective(entry: LiveEntry, par: number): number | null {
+        if (entry.pickedUp) return par + 2;
+        return entry.strokes;
+      }
 
       function totalsFor(pid: string): { strokes: number; played: number; diff: number } {
         const map = scoresByPlayer.get(pid);
@@ -201,10 +225,13 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
         let strokes = 0;
         let played = 0;
         let diff = 0;
-        for (const [hole, s] of map) {
-          strokes += s;
+        for (const [hole, entry] of map) {
+          const par = holes[hole] ?? 0;
+          const eff = effective(entry, par);
+          if (eff === null) continue;
+          strokes += eff;
           played++;
-          diff += s - (holes[hole] ?? 0);
+          diff += eff - par;
         }
         return { strokes, played, diff };
       }
@@ -261,13 +288,13 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
           renderBoard();
         },
         onScoresChange: (event, row) => {
-          const s = row as { round_player_id: string; hole_number: number; strokes: number };
+          const s = row as { round_player_id: string; hole_number: number; strokes: number | null; picked_up?: boolean };
           if (!players.has(s.round_player_id)) return;
-          const map = scoresByPlayer.get(s.round_player_id) ?? new Map<number, number>();
+          const map = scoresByPlayer.get(s.round_player_id) ?? new Map<number, LiveEntry>();
           if (event === 'DELETE') {
             map.delete(s.hole_number);
           } else {
-            map.set(s.hole_number, s.strokes);
+            map.set(s.hole_number, { strokes: s.strokes, pickedUp: s.picked_up === true });
           }
           scoresByPlayer.set(s.round_player_id, map);
           renderBoard();
@@ -282,16 +309,18 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       window.addEventListener('beforeunload', () => unsubscribeFromRound(channel));
     }
 
-    /* === Score entry (existing logic, unchanged) ======================== */
+    /* === Score entry =================================================== */
     const root = document.querySelector<HTMLElement>('[data-play-root]');
     if (root) {
       const shortCode = root.dataset.shortCode!;
       const course = JSON.parse(root.dataset.course!) as CourseData;
       const initialScores = JSON.parse(root.dataset.scores!) as Record<number, number>;
+      const initialPickedUp = JSON.parse(root.dataset.pickedUp ?? '[]') as number[];
       const totalPar = Number(root.dataset.par);
       const holeCount = Number(root.dataset.holeCount);
 
       const scores: Record<number, number> = { ...initialScores };
+      const pickedUp = new Set<number>(initialPickedUp);
       let currentHole = nextEmptyHole();
 
       const holeNumberEl = root.querySelector<HTMLElement>('[data-hole-number]')!;
@@ -305,7 +334,7 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
 
       function nextEmptyHole(): number {
         for (let h = 1; h <= holeCount; h++) {
-          if (scores[h] === undefined) return h;
+          if (scores[h] === undefined && !pickedUp.has(h)) return h;
         }
         return holeCount;
       }
@@ -338,7 +367,11 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
         parValueEl.textContent = String(hole.par);
 
         const s = scores[currentHole];
-        if (s === undefined) {
+        const isPickup = pickedUp.has(currentHole);
+        if (isPickup) {
+          strokesEl.textContent = 'C';
+          hintEl.textContent = `Abandonné — compté ${hole.par + 2} (Par + 2)`;
+        } else if (s === undefined) {
           strokesEl.textContent = '—';
           hintEl.textContent = 'Choisis ton score';
         } else {
@@ -348,20 +381,35 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
 
         let total = 0;
         let played = 0;
+        let playedPar = 0;
         for (let h = 1; h <= holeCount; h++) {
           const cell = cells.find((c) => Number(c.dataset.cellHole) === h);
           if (!cell) continue;
           cell.className = 'grid-cell';
-          if (scores[h] !== undefined) {
+          const hp = holeAt(h).par;
+          if (pickedUp.has(h)) {
+            cell.textContent = 'C';
+            cell.classList.add('cell-pickup');
+            total += hp + 2;
+            played++;
+            playedPar += hp;
+          } else if (scores[h] !== undefined) {
             cell.textContent = String(scores[h]);
-            cell.classList.add(diffClass(scores[h], holeAt(h).par));
+            cell.classList.add(diffClass(scores[h], hp));
             total += scores[h];
             played++;
+            playedPar += hp;
           } else {
             cell.textContent = '—';
           }
         }
-        totalStrokesEl.textContent = played === 0 ? '—' : `${total} (par ${totalPar})`;
+        const diffPlayed = total - playedPar;
+        const diffLbl = diffPlayed === 0 ? '±0' : diffPlayed > 0 ? `+${diffPlayed}` : String(diffPlayed);
+        totalStrokesEl.textContent = played === 0
+          ? '—'
+          : played === holeCount
+            ? `${total} (${diffLbl} · Par ${totalPar})`
+            : `${total} sur ${played}/${holeCount} (${diffLbl})`;
 
         const allDone = played === holeCount;
         // Finish form is always visible: lets the player stop early (the
@@ -396,6 +444,7 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
 
       async function saveScore(strokes: number) {
         scores[currentHole] = strokes;
+        pickedUp.delete(currentHole); // saisir un score annule l'abandon
         render();
         statusEl.textContent = 'Sauvegarde…';
         try {
@@ -406,6 +455,25 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
           });
           if (!res.ok) throw new Error(await res.text());
           statusEl.textContent = '✓ Enregistré';
+          setTimeout(() => { statusEl.textContent = ''; }, 1200);
+        } catch (e) {
+          statusEl.textContent = `Erreur : ${(e as Error).message}`;
+        }
+      }
+
+      async function savePickup() {
+        delete scores[currentHole];
+        pickedUp.add(currentHole);
+        render();
+        statusEl.textContent = 'Sauvegarde…';
+        try {
+          const res = await fetch(`/api/rounds/${shortCode}/scores`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hole: currentHole, picked_up: true }),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          statusEl.textContent = '✓ Trou abandonné';
           setTimeout(() => { statusEl.textContent = ''; }, 1200);
         } catch (e) {
           statusEl.textContent = `Erreur : ${(e as Error).message}`;
@@ -426,6 +494,12 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
           const next = Math.max(1, Math.min(20, current + delta));
           saveScore(next);
         });
+      });
+
+      const pickupBtn = root.querySelector<HTMLButtonElement>('[data-pickup]');
+      pickupBtn?.addEventListener('click', () => {
+        if (pickedUp.has(currentHole)) return; // déjà abandonné
+        savePickup();
       });
 
       root.querySelectorAll<HTMLElement>('[data-nav]').forEach((btn) => {
@@ -655,6 +729,37 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
     .quick-btn:hover { background: var(--bg-soft); }
     .quick-btn:active { transform: scale(0.96); }
 
+    .pickup-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: var(--space-4) auto 0;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: 1px dashed var(--muted);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .pickup-btn:hover { border-color: var(--ink); color: var(--ink); }
+    .pickup-btn:active { transform: scale(0.97); }
+    .pickup-letter {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1.5px solid currentColor;
+      font-family: var(--font-serif);
+      font-weight: 800;
+      font-size: 13px;
+    }
+
     .nav-buttons {
       display: flex;
       justify-content: space-between;
@@ -742,6 +847,18 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
     .grid-cell.cell-par { color: var(--clubColor); }
     .grid-cell.cell-bogey { color: var(--muted); }
     .grid-cell.cell-double { color: #6B7280; background: rgba(107,114,128,0.08); }
+    .grid-cell.cell-pickup {
+      color: var(--muted);
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(107,114,128,0.06) 0,
+        rgba(107,114,128,0.06) 4px,
+        transparent 4px,
+        transparent 8px
+      );
+      border-style: dashed;
+      font-family: var(--font-serif);
+    }
 
     .finish-form {
       padding: 0 var(--space-5);
