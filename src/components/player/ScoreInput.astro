@@ -43,10 +43,17 @@ const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
 ---
 
 <div class="score-input" data-score-input data-current-hole={currentHole}>
-  {/* Progression : 18 dots (ou holeCount) tap-to-jump, dot actuel élargi.
-       Permet de naviguer rapidement entre trous sans utiliser de
-       boutons prev/next encombrants. Le swipe horizontal sur le bloc
-       principal est l'autre voie de navigation (gérée en JS). */}
+  {/* Navigation entre trous : 18 chips numérotés cliquables. Le trou
+       actif est en grand + fond clubColor + chiffre serif. Les trous
+       joués prennent un fond honey-soft. Les trous vides restent
+       transparents. Beaucoup plus discoverable que des dots — le
+       chiffre signale "je suis cliquable". Swipe horizontal sur le
+       bloc reste la voie rapide alternative. */}
+  <p class="hole-nav-hint" aria-hidden="true">
+    <span class="hole-nav-hint-arrow">←</span>
+    <span>Tap un trou pour y aller, ou swipe</span>
+    <span class="hole-nav-hint-arrow">→</span>
+  </p>
   <nav class="hole-progress" aria-label="Navigation entre trous">
     {Array.from({ length: holeCount }).map((_, i) => {
       const n = i + 1;
@@ -54,11 +61,11 @@ const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
       return (
         <button
           type="button"
-          class={`hole-dot${isCurrent ? ' is-current' : ''}`}
+          class={`hole-chip${isCurrent ? ' is-current' : ''}`}
           data-hole-jump={n}
-          aria-label={`Trou ${n}`}
+          aria-label={`Aller au trou ${n}`}
           aria-current={isCurrent ? 'true' : 'false'}
-        ></button>
+        >{n}</button>
       );
     })}
   </nav>
@@ -137,46 +144,95 @@ const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
     margin: var(--space-4) 0;
   }
 
-  /* === Progression dots === */
+  /* === Navigation entre trous (chips numérotés cliquables) ===
+     Remplace les anciens dots minuscules (peu discoverable) par des
+     chiffres dans des chips ronds. Le chiffre signale immédiatement
+     "je suis cliquable et tu peux jumper". Active = grand + plein
+     clubColor. Joué = fond honey-soft. Vide = transparent. */
+  .hole-nav-hint {
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .hole-nav-hint-arrow {
+    color: var(--accent);
+    font-size: 11px;
+  }
   .hole-progress {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 3px;
     padding: var(--space-2) 0;
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
+    /* Petit scroll horizontal si vraiment trop de trous (cas exotique 27 trous). */
+    -webkit-overflow-scrolling: touch;
   }
   .hole-progress::-webkit-scrollbar { display: none; }
-  .hole-dot {
-    width: 8px;
-    height: 8px;
-    min-width: 8px;
-    border-radius: 50%;
-    background: var(--line);
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    transition: width 200ms var(--ease-expo), background 150ms;
-    /* Hit area étendue pour faciliter le tap : 24px ≥ 44pt avec padding
-       transparent (touch-area sans changer le visuel). */
-    position: relative;
-  }
-  .hole-dot::before {
-    content: '';
-    position: absolute;
-    inset: -8px;
-    border-radius: 50%;
-  }
-  .hole-dot.is-current {
-    width: 22px;
-    background: var(--clubColor, var(--primary));
+  .hole-chip {
+    flex-shrink: 0;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 4px;
     border-radius: 999px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--muted);
+    font-family: var(--font-display, var(--font-serif));
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums lining-nums;
+    cursor: pointer;
+    transition: all 180ms var(--ease-expo);
+    touch-action: manipulation;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
-  .hole-dot.is-played:not(.is-current) {
-    background: var(--accent);
-    opacity: 0.7;
+  .hole-chip:hover {
+    border-color: var(--clubColor, var(--primary));
+    color: var(--ink);
+  }
+  .hole-chip.is-current {
+    min-width: 36px;
+    height: 32px;
+    background: var(--clubColor, var(--primary));
+    border-color: var(--clubColor, var(--primary));
+    color: #FAF7EE;
+    font-size: 14px;
+    font-weight: 800;
+    box-shadow: 0 4px 12px rgba(15, 42, 30, 0.18);
+  }
+  .hole-chip.is-played:not(.is-current) {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--primary-deep);
+  }
+  .hole-chip:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 5px rgba(15, 42, 30, 0.16);
+  }
+
+  /* iPhone SE 375px : tighten. 18 chips × 26px = 468px, ça déborde.
+     On laisse le scroll horizontal natif gérer si nécessaire. Sur
+     iPhone 12+ (390px+) les chips à 26px tiennent juste si on
+     réduit gap à 2px. */
+  @media (max-width: 400px) {
+    .hole-chip { min-width: 22px; height: 22px; font-size: 11px; }
+    .hole-chip.is-current { min-width: 30px; height: 28px; font-size: 13px; }
+    .hole-progress { gap: 2px; }
   }
 
   /* === 5 boutons par-relative === */
