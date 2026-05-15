@@ -84,6 +84,13 @@ for (const s of allScores) {
 
 const canHostSwitch = me.is_creator && allPlayers.length > 1;
 
+// Vue spectateur : quand la partie est en mode "host saisit tout" et que
+// le joueur courant n'est pas le créateur, on masque le ScoreInput et
+// on met en avant le live leaderboard. Un bouton "Corriger un de mes
+// scores" permet de réafficher la saisie en exception.
+const isSpectator = r.scoring_mode === 'host' && !me.is_creator;
+const hostPlayer = allPlayers.find((p) => p.is_creator) ?? null;
+
 const holesByNumber: Record<number, number> = {};
 for (const h of roundHoles) holesByNumber[h.number] = h.par;
 
@@ -153,9 +160,26 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       </nav>
     )}
 
+    {isSpectator && (
+      <aside class="spectator-banner" data-spectator-banner>
+        <div class="spectator-banner-text">
+          <p class="spectator-banner-title">
+            {hostPlayer ? `${hostPlayer.display_name} tient la carte` : 'Le host tient la carte'}
+          </p>
+          <p class="spectator-banner-sub">
+            Suis le classement en direct. Tes scores apparaissent quand le host les saisit.
+          </p>
+        </div>
+        <button type="button" class="spectator-toggle-btn" data-spectator-toggle>
+          Corriger un de mes scores
+        </button>
+      </aside>
+    )}
+
     <section
       class="hole-card"
       data-play-root
+      data-spectator={String(isSpectator)}
       data-short-code={r.short_code}
       data-me-id={me.id}
       data-can-host-switch={String(canHostSwitch)}
@@ -889,6 +913,26 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
 
       render();
     }
+
+    /* === Spectator toggle (mode 'host' uniquement, côté joueur invité) ===
+       Le ScoreInput est caché par CSS quand data-spectator="true" sur
+       le hole-card. Le bouton "Corriger un de mes scores" toggle la
+       classe is-revealed qui annule le display:none, permettant au
+       joueur de corriger son propre score en exception. */
+    const spectatorToggle = document.querySelector<HTMLButtonElement>('[data-spectator-toggle]');
+    const holeCardEl = document.querySelector<HTMLElement>('[data-play-root]');
+    if (spectatorToggle && holeCardEl) {
+      spectatorToggle.addEventListener('click', () => {
+        const revealed = holeCardEl.classList.toggle('is-revealed');
+        spectatorToggle.classList.toggle('is-active', revealed);
+        spectatorToggle.textContent = revealed
+          ? 'Masquer la saisie'
+          : 'Corriger un de mes scores';
+        if (revealed) {
+          holeCardEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    }
   </script>
 
   <style>
@@ -1094,6 +1138,60 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       padding: var(--space-7) var(--space-5) var(--space-6);
       text-align: center;
     }
+    /* Mode spectateur (scoring_mode='host', non-créateur) : le hole-card
+       (PAR + ScoreInput) est masqué. Visible si le joueur clique sur
+       "Corriger un de mes scores" → toggle .is-revealed. */
+    .hole-card[data-spectator="true"]:not(.is-revealed) {
+      display: none;
+    }
+
+    .spectator-banner {
+      margin: var(--space-3) var(--space-4) 0;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(212, 165, 116, 0.16), rgba(212, 165, 116, 0.05));
+      border: 1px solid rgba(212, 165, 116, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .spectator-banner-title {
+      margin: 0;
+      font-family: var(--font-display, var(--font-serif));
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .spectator-banner-sub {
+      margin: 4px 0 0;
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--muted);
+    }
+    .spectator-toggle-btn {
+      align-self: flex-start;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(212, 165, 116, 0.55);
+      color: var(--clubColor);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .spectator-toggle-btn:hover { background: #fff; }
+    .spectator-toggle-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 5px rgba(15, 42, 30, 0.12);
+    }
+    .spectator-toggle-btn.is-active {
+      background: var(--clubColor);
+      color: #FAF7EE;
+      border-color: var(--clubColor);
+    }
+
     .hole-meta {
       position: absolute;
       top: var(--space-3);

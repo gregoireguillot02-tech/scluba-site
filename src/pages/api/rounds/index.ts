@@ -30,17 +30,22 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
   }
 
   const rawFormatId = form.get('format_id');
+  const rawScoringMode = form.get('scoring_mode');
   const parsed = createRoundSchema.safeParse({
     slug: form.get('slug') ?? '',
     display_name: form.get('display_name') ?? '',
     additional_players: additional_players.length > 0 ? additional_players : undefined,
     format_id: typeof rawFormatId === 'string' && rawFormatId.length > 0 ? rawFormatId : undefined,
+    scoring_mode: typeof rawScoringMode === 'string' && rawScoringMode.length > 0 ? rawScoringMode : undefined,
     hp_email: form.get('hp_email') ?? undefined,
   });
   if (!parsed.success) return new Response(formatZodError(parsed.error), { status: 400 });
   const { slug, display_name } = parsed.data;
   const placeholders = parsed.data.additional_players ?? [];
   const formatId = parsed.data.format_id ?? null;
+  // 'host' n'a de sens qu'en multi-joueurs ; en solo on retombe toujours
+  // sur 'self' (défaut) car il n'y a personne d'autre à scorer pour.
+  const scoringMode = placeholders.length > 0 ? (parsed.data.scoring_mode ?? 'self') : 'self';
   // Heure de départ = moment de création. La feature « choix de l'heure »
   // a été retirée (cf. iOS Safari qui ne committait jamais la valeur du
   // picker), donc on stocke juste l'instant courant.
@@ -81,6 +86,7 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
         short_code,
         status: 'lobby',
         format_id: formatId,
+        scoring_mode: scoringMode,
         started_at: startedAt,
         weather: weatherSnapshot,
       })
