@@ -46,17 +46,19 @@ export async function flashPar(el: HTMLElement | null): Promise<void> {
 /**
  * Quick pulse sur le bouton par-relative qui vient d'être sélectionné.
  * Visible feedback que le tap a été enregistré (avant l'auto-advance).
+ *
+ * Spring physique (Apple-like) : ease elastic.out(1, 0.4) simule un
+ * vrai ressort qui se libère du tap — le bouton dépasse légèrement
+ * la cible puis se stabilise. Plus organique que back.out (qui était
+ * plus mécanique). Inspiré SwiftUI .spring(response: 0.4, dampingFraction: 0.6).
  */
 export async function flashSelected(btn: HTMLElement | null): Promise<void> {
   if (!btn || prefersReducedMotion()) return;
   const { gsap } = await gsapBundle();
-  // Scale up légèrement puis retour à 1, sur l'élément déjà en is-selected.
-  // La CSS gère le scale(0.96) sur :active (down phase), GSAP fait le
-  // bounce-up à la sélection (up phase).
   gsap.fromTo(
     btn,
-    { scale: 0.92 },
-    { scale: 1, duration: 0.34, ease: 'back.out(2)' },
+    { scale: 0.9 },
+    { scale: 1, duration: 0.55, ease: 'elastic.out(1, 0.4)' },
   );
 }
 

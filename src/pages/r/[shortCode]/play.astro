@@ -756,8 +756,18 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       function showStatusInfo(text: string) {
         statusEl.textContent = text;
       }
+      // Wiggle SVG ⚠ pour les erreurs save (réseau merdique sur le
+       // green, etc.) — feedback tactile + a11y plus mémorable qu'un
+       // simple texte rouge. Inspiré SF Symbols 'wiggle' effect.
+       // Le path SVG triangle d'alerte + animation CSS .alert-icon
+       // (cf. style bloc en bas du fichier).
       function showStatusError(text: string) {
-        statusEl.textContent = `Erreur : ${text}`;
+        statusEl.innerHTML = `
+          <svg class="alert-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span class="status-text status-text-error"></span>
+        `;
+        const span = statusEl.querySelector<HTMLElement>('.status-text');
+        if (span) span.textContent = text;
       }
       function clearStatus() {
         statusEl.textContent = '';
@@ -1322,6 +1332,37 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         animation: none;
         stroke-dashoffset: 0;
       }
+    }
+
+    /* Alert icon (triangle ⚠) + wiggle pour les erreurs save.
+       Inspiré SF Symbols 'wiggle' effect : le symbole secoue
+       gauche-droite 3 fois rapidement → communique l'erreur de
+       façon tactile / mémorable, plus qu'un simple texte rouge.
+       Transform-only : compositor GPU, zéro repaint. */
+    .alert-icon {
+      display: inline-block;
+      color: #C0392B;
+      flex-shrink: 0;
+      transform-origin: center;
+      animation: alert-wiggle 0.42s cubic-bezier(0.36, 0, 0.66, -0.56) 1;
+    }
+    .status-text-error {
+      color: #C0392B;
+      font-weight: 600;
+    }
+    /* Erreur tinte le bloc entier */
+    .play-status:has(.alert-icon) {
+      color: #C0392B;
+    }
+    @keyframes alert-wiggle {
+      0%, 100% { transform: translateX(0) rotate(0deg); }
+      15%      { transform: translateX(-3px) rotate(-4deg); }
+      35%      { transform: translateX(3px)  rotate(4deg); }
+      55%      { transform: translateX(-2px) rotate(-3deg); }
+      75%      { transform: translateX(2px)  rotate(3deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .alert-icon { animation: none; }
     }
   </style>
 </PlayerLayout>
