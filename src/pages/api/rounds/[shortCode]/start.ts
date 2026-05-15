@@ -20,7 +20,7 @@ export const POST: APIRoute = async ({ params, redirect, cookies }) => {
 
   const { data: round } = await sb
     .from('rounds')
-    .select('id, status')
+    .select('id, status, scoring_mode')
     .eq('short_code', shortCode)
     .maybeSingle();
   if (!round) return new Response('Round not found', { status: 404 });
@@ -39,23 +39,29 @@ export const POST: APIRoute = async ({ params, redirect, cookies }) => {
   }
 
   if (round.status === 'lobby') {
-    // Gating: no placeholder name may remain unclaimed. The organizer can
-    // remove a no-show via DELETE /api/rounds/[code]/players?id=... if
-    // someone never scans.
-    const { count: pendingCount, error: cntErr } = await sb
-      .from('round_players')
-      .select('id', { count: 'exact', head: true })
-      .eq('round_id', round.id)
-      .is('claimed_at', null);
-    if (cntErr) {
-      console.error('[api/rounds/start] count failed', cntErr);
-      return new Response('Vérification impossible', { status: 500 });
-    }
-    if ((pendingCount ?? 0) > 0) {
-      return new Response(
-        `Encore ${pendingCount} joueur(s) à rejoindre. Patiente ou retire les absents.`,
-        { status: 409 },
-      );
+    // Gating sur les placeholders non claimed n'est pertinent qu'en mode
+    // 'each' (chacun saisit pour soi → sans device, pas de scores). En
+    // mode 'host', le créateur marque pour tout le monde, donc un
+    // joueur qui n'a jamais scanné peut quand même apparaître sur la
+    // carte. On laisse le démarrage. S'il scanne après, claim.ts
+    // accepte tant que status !== 'finished' → il rejoint le live en
+    // mode spectateur.
+    if (round.scoring_mode !== 'host') {
+      const { count: pendingCount, error: cntErr } = await sb
+        .from('round_players')
+        .select('id', { count: 'exact', head: true })
+        .eq('round_id', round.id)
+        .is('claimed_at', null);
+      if (cntErr) {
+        console.error('[api/rounds/start] count failed', cntErr);
+        return new Response('Vérification impossible', { status: 500 });
+      }
+      if ((pendingCount ?? 0) > 0) {
+        return new Response(
+          `Encore ${pendingCount} joueur(s) à rejoindre. Patiente ou retire les absents.`,
+          { status: 409 },
+        );
+      }
     }
 
     await sb
