@@ -149,6 +149,38 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       <ul class="live-list" data-live-list></ul>
     </section>
 
+    {/* Template cloné par JS pour chaque row. Inclut les 3 médailles SVG
+        (honey/silver/bronze, palette tinted forest cohérente avec recap)
+        qu'on toggle via [hidden] selon le rang. Évite la string interpolation
+        innerHTML côté client. */}
+    <template id="live-card-tpl">
+      <li class="live-card">
+        <span class="live-avatar" aria-hidden="true"></span>
+        <div class="live-info">
+          <span class="live-name"></span>
+          <span class="live-sub"></span>
+        </div>
+        <span class="live-medal" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" class="medal-svg" data-rank="1" hidden>
+            <circle cx="12" cy="12" r="10" fill="#D4A574" stroke="#0F2A1E" stroke-width="1.25" class="medal-rim" />
+            <text x="12" y="16" text-anchor="middle" font-family="var(--font-display, Georgia, serif)" font-weight="800" font-size="11" fill="#0F2A1E">1</text>
+          </svg>
+          <svg viewBox="0 0 24 24" width="24" height="24" class="medal-svg" data-rank="2" hidden>
+            <circle cx="12" cy="12" r="10" fill="#D5D8DD" stroke="#0F2A1E" stroke-width="1.25" class="medal-rim" />
+            <text x="12" y="16" text-anchor="middle" font-family="var(--font-display, Georgia, serif)" font-weight="800" font-size="11" fill="#0F2A1E">2</text>
+          </svg>
+          <svg viewBox="0 0 24 24" width="24" height="24" class="medal-svg" data-rank="3" hidden>
+            <circle cx="12" cy="12" r="10" fill="#B07D5B" stroke="#0F2A1E" stroke-width="1.25" class="medal-rim" />
+            <text x="12" y="16" text-anchor="middle" font-family="var(--font-display, Georgia, serif)" font-weight="800" font-size="11" fill="#FAF7EE">3</text>
+          </svg>
+        </span>
+        <span class="live-score">
+          <strong class="live-strokes"></strong>
+          <span class="live-diff"></span>
+        </span>
+      </li>
+    </template>
+
     {canHostSwitch && (
       <nav class="player-tabs" data-player-tabs aria-label="Saisir le score d'un joueur">
         {allPlayers.map((p) => (
@@ -231,7 +263,14 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
 
   <script>
     import { subscribeToRound, unsubscribeFromRound } from '../../../lib/realtime';
-    import { flashPar, flashSelected, flashFeedback } from '../../../lib/animations/play';
+    import {
+      flashPar,
+      flashSelected,
+      flashFeedback,
+      flipLeaderboard,
+      countUp,
+      pulseLeaderRing,
+    } from '../../../lib/animations/play';
 
     type CourseData = { holes: { number: number; par: number }[] };
     type LivePlayer = { id: string; name: string };
@@ -293,14 +332,86 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         return (name.trim()[0] ?? '?').toUpperCase();
       }
 
-      const MEDALS = ['🥇', '🥈', '🥉'];
+      // Template HTML cloné pour chaque row (cf. <template id="live-card-tpl">
+      // dans le markup). Évite la string interpolation innerHTML côté client
+      // et le SVG médaille est pré-rendu (toggle [hidden] selon le rang).
+      const tpl = document.getElementById('live-card-tpl') as HTMLTemplateElement | null;
 
       // Cache des strokes par joueur pour détecter les changements et
-      // déclencher l'animation flash. Rempli au premier render sans flash.
+      // déclencher l'animation count-up. Rempli au premier render sans anim.
       const lastStrokesByPid = new Map<string, number>();
+      let lastLeaderId: string | null = null;
       let firstRender = true;
 
-      function renderBoard() {
+      function buildRow(
+        p: LivePlayer,
+        isLeader: boolean,
+        rankIdx: number,
+        t: { strokes: number; played: number; diff: number },
+        leaderDiff: number,
+      ): HTMLElement {
+        const li = (tpl!.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+        li.dataset.pid = p.id;
+        const classes = ['live-card'];
+        if (p.id === meId) classes.push('is-me');
+        if (isLeader) classes.push('is-leader');
+        if (rankIdx === 1) classes.push('is-second');
+        if (rankIdx === 2) classes.push('is-third');
+        li.className = classes.join(' ');
+
+        // Sub-line micro-caps (eyebrow JetBrains Mono) :
+        //  - played===0 → « EN ATTENTE »
+        //  - leader → « X TROUS JOUÉS »
+        //  - autres → « +N VS LEADER »
+        let subLine = '';
+        if (t.played === 0) {
+          subLine = 'EN ATTENTE';
+        } else if (isLeader) {
+          subLine = `${t.played} TROU${t.played > 1 ? 'S' : ''} JOUÉ${t.played > 1 ? 'S' : ''}`;
+        } else {
+          subLine = `+${t.diff - leaderDiff} VS LEADER`;
+        }
+
+        const avatarEl = li.querySelector<HTMLElement>('.live-avatar')!;
+        avatarEl.style.background = `hsl(${hueFromId(p.id)}, 55%, 55%)`;
+        avatarEl.textContent = initialOf(p.name);
+
+        const nameEl = li.querySelector<HTMLElement>('.live-name')!;
+        // Le « (vous) » est en <em> stylé en italic muted — pattern récap.
+        if (p.id === meId) {
+          nameEl.textContent = '';
+          nameEl.append(p.name + ' ');
+          const em = document.createElement('em');
+          em.textContent = '(vous)';
+          nameEl.append(em);
+        } else {
+          nameEl.textContent = p.name;
+        }
+
+        li.querySelector<HTMLElement>('.live-sub')!.textContent = subLine;
+
+        // Médaille SVG : show celle qui correspond au rang (1/2/3), hide les autres
+        const medals = li.querySelectorAll<SVGSVGElement>('.medal-svg');
+        const targetRank = rankIdx >= 0 && rankIdx < 3 ? rankIdx + 1 : 0;
+        medals.forEach((svg) => {
+          svg.hidden = Number(svg.dataset.rank) !== targetRank;
+        });
+
+        const strokesEl = li.querySelector<HTMLElement>('.live-strokes')!;
+        strokesEl.textContent = t.played === 0 ? '' : String(t.strokes);
+
+        const diffEl = li.querySelector<HTMLElement>('.live-diff')!;
+        diffEl.textContent = fmtDiff(t.diff, t.played);
+        diffEl.classList.remove('over', 'under');
+        if (t.played > 0) {
+          if (t.diff < 0) diffEl.classList.add('under');
+          else if (t.diff > 0) diffEl.classList.add('over');
+        }
+
+        return li;
+      }
+
+      async function renderBoard() {
         const ordered = Array.from(players.values()).sort((a, b) => {
           const ta = totalsFor(a.id);
           const tb = totalsFor(b.id);
@@ -311,114 +422,57 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           return tb.played - ta.played; // à égalité de diff, celui qui a joué + trous d'abord
         });
 
-        // Diff du leader = premier joueur avec played > 0
         const leader = ordered.find((p) => totalsFor(p.id).played > 0);
         const leaderDiff = leader ? totalsFor(leader.id).diff : 0;
+        const newLeaderId = leader?.id ?? null;
 
-        // ÉTAPE 1 (FLIP) : capturer les positions actuelles des `<li>` par pid
-        const oldPositions = new Map<string, number>();
-        for (const child of Array.from(list.children) as HTMLElement[]) {
-          const pid = child.dataset.pid;
-          if (pid) oldPositions.set(pid, child.getBoundingClientRect().top);
-        }
-
-        // ÉTAPE 2 : reconstruction du DOM
-        const newItems: HTMLElement[] = [];
-        const flashPids = new Set<string>();
-        for (let i = 0; i < ordered.length; i++) {
-          const p = ordered[i];
+        // Détecte les changements de strokes pour déclencher countUp() après
+        // le DOM rebuild. On capture (prev, next) maintenant et on update le
+        // cache pour le prochain render.
+        const strokeChanges = new Map<string, { from: number; to: number }>();
+        for (const p of ordered) {
           const t = totalsFor(p.id);
-          const isLeader = leader?.id === p.id;
-          const rankIdx = t.played > 0 ? i : -1; // -1 = pas classé (NC)
-
-          // Détection changement de strokes → flash (sauf au premier render)
-          const prevStrokes = lastStrokesByPid.get(p.id);
-          if (!firstRender && prevStrokes !== undefined && prevStrokes !== t.strokes && t.played > 0) {
-            flashPids.add(p.id);
+          if (t.played === 0) continue;
+          const prev = lastStrokesByPid.get(p.id);
+          if (!firstRender && prev !== undefined && prev !== t.strokes) {
+            strokeChanges.set(p.id, { from: prev, to: t.strokes });
           }
           lastStrokesByPid.set(p.id, t.strokes);
+        }
 
-          const li = document.createElement('li');
-          li.dataset.pid = p.id;
-          const classes = ['live-card'];
-          if (p.id === meId) classes.push('is-me');
-          if (isLeader) classes.push('is-leader');
-          if (rankIdx === 1) classes.push('is-second');
-          if (rankIdx === 2) classes.push('is-third');
-          li.className = classes.join(' ');
+        // Capture old DOM rows pour le Flip (avant rebuildDom).
+        const oldItems = Array.from(list.children) as HTMLElement[];
 
-          // Sub-line : leader → « X trous joués » ; non-leader avec played → « +N / leader » ; played===0 → « en attente »
-          let subLine = '';
-          if (t.played === 0) {
-            subLine = 'en attente';
-          } else if (isLeader) {
-            subLine = `${t.played} trou${t.played > 1 ? 's' : ''} joué${t.played > 1 ? 's' : ''}`;
-          } else {
-            const gap = t.diff - leaderDiff;
-            subLine = `+${gap} vs leader`;
+        await flipLeaderboard(oldItems, () => {
+          const newItems: HTMLElement[] = [];
+          for (let i = 0; i < ordered.length; i++) {
+            const p = ordered[i];
+            const t = totalsFor(p.id);
+            const isLeader = leader?.id === p.id;
+            const rankIdx = t.played > 0 ? i : -1;
+            newItems.push(buildRow(p, isLeader, rankIdx, t, leaderDiff));
           }
+          list.replaceChildren(...newItems);
+        });
 
-          const hue = hueFromId(p.id);
-          const initial = initialOf(p.name);
-          const medal = rankIdx >= 0 && rankIdx < 3 ? MEDALS[rankIdx] : '';
-          const diffClass = t.played === 0 ? '' : t.diff < 0 ? ' under' : t.diff > 0 ? ' over' : '';
-
-          li.innerHTML = `
-            <span class="live-avatar" aria-hidden="true"></span>
-            <div class="live-info">
-              <span class="live-name"></span>
-              <span class="live-sub"></span>
-            </div>
-            <span class="live-medal" aria-hidden="true"></span>
-            <span class="live-score">
-              <strong class="live-strokes"></strong>
-              <span class="live-diff${diffClass}"></span>
-            </span>
-          `;
-          const avatarEl = li.querySelector<HTMLElement>('.live-avatar')!;
-          avatarEl.style.background = `hsl(${hue}, 55%, 55%)`;
-          avatarEl.textContent = initial;
-
-          li.querySelector('.live-name')!.innerHTML = p.id === meId
-            ? `${p.name} <em>(vous)</em>`
-            : p.name;
-          li.querySelector('.live-sub')!.textContent = subLine;
-          li.querySelector('.live-medal')!.textContent = medal;
-          li.querySelector('.live-strokes')!.textContent = t.played === 0 ? '' : String(t.strokes);
-          li.querySelector('.live-diff')!.textContent = fmtDiff(t.diff, t.played);
-
-          newItems.push(li);
-        }
-
-        list.replaceChildren(...newItems);
-
-        // ÉTAPE 3 (FLIP) : pour chaque nouvelle <li>, calculer la diff de
-        // position vs l'ancienne et appliquer translateY inverse, puis
-        // animer le retour à 0.
-        for (const li of newItems) {
-          const pid = li.dataset.pid!;
-          const oldTop = oldPositions.get(pid);
-          if (oldTop === undefined) continue;
-          const newTop = li.getBoundingClientRect().top;
-          const delta = oldTop - newTop;
-          if (Math.abs(delta) < 1) continue;
-          li.style.transform = `translateY(${delta}px)`;
-          li.style.transition = 'none';
-          requestAnimationFrame(() => {
-            li.style.transition = 'transform 320ms cubic-bezier(0.2, 0.6, 0.2, 1)';
-            li.style.transform = '';
-          });
-        }
-
-        // Flash pour les joueurs qui ont eu un changement de strokes
-        for (const li of newItems) {
-          const pid = li.dataset.pid!;
-          if (flashPids.has(pid)) {
-            li.classList.add('is-flash');
-            setTimeout(() => li.classList.remove('is-flash'), 1200);
+        // Post-rebuild : count-ups sur les chiffres qui ont bougé, et ring
+        // burst sur la card du nouveau leader si la tête a changé. Ces anims
+        // se superposent sur les rows finales — c'est intentionnel.
+        for (const li of Array.from(list.children) as HTMLElement[]) {
+          const pid = li.dataset.pid;
+          if (!pid) continue;
+          const change = strokeChanges.get(pid);
+          if (change) {
+            const strokesEl = li.querySelector<HTMLElement>('.live-strokes');
+            countUp(strokesEl, change.from, change.to);
           }
         }
 
+        if (!firstRender && newLeaderId && newLeaderId !== lastLeaderId) {
+          const leaderCard = list.querySelector<HTMLElement>(`[data-pid="${newLeaderId}"]`);
+          pulseLeaderRing(leaderCard);
+        }
+        lastLeaderId = newLeaderId;
         firstRender = false;
       }
 
@@ -960,13 +1014,49 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       flex-direction: column;
     }
 
-    /* === Live leaderboard (cards) === */
+    /* === Live leaderboard (cards) ===
+       Refonte PR#68 : container paper-deep + noise subtil, cards off-cream
+       éditoriales, card leader en material honey tinted (gradient + inner
+       light + multi-shadow — pas de backdrop-filter car surface inline,
+       cf. règle d'or tokens.css), médailles SVG, typo Fraunces/Mono.
+       Breathe persistant sur la card leader pour signaler la tête en
+       continu sans agresser (3.2s, paused au hover, off en reduced-motion). */
     .live-board {
+      position: relative;
       padding: var(--space-3) var(--space-4);
-      background: rgba(212, 165, 116, 0.08);
-      border-bottom: 1px solid rgba(212, 165, 116, 0.3);
+      background: var(--paper-deep);
+      border-bottom: 1px solid var(--rule);
+    }
+    .live-board::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: var(--noise-svg);
+      background-size: 120px 120px;
+      opacity: 0.18;
+      pointer-events: none;
+      mix-blend-mode: multiply;
+    }
+    /* Rail honey décoratif en bas (au lieu d'un trait brut). */
+    .live-board::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(212, 165, 116, 0.45) 30%,
+        rgba(212, 165, 116, 0.55) 50%,
+        rgba(212, 165, 116, 0.45) 70%,
+        transparent 100%
+      );
+      pointer-events: none;
     }
     .live-list {
+      position: relative;
       list-style: none;
       margin: 0;
       padding: 0;
@@ -976,103 +1066,163 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     }
     .live-card {
       display: grid;
-      grid-template-columns: 36px 1fr auto auto;
+      grid-template-columns: 40px 1fr auto auto;
       align-items: center;
       gap: 12px;
-      padding: 10px 14px;
-      background: rgba(255, 255, 255, 0.75);
-      border: 1px solid var(--line);
+      padding: 12px 14px;
+      background: rgba(255, 255, 248, 0.92);
+      border: 1px solid var(--rule);
       border-radius: 12px;
-      transition: background 0.2s, border-color 0.2s;
       position: relative;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 1px 2px rgba(15, 42, 30, 0.04);
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
     }
+    /* === Card leader === material honey tinted (vocabulaire Liquid Glass
+       adapté inline : pas de backdrop-filter, à la place gradient honey
+       + inner light + multi-shadow tinted honey). */
     .live-card.is-leader {
-      background: rgba(212, 165, 116, 0.14);
+      background: linear-gradient(
+        135deg,
+        rgba(212, 165, 116, 0.26) 0%,
+        rgba(212, 165, 116, 0.12) 100%
+      );
       border-color: rgba(212, 165, 116, 0.55);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.65),
+        inset 0 -1px 0 rgba(212, 165, 116, 0.20),
+        0 6px 18px -8px rgba(212, 165, 116, 0.42),
+        0 2px 6px -2px rgba(15, 42, 30, 0.08);
+      animation: lb-leader-breathe 3.2s ease-in-out infinite;
     }
+    .live-card.is-leader:hover {
+      animation-play-state: paused;
+    }
+    /* Card "me" : border accentuée clubColor + sous-fond très léger pour
+       le repère "c'est toi". Si me === leader, la card leader prime
+       (cascade naturelle, .is-leader vient en dernier en CSS). */
     .live-card.is-me {
       border-color: var(--clubColor);
       border-width: 1.5px;
+      background:
+        linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--clubColor) 7%, transparent) 100%),
+        rgba(255, 255, 248, 0.92);
     }
+    .live-card.is-me.is-leader {
+      /* Leader prime — mais on garde la border clubColor. */
+      background: linear-gradient(
+        135deg,
+        rgba(212, 165, 116, 0.26) 0%,
+        rgba(212, 165, 116, 0.12) 100%
+      );
+    }
+
+    @keyframes lb-leader-breathe {
+      0%, 100% {
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.65),
+          inset 0 -1px 0 rgba(212, 165, 116, 0.20),
+          0 6px 18px -8px rgba(212, 165, 116, 0.42),
+          0 2px 6px -2px rgba(15, 42, 30, 0.08);
+      }
+      50% {
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.75),
+          inset 0 -1px 0 rgba(212, 165, 116, 0.28),
+          0 8px 22px -8px rgba(212, 165, 116, 0.55),
+          0 3px 8px -2px rgba(15, 42, 30, 0.10);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .live-card.is-leader { animation: none; }
+    }
+
     .live-avatar {
-      width: 36px; height: 36px;
+      width: 40px; height: 40px;
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       color: #fff;
       font-family: var(--font-serif);
-      font-weight: 800;
-      font-size: 16px;
+      font-weight: 700;
+      font-size: 17px;
       flex-shrink: 0;
-      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+      box-shadow:
+        inset 0 -2px 0 rgba(0, 0, 0, 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
     }
     .live-info {
       display: flex;
       flex-direction: column;
       min-width: 0;
-      gap: 2px;
+      gap: 3px;
     }
     .live-name {
-      font-weight: 600;
-      font-size: 14px;
+      font-family: var(--font-serif);
+      font-weight: 500;
+      font-size: 14.5px;
       color: var(--ink);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      letter-spacing: 0.005em;
     }
     .live-name em {
-      font-style: normal;
+      font-style: italic;
+      font-weight: 400;
       color: var(--muted);
-      font-weight: 500;
       font-size: 12px;
+      margin-left: 2px;
     }
+    /* Sub-line = eyebrow micro-caps JetBrains Mono, cohérence avec le
+       reste de la page (PAR, TROU, etc.). */
     .live-sub {
-      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 500;
+      font-size: 10.5px;
       color: var(--muted);
-      letter-spacing: 0.02em;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
     }
     .live-medal {
-      font-size: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
       line-height: 1;
-      min-width: 22px;
-      text-align: center;
+    }
+    .medal-svg {
+      display: block;
+      filter: drop-shadow(0 1px 1px rgba(15, 42, 30, 0.12));
     }
     .live-score {
       display: flex;
       align-items: baseline;
       gap: 6px;
       font-variant-numeric: tabular-nums;
-      min-width: 60px;
+      min-width: 64px;
       justify-content: flex-end;
     }
     .live-strokes {
       font-family: var(--font-serif);
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 800;
       color: var(--clubColor);
+      line-height: 1;
     }
     .live-diff {
-      font-size: 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
       color: var(--muted);
       min-width: 28px;
       text-align: right;
     }
     .live-diff.over { color: #C0392B; }
     .live-diff.under { color: #1B4332; }
-
-    @keyframes lb-flash {
-      0%   { box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.55), 0 4px 12px rgba(212, 165, 116, 0.30); }
-      100% { box-shadow: 0 0 0 0 rgba(212, 165, 116, 0), 0 4px 12px rgba(212, 165, 116, 0); }
-    }
-    .live-card.is-flash {
-      animation: lb-flash 1.2s ease-out;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .live-card.is-flash { animation: none; }
-    }
 
     /* === Player tabs (host mode only) === */
     .player-tabs {
