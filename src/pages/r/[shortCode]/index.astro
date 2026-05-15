@@ -53,7 +53,11 @@ if (!me) {
 }
 
 const isCreator = me?.is_creator === true;
-const canStart = isCreator && pendingCount === 0;
+// En mode 'host', le creator marque pour tous → pas besoin d'attendre que
+// tous les joueurs scannent. En mode 'each', les pending ne pourraient pas
+// saisir leurs scores (pas de device) → on garde le block.
+const isHostMode = r.scoring_mode === 'host';
+const canStart = isCreator && (isHostMode || pendingCount === 0);
 
 // QR encodes the join URL so scanners land directly on the claim flow.
 const joinUrl = `${Astro.url.origin}/r/${shortCode}/join`;
@@ -193,7 +197,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       <p class="add-player-error" data-add-player-error hidden></p>
     </section>
 
-    <form method="POST" action={`/api/rounds/${shortCode}/start`} class="start-form" data-start-form>
+    <form method="POST" action={`/api/rounds/${shortCode}/start`} class="start-form" data-start-form data-pending-count={pendingCount} data-host-mode={String(isHostMode)}>
       <button
         type="submit"
         class="start-btn"
@@ -201,7 +205,13 @@ const clubColor = r.club.primary_color ?? '#1B4332';
         disabled={!canStart}
       >
         <span data-start-label>
-          {canStart ? "C'est parti" : pendingCount > 0 ? `En attente de ${pendingCount} joueur${pendingCount > 1 ? 's' : ''}…` : "Seul l'organisateur peut démarrer"}
+          {canStart
+            ? (isHostMode && pendingCount > 0
+                ? `C'est parti (${pendingCount} non connecté${pendingCount > 1 ? 's' : ''})`
+                : "C'est parti")
+            : pendingCount > 0
+              ? `En attente de ${pendingCount} joueur${pendingCount > 1 ? 's' : ''}…`
+              : "Seul l'organisateur peut démarrer"}
         </span>
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
@@ -450,15 +460,27 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 
       // Surface server-side gating errors on the start form (e.g. someone
       // hasn't joined yet but the user clicked anyway via a stale cache).
+      // Si on est en mode 'host' avec des joueurs pending (non scannés),
+      // on confirme avant submit — le creator est censé savoir que ces
+      // joueurs ne verront pas le live tant qu'ils n'ont pas scanné.
       const startForm = root.querySelector<HTMLFormElement>('[data-start-form]');
       if (startForm) {
-        startForm.addEventListener('submit', async (e) => {
+        startForm.addEventListener('submit', (e) => {
           if (!isCreator) {
             e.preventDefault();
             return;
           }
-          // Let it submit; on error, the API returns a non-redirect response
-          // that the browser will display. (Standard form submit semantics.)
+          const pendingCount = Number(startForm.dataset.pendingCount ?? '0');
+          const isHostMode = startForm.dataset.hostMode === 'true';
+          if (isHostMode && pendingCount > 0) {
+            const plural = pendingCount > 1 ? 's' : '';
+            const msg = `${pendingCount} joueur${plural} n'${pendingCount > 1 ? 'ont' : 'a'} pas scanné.\n\nTu pourras marquer leurs scores quand même (ils apparaissent sur la carte). S'ils scannent en cours de partie, ils verront le live à ce moment-là.\n\nLancer la partie maintenant ?`;
+            if (!window.confirm(msg)) {
+              e.preventDefault();
+            }
+          }
+          // Sinon : submit normal. En cas d'erreur API, la réponse
+          // non-redirect s'affichera (semantique form natif).
         });
       }
     }
