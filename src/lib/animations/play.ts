@@ -6,27 +6,36 @@
  * la batterie). On se limite à des micro-feedbacks utiles :
  *
  *  - flashPar(el) : à chaque changement de trou, le chiffre PAR fait un
- *    petit pop fade-y + back-ease. Confirme visuellement la navigation.
+ *    petit pop fade-y + back-ease.
  *  - flashSelected(btn) : pulse subtile sur le bouton par-relative qui
- *    vient d'être sélectionné (sur tap → save → re-render).
- *  - flashFeedback(el) : fade-in de la ligne "Birdie · −1 vs par" quand
- *    elle change.
+ *    vient d'être sélectionné.
+ *  - flashFeedback(el) : fade-in de la ligne "Birdie · −1 vs par".
  *
- * Les transitions plus lourdes (Flip leaderboard via GSAP, swipe content
- * transition gesture-tracked) sont reportées en PR5 polish — l'ergonomie
- * du score input PR3 est déjà l'impact majeur sur l'UX joueur.
+ * Refonte live-leaderboard (PR#68) — ajout des helpers narrative :
+ *  - flipLeaderboard(items, rebuildDom) : reorder fluide via GSAP Flip
+ *    plugin (remplace le FLIP vanilla custom de play.astro).
+ *  - countUp(el, from, to) : chiffre qui s'incrémente sur changement
+ *    de score plutôt qu'un swap brutal.
+ *  - pulseLeaderRing(card) : ring honey burst quand un joueur prend
+ *    la tête — communique l'événement "tu n'es plus leader".
+ *
+ * Bundle : GSAP Flip ajoute ~12kb gz à /play, mais retire ~30 LOC de
+ * FLIP vanilla custom + récupère stagger natif. Acceptable.
  */
 
-import { loadGsap } from './registry';
+import { loadGsap, loadFlip } from './registry';
 import { prefersReducedMotion, EASE } from './utils';
 
-// /play n'utilise aucun plugin GSAP (ni ScrollTrigger, ni SplitText, ni
-// Flip) — le code-split nous évite de charger ~60kb gz de plugins
-// inutilisés sur la page la plus longue-session.
 let gsapPromise: ReturnType<typeof loadGsap> | null = null;
 function gsapBundle() {
   if (!gsapPromise) gsapPromise = loadGsap();
   return gsapPromise;
+}
+
+let flipPromise: ReturnType<typeof loadFlip> | null = null;
+function flipBundle() {
+  if (!flipPromise) flipPromise = loadFlip();
+  return flipPromise;
 }
 
 /**
@@ -45,12 +54,9 @@ export async function flashPar(el: HTMLElement | null): Promise<void> {
 
 /**
  * Quick pulse sur le bouton par-relative qui vient d'être sélectionné.
- * Visible feedback que le tap a été enregistré (avant l'auto-advance).
- *
- * Spring physique (Apple-like) : ease elastic.out(1, 0.4) simule un
- * vrai ressort qui se libère du tap — le bouton dépasse légèrement
- * la cible puis se stabilise. Plus organique que back.out (qui était
- * plus mécanique). Inspiré SwiftUI .spring(response: 0.4, dampingFraction: 0.6).
+ * Spring physique : elastic.out(1, 0.4) simule un vrai ressort qui se
+ * libère du tap — le bouton dépasse légèrement la cible puis se stabilise.
+ * Inspiré SwiftUI .spring(response: 0.4, dampingFraction: 0.6).
  */
 export async function flashSelected(btn: HTMLElement | null): Promise<void> {
   if (!btn || prefersReducedMotion()) return;
@@ -64,7 +70,7 @@ export async function flashSelected(btn: HTMLElement | null): Promise<void> {
 
 /**
  * Fade-in de la ligne de feedback ("Birdie · −1 vs par") quand son
- * contenu change. Évite l'apparition brutale, donne un sens de continuité.
+ * contenu change.
  */
 export async function flashFeedback(el: HTMLElement | null): Promise<void> {
   if (!el || prefersReducedMotion()) return;
@@ -73,5 +79,112 @@ export async function flashFeedback(el: HTMLElement | null): Promise<void> {
     el,
     { autoAlpha: 0, y: 4 },
     { autoAlpha: 1, y: 0, duration: 0.28, ease: EASE.expo },
+  );
+}
+
+/**
+ * Reorder fluide du live-leaderboard via GSAP Flip plugin.
+ *
+ * Remplace le FLIP vanilla custom (translateY + transition CSS) qui
+ * fonctionnait mais sans stagger, sans absolute positioning, et avec
+ * un layout shift visible pendant le reorder. Flip plugin gère tout
+ * proprement avec `absolute: true` (les rows quittent le flow le
+ * temps de l'anim) et stagger natif.
+ *
+ * Usage :
+ *   const oldItems = Array.from(list.children) as HTMLElement[];
+ *   await flipLeaderboard(oldItems, () => {
+ *     list.replaceChildren(...newItems);
+ *   });
+ *
+ * Reduced-motion : skip Flip, juste exécuter rebuildDom() immédiatement.
+ */
+export async function flipLeaderboard(
+  items: HTMLElement[],
+  rebuildDom: () => void,
+): Promise<void> {
+  if (prefersReducedMotion()) {
+    rebuildDom();
+    return;
+  }
+  const { gsap, Flip } = await flipBundle();
+  const state = Flip.getState(items, { props: 'opacity,backgroundColor' });
+  rebuildDom();
+  Flip.from(state, {
+    duration: 0.45,
+    ease: 'power3.out',
+    stagger: 0.025,
+    absolute: true,
+    onEnter: (els) =>
+      gsap.fromTo(
+        els,
+        { autoAlpha: 0, y: 8 },
+        { autoAlpha: 1, y: 0, duration: 0.3, ease: EASE.expo },
+      ),
+    onLeave: (els) => gsap.to(els, { autoAlpha: 0, duration: 0.2 }),
+  });
+}
+
+/**
+ * Anime un chiffre qui change (ex : score cumulé d'un joueur qui passe
+ * de 12 à 15 après saisie d'un trou). Plus narrative que textContent =
+ * newValue brutal — donne le sens "le verdict se précise".
+ *
+ * Si reduced-motion, set la valeur finale immédiatement.
+ */
+export async function countUp(
+  el: HTMLElement | null,
+  from: number,
+  to: number,
+  duration = 0.4,
+): Promise<void> {
+  if (!el) return;
+  if (prefersReducedMotion() || from === to) {
+    el.textContent = String(to);
+    return;
+  }
+  const { gsap } = await gsapBundle();
+  const obj = { val: from };
+  gsap.to(obj, {
+    val: to,
+    duration,
+    ease: 'expo.out',
+    onUpdate() {
+      el.textContent = String(Math.round(obj.val));
+    },
+  });
+}
+
+/**
+ * Ring honey burst depuis une card (utilisée quand un joueur prend la
+ * tête du classement). Overlay div positionné absolu sur la card, anime
+ * scale 1 → 1.08 + opacity 0.7 → 0, puis se retire du DOM.
+ *
+ * La card doit avoir `position: relative` (déjà le cas pour .live-card).
+ */
+export async function pulseLeaderRing(card: HTMLElement | null): Promise<void> {
+  if (!card || prefersReducedMotion()) return;
+  const { gsap } = await gsapBundle();
+  const ring = document.createElement('span');
+  ring.setAttribute('aria-hidden', 'true');
+  Object.assign(ring.style, {
+    position: 'absolute',
+    inset: '-2px',
+    borderRadius: '14px',
+    border: '2px solid rgba(212, 165, 116, 0.85)',
+    pointerEvents: 'none',
+    opacity: '0',
+  } as Partial<CSSStyleDeclaration>);
+  card.appendChild(ring);
+  gsap.fromTo(
+    ring,
+    { scale: 1, opacity: 0.75 },
+    {
+      scale: 1.08,
+      opacity: 0,
+      duration: 0.65,
+      ease: 'power2.out',
+      onComplete: () => ring.remove(),
+    },
   );
 }
