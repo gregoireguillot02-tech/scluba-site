@@ -1,8 +1,8 @@
 ---
 export const prerender = false;
 
-import '../../../styles/tokens.css';
-import '../../../styles/global.css';
+import PlayerLayout from '../../../layouts/PlayerLayout.astro';
+import Scorecard from '../../../components/player/Scorecard.astro';
 import { serviceClient } from '../../../lib/supabase';
 import type { Club, Round, RoundPlayer, Score } from '../../../lib/clubs-types';
 import { resolveRoundHoles, resolveRoundSections } from '../../../lib/clubs-types';
@@ -87,25 +87,12 @@ const holesByNumber: Record<number, number> = {};
 for (const h of roundHoles) holesByNumber[h.number] = h.par;
 ---
 
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>{r.club.name} — Saisie en cours · Scluba</title>
-  <meta name="robots" content="noindex, nofollow" />
-  <meta name="theme-color" content={clubColor} />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <style define:vars={{ clubColor }}>
-    body {
-      background: #FAF7EE;
-      min-height: 100dvh;
-      overflow-x: hidden;
-      overscroll-behavior-y: none;
-    }
-  </style>
-</head>
-<body>
+<PlayerLayout
+  title={`${r.club.name} — Saisie en cours · Scluba`}
+  themeColor={clubColor}
+  clubColor={clubColor}
+  lockOverscroll={true}
+>
   <main class="play">
     <header class="play-header" style={`background: ${clubColor}`}>
       <div class="play-header-inner">
@@ -209,16 +196,7 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
         <span>Carte</span>
         <span data-total-strokes>—</span>
       </header>
-      <div class="grid">
-        {roundSections.map((section) => (
-          <div class="grid-row">
-            <span class="grid-label">{section.loop_name}</span>
-            {section.holes.map((h) => (
-              <span class="grid-cell" data-cell-hole={h.number}>—</span>
-            ))}
-          </div>
-        ))}
-      </div>
+      <Scorecard sections={roundSections} mode="live" />
     </section>
 
     <form method="POST" action={`/api/rounds/${r.short_code}/finish`} class="finish-form" data-finish-form>
@@ -1109,60 +1087,11 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       text-transform: none;
     }
 
-    .grid {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .grid-row {
-      display: grid;
-      /* Loop names ("La Plaine"…) need more room than the legacy F9/B9 chip. */
-      grid-template-columns: minmax(56px, auto) repeat(9, 1fr);
-      gap: 4px;
-    }
-    .grid-label {
-      background: var(--clubColor);
-      color: var(--bg);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      padding: 2px 8px;
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      white-space: nowrap;
-      text-transform: uppercase;
-    }
-    .grid-cell {
-      aspect-ratio: 1;
-      background: var(--bg);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--ink);
-      font-variant-numeric: tabular-nums;
-    }
-    .grid-cell.cell-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
-    .grid-cell.cell-par { color: var(--clubColor); }
-    .grid-cell.cell-bogey { color: var(--muted); }
-    .grid-cell.cell-double { color: #6B7280; background: rgba(107,114,128,0.08); }
-    .grid-cell.cell-pickup {
-      color: var(--muted);
-      background: repeating-linear-gradient(
-        45deg,
-        rgba(107,114,128,0.06) 0,
-        rgba(107,114,128,0.06) 4px,
-        transparent 4px,
-        transparent 8px
-      );
-      border-style: dashed;
-      font-family: var(--font-serif);
-    }
+    /* La grille scorecard (.grid, .grid-row, .grid-cell, .cell-*) est
+       maintenant dans Scorecard.astro (mode="live"). Le JS de cette page
+       continue de manipuler les cells via [data-cell-hole] et de toggler
+       les classes cell-birdie/par/bogey/double/pickup (les sélecteurs
+       scoped dans Scorecard.astro matchent les cells qu'il a rendues). */
 
     .finish-form {
       padding: 0 var(--space-5);
@@ -1188,5 +1117,4 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       min-height: 1.2em;
     }
   </style>
-</body>
-</html>
+</PlayerLayout>

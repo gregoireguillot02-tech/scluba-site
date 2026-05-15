@@ -1,0 +1,151 @@
+---
+/**
+ * Grille scorecard 18 trous (ou 9, ou autre subset) partagée entre :
+ *  - play.astro : mode 'live' — cells rendues vides avec data-cell-hole,
+ *    le JS du play remplit dynamiquement le score + ajoute la classe
+ *    cell-birdie/par/bogey/double/pickup quand le joueur saisit.
+ *  - recap.astro : mode 'final' — cells rendues directement avec leur
+ *    contenu + classe calculée côté serveur (scoreType + picked_up).
+ *
+ * Source des patterns extraits :
+ *  - play.astro:236-246 + styles 1200-1253
+ *  - recap.astro:302-333 + styles 713-792
+ *
+ * Le grid-label prend la couleur --clubColor.
+ */
+
+import { scoreType, type ResolvedSection } from '../../lib/clubs-types';
+
+interface ScoreEntry {
+  strokes: number | null;
+  picked_up: boolean;
+}
+
+interface Props {
+  /** Sections du parcours (loops) avec leurs trous. */
+  sections: ResolvedSection[];
+  /** 'live' : cells vides + data-cell-hole (rempli par le JS de la page).
+   *  'final' : cells avec contenu + classe calculée. */
+  mode: 'live' | 'final';
+  /** Pour mode 'final' uniquement : map { holeNumber: ScoreEntry }. */
+  scoreMap?: Record<number, ScoreEntry>;
+}
+
+const { sections, mode, scoreMap = {} } = Astro.props;
+
+function cellClassFor(par: number, entry: ScoreEntry | undefined): string {
+  if (!entry) return 'grid-cell cell-empty';
+  if (entry.picked_up) return 'grid-cell cell-pickup';
+  if (entry.strokes === null || entry.strokes === undefined) return 'grid-cell cell-empty';
+  return `grid-cell cell-${scoreType(entry.strokes, par)}`;
+}
+
+function cellContentFor(entry: ScoreEntry | undefined): string {
+  if (!entry) return '—';
+  if (entry.picked_up) return 'C';
+  if (entry.strokes === null || entry.strokes === undefined) return '—';
+  return String(entry.strokes);
+}
+---
+
+<div class="grid">
+  {sections.map((section) => (
+    <div class="grid-row">
+      <span class="grid-label">{section.loop_name}</span>
+      {section.holes.map((h) => {
+        if (mode === 'live') {
+          return (
+            <span class="grid-cell" data-cell-hole={h.number}>—</span>
+          );
+        }
+        // mode 'final'
+        const entry = scoreMap[h.number];
+        return (
+          <span
+            class={cellClassFor(h.par, entry)}
+            aria-label={`Trou ${h.number}: ${entry?.picked_up ? `abandonné, compté ${h.par + 2}` : (entry?.strokes ?? '—')}`}
+          >
+            {cellContentFor(entry)}
+          </span>
+        );
+      })}
+    </div>
+  ))}
+</div>
+
+<style>
+  .grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .grid-row {
+    display: grid;
+    /* Loop names ("La Plaine", "Le Vallon") need more room than the legacy
+       F9/B9 chip — auto column with a min-width. */
+    grid-template-columns: minmax(56px, auto) repeat(9, 1fr);
+    gap: 4px;
+  }
+  .grid-label {
+    background: var(--clubColor, var(--primary));
+    color: var(--bg);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .grid-cell {
+    aspect-ratio: 1;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  /* Score type cells — couleurs alignées sur le système actuel.
+     Birdie/Eagle : honey accent (subtle bg + accent border).
+     Par : forest (clubColor).
+     Bogey : muted gray.
+     Double+ : darker gray sur fond gris léger.
+     Empty : très atténué (avant saisie).
+     Pickup : motif diagonal + tirets. */
+  .grid-cell.cell-eagle,
+  .grid-cell.cell-birdie {
+    color: #C0392B;
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .grid-cell.cell-par { color: var(--clubColor, var(--primary)); }
+  .grid-cell.cell-bogey { color: var(--muted); }
+  .grid-cell.cell-double {
+    color: #6B7280;
+    background: rgba(107, 114, 128, 0.08);
+  }
+  .grid-cell.cell-empty {
+    color: var(--muted-soft);
+    opacity: 0.5;
+  }
+  .grid-cell.cell-pickup {
+    color: var(--muted);
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(107, 114, 128, 0.08) 0,
+      rgba(107, 114, 128, 0.08) 4px,
+      transparent 4px,
+      transparent 8px
+    );
+    border-style: dashed;
+    font-family: var(--font-serif);
+  }
+</style>

@@ -1,8 +1,9 @@
 ---
 export const prerender = false;
 
-import '../../../styles/tokens.css';
-import '../../../styles/global.css';
+import PlayerLayout from '../../../layouts/PlayerLayout.astro';
+import Masthead from '../../../components/player/Masthead.astro';
+import Colophon from '../../../components/player/Colophon.astro';
 import { serviceClient } from '../../../lib/supabase';
 import Honeypot from '../../../components/Honeypot.astro';
 import type { Club, Round, RoundPlayer } from '../../../lib/clubs-types';
@@ -61,42 +62,24 @@ const prefillName = (Astro.url.searchParams.get('name') ?? '').trim().slice(0, 4
 const clubColor = r.club.primary_color ?? '#1B4332';
 ---
 
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Rejoindre — {r.club.name} · Scluba</title>
-  <meta name="robots" content="noindex, nofollow" />
-  <meta name="theme-color" content="#FAF7EE" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-</head>
-<body>
+<PlayerLayout
+  title={`Rejoindre — ${r.club.name} · Scluba`}
+  themeColor="#FAF7EE"
+  clubColor={clubColor}
+>
   <main class="join-page" data-join-page data-short-code={shortCode} data-round-id={r.id} data-status={r.status}>
-    <header class="masthead">
-      {r.club.photo_url ? (
-        <figure class="photo-card">
-          <img src={r.club.photo_url} alt="" loading="eager" decoding="async" />
-          <span class="photo-card-fade" aria-hidden="true"></span>
-        </figure>
-      ) : (
-        <div class="photo-card photo-card-placeholder" aria-hidden="true"></div>
-      )}
-      {r.club.logo_url && (
-        <div class="logo-frame">
-          <img src={r.club.logo_url} alt="" />
-        </div>
-      )}
-      <p class="masthead-eyebrow">Rejoindre</p>
-      <div class="title-rail" aria-hidden="true"></div>
-      <h1 class="masthead-title">{r.club.name}</h1>
-      <div class="title-rail" aria-hidden="true"></div>
-      {creator && (
-        <p class="join-context">
-          Partie lancée par <strong>{creator.display_name}</strong>
-        </p>
-      )}
-    </header>
+    <Masthead
+      photoUrl={r.club.photo_url}
+      logoUrl={r.club.logo_url}
+      eyebrow="Rejoindre"
+      title={r.club.name}
+      size="compact"
+    />
+    {creator && (
+      <p class="join-context">
+        Partie lancée par <strong>{creator.display_name}</strong>
+      </p>
+    )}
 
     {placeholders.length > 0 ? (
       <section class="claim-block" aria-labelledby="claim-title">
@@ -154,15 +137,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       </form>
     </details>
 
-    <footer class="colophon">
-      <span class="colophon-rail" aria-hidden="true"></span>
-      <span class="colophon-text">
-        <span>carte by</span>
-        <strong>SCLUBA</strong>
-        <span class="colophon-dot" aria-hidden="true"></span>
-      </span>
-      <span class="colophon-rail" aria-hidden="true"></span>
-    </footer>
+    <Colophon />
   </main>
 
   <script>
@@ -241,13 +216,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     }
   </script>
 
-  <style define:vars={{ clubColor }}>
-    body {
-      background: #FAF7EE;
-      min-height: 100dvh;
-      overflow-x: hidden;
-      margin: 0;
-    }
+  <style>
     .join-page {
       max-width: 480px;
       margin: 0 auto;
@@ -257,40 +226,11 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       padding: 0 var(--space-4);
     }
 
-    /* Masthead (slimmer than the lobby) */
-    .masthead { text-align: center; padding: var(--space-5) 0 var(--space-3); }
-    .photo-card {
-      position: relative;
-      margin: 0;
-      aspect-ratio: 16 / 9;
-      max-height: 160px;
-      width: 100%;
-      border-radius: 16px;
-      overflow: hidden;
-      background: #E8E0CB;
-      box-shadow: 0 1px 2px rgba(15, 42, 30, 0.06), 0 12px 32px rgba(27, 67, 50, 0.10);
-    }
-    .photo-card img { width: 100%; height: 100%; object-fit: cover; object-position: center 55%; display: block; }
-    .photo-card-fade { position: absolute; inset: auto 0 0 0; height: 40%; background: linear-gradient(180deg, transparent, rgba(15, 42, 30, 0.35)); pointer-events: none; }
-    .photo-card-placeholder { background: linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%); }
-    .logo-frame {
-      position: relative; z-index: 2;
-      margin: -32px auto 0;
-      width: 68px; height: 68px;
-      border-radius: 50%;
-      background: #FAF7EE; border: 2px solid var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 20px rgba(27, 67, 50, 0.10);
-      padding: 8px;
-    }
-    .logo-frame img { width: 100%; height: 100%; object-fit: contain; }
-    .masthead-eyebrow { margin: var(--space-3) 0 var(--space-2); font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); }
-    .title-rail { width: 64px; height: 1px; margin: 0 auto; background: var(--accent); opacity: 0.55; }
-    .masthead-title { margin: var(--space-2) auto var(--space-3); font-family: var(--font-serif); font-weight: 700; font-size: clamp(1.4rem, 5vw, 1.85rem); line-height: 1.15; letter-spacing: 0.04em; text-transform: uppercase; color: var(--clubColor); max-width: 22ch; }
     .join-context {
       margin: var(--space-2) 0 0;
       font-size: 13px;
       color: var(--muted);
+      text-align: center;
     }
     .join-context strong { color: var(--clubColor); font-weight: 600; }
 
@@ -430,22 +370,5 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       background: var(--clubColor);
       color: #FAF7EE;
     }
-
-    /* Colophon */
-    .colophon {
-      display: flex; align-items: center; justify-content: center; gap: var(--space-3);
-      padding: var(--space-6) 0 var(--space-7);
-      max-width: 320px;
-      margin: 0 auto;
-    }
-    .colophon-rail { flex: 1; height: 1px; background: var(--accent); opacity: 0.45; }
-    .colophon-text {
-      display: inline-flex; align-items: center; gap: 8px;
-      font-family: var(--font-serif); font-size: 12px; letter-spacing: 0.04em;
-      color: var(--muted); white-space: nowrap;
-    }
-    .colophon-text strong { font-family: var(--font-serif); font-weight: 700; color: var(--clubColor); letter-spacing: 0.08em; }
-    .colophon-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 1px; }
   </style>
-</body>
-</html>
+</PlayerLayout>
