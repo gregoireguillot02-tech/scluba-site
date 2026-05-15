@@ -547,20 +547,43 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     }
     .btn-secondary:hover { border-color: var(--accent); background: var(--bg-soft); }
 
+    /* QR popover : surface flottante mais inline (pas overlay), donc
+       pas de full Glass Forest (backdrop-filter aurait rien à flouter
+       derrière puisque la code-block est en aplat honey). On lui donne
+       un traitement "papier ciselé" : ring honey, paper-deep, multi-
+       layer shadow pour le sortir du fond. */
     .qr-popover {
       margin: var(--space-4) auto 0;
-      max-width: 220px;
+      max-width: 240px;
       text-align: center;
+      padding: 14px;
+      background: var(--paper-deep, #F4EEDD);
+      border: 1px solid rgba(212, 165, 116, 0.45);
+      border-radius: 16px;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 1px 2px rgba(15, 42, 30, 0.06),
+        0 12px 32px rgba(27, 67, 50, 0.14);
     }
     .qr-frame {
       width: 100%;
-      padding: 14px;
+      padding: 12px;
       background: #fff;
-      border: 1px solid var(--line);
+      border: 1px solid var(--accent);
       border-radius: 12px;
+      /* Le QR a besoin d'un fond BLANC PUR + bord net pour que les
+         scanners téléphone le lisent correctement à n'importe quelle
+         distance. Pas de glass / pas de blur ici. */
     }
     .qr-frame :global(svg) { width: 100%; height: auto; display: block; }
-    .qr-popover-hint { margin-top: var(--space-2); font-size: 12px; color: var(--muted); }
+    .qr-popover-hint {
+      margin-top: var(--space-3);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
 
     /* Players block */
     .players-block { padding: 0 var(--space-1) var(--space-5); }
