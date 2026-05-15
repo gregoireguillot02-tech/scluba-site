@@ -30,8 +30,19 @@
  *   .colophon-rail
  */
 
-import { registerGsap, type GsapBundle } from './registry';
+import { loadScrollTrigger, loadSplitText } from './registry';
 import { prefersReducedMotion, EASE } from './utils';
+
+// Type aliases — récap a besoin de ScrollTrigger + SplitText mais pas
+// de Flip → chargement parallèle des deux plugins via Promise.all.
+type GsapInstance = Awaited<ReturnType<typeof loadScrollTrigger>>['gsap'];
+type ScrollTriggerStatic = Awaited<ReturnType<typeof loadScrollTrigger>>['ScrollTrigger'];
+type SplitTextStatic = Awaited<ReturnType<typeof loadSplitText>>['SplitText'];
+interface RecapBundle {
+  gsap: GsapInstance;
+  ScrollTrigger: ScrollTriggerStatic;
+  SplitText: SplitTextStatic;
+}
 
 /** Entrée publique — appelée depuis le <script> de recap.astro. */
 export async function initRecapAnimations(): Promise<void> {
@@ -47,7 +58,14 @@ export async function initRecapAnimations(): Promise<void> {
     return;
   }
 
-  const bundle = await registerGsap();
+  // Load ScrollTrigger + SplitText en parallèle, mais PAS Flip
+  // (recap n'utilise pas Flip → ~20kb gz économisés).
+  const [st, sp] = await Promise.all([loadScrollTrigger(), loadSplitText()]);
+  const bundle: RecapBundle = {
+    gsap: st.gsap,
+    ScrollTrigger: st.ScrollTrigger,
+    SplitText: sp.SplitText,
+  };
   const { gsap } = bundle;
 
   // gsap.context() scope les sélecteurs au document ET capture toutes
@@ -77,7 +95,7 @@ function applyReducedMotionFinalState(): void {
 /* ---------------------------------------------------------------- */
 /* Acte I + Acte II : timeline maître au load                        */
 /* ---------------------------------------------------------------- */
-function playLoadActes({ gsap, SplitText }: GsapBundle): void {
+function playLoadActes({ gsap, SplitText }: RecapBundle): void {
   // SplitText sur eyebrow + title : préserver l'accessibilité en
   // gardant le texte original dans aria-label si pas déjà set.
   const eyebrowEl = document.querySelector<HTMLElement>('.masthead-eyebrow');
@@ -198,7 +216,7 @@ function playLoadActes({ gsap, SplitText }: GsapBundle): void {
 /* ---------------------------------------------------------------- */
 /* Acte III : reveal au scroll                                       */
 /* ---------------------------------------------------------------- */
-function setupScrollActes({ gsap, ScrollTrigger }: GsapBundle): void {
+function setupScrollActes({ gsap, ScrollTrigger }: RecapBundle): void {
   // Grid cells : stagger reveal cell-by-cell quand le block entre.
   // On cible les .grid-cell INSIDE .grid-block uniquement (pas la
   // mini scorecard live dans play.astro — recap n'a qu'un seul grid).
@@ -268,6 +286,30 @@ function setupScrollActes({ gsap, ScrollTrigger }: GsapBundle): void {
         },
       );
     }
+
+    // Medal rim stroke-draw : le rim du SVG médaille (circle r=10,
+    // circumference ~62.83) part en dashoffset = path length puis se
+    // dessine de 0 en 700ms expo. Donne le sentiment "la médaille
+    // s'inscrit autour du chiffre" — détail premium, presque sub-
+    // conscient mais qui fait la différence sur capture vidéo.
+    const medalRims = document.querySelectorAll<SVGCircleElement>(
+      '.leaderboard .medal-rim',
+    );
+    if (medalRims.length > 0) {
+      gsap.set(medalRims, { strokeDasharray: 63, strokeDashoffset: 63 });
+      gsap.to(medalRims, {
+        strokeDashoffset: 0,
+        duration: 0.7,
+        stagger: 0.12,
+        delay: 0.35,
+        ease: EASE.expo,
+        scrollTrigger: {
+          trigger: '.leaderboard',
+          start: 'top 80%',
+          toggleActions: 'play none none none',
+        },
+      });
+    }
   }
 
   // Weather strip + comment + player-row + colophon : fade-up simple,
@@ -312,7 +354,7 @@ function setupScrollActes({ gsap, ScrollTrigger }: GsapBundle): void {
 /* ---------------------------------------------------------------- */
 /* Photo parallax : translateY -10% sur 60vh, scrub                  */
 /* ---------------------------------------------------------------- */
-function setupPhotoParallax({ gsap, ScrollTrigger }: GsapBundle): void {
+function setupPhotoParallax({ gsap, ScrollTrigger }: RecapBundle): void {
   const photo = document.querySelector<HTMLElement>('.photo-card');
   if (!photo) return;
 

@@ -618,6 +618,11 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       cursor: pointer;
     }
     .comment-btn:hover { background: var(--clubColor); color: var(--bg); }
+    .comment-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 5px rgba(15, 42, 30, 0.12);
+    }
     .comment-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .comment-status { margin: 0; font-size: 12px; color: var(--muted); min-height: 16px; }
 
@@ -656,6 +661,12 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       transition: background 0.15s;
     }
     .share-btn:hover { filter: brightness(0.92); }
+    .share-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 5px rgba(15, 42, 30, 0.16);
+    }
+    .share-btn:active { transform: scale(0.97); }
 
     /* Colophon styles → src/components/player/Colophon.astro */
   </style>

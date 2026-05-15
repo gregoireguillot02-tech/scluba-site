@@ -1,25 +1,77 @@
 /**
- * Registry GSAP — point d'entrée centralisé pour la suite GSAP.
+ * Registry GSAP — chargeurs par plugin pour permettre le code-splitting.
  *
- * Garantit que :
- *  - Les plugins (ScrollTrigger, SplitText, Flip) sont enregistrés UNE
- *    SEULE fois pour toute la session (idempotent).
- *  - GSAP n'est jamais évalué côté serveur (window est requis).
- *  - Le code appelant n'a pas à se soucier de l'ordre d'import.
+ * Chaque page joueur consomme un sous-ensemble des plugins GSAP :
+ *   /r/play      → gsap core (zéro plugin) + autoAnimate
+ *   /r/join      → gsap core (zéro plugin) + autoAnimate
+ *   /r/[lobby]   → gsap core + SplitText (code drop-in) + autoAnimate
+ *   /r/recap     → gsap core + ScrollTrigger + SplitText (zéro Flip)
  *
- * Tous les plugins sont gratuits depuis GSAP 3.13 (relicensing MIT par
- * Webflow, mai 2024). Pas de Club GreenSock nécessaire.
+ * Sans split, chaque page charge ~80kb gz de plugins inutiles. Le split
+ * fait économiser ~40kb sur /play (la page longue-session, on prend
+ * tous les wins batterie/latence). Chaque loader est idempotent (un
+ * plugin n'est registerPlugin'é qu'une fois par session).
  *
- * Pattern d'usage :
- *   import { registerGsap } from '../lib/animations/registry';
- *   const { gsap, ScrollTrigger } = await registerGsap();
- *
- * Pour les listes simples (lobby players, leaderboard), utiliser plutôt
- * `getAutoAnimate()` qui retourne l'API @formkit/auto-animate (2.4kb).
+ * Tous les plugins sont gratuits depuis GSAP 3.13 (relicensing MIT
+ * par Webflow, mai 2024).
  */
 
-let registered = false;
+const registered = new Set<string>();
 
+/** Charge gsap core. Idempotent — appels successifs renvoient le même module. */
+export async function loadGsap() {
+  if (typeof window === 'undefined') {
+    throw new Error('loadGsap() doit être appelé côté client uniquement');
+  }
+  const { gsap } = await import('gsap');
+  if (!registered.has('defaults')) {
+    gsap.defaults({ ease: 'power2.out', duration: 0.3 });
+    registered.add('defaults');
+  }
+  return { gsap };
+}
+
+/** Charge gsap + ScrollTrigger. Pour les reveals au scroll + parallax. */
+export async function loadScrollTrigger() {
+  const { gsap } = await loadGsap();
+  const { ScrollTrigger } = await import('gsap/ScrollTrigger');
+  if (!registered.has('ScrollTrigger')) {
+    gsap.registerPlugin(ScrollTrigger);
+    registered.add('ScrollTrigger');
+  }
+  return { gsap, ScrollTrigger };
+}
+
+/** Charge gsap + SplitText. Pour les reveals char-by-char (titres, code). */
+export async function loadSplitText() {
+  const { gsap } = await loadGsap();
+  const { SplitText } = await import('gsap/SplitText');
+  if (!registered.has('SplitText')) {
+    gsap.registerPlugin(SplitText);
+    registered.add('SplitText');
+  }
+  return { gsap, SplitText };
+}
+
+/** Charge gsap + Flip. Pour les transitions DOM-reorder (leaderboards). */
+export async function loadFlip() {
+  const { gsap } = await loadGsap();
+  const { Flip } = await import('gsap/Flip');
+  if (!registered.has('Flip')) {
+    gsap.registerPlugin(Flip);
+    registered.add('Flip');
+  }
+  return { gsap, Flip };
+}
+
+/**
+ * Charge tout (compat ascendante pour les modules qui n'ont pas
+ * encore migré vers le code-split). Préférer les loaders ciblés
+ * sur les nouvelles pages.
+ *
+ * @deprecated Use loadGsap + loadScrollTrigger/loadSplitText/loadFlip
+ *   per-need to reduce bundle size on pages that don't need everything.
+ */
 export interface GsapBundle {
   gsap: typeof import('gsap').gsap;
   ScrollTrigger: typeof import('gsap/ScrollTrigger').ScrollTrigger;
@@ -27,34 +79,13 @@ export interface GsapBundle {
   SplitText: typeof import('gsap/SplitText').SplitText;
 }
 
-/**
- * Charge et enregistre la suite GSAP côté client. Idempotent : appels
- * successifs renvoient les mêmes instances.
- *
- * Code-splittable : les plugins sont chargés via dynamic import. Sur les
- * pages qui n'animent rien (ex: lobby qui utilise uniquement autoAnimate),
- * GSAP n'est jamais chargé.
- */
 export async function registerGsap(): Promise<GsapBundle> {
-  if (typeof window === 'undefined') {
-    throw new Error('registerGsap() doit être appelé côté client uniquement');
-  }
-
   const [{ gsap }, { ScrollTrigger }, { Flip }, { SplitText }] = await Promise.all([
-    import('gsap'),
-    import('gsap/ScrollTrigger'),
-    import('gsap/Flip'),
-    import('gsap/SplitText'),
+    loadGsap(),
+    loadScrollTrigger(),
+    loadFlip(),
+    loadSplitText(),
   ]);
-
-  if (!registered) {
-    gsap.registerPlugin(ScrollTrigger, Flip, SplitText);
-    // Defaults globaux : ease cohérent avec les tokens CSS, duration courte
-    // (les durations longues sont surchargées par chaque timeline).
-    gsap.defaults({ ease: 'power2.out', duration: 0.3 });
-    registered = true;
-  }
-
   return { gsap, ScrollTrigger, Flip, SplitText };
 }
 

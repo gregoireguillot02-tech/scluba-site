@@ -17,12 +17,15 @@
  * du score input PR3 est déjà l'impact majeur sur l'UX joueur.
  */
 
-import { registerGsap } from './registry';
+import { loadGsap } from './registry';
 import { prefersReducedMotion, EASE } from './utils';
 
-let gsapPromise: ReturnType<typeof registerGsap> | null = null;
+// /play n'utilise aucun plugin GSAP (ni ScrollTrigger, ni SplitText, ni
+// Flip) — le code-split nous évite de charger ~60kb gz de plugins
+// inutilisés sur la page la plus longue-session.
+let gsapPromise: ReturnType<typeof loadGsap> | null = null;
 function gsapBundle() {
-  if (!gsapPromise) gsapPromise = registerGsap();
+  if (!gsapPromise) gsapPromise = loadGsap();
   return gsapPromise;
 }
 
