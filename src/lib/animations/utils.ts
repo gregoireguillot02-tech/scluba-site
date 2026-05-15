@@ -20,6 +20,37 @@ export function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+/**
+ * Vrai si la page courante a été atteinte via une View Transition Astro
+ * depuis une autre page joueur (/r/CODE/*).
+ *
+ * Quand c'est le cas, Astro a déjà morphé les éléments matched-geometry
+ * (logo, photo, titre) entre l'ancienne page et la nouvelle. Si on
+ * relance les entrance animations GSAP (gsap.from sur .photo-card,
+ * SplitText sur club name, etc.) par-dessus, on a un double effet
+ * disgracieux (fade VT + scale GSAP simultanés).
+ *
+ * Donc chaque init*Animations() check ce helper et SKIP les entrance
+ * sur les hero elements quand VT arrival === true. Les animations
+ * spécifiques à la page (score count-up, grid stagger reveal,
+ * leaderboard reveal) restent active.
+ *
+ * Détection : same-origin + référent matche /r/CODE/* (sibling player
+ * page). Approche simple et fiable, pas besoin d'event listeners.
+ */
+export function isViewTransitionArrival(): boolean {
+  if (typeof document === 'undefined') return false;
+  if (!document.referrer) return false;
+  try {
+    const ref = new URL(document.referrer);
+    if (ref.origin !== window.location.origin) return false;
+    // Tout /r/<code>... compte comme page sibling. On exclut /r/ tout court.
+    return /^\/r\/[^/]+/.test(ref.pathname);
+  } catch {
+    return false;
+  }
+}
+
 /** Helper : exécute fn() uniquement si l'élément existe ET reduced-motion off. */
 export function whenMotion(fn: () => void): void {
   if (prefersReducedMotion()) return;

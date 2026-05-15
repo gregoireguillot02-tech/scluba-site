@@ -31,7 +31,7 @@
  */
 
 import { loadScrollTrigger, loadSplitText } from './registry';
-import { prefersReducedMotion, EASE } from './utils';
+import { prefersReducedMotion, isViewTransitionArrival, EASE } from './utils';
 
 // Type aliases — récap a besoin de ScrollTrigger + SplitText mais pas
 // de Flip → chargement parallèle des deux plugins via Promise.all.
@@ -68,11 +68,18 @@ export async function initRecapAnimations(): Promise<void> {
   };
   const { gsap } = bundle;
 
+  // Détecte si on arrive via View Transition depuis une sibling page
+  // joueur (/r/CODE/*). Si oui, Astro a déjà morphé le photo + logo +
+  // titre — on skip l'Acte I (entrance hero) pour éviter le double effet
+  // VT-fade + GSAP-scale simultanés. Le Acte II (score count-up) et
+  // l'Acte III (scroll grid + leaderboard) restent toujours actifs car
+  // ils animent du contenu qui n'existait pas sur la page précédente.
+  const fromVT = isViewTransitionArrival();
+
   // gsap.context() scope les sélecteurs au document ET capture toutes
-  // les timelines + ScrollTriggers pour un revert() propre si jamais
-  // View Transitions sont activées plus tard.
+  // les timelines + ScrollTriggers pour un revert() propre.
   gsap.context(() => {
-    playLoadActes(bundle);
+    playLoadActes(bundle, fromVT);
     setupScrollActes(bundle);
     setupPhotoParallax(bundle);
   });
@@ -95,7 +102,7 @@ function applyReducedMotionFinalState(): void {
 /* ---------------------------------------------------------------- */
 /* Acte I + Acte II : timeline maître au load                        */
 /* ---------------------------------------------------------------- */
-function playLoadActes({ gsap, SplitText }: RecapBundle): void {
+function playLoadActes({ gsap, SplitText }: RecapBundle, fromVT: boolean): void {
   // SplitText sur eyebrow + title : préserver l'accessibilité en
   // gardant le texte original dans aria-label si pas déjà set.
   const eyebrowEl = document.querySelector<HTMLElement>('.masthead-eyebrow');
@@ -107,65 +114,76 @@ function playLoadActes({ gsap, SplitText }: RecapBundle): void {
     eyebrowEl.setAttribute('aria-label', eyebrowEl.textContent ?? '');
   }
 
-  const splitEyebrow = eyebrowEl ? new SplitText(eyebrowEl, { type: 'chars' }) : null;
-  const splitTitle = titleEl ? new SplitText(titleEl, { type: 'chars,words' }) : null;
+  // SplitText : on n'instancie que si on va animer (skip si VT arrival
+  // car le titre est déjà morphé par Astro). Ça évite aussi de wrapper
+  // le titre dans des spans pour rien.
+  const splitEyebrow = (!fromVT && eyebrowEl) ? new SplitText(eyebrowEl, { type: 'chars' }) : null;
+  const splitTitle = (!fromVT && titleEl) ? new SplitText(titleEl, { type: 'chars,words' }) : null;
 
   const tl = gsap.timeline({ defaults: { ease: EASE.expo } });
 
-  // === Acte I (au load, ~1.6s) ==================================
+  // === Acte I (au load, ~1.6s) — SKIP si VT arrival =============
+  // Astro a déjà morphé photo + logo + titre via matched geometry.
+  // Re-animer par-dessus ferait un double effet disgracieux.
 
-  tl
-    // 1. Photo card : scale-in léger depuis 1.08
-    .fromTo(
-      '.photo-card',
-      { scale: 1.08, autoAlpha: 0 },
-      { scale: 1, autoAlpha: 1, duration: 0.8 },
-      0,
-    )
-    // 2. Logo frame : pop + slight rotate
-    .fromTo(
-      '.logo-frame',
-      { scale: 0, rotate: -12, autoAlpha: 0 },
-      { scale: 1, rotate: 0, autoAlpha: 1, duration: 0.48, ease: EASE.back },
-      0.3,
-    );
+  if (!fromVT) {
+    tl
+      // 1. Photo card : scale-in léger depuis 1.08
+      .fromTo(
+        '.photo-card',
+        { scale: 1.08, autoAlpha: 0 },
+        { scale: 1, autoAlpha: 1, duration: 0.8 },
+        0,
+      )
+      // 2. Logo frame : pop + slight rotate
+      .fromTo(
+        '.logo-frame',
+        { scale: 0, rotate: -12, autoAlpha: 0 },
+        { scale: 1, rotate: 0, autoAlpha: 1, duration: 0.48, ease: EASE.back },
+        0.3,
+      );
 
-  // 3. Eyebrow chars stagger
-  if (splitEyebrow) {
+    // 3. Eyebrow chars stagger
+    if (splitEyebrow) {
+      tl.fromTo(
+        splitEyebrow.chars,
+        { yPercent: 30, autoAlpha: 0 },
+        { yPercent: 0, autoAlpha: 1, duration: 0.5, stagger: 0.025 },
+        0.5,
+      );
+    }
+
+    // 4. Title rails depuis le centre
     tl.fromTo(
-      splitEyebrow.chars,
-      { yPercent: 30, autoAlpha: 0 },
-      { yPercent: 0, autoAlpha: 1, duration: 0.5, stagger: 0.025 },
-      0.5,
-    );
-  }
-
-  // 4. Title rails depuis le centre
-  tl.fromTo(
-    '.masthead .title-rail',
-    { scaleX: 0, autoAlpha: 0 },
-    { scaleX: 1, autoAlpha: 1, duration: 0.38, transformOrigin: 'center', ease: 'power2.out' },
+      '.masthead .title-rail',
+      { scaleX: 0, autoAlpha: 0 },
+      { scaleX: 1, autoAlpha: 1, duration: 0.38, transformOrigin: 'center', ease: 'power2.out' },
     0.7,
   );
 
-  // 5. Club name chars (le moment éditorial)
-  if (splitTitle) {
-    tl.fromTo(
-      splitTitle.chars,
-      { yPercent: 100, autoAlpha: 0 },
-      { yPercent: 0, autoAlpha: 1, duration: 0.6, stagger: 0.04, ease: 'expo.out' },
-      0.8,
-    );
-  }
+    // 5. Club name chars (le moment éditorial)
+    if (splitTitle) {
+      tl.fromTo(
+        splitTitle.chars,
+        { yPercent: 100, autoAlpha: 0 },
+        { yPercent: 0, autoAlpha: 1, duration: 0.6, stagger: 0.04, ease: 'expo.out' },
+        0.8,
+      );
+    }
+  } // fin du if (!fromVT) — Acte I
 
-  // === Acte II : le verdict (delay ~1.0s après Acte I) ==========
+  // === Acte II : le verdict (toujours joué — score-value n'existe
+  // que sur recap, donc rien à matcher en VT). En cas de VT arrival,
+  // on joue Acte II au temps 0 au lieu de delay 1.4s. ============
+
+  const acteIIOffset = fromVT ? 0.3 : 1.4;
 
   // 6. score-eyebrow
   tl.fromTo(
     '.score-eyebrow',
     { y: 12, autoAlpha: 0 },
     { y: 0, autoAlpha: 1, duration: 0.4 },
-    1.4,
+    acteIIOffset,
   );
 
   // 7. score-value count-up + motion blur
@@ -192,7 +210,7 @@ function playLoadActes({ gsap, SplitText }: RecapBundle): void {
           scoreEl.textContent = String(target);
         },
       },
-      1.5,
+      acteIIOffset + 0.1,
     );
   }
 
@@ -201,7 +219,7 @@ function playLoadActes({ gsap, SplitText }: RecapBundle): void {
     '.score-meta',
     { y: 8, autoAlpha: 0 },
     { y: 0, autoAlpha: 1, duration: 0.4 },
-    2.4,
+    acteIIOffset + 1.0,
   );
 
   // 9. score-note (si présent — trous abandonnés)
@@ -209,7 +227,7 @@ function playLoadActes({ gsap, SplitText }: RecapBundle): void {
     '.score-note',
     { y: 6, autoAlpha: 0 },
     { y: 0, autoAlpha: 1, duration: 0.4 },
-    2.6,
+    acteIIOffset + 1.2,
   );
 }
 

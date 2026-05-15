@@ -120,13 +120,17 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
   lockOverscroll={true}
 >
   <main class="play">
+    {/* play-header est l'équivalent local du Masthead — bande colorée
+         clubColor + logo + nom club + prénom joueur. Les transition:name
+         matchent les éléments du Masthead (lobby/recap) pour que le logo
+         et le nom du club continuent visuellement entre les 3 pages. */}
     <header class="play-header" style={`background: ${clubColor}`}>
       <div class="play-header-inner">
         {r.club.logo_url && (
-          <img class="play-header-logo" src={r.club.logo_url} alt="" />
+          <img class="play-header-logo" src={r.club.logo_url} alt="" transition:name="player-club-logo" />
         )}
         <div class="play-header-text">
-          <p class="play-club">{r.club.name}</p>
+          <p class="play-club" transition:name="player-club-name">{r.club.name}</p>
           <p class="play-player">{me.display_name}</p>
         </div>
       </div>

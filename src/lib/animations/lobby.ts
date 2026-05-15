@@ -14,8 +14,37 @@
  * Reduced-motion : SplitText skip, autoAnimate respecte nativement.
  */
 
-import { loadSplitText, getAutoAnimate } from './registry';
-import { prefersReducedMotion, EASE } from './utils';
+import { loadGsap, loadSplitText, getAutoAnimate } from './registry';
+import { prefersReducedMotion, isViewTransitionArrival, EASE } from './utils';
+
+type GsapInstance = Awaited<ReturnType<typeof loadGsap>>['gsap'];
+
+/**
+ * QR popover spring : intercept le toggle existant pour animer l'ouverture.
+ * Extrait dans une fonction réutilisable car appelé depuis 2 chemins :
+ *  - normal flow (fresh load) — après les entrance reveals GSAP
+ *  - VT arrival (depuis /join) — SEULE animation nécessaire car Astro
+ *    a déjà animé les hero elements, pas besoin de ré-animer
+ *
+ * Le handler existant flip popover.hidden APRÈS ce listener (ordre
+ * d'exécution). À ce stade `hidden` est encore son ancienne valeur.
+ * On lit donc le state via requestAnimationFrame après le flip.
+ */
+function setupQrSpring(gsap: GsapInstance): void {
+  const qrToggleBtn = document.querySelector<HTMLElement>('[data-toggle-qr]');
+  const qrPopover = document.querySelector<HTMLElement>('[data-qr-popover]');
+  if (!qrToggleBtn || !qrPopover) return;
+  qrToggleBtn.addEventListener('click', () => {
+    requestAnimationFrame(() => {
+      if (qrPopover.hidden) return;
+      gsap.fromTo(
+        qrPopover,
+        { scale: 0.92, autoAlpha: 0 },
+        { scale: 1, autoAlpha: 1, duration: 0.28, ease: 'back.out(1.4)' },
+      );
+    });
+  });
+}
 
 export async function initLobbyAnimations(): Promise<void> {
   if (typeof document !== 'undefined' && document.fonts?.ready) {
@@ -34,6 +63,23 @@ export async function initLobbyAnimations(): Promise<void> {
 
   // === GSAP : SplitText sur code + QR popover spring + entrées staggered ===
   if (prefersReducedMotion()) return;
+
+  // Si arrivée via View Transition (depuis /join), Astro a déjà animé
+  // les éléments matched (photo, logo, titre Masthead). On skip les
+  // entrance animations GSAP pour éviter le double effet et le délai
+  // d'attente — le QR popover spring reste actif (utilisé sur tap, pas
+  // au load), et autoAnimate sur players list reste actif aussi (déjà
+  // setup plus haut, hors du if).
+  const fromVT = isViewTransitionArrival();
+  if (fromVT) {
+    // Setup uniquement le QR popover spring (interaction, pas entrance).
+    // On charge gsap core seul — pas besoin de SplitText puisqu'on skip
+    // le SplitText du code XL.
+    const { gsap: gsapCore } = await loadGsap();
+    setupQrSpring(gsapCore);
+    return;
+  }
+
   // /lobby a besoin de gsap + SplitText (pour le code XL drop-in) mais
   // ni ScrollTrigger ni Flip → code-split via loadSplitText().
   const { gsap, SplitText } = await loadSplitText();
@@ -105,27 +151,7 @@ export async function initLobbyAnimations(): Promise<void> {
     // batterie low, focus perdu) le bouton restait invisible et
     // bloquait le démarrage de la partie. Hotfix 2026-05-15.
 
-    // QR popover : intercept le toggle existant pour animer l'ouverture.
-    // L'existant toggle popover.hidden ; on ne change pas la logique,
-    // on ajoute juste un fade+scale quand le button data-toggle-qr
-    // est cliqué et que le popover passe de hidden=true → false.
-    const qrToggleBtn = document.querySelector<HTMLElement>('[data-toggle-qr]');
-    const qrPopover = document.querySelector<HTMLElement>('[data-qr-popover]');
-    if (qrToggleBtn && qrPopover) {
-      qrToggleBtn.addEventListener('click', () => {
-        // Le handler existant flip popover.hidden APRÈS ce listener
-        // (ordre d'exécution). Mais à ce stade `hidden` est encore son
-        // ancienne valeur. On lit donc l'opposé pour deviner le nouveau
-        // state. (Ou on attache un raf pour lire après le flip.)
-        requestAnimationFrame(() => {
-          if (qrPopover.hidden) return;
-          gsap.fromTo(
-            qrPopover,
-            { scale: 0.92, autoAlpha: 0 },
-            { scale: 1, autoAlpha: 1, duration: 0.28, ease: 'back.out(1.4)' },
-          );
-        });
-      });
-    }
+    // QR popover spring (interaction, pas entrance)
+    setupQrSpring(gsap);
   });
 }
