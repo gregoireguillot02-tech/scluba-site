@@ -88,7 +88,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
         <ul class="claim-list" data-claim-list>
           {placeholders.map((p) => (
             <li>
-              <form method="POST" action={`/api/rounds/${shortCode}/claim`} class="claim-form">
+              <form method="POST" action={`/api/rounds/${shortCode}/claim`} class="claim-form" data-astro-reload>
                 <input type="hidden" name="placeholder_id" value={p.id} />
                 <Honeypot />
                 <button type="submit" class="claim-btn">
@@ -116,7 +116,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
           <polyline points="6 9 12 15 18 9"/>
         </svg>
       </summary>
-      <form method="POST" action={`/api/rounds/${shortCode}/claim`} class="selfadd-form">
+      <form method="POST" action={`/api/rounds/${shortCode}/claim`} class="selfadd-form" data-astro-reload>
         <Honeypot />
         <label class="selfadd-label">
           <span>Ton prénom</span>
@@ -178,7 +178,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
         if (existing) return;
         const li = document.createElement('li');
         li.innerHTML = `
-          <form method="POST" action="/api/rounds/${shortCode}/claim" class="claim-form">
+          <form method="POST" action="/api/rounds/${shortCode}/claim" class="claim-form" data-astro-reload>
             <input type="hidden" name="placeholder_id" value="${p.id}" />
             <input type="text" name="hp_email" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;" aria-hidden="true" />
             <button type="submit" class="claim-btn">
