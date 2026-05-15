@@ -8,6 +8,7 @@ import { serviceClient } from '../../../lib/supabase';
 import { qrSvg } from '../../../lib/qr';
 import Honeypot from '../../../components/Honeypot.astro';
 import type { Club, Round, RoundPlayer } from '../../../lib/clubs-types';
+import { avatarColor, initialOf } from '../../../lib/avatar';
 
 const { shortCode: rawShortCode } = Astro.params;
 const shortCode = (rawShortCode ?? '').toUpperCase();
@@ -135,7 +136,11 @@ const clubColor = r.club.primary_color ?? '#1B4332';
               data-is-creator={p.is_creator ? '1' : '0'}
               data-is-claimed={isPlaceholder ? '0' : '1'}
             >
-              <span class="player-dot" aria-hidden="true"></span>
+              <span
+                class="player-avatar"
+                aria-hidden="true"
+                style={`background: ${avatarColor(p.id)}`}
+              >{initialOf(p.display_name)}</span>
               <span class="player-name">{p.display_name}</span>
               {isMe && <span class="player-tag">vous</span>}
               {!isMe && p.is_creator && <span class="player-tag muted">créateur</span>}
@@ -203,6 +208,13 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 
   <script>
     import { subscribeToRound, unsubscribeFromRound } from '../../../lib/realtime';
+    import { avatarColor, initialOf } from '../../../lib/avatar';
+    import { initLobbyAnimations } from '../../../lib/animations/lobby';
+
+    // Reveal éditorial + autoAnimate sur la players list + spring QR.
+    initLobbyAnimations().catch((err) => {
+      console.warn('[lobby] animations init failed', err);
+    });
 
     type RoundPlayerRow = {
       id: string;
@@ -276,10 +288,14 @@ const clubColor = r.club.primary_color ?? '#1B4332';
         // Clear then re-render the row content (cheaper than diffing in JS).
         li.innerHTML = '';
 
-        const dot = document.createElement('span');
-        dot.className = 'player-dot';
-        dot.setAttribute('aria-hidden', 'true');
-        li.appendChild(dot);
+        // Avatar : initiale + couleur HSL stable (matche le SSR).
+        // Repère visuel cohérent avec /play et /recap leaderboards.
+        const avatar = document.createElement('span');
+        avatar.className = 'player-avatar';
+        avatar.setAttribute('aria-hidden', 'true');
+        avatar.style.background = avatarColor(p.id);
+        avatar.textContent = initialOf(p.display_name);
+        li.appendChild(avatar);
 
         const name = document.createElement('span');
         name.className = 'player-name';
@@ -486,16 +502,27 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       border-bottom: 1px solid rgba(212, 165, 116, 0.4);
       margin-bottom: var(--space-5);
     }
-    .code-eyebrow { margin: 0 0 var(--space-2); font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); }
+    .code-eyebrow {
+      margin: 0 0 var(--space-2);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
     .code-value {
       margin: 0;
-      font-family: var(--font-serif);
+      font-family: var(--font-display, var(--font-serif));
       font-size: clamp(2.5rem, 11vw, 4rem);
-      font-weight: 800;
+      font-weight: 900;
       letter-spacing: 0.18em;
       color: var(--clubColor);
-      font-variant-numeric: tabular-nums;
+      font-variant-numeric: tabular-nums lining-nums;
       line-height: 1;
+      /* font-variation-settings pour pousser l'opsz de Fraunces en
+         mode "display" (chiffres condensés + cap-height max). */
+      font-variation-settings: 'opsz' 144, 'wght' 900, 'SOFT' 0;
     }
     .code-hint { margin: var(--space-3) 0 var(--space-4); font-size: 13px; color: var(--muted); }
 
@@ -573,15 +600,24 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       color: var(--muted);
       font-style: italic;
     }
-    :global(.player-item.is-pending .player-dot) {
-      background: transparent;
+    :global(.player-item.is-pending .player-avatar) {
+      background: transparent !important;
       border: 1.5px dashed var(--muted-soft);
+      color: var(--muted-soft);
     }
-    :global(.player-dot) {
-      width: 10px; height: 10px;
+    :global(.player-avatar) {
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
-      background: var(--clubColor);
       flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: var(--font-display, var(--font-serif));
+      font-weight: 800;
+      font-size: 14px;
+      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
       box-sizing: border-box;
     }
     :global(.player-name) { flex: 1; font-size: 15px; font-weight: 500; color: var(--ink); }
@@ -695,6 +731,21 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     .start-btn:hover:not(:disabled) { filter: brightness(0.92); }
     .start-btn:active:not(:disabled) { transform: translateY(1px); }
     .start-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    /* Pulse glow honey quand le CTA est actif (canStart = true).
+       Période 2.4s, paused au hover. Signal subtil "prêt à lancer". */
+    @keyframes cta-pulse {
+      0%, 100% { box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 20px rgba(27, 67, 50, 0.18); }
+      50%      { box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 30px rgba(212, 165, 116, 0.55), 0 0 0 4px rgba(212, 165, 116, 0.16); }
+    }
+    .start-btn:not(:disabled) {
+      animation: cta-pulse 2.4s ease-in-out infinite;
+    }
+    .start-btn:not(:disabled):hover {
+      animation-play-state: paused;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .start-btn:not(:disabled) { animation: none; }
+    }
     .start-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
