@@ -760,8 +760,19 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       0%, 100% { box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 20px rgba(27, 67, 50, 0.18); }
       50%      { box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 30px rgba(212, 165, 116, 0.55), 0 0 0 4px rgba(212, 165, 116, 0.16); }
     }
+    /* Breathe : respiration subtile scale 1 → 1.012 — Apple-like
+       "le bouton est vivant et t'attend". Période 3.6s décalée du
+       pulse pour créer un layered rythm (les 2 courbes se croisent
+       au lieu de pulser ensemble). transform-only → GPU compositor,
+       zéro repaint. */
+    @keyframes cta-breathe {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.012); }
+    }
     .start-btn:not(:disabled) {
-      animation: cta-pulse 2.4s ease-in-out infinite;
+      animation:
+        cta-pulse 2.4s ease-in-out infinite,
+        cta-breathe 3.6s ease-in-out infinite;
     }
     .start-btn:not(:disabled):hover {
       animation-play-state: paused;
