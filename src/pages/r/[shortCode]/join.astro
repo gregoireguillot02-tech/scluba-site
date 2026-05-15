@@ -142,6 +142,13 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 
   <script>
     import { subscribeToRound, unsubscribeFromRound } from '../../../lib/realtime';
+    import { initJoinAnimations } from '../../../lib/animations/join';
+
+    // Reveal éditorial (claim cards stagger, masthead fade) + autoAnimate
+    // sur la liste de claims (realtime UPDATE/INSERT/DELETE auto-anim).
+    initJoinAnimations().catch((err) => {
+      console.warn('[join] animations init failed', err);
+    });
 
     type RoundPlayerRow = {
       id: string;
