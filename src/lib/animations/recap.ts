@@ -26,7 +26,7 @@
  *   .score-eyebrow, .score-value[data-target], .score-meta, .score-note
  *   .grid-block, .grid-cell, .grid-legend
  *   .leaderboard, .lb-row
- *   .weather-strip, .comment-block, .player-row, .share-btn
+ *   .comment-block, .player-row, .share-btn (météo intégrée dans .meta-strip)
  *   .colophon-rail
  */
 
@@ -312,10 +312,10 @@ function setupScrollActes({ gsap, ScrollTrigger }: RecapBundle): void {
     }
   }
 
-  // Weather strip + comment + player-row + colophon : fade-up simple,
-  // chacun à son propre trigger.
+  // Comment + player-row + colophon : fade-up simple, chacun à son
+  // propre trigger. La météo est maintenant dans .meta-strip (animée
+  // en bloc avec le masthead, pas individuellement).
   const tailSelectors = [
-    '.weather-strip',
     '.comment-block',
     '.player-row',
     '.colophon',

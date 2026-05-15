@@ -228,6 +228,17 @@ const clubColor = r.club.primary_color ?? '#1B4332';
         <span class="meta-l">Réf.</span>
         <span class="meta-v">{r.short_code}</span>
       </li>
+      {r.weather ? (
+        <li>
+          <span class="meta-l">Météo</span>
+          <span class="meta-v meta-v-weather">
+            <span class="meta-weather-emoji" aria-hidden="true">{r.weather.emoji}</span>
+            <span>{r.weather.temp_c}°C</span>
+          </span>
+        </li>
+      ) : (
+        <li aria-hidden="true"></li>
+      )}
     </ul>
 
     <section class="score-block" aria-labelledby="score-title">
@@ -272,13 +283,8 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       <Leaderboard players={leaderboard} eyebrow="Multijoueur" title="Classement" />
     )}
 
-    {r.weather && (
-      <section class="weather-strip" aria-label="Météo à la création de la partie">
-        <span class="weather-emoji" aria-hidden="true">{r.weather.emoji}</span>
-        <span class="weather-temp">{r.weather.temp_c}°C</span>
-        <span class="weather-label">{r.weather.label}</span>
-      </section>
-    )}
+    {/* Météo : remontée dans la meta-strip Date / Réf / Météo (3 cols).
+         Le bandeau weather-strip séparé est retiré pour éviter le doublon. */}
 
     <section class="comment-block">
       <p class="comment-eyebrow">Ton commentaire</p>
@@ -456,6 +462,19 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       font-weight: 700;
       font-variant-numeric: tabular-nums;
     }
+    /* Météo en 3ème col : emoji + température sur une ligne. L'emoji est
+       du contenu sémantique (☁️🌤️☀️🌧️), pas une icône d'UI — OK selon
+       l'anti-slop rule. */
+    .meta-v-weather {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .meta-weather-emoji {
+      font-size: 14px;
+      line-height: 1;
+    }
 
     /* === Score block === */
     .score-block {
@@ -553,23 +572,9 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 
     /* Leaderboard styles → src/components/player/Leaderboard.astro */
 
-    /* === Weather strip === */
-    .weather-strip {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin: var(--space-3) auto 0;
-      padding: 6px 12px;
-      background: rgba(212, 165, 116, 0.08);
-      border: 1px solid rgba(212, 165, 116, 0.4);
-      border-radius: 999px;
-      align-self: center;
-      font-size: 13px;
-      color: var(--muted);
-    }
-    .weather-emoji { font-size: 18px; line-height: 1; }
-    .weather-temp { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-    .weather-label { font-size: 12px; }
+    /* Weather styles → intégré dans .meta-strip ci-dessus (.meta-v-weather
+       et .meta-weather-emoji). Le bandeau dédié .weather-strip a été
+       retiré pour éviter le doublon avec la meta-strip. */
 
     /* === Comment block === */
     .comment-block {
