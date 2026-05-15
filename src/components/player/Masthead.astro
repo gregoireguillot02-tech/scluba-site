@@ -1,0 +1,189 @@
+---
+/**
+ * En-tête éditorial des pages joueur (join, lobby, recap).
+ *
+ * Pattern : photo 16/9 + logo-frame qui chevauche + eyebrow uppercase +
+ * title-rails encadrants + titre serif + subtitle optionnel.
+ *
+ * Variantes via `size` :
+ *  - compact : join page (photo max 160px, logo 68px, titre 1.4-1.85rem)
+ *  - standard : lobby (photo max 200px, logo 68px, titre 1.4-1.85rem)
+ *  - large : recap (photo max 240px, logo 76px, titre 1.6-2.1rem)
+ *
+ * Source des patterns extraits :
+ *  - join.astro:76-99
+ *  - index.astro:82-102
+ *  - recap.astro:238-263
+ *
+ * Le titre prend la couleur --clubColor exposée par PlayerLayout.
+ */
+
+interface Props {
+  /** URL de la photo du club ou de la partie. Si absente → placeholder gradient. */
+  photoUrl?: string | null;
+  /** URL du logo du club. Si absente, le logo-frame n'est pas rendu. */
+  logoUrl?: string | null;
+  /** Texte court en uppercase au-dessus du titre (ex: "REJOINDRE"). */
+  eyebrow: string;
+  /** Nom du club (rendu en uppercase serif XL). */
+  title: string;
+  /** Ligne de contexte optionnelle (ex: "Partie lancée par X"). */
+  subtitle?: string;
+  /** Taille du bloc — adapté à chaque page du flow. */
+  size?: 'compact' | 'standard' | 'large';
+}
+
+const {
+  photoUrl = null,
+  logoUrl = null,
+  eyebrow,
+  title,
+  subtitle,
+  size = 'standard',
+} = Astro.props;
+---
+
+<header class="masthead" data-size={size}>
+  {photoUrl ? (
+    <figure class="photo-card">
+      <img src={photoUrl} alt="" loading="eager" decoding="async" />
+      <span class="photo-card-fade" aria-hidden="true"></span>
+    </figure>
+  ) : (
+    <div class="photo-card photo-card-placeholder" aria-hidden="true"></div>
+  )}
+
+  {logoUrl && (
+    <div class="logo-frame">
+      <img src={logoUrl} alt="" />
+    </div>
+  )}
+
+  <p class="masthead-eyebrow">{eyebrow}</p>
+  <div class="title-rail" aria-hidden="true"></div>
+  <h1 class="masthead-title">{title}</h1>
+  <div class="title-rail" aria-hidden="true"></div>
+
+  {subtitle && (
+    <p class="masthead-subtitle">
+      <Fragment set:html={subtitle} />
+    </p>
+  )}
+</header>
+
+<style>
+  .masthead { text-align: center; padding: var(--space-5) 0; }
+  .masthead[data-size="compact"] { padding: var(--space-5) 0 var(--space-3); }
+  .masthead[data-size="large"] { padding-bottom: var(--space-5); }
+
+  .photo-card {
+    position: relative;
+    margin: 0;
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #E8E0CB;
+    box-shadow:
+      0 1px 2px rgba(15, 42, 30, 0.06),
+      0 12px 32px rgba(27, 67, 50, 0.10);
+  }
+  .masthead[data-size="compact"] .photo-card { max-height: 160px; }
+  .masthead[data-size="standard"] .photo-card { max-height: 200px; }
+  .masthead[data-size="large"] .photo-card { max-height: 240px; }
+
+  .photo-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 55%;
+    display: block;
+  }
+  .photo-card-fade {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 40%;
+    background: linear-gradient(180deg, transparent, rgba(15, 42, 30, 0.35));
+    pointer-events: none;
+  }
+  .photo-card-placeholder {
+    background: linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%);
+  }
+
+  .logo-frame {
+    position: relative;
+    z-index: 2;
+    border-radius: 50%;
+    background: #FAF7EE;
+    border: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 1px 2px rgba(15, 42, 30, 0.08),
+      0 8px 20px rgba(27, 67, 50, 0.10);
+    padding: 8px;
+  }
+  .masthead[data-size="compact"] .logo-frame,
+  .masthead[data-size="standard"] .logo-frame {
+    margin: -32px auto 0;
+    width: 68px;
+    height: 68px;
+  }
+  .masthead[data-size="large"] .logo-frame {
+    margin: -36px auto 0;
+    width: 76px;
+    height: 76px;
+    padding: 10px;
+  }
+  .logo-frame img { width: 100%; height: 100%; object-fit: contain; }
+
+  .masthead-eyebrow {
+    margin: var(--space-3) 0 var(--space-2);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .masthead[data-size="large"] .masthead-eyebrow {
+    margin: var(--space-4) 0 var(--space-3);
+  }
+
+  .title-rail {
+    width: 64px;
+    height: 1px;
+    margin: 0 auto;
+    background: var(--accent);
+    opacity: 0.55;
+  }
+
+  .masthead-title {
+    margin: var(--space-2) auto var(--space-3);
+    font-family: var(--font-serif);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--clubColor, var(--primary));
+    max-width: 22ch;
+  }
+  .masthead[data-size="compact"] .masthead-title,
+  .masthead[data-size="standard"] .masthead-title {
+    font-size: clamp(1.4rem, 5vw, 1.85rem);
+  }
+  .masthead[data-size="large"] .masthead-title {
+    margin: var(--space-3) auto;
+    font-size: clamp(1.6rem, 5.5vw, 2.1rem);
+  }
+
+  .masthead-subtitle {
+    margin: var(--space-2) 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .masthead-subtitle :global(strong) {
+    color: var(--clubColor, var(--primary));
+    font-weight: 600;
+  }
+</style>

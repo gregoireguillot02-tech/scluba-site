@@ -1,0 +1,82 @@
+---
+/**
+ * Layout partagé des 4 pages du flow joueur (/r/[shortCode]/*) :
+ * join, lobby (index), play, recap.
+ *
+ * Encapsule :
+ *  - <head> commun (charset, viewport, fonts preload Fraunces + JetBrains Mono,
+ *    favicon, robots noindex, theme-color, imports CSS).
+ *  - <body> avec background paper-friendly + clubColor exposé en CSS var.
+ *
+ * Le contenu spécifique de chaque page est passé via le slot par défaut.
+ * Les <style> spécifiques à chaque page restent dans la page (define:vars
+ * fonctionnent uniquement au niveau de la page, pas du layout).
+ */
+
+import '../styles/tokens.css';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  /** theme-color meta (mobile browser chrome). Default = paper. */
+  themeColor?: string;
+  /** Couleur primaire du club (exposée en --clubColor pour les inline styles). */
+  clubColor?: string;
+  /** Classes additionnelles sur <body>. */
+  bodyClass?: string;
+  /** Verrouille le scroll overscroll-behavior-y (utile pour /play). */
+  lockOverscroll?: boolean;
+}
+
+const {
+  title,
+  themeColor = '#FAF7EE',
+  clubColor = '#1B4332',
+  bodyClass = '',
+  lockOverscroll = false,
+} = Astro.props;
+
+// Inline style sur <body> : expose --clubColor + bg + overscroll.
+// On garde #FAF7EE en bg pour la parité visuelle PR1 — le swap vers --paper
+// (#FAF5E8) se fera en PR2 où les pages joueur basculent sur le crème.
+const bodyStyle = [
+  `--clubColor: ${clubColor}`,
+  'background: #FAF7EE',
+  'min-height: 100dvh',
+  'margin: 0',
+  'overflow-x: hidden',
+  lockOverscroll ? 'overscroll-behavior-y: none' : null,
+].filter(Boolean).join('; ');
+---
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>{title}</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content={themeColor} />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <!-- === Fonts : Fraunces (display) + JetBrains Mono (labels) ===
+       Preconnect aux origines Google Fonts pour réduire la latence de la
+       première requête. Preload sur le seul weight critique (Fraunces 700)
+       en woff2 pour éviter un round-trip CSS avant le premier render.
+       font-display: swap (configuré côté Google Fonts via &display=swap)
+       → pas de FOIT, fallback Georgia immédiat puis swap silencieux.
+
+       Note: la fonctionnalité variable de Fraunces (opsz + wght) est
+       préservée par le subset latin variable. JetBrains Mono : un seul
+       weight 500 suffit pour les eyebrow uppercase. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@500&display=swap"
+  />
+</head>
+<body style={bodyStyle} class={bodyClass}>
+  <slot />
+</body>
+</html>

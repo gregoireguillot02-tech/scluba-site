@@ -1,0 +1,61 @@
+---
+/**
+ * Pied de page éditorial — "carte by SCLUBA" entre deux rails honey.
+ *
+ * Pattern repris à l'identique de join.astro, index.astro (lobby) et
+ * recap.astro. Centralisé ici pour cohérence visuelle et maintenance.
+ *
+ * Le mot "SCLUBA" prend la couleur --clubColor (exposée par PlayerLayout).
+ * Si la page n'expose pas --clubColor, fallback sur --primary (forest).
+ */
+---
+
+<footer class="colophon">
+  <span class="colophon-rail" aria-hidden="true"></span>
+  <span class="colophon-text">
+    <span>carte by</span>
+    <strong>SCLUBA</strong>
+    <span class="colophon-dot" aria-hidden="true"></span>
+  </span>
+  <span class="colophon-rail" aria-hidden="true"></span>
+</footer>
+
+<style>
+  .colophon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-6) 0 var(--space-7);
+    max-width: 320px;
+    margin: 0 auto;
+  }
+  .colophon-rail {
+    flex: 1;
+    height: 1px;
+    background: var(--accent);
+    opacity: 0.45;
+  }
+  .colophon-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-serif);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .colophon-text strong {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    color: var(--clubColor, var(--primary));
+    letter-spacing: 0.08em;
+  }
+  .colophon-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 1px;
+  }
+</style>

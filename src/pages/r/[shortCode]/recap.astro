@@ -1,11 +1,14 @@
 ---
 export const prerender = false;
 
-import '../../../styles/tokens.css';
-import '../../../styles/global.css';
+import PlayerLayout from '../../../layouts/PlayerLayout.astro';
+import Masthead from '../../../components/player/Masthead.astro';
+import Colophon from '../../../components/player/Colophon.astro';
+import Scorecard from '../../../components/player/Scorecard.astro';
+import Leaderboard from '../../../components/player/Leaderboard.astro';
 import { serviceClient } from '../../../lib/supabase';
 import type { Club, Round, RoundPlayer, Score } from '../../../lib/clubs-types';
-import { resolveRoundHoles, resolveRoundSections, scoreType, effectiveStrokes } from '../../../lib/clubs-types';
+import { resolveRoundHoles, resolveRoundSections, effectiveStrokes } from '../../../lib/clubs-types';
 import ShareCardModal from '../../../components/ShareCardModal.astro';
 
 const { shortCode } = Astro.params;
@@ -162,29 +165,8 @@ leaderboard.sort((a, b) => {
   return a.display_name.localeCompare(b.display_name);
 });
 
-// Pre-compute the visible rank (1, 2, 3, …) for finished players only.
-let rankCounter = 0;
-const rankByIndex = leaderboard.map((row) => {
-  if (!row.finished) return null;
-  rankCounter += 1;
-  return rankCounter;
-});
-
-// Diff du leader (= meilleur score parmi finished) pour calculer l'écart
-// affiché en sub-line de chaque joueur non-leader.
-const leaderRow = leaderboard.find((row) => row.finished) ?? null;
-const leaderboardLeaderDiff = leaderRow?.diff ?? 0;
-
-// Helpers de génération d'avatar — cohérence visuelle avec play.astro.
-function hueFromId(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
-  return h;
-}
-function initialOf(name: string): string {
-  return (name.trim()[0] ?? '?').toUpperCase();
-}
-const MEDALS = ['🥇', '🥈', '🥉'];
+// Rank/medal/avatar helpers et leaderboardLeaderDiff sont maintenant gérés
+// par Leaderboard.astro qui consomme `players: LeaderboardRow[]`.
 
 const sharePayload = JSON.stringify({
   player: me,
@@ -223,44 +205,19 @@ const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
 const clubColor = r.club.primary_color ?? '#1B4332';
 ---
 
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Carte du {fmtDate(r.started_at ?? r.created_at)} — {r.club.name} · Scluba</title>
-  <meta name="robots" content="noindex, nofollow" />
-  <meta name="theme-color" content="#FAF7EE" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-</head>
-<body>
+<PlayerLayout
+  title={`Carte du ${fmtDate(r.started_at ?? r.created_at)} — ${r.club.name} · Scluba`}
+  themeColor="#FAF7EE"
+  clubColor={clubColor}
+>
   <main class="card">
-    <header class="masthead">
-      {r.share_photo_url ? (
-        <figure class="photo-card">
-          <img src={r.share_photo_url} alt="" loading="eager" decoding="async" />
-          <span class="photo-card-fade" aria-hidden="true"></span>
-        </figure>
-      ) : r.club.photo_url ? (
-        <figure class="photo-card">
-          <img src={r.club.photo_url} alt="" loading="eager" decoding="async" />
-          <span class="photo-card-fade" aria-hidden="true"></span>
-        </figure>
-      ) : (
-        <div class="photo-card photo-card-placeholder" aria-hidden="true"></div>
-      )}
-
-      {r.club.logo_url && (
-        <div class="logo-frame">
-          <img src={r.club.logo_url} alt="" />
-        </div>
-      )}
-
-      <p class="masthead-eyebrow">Carte récapitulative</p>
-      <div class="title-rail" aria-hidden="true"></div>
-      <h1 class="masthead-title">{r.club.name}</h1>
-      <div class="title-rail" aria-hidden="true"></div>
-    </header>
+    <Masthead
+      photoUrl={r.share_photo_url ?? r.club.photo_url}
+      logoUrl={r.club.logo_url}
+      eyebrow="Carte récapitulative"
+      title={r.club.name}
+      size="large"
+    />
 
     <ul class="meta-strip" aria-label="Détails de la partie">
       <li>
@@ -300,88 +257,19 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     </section>
 
     <section class="grid-block" aria-label="Score par trou">
-      {roundSections.map((section) => (
-        <div class="grid-row">
-          <span class="grid-label">{section.loop_name}</span>
-          {section.holes.map((h) => {
-            const entry = myScoreMap[h.number];
-            if (entry?.picked_up) {
-              return (
-                <span class="grid-cell cell-pickup" aria-label={`Trou ${h.number}: abandonné, compté ${h.par + 2}`}>
-                  C
-                </span>
-              );
-            }
-            const s = entry?.strokes ?? undefined;
-            const t = s !== undefined && s !== null ? scoreType(s, h.par) : null;
-            return (
-              <span class={`grid-cell${t ? ` cell-${t}` : ' cell-empty'}`} aria-label={`Trou ${h.number}: ${s ?? '—'}`}>
-                {s ?? '—'}
-              </span>
-            );
-          })}
-        </div>
-      ))}
+      <Scorecard sections={roundSections} mode="final" scoreMap={myScoreMap} />
       <ul class="grid-legend" aria-hidden="true">
-        <li><span class="legend-swatch cell-birdie"></span>Birdie</li>
-        <li><span class="legend-swatch cell-par"></span>Par</li>
-        <li><span class="legend-swatch cell-bogey"></span>Bogey</li>
+        <li><span class="legend-swatch legend-birdie"></span>Birdie</li>
+        <li><span class="legend-swatch legend-par"></span>Par</li>
+        <li><span class="legend-swatch legend-bogey"></span>Bogey</li>
         {myPickedUpHoles.length > 0 && (
-          <li><span class="legend-swatch cell-pickup">C</span>Abandonné</li>
+          <li><span class="legend-swatch legend-pickup">C</span>Abandonné</li>
         )}
       </ul>
     </section>
 
     {isMultiplayer && (
-      <section class="leaderboard" aria-labelledby="lb-title">
-        <header class="leaderboard-head">
-          <p class="leaderboard-eyebrow">Multijoueur</p>
-          <h2 id="lb-title" class="leaderboard-title">Classement</h2>
-        </header>
-        <ol class="leaderboard-list">
-          {leaderboard.map((row, i) => {
-            const rank = rankByIndex[i];
-            const isLeader = rank === 1;
-            const medal = rank !== null && rank >= 1 && rank < 4 ? MEDALS[rank - 1] : '';
-            const hue = hueFromId(row.player_id);
-            const initial = initialOf(row.display_name);
-            const gap = row.finished && !isLeader ? row.diff - leaderboardLeaderDiff : 0;
-            const subLine = !row.finished
-              ? 'partie non terminée'
-              : isLeader
-                ? `${row.strokes} coups`
-                : `+${gap} vs leader`;
-            const classes = [
-              'lb-row',
-              row.is_me ? 'is-me' : '',
-              !row.finished ? 'is-nc' : '',
-              isLeader ? 'is-leader' : '',
-              rank === 2 ? 'is-second' : '',
-              rank === 3 ? 'is-third' : '',
-            ].filter(Boolean).join(' ');
-            return (
-              <li class={classes}>
-                <span class="lb-avatar" aria-hidden="true" style={`background: hsl(${hue}, 55%, 55%)`}>{initial}</span>
-                <div class="lb-info">
-                  <span class="lb-name">{row.display_name}{row.is_me && <em> (vous)</em>}</span>
-                  <span class="lb-sub">{subLine}</span>
-                </div>
-                <span class="lb-medal" aria-hidden="true">{medal}</span>
-                {row.finished ? (
-                  <span class="lb-score">
-                    <strong>{row.strokes}</strong>
-                    <span class={`lb-diff${row.diff < 0 ? ' under' : row.diff > 0 ? ' over' : ''}`}>
-                      {row.diff === 0 ? '±0' : row.diff > 0 ? `+${row.diff}` : String(row.diff)}
-                    </span>
-                  </span>
-                ) : (
-                  <span class="lb-score lb-nc">NC</span>
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      </section>
+      <Leaderboard players={leaderboard} eyebrow="Multijoueur" title="Classement" />
     )}
 
     {r.weather && (
@@ -426,15 +314,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       </button>
     </section>
 
-    <footer class="colophon">
-      <span class="colophon-rail" aria-hidden="true"></span>
-      <span class="colophon-text">
-        <span>carte by</span>
-        <strong>SCLUBA</strong>
-        <span class="colophon-dot" aria-hidden="true"></span>
-      </span>
-      <span class="colophon-rail" aria-hidden="true"></span>
-    </footer>
+    <Colophon />
 
     <ShareCardModal
       initialPhotoUrl={r.share_photo_url}
@@ -533,14 +413,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     }
   </script>
 
-  <style define:vars={{ clubColor }}>
-    body {
-      background: #FAF7EE;
-      min-height: 100dvh;
-      overflow-x: hidden;
-      margin: 0;
-    }
-
+  <style>
     .sr-only {
       position: absolute;
       width: 1px; height: 1px;
@@ -558,83 +431,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       touch-action: manipulation;
     }
 
-    /* === Masthead === */
-    .masthead {
-      text-align: center;
-      padding-top: var(--space-5);
-      padding-bottom: var(--space-5);
-    }
-    .photo-card {
-      position: relative;
-      margin: 0;
-      aspect-ratio: 16 / 9;
-      max-height: 240px;
-      width: 100%;
-      border-radius: 16px;
-      overflow: hidden;
-      background: #E8E0CB;
-      box-shadow:
-        0 1px 2px rgba(15, 42, 30, 0.06),
-        0 12px 32px rgba(27, 67, 50, 0.10);
-    }
-    .photo-card img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center 55%;
-      display: block;
-    }
-    .photo-card-fade {
-      position: absolute;
-      inset: auto 0 0 0;
-      height: 40%;
-      background: linear-gradient(180deg, transparent, rgba(15, 42, 30, 0.35));
-      pointer-events: none;
-    }
-    .photo-card-placeholder {
-      background: linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%);
-    }
-    .logo-frame {
-      position: relative;
-      z-index: 2;
-      margin: -36px auto 0;
-      width: 76px;
-      height: 76px;
-      border-radius: 50%;
-      background: #FAF7EE;
-      border: 2px solid var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 20px rgba(27, 67, 50, 0.10);
-      padding: 10px;
-    }
-    .logo-frame img { width: 100%; height: 100%; object-fit: contain; }
-
-    .masthead-eyebrow {
-      margin: var(--space-4) 0 var(--space-3);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--accent);
-    }
-    .title-rail {
-      width: 64px;
-      height: 1px;
-      margin: 0 auto;
-      background: var(--accent);
-      opacity: 0.55;
-    }
-    .masthead-title {
-      margin: var(--space-3) auto;
-      font-family: var(--font-serif);
-      font-weight: 700;
-      font-size: clamp(1.6rem, 5.5vw, 2.1rem);
-      line-height: 1.15;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--clubColor);
-      max-width: 22ch;
-    }
+    /* Masthead styles → src/components/player/Masthead.astro (size="large") */
 
     /* === Meta strip === */
     .meta-strip {
@@ -709,70 +506,15 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       text-align: center;
     }
 
-    /* === Grid block === */
+    /* === Grid block ===
+       Le grid (cells + sections) est dans Scorecard.astro. Ici on ne
+       garde que le wrapper du bloc + la légende sous le grid. */
     .grid-block {
       padding: var(--space-5) 0 var(--space-4);
       display: flex;
       flex-direction: column;
       gap: var(--space-3);
     }
-    .grid-row {
-      display: grid;
-      /* Loop names ("La Plaine", "Le Vallon") need more room than the old
-         "F9"/"B9" chip, so the label column is auto with a minimum. */
-      grid-template-columns: minmax(56px, auto) repeat(9, 1fr);
-      gap: 4px;
-    }
-    .grid-label {
-      background: var(--clubColor);
-      color: var(--bg);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      padding: 2px 8px;
-      border-radius: var(--radius-sm);
-      display: flex; align-items: center; justify-content: center;
-      white-space: nowrap;
-      text-transform: uppercase;
-    }
-    .grid-cell {
-      aspect-ratio: 1;
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--ink);
-      font-variant-numeric: tabular-nums;
-    }
-    .cell-eagle, .cell-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
-    .cell-par { color: var(--clubColor); }
-    .cell-bogey { color: var(--muted); }
-    .cell-double { color: #6B7280; background: rgba(107,114,128,0.08); }
-    .cell-empty { color: var(--muted-soft); opacity: 0.5; }
-    .grid-cell.cell-pickup {
-      color: var(--muted);
-      background: repeating-linear-gradient(
-        45deg,
-        rgba(107,114,128,0.08) 0,
-        rgba(107,114,128,0.08) 4px,
-        transparent 4px,
-        transparent 8px
-      );
-      border-style: dashed;
-      font-family: var(--font-serif);
-    }
-    .legend-swatch.cell-pickup {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 9px;
-      font-family: var(--font-serif);
-      font-weight: 800;
-      color: var(--muted);
-    }
-
     .grid-legend {
       list-style: none;
       margin: var(--space-3) 0 0;
@@ -790,138 +532,32 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       border-radius: var(--radius-sm);
       border: 1px solid var(--line);
     }
-
-    /* === Mini leaderboard (multiplayer only) — cards alignées sur play.astro === */
-    .leaderboard {
-      margin: var(--space-5) 0;
-      padding: var(--space-4);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: #fff;
+    /* Swatches calquées sur les classes cell-* de Scorecard.astro pour que
+       la légende reflète le code couleur réel des cells. */
+    .legend-swatch.legend-birdie {
+      color: #C0392B; background: var(--accent-soft); border-color: var(--accent);
     }
-    .leaderboard-head {
-      text-align: center;
-      margin-bottom: var(--space-3);
-    }
-    .leaderboard-eyebrow {
-      margin: 0 0 4px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--accent);
-    }
-    .leaderboard-title {
-      margin: 0;
-      font-family: var(--font-serif);
-      font-size: var(--text-md);
-      font-weight: 700;
-      color: var(--ink);
-      letter-spacing: 0.02em;
-    }
-    .leaderboard-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .lb-row {
-      display: grid;
-      grid-template-columns: 36px 1fr auto auto;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 14px;
-      background: rgba(255, 255, 255, 0.75);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      min-width: 0;
-    }
-    .lb-row.is-leader {
-      background: rgba(212, 165, 116, 0.14);
-      border-color: rgba(212, 165, 116, 0.55);
-    }
-    .lb-row.is-me {
-      border-color: var(--clubColor);
-      border-width: 1.5px;
-    }
-    .lb-avatar {
-      width: 36px; height: 36px;
-      border-radius: 50%;
+    .legend-swatch.legend-par { background: var(--bg); }
+    .legend-swatch.legend-bogey { background: var(--bg); }
+    .legend-swatch.legend-pickup {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: #fff;
+      font-size: 9px;
       font-family: var(--font-serif);
       font-weight: 800;
-      font-size: 16px;
-      flex-shrink: 0;
-      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
-    }
-    .lb-row.is-nc .lb-avatar { opacity: 0.5; }
-    .lb-info {
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-      gap: 2px;
-    }
-    .lb-name {
-      font-weight: 600;
-      font-size: 14px;
-      color: var(--ink);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .lb-name em {
-      font-style: normal;
       color: var(--muted);
-      font-weight: 500;
-      font-size: 12px;
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(107,114,128,0.08) 0,
+        rgba(107,114,128,0.08) 4px,
+        transparent 4px,
+        transparent 8px
+      );
+      border-style: dashed;
     }
-    .lb-sub {
-      font-size: 11px;
-      color: var(--muted);
-      letter-spacing: 0.02em;
-    }
-    .lb-medal {
-      font-size: 22px;
-      line-height: 1;
-      min-width: 22px;
-      text-align: center;
-    }
-    .lb-score {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-      font-variant-numeric: tabular-nums;
-      min-width: 60px;
-      justify-content: flex-end;
-    }
-    .lb-score strong {
-      font-family: var(--font-serif);
-      font-size: 22px;
-      font-weight: 800;
-      color: var(--clubColor);
-    }
-    .lb-diff {
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      color: var(--muted);
-      min-width: 28px;
-      text-align: right;
-    }
-    .lb-diff.under { color: #1B4332; }
-    .lb-diff.over { color: #C0392B; }
-    .lb-score.lb-nc {
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      color: var(--muted);
-      text-transform: uppercase;
-    }
+
+    /* Leaderboard styles → src/components/player/Leaderboard.astro */
 
     /* === Weather strip === */
     .weather-strip {
@@ -1027,43 +663,6 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     }
     .share-btn:hover { filter: brightness(0.92); }
 
-    /* === Colophon === */
-    .colophon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-3);
-      padding: var(--space-6) 0 var(--space-7);
-      max-width: 320px;
-      margin: 0 auto;
-    }
-    .colophon-rail {
-      flex: 1;
-      height: 1px;
-      background: var(--accent);
-      opacity: 0.45;
-    }
-    .colophon-text {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-family: var(--font-serif);
-      font-size: 12px;
-      letter-spacing: 0.04em;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-    .colophon-text strong {
-      font-family: var(--font-serif);
-      font-weight: 700;
-      color: var(--clubColor);
-      letter-spacing: 0.08em;
-    }
-    .colophon-dot {
-      width: 6px; height: 6px;
-      background: var(--accent);
-      border-radius: 1px;
-    }
+    /* Colophon styles → src/components/player/Colophon.astro */
   </style>
-</body>
-</html>
+</PlayerLayout>
