@@ -253,6 +253,21 @@ function fmtTime(iso: string | null): string {
             <span>Ajouter un joueur</span>
           </button>
         </fieldset>
+        <fieldset class="scoring-fieldset">
+          <legend>Qui saisit les scores&nbsp;?</legend>
+          <div class="scoring-list">
+            <label class="scoring-radio">
+              <input type="radio" name="scoring_mode" value="self" checked />
+              <span class="scoring-radio-main">Chacun sur son téléphone</span>
+              <span class="scoring-radio-sub">Chaque joueur entre ses propres scores depuis son tel.</span>
+            </label>
+            <label class="scoring-radio">
+              <input type="radio" name="scoring_mode" value="host" />
+              <span class="scoring-radio-main">Je m'en occupe pour tout le monde</span>
+              <span class="scoring-radio-sub">Comme une carte papier — toi seul saisis. Les autres suivent le classement en direct.</span>
+            </label>
+          </div>
+        </fieldset>
         <button type="submit" class="start-btn">
           Créer la partie
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -710,14 +725,16 @@ function fmtTime(iso: string | null): string {
 
     /* === Group party fieldset === */
     .party-fieldset,
-    .format-fieldset {
+    .format-fieldset,
+    .scoring-fieldset {
       border: none;
       padding: 0;
       margin: 0;
       text-align: left;
     }
     .party-fieldset legend,
-    .format-fieldset legend {
+    .format-fieldset legend,
+    .scoring-fieldset legend {
       display: block;
       font-size: 11px;
       font-weight: 700;
@@ -725,6 +742,53 @@ function fmtTime(iso: string | null): string {
       text-transform: uppercase;
       color: var(--accent);
       margin-bottom: 8px;
+    }
+
+    /* === Scoring mode selector (multi-player only) === */
+    .scoring-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .scoring-radio {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-template-rows: auto auto;
+      column-gap: 10px;
+      row-gap: 2px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .scoring-radio:hover {
+      border-color: var(--accent);
+      background: var(--bg-soft);
+    }
+    .scoring-radio input {
+      grid-row: 1 / span 2;
+      align-self: center;
+      accent-color: var(--clubColor);
+      cursor: pointer;
+    }
+    .scoring-radio-main {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .scoring-radio-sub {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .scoring-radio:has(input:checked) {
+      border-color: var(--clubColor);
+      background: rgba(212, 165, 116, 0.08);
+    }
+    .scoring-radio:has(input:checked) .scoring-radio-main {
+      color: var(--clubColor);
     }
 
     /* === Format selector (multi-loop clubs) === */

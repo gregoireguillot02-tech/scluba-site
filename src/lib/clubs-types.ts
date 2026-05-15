@@ -60,6 +60,9 @@ export interface WeatherSnapshot {
 export const ROUND_STATUSES = ['lobby', 'playing', 'finished'] as const;
 export type RoundStatus = (typeof ROUND_STATUSES)[number];
 
+export const SCORING_MODES = ['self', 'host'] as const;
+export type ScoringMode = (typeof SCORING_MODES)[number];
+
 export interface Round {
   id: string;
   club_id: string;
@@ -79,6 +82,10 @@ export interface Round {
   // Commentaire libre saisi par le joueur en fin de partie (page recap).
   // Affiché sur la scorecard partagée.
   comment: string | null;
+  // 'self' = chaque joueur saisit sur son tel (comportement par défaut).
+  // 'host' = un seul scoreur (host) saisit pour tout le flight ; les autres
+  // ont une vue spectateur. Voir migration 0015.
+  scoring_mode: ScoringMode;
 }
 
 export interface RoundPlayer {
