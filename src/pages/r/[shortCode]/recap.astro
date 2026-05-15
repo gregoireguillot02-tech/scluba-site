@@ -235,7 +235,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
         Score final {myTotal.strokes}, {myTotal.diff >= 0 ? '+' : ''}{myTotal.diff} par rapport au par {myTotal.played === holesCount ? par : myTotal.playedPar}.
       </p>
       <p class="score-eyebrow">Score · {formatLabel}</p>
-      <div class="score-value" data-card-score data-target={String(myTotal.strokes)}>0</div>
+      <div class="score-value" data-card-score data-target={String(myTotal.strokes)}>{myTotal.strokes}</div>
       <p class="score-meta">
         <span class={`score-diff${myTotal.diff > 0 ? ' over' : myTotal.diff < 0 ? ' under' : ''}`}>
           {myTotal.diff > 0 ? `+${myTotal.diff}` : myTotal.diff < 0 ? String(myTotal.diff) : '±0'}
@@ -326,24 +326,18 @@ const clubColor = r.club.primary_color ?? '#1B4332';
   </main>
 
   <script>
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const el = document.querySelector<HTMLElement>('[data-card-score]');
-    if (el) {
-      const target = Number(el.dataset.target ?? '0');
-      if (reduced || target === 0) {
-        el.textContent = String(target);
-      } else {
-        const duration = 1600;
-        const start = performance.now();
-        const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
-        const tick = (now: number) => {
-          const t = Math.min(1, (now - start) / duration);
-          el.textContent = String(Math.round(target * easeOut(t)));
-          if (t < 1) requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-      }
-    }
+    import { initRecapAnimations } from '../../../lib/animations/recap';
+
+    // Reveal éditorial en 3 actes + parallax photo + scroll triggers.
+    // Le score count-up est géré à l'intérieur (avec motion-blur SVG).
+    // Si reduced-motion ON, l'état final est posé instantanément.
+    initRecapAnimations().catch((err) => {
+      // En cas de fail de l'init (network sur GSAP, etc.), au moins
+      // assurer que le score s'affiche correctement.
+      console.warn('[recap] animations init failed', err);
+      const el = document.querySelector<HTMLElement>('.score-value');
+      if (el?.dataset.target) el.textContent = el.dataset.target;
+    });
 
     const shareBtn = document.querySelector<HTMLButtonElement>('[data-share-url]');
     if (shareBtn) {

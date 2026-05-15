@@ -20,7 +20,7 @@
 
 let registered = false;
 
-interface GsapBundle {
+export interface GsapBundle {
   gsap: typeof import('gsap').gsap;
   ScrollTrigger: typeof import('gsap/ScrollTrigger').ScrollTrigger;
   Flip: typeof import('gsap/Flip').Flip;
