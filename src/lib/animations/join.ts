@@ -11,7 +11,7 @@
  */
 
 import { loadGsap, getAutoAnimate } from './registry';
-import { prefersReducedMotion, EASE } from './utils';
+import { prefersReducedMotion, isViewTransitionArrival, EASE } from './utils';
 
 export async function initJoinAnimations(): Promise<void> {
   if (typeof document !== 'undefined' && document.fonts?.ready) {
@@ -31,44 +31,52 @@ export async function initJoinAnimations(): Promise<void> {
   // /join n'a pas besoin de plugins GSAP — juste gsap core.
   const { gsap } = await loadGsap();
 
+  // Si arrivée via View Transition (cas rare — l'utilisateur arrive
+  // normalement par QR scan donc cold load), Astro a déjà animé les
+  // hero matched. On skip les entrance et garde uniquement le tap
+  // feedback sur claim buttons.
+  const fromVT = isViewTransitionArrival();
+
   gsap.context(() => {
-    // Claim title + hint
-    gsap.from('.claim-title', {
-      autoAlpha: 0,
-      y: 10,
-      duration: 0.5,
-      delay: 0.05,
-      ease: EASE.expo,
-    });
-    gsap.from('.claim-hint', {
-      autoAlpha: 0,
-      y: 8,
-      duration: 0.4,
-      delay: 0.15,
-      ease: EASE.expo,
-    });
+    if (!fromVT) {
+      // Claim title + hint
+      gsap.from('.claim-title', {
+        autoAlpha: 0,
+        y: 10,
+        duration: 0.5,
+        delay: 0.05,
+        ease: EASE.expo,
+      });
+      gsap.from('.claim-hint', {
+        autoAlpha: 0,
+        y: 8,
+        duration: 0.4,
+        delay: 0.15,
+        ease: EASE.expo,
+      });
 
-    // Claim cards stagger fade-up — "tu cherches ton nom" comme on
-    // cherche sa carte sur le panneau d'affichage du club.
-    gsap.from('.claim-list > li', {
-      autoAlpha: 0,
-      y: 12,
-      duration: 0.45,
-      stagger: 0.06,
-      delay: 0.25,
-      ease: EASE.expo,
-    });
+      // Claim cards stagger fade-up — "tu cherches ton nom" comme on
+      // cherche sa carte sur le panneau d'affichage du club.
+      gsap.from('.claim-list > li', {
+        autoAlpha: 0,
+        y: 12,
+        duration: 0.45,
+        stagger: 0.06,
+        delay: 0.25,
+        ease: EASE.expo,
+      });
 
-    // Self-add expand (visible si "Mon prénom n'est pas dans la liste")
-    gsap.from('.selfadd-block', {
-      autoAlpha: 0,
-      y: 8,
-      duration: 0.4,
-      delay: 0.5,
-      ease: EASE.expo,
-    });
+      // Self-add expand (visible si "Mon prénom n'est pas dans la liste")
+      gsap.from('.selfadd-block', {
+        autoAlpha: 0,
+        y: 8,
+        duration: 0.4,
+        delay: 0.5,
+        ease: EASE.expo,
+      });
+    }
 
-    // === Tap feedback sur les claim buttons ===
+    // === Tap feedback sur les claim buttons (toujours actif) ===
     // CSS gère le scale(0.97) sur :active (down). GSAP ajoute un
     // radial honey ring expansion subtle juste avant la soumission
     // du form. Donne le sentiment "j'ai pris ma carte".

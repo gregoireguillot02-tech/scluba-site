@@ -44,24 +44,31 @@ const {
 ---
 
 <header class="masthead" data-size={size}>
+  {/* transition:name posés sur les éléments hero pour matched geometry
+       cross-pages (Astro ClientRouter View Transitions). Les pages
+       join + lobby + recap utilisent toutes ce Masthead → le photo +
+       le logo + le titre morphent fluidement entre ces 3 pages. La
+       page play n'a pas de Masthead mais a un play-header avec
+       transition:name="player-club-logo" sur SON logo → continuité
+       du logo lobby → play → recap. */}
   {photoUrl ? (
-    <figure class="photo-card">
+    <figure class="photo-card" transition:name="player-club-photo">
       <img src={photoUrl} alt="" loading="eager" decoding="async" />
       <span class="photo-card-fade" aria-hidden="true"></span>
     </figure>
   ) : (
-    <div class="photo-card photo-card-placeholder" aria-hidden="true"></div>
+    <div class="photo-card photo-card-placeholder" aria-hidden="true" transition:name="player-club-photo"></div>
   )}
 
   {logoUrl && (
-    <div class="logo-frame">
+    <div class="logo-frame" transition:name="player-club-logo">
       <img src={logoUrl} alt="" />
     </div>
   )}
 
   <p class="masthead-eyebrow">{eyebrow}</p>
   <div class="title-rail" aria-hidden="true"></div>
-  <h1 class="masthead-title">{title}</h1>
+  <h1 class="masthead-title" transition:name="player-club-name">{title}</h1>
   <div class="title-rail" aria-hidden="true"></div>
 
   {subtitle && (

@@ -15,6 +15,7 @@
 
 import '../styles/tokens.css';
 import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
 
 interface Props {
   title: string;
@@ -87,6 +88,21 @@ const bodyStyle = [
     rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800;9..144,900&family=JetBrains+Mono:wght@500&display=swap"
   />
+
+  <!-- === View Transitions (Astro 6 ClientRouter) ===
+       Active la View Transitions API native sur les 4 pages joueur.
+       Astro 6 intercepte automatiquement les <a> ET les <form> POST :
+        - lobby → play : form "C'est parti" → /api/rounds/[code]/start
+          redirige vers /play, Astro suit le redirect + swap DOM avec VT
+        - play → recap : form "Terminer" → /api/rounds/[code]/finish
+          redirige vers /recap, idem
+        - join → lobby : form claim → /api/rounds/[code]/claim
+          redirige vers /, idem
+       Les éléments avec transition:name="X" sont matched cross-pages
+       et morphent visuellement (logo, photo, code, masthead).
+       Browsers sans View Transitions API (Firefox < 122) : fade par
+       défaut, comportement gracieusement dégradé. -->
+  <ClientRouter />
 </head>
 <body style={bodyStyle} class={bodyClass}>
   <slot />
