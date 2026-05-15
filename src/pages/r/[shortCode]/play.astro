@@ -198,12 +198,15 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
 
     {isSpectator && (
       <aside class="spectator-banner" data-spectator-banner>
+        <span class="spectator-live-badge" aria-hidden="true">
+          <span class="live-badge-dot"></span>EN DIRECT
+        </span>
         <div class="spectator-banner-text">
           <p class="spectator-banner-title">
-            {hostPlayer ? `${hostPlayer.display_name} tient la carte` : 'Le host tient la carte'}
+            {hostPlayer ? `${hostPlayer.display_name} marque pour toi` : 'Le host marque pour toi'}
           </p>
           <p class="spectator-banner-sub">
-            Suis le classement en direct. Tes scores apparaissent quand le host les saisit.
+            Tu suis la carte en temps réel. Corrige-toi en bas si besoin.
           </p>
         </div>
         <button type="button" class="spectator-toggle-btn" data-spectator-toggle>
@@ -1310,6 +1313,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     }
 
     .spectator-banner {
+      position: relative;
       margin: var(--space-3) var(--space-4) 0;
       padding: 14px 16px;
       border-radius: 14px;
@@ -1319,8 +1323,47 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       flex-direction: column;
       gap: 10px;
     }
+    /* Badge "EN DIRECT" anchored top-right — signal visuel que le
+       spectateur regarde en temps réel. Dot honey qui pulse pour
+       renforcer le ressenti "live". */
+    .spectator-live-badge {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 9px 4px 8px;
+      border-radius: 999px;
+      background: rgba(212, 165, 116, 0.22);
+      border: 1px solid rgba(212, 165, 116, 0.55);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      color: var(--clubColor);
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+    .live-badge-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.28);
+      animation: live-dot-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes live-dot-pulse {
+      0%, 100% { opacity: 0.55; transform: scale(1); }
+      50%      { opacity: 1;    transform: scale(1.15); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .live-badge-dot { animation: none; }
+    }
     .spectator-banner-title {
       margin: 0;
+      /* Padding-right pour ne pas chevaucher le badge "EN DIRECT". */
+      padding-right: 92px;
       font-family: var(--font-display, var(--font-serif));
       font-size: 16px;
       font-weight: 700;
