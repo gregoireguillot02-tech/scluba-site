@@ -29,9 +29,18 @@ export interface RoundSubscriptionCallbacks {
   onScoresChange?: (event: 'INSERT' | 'UPDATE' | 'DELETE', row: Record<string, unknown>) => void;
 }
 
-export function subscribeToRound(roundId: string, cb: RoundSubscriptionCallbacks): RealtimeChannel {
+export function subscribeToRound(
+  roundId: string,
+  cb: RoundSubscriptionCallbacks,
+  // Optional suffix to distinguish multiple independent subscriptions
+  // to the same round from the same page (e.g. live-board + score-entry
+  // both want their own onScoresChange handler — Supabase channels need
+  // unique names to avoid handler collisions).
+  channelSuffix?: string,
+): RealtimeChannel {
   const sb = browserClient();
-  const channel = sb.channel(`round:${roundId}`);
+  const channelName = channelSuffix ? `round:${roundId}:${channelSuffix}` : `round:${roundId}`;
+  const channel = sb.channel(channelName);
 
   if (cb.onRoundUpdate) {
     channel.on(

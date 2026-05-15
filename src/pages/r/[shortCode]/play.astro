@@ -982,6 +982,46 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         });
       }
 
+      // === Realtime score sync ===
+      // Quand un autre device saisit un score (cas typique : mode 'host'
+      // où le créateur marque pour les autres joueurs), on doit le
+      // refléter dans la grille Scorecard locale. Sans ça, le spectateur
+      // voit son score cumul s'incrémenter dans le live-board (qui a son
+      // propre sub) mais sa carte du bas reste figée sur les valeurs SSR
+      // du chargement de page.
+      //
+      // On utilise un suffix 'entry' pour éviter le conflit de channel
+      // name avec le sub du live-board (Supabase channels = uniques).
+      const liveBoardEl = document.querySelector<HTMLElement>('[data-live-board]');
+      const entryRoundId = liveBoardEl?.dataset.roundId;
+      if (entryRoundId) {
+        const entryChannel = subscribeToRound(entryRoundId, {
+          onScoresChange: (event, row) => {
+            const s = row as {
+              round_player_id: string;
+              hole_number: number;
+              strokes: number | null;
+              picked_up?: boolean;
+            };
+            if (!scoresByPlayer.has(s.round_player_id)) return;
+            const scores = scoresOf(s.round_player_id);
+            const pickedUp = pickedUpOf(s.round_player_id);
+            if (event === 'DELETE') {
+              delete scores[s.hole_number];
+              pickedUp.delete(s.hole_number);
+            } else if (s.picked_up === true) {
+              pickedUp.add(s.hole_number);
+              delete scores[s.hole_number];
+            } else if (s.strokes !== null) {
+              scores[s.hole_number] = s.strokes;
+              pickedUp.delete(s.hole_number);
+            }
+            if (s.round_player_id === currentPlayerId) render();
+          },
+        }, 'entry');
+        window.addEventListener('beforeunload', () => unsubscribeFromRound(entryChannel));
+      }
+
       render();
     }
 
