@@ -108,6 +108,12 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       <div class="qr-popover" data-qr-popover hidden>
         <div class="qr-frame" set:html={inviteQr}></div>
         <p class="qr-popover-hint">Scanne avec l'appareil photo de ton tel pour rejoindre.</p>
+        {r.scoring_mode === 'host' && (
+          <p class="qr-popover-bonus">
+            <span class="qr-bonus-dot" aria-hidden="true"></span>
+            Suis ta carte en direct, même quand ce n'est pas toi qui marques.
+          </p>
+        )}
       </div>
     </section>
 
@@ -583,6 +589,40 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--muted);
+    }
+    /* Le hint dit COMMENT scanner ; le bonus dit POURQUOI scanner même
+       quand le host marque pour tout le monde. Ton "promesse humaine"
+       (italic Fraunces) contraste avec le hint mono technique au-dessus. */
+    .qr-popover-bonus {
+      margin: 8px 0 0;
+      padding: 8px 4px 0;
+      border-top: 1px solid rgba(212, 165, 116, 0.30);
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-weight: 500;
+      font-size: 12.5px;
+      line-height: 1.4;
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-align: left;
+    }
+    .qr-bonus-dot {
+      flex-shrink: 0;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.22);
+      animation: live-dot-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes live-dot-pulse {
+      0%, 100% { opacity: 0.55; transform: scale(1); }
+      50%      { opacity: 1;    transform: scale(1.15); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .qr-bonus-dot { animation: none; }
     }
 
     /* Players block */
