@@ -98,14 +98,12 @@ export async function initLobbyAnimations(): Promise<void> {
       ease: EASE.expo,
     });
 
-    // Start CTA fade-up
-    gsap.from('.start-btn', {
-      autoAlpha: 0,
-      y: 12,
-      duration: 0.5,
-      delay: 0.9,
-      ease: EASE.expo,
-    });
+    // Start CTA — pas de fade GSAP : le pulse glow CSS (cf.
+    // @keyframes cta-pulse dans index.astro) gère déjà l'effet "prêt à
+    // lancer". Le fade gsap.from posait autoAlpha:0 immédiatement +
+    // tween 1.4s ; si le tween échouait (Safari iOS background tab,
+    // batterie low, focus perdu) le bouton restait invisible et
+    // bloquait le démarrage de la partie. Hotfix 2026-05-15.
 
     // QR popover : intercept le toggle existant pour animer l'ouverture.
     // L'existant toggle popover.hidden ; on ne change pas la logique,
