@@ -43,7 +43,15 @@ const rankByIndex = players.map((row) => {
   return rankCounter;
 });
 
-const MEDALS = ['🥇', '🥈', '🥉'];
+// SVG medals — remplace les emoji 🥇🥈🥉 (anti-slop : pas d'emoji
+// structurels). Palette tinted forest/honey pour rester cohérente
+// avec la brand. Le path de la couronne est animable au stroke-draw
+// via stroke-dasharray (utilisé dans recap.ts pour le podium reveal).
+const MEDAL_COLORS: Record<number, { fill: string; stroke: string; text: string }> = {
+  1: { fill: '#D4A574', stroke: '#0F2A1E', text: '#0F2A1E' }, // Honey (gold)
+  2: { fill: '#D5D8DD', stroke: '#0F2A1E', text: '#0F2A1E' }, // Silver
+  3: { fill: '#B07D5B', stroke: '#0F2A1E', text: '#FAF7EE' }, // Bronze
+};
 
 // Diff du leader pour les sub-lines "+N vs leader" des non-leaders.
 const leaderRow = players.find((row) => row.finished) ?? null;
@@ -59,7 +67,7 @@ const leaderDiff = leaderRow?.diff ?? 0;
     {players.map((row, i) => {
       const rank = rankByIndex[i];
       const isLeader = rank === 1;
-      const medal = rank !== null && rank >= 1 && rank < 4 ? MEDALS[rank - 1] : '';
+      const medalColors = rank !== null && rank >= 1 && rank < 4 ? MEDAL_COLORS[rank] : null;
       const gap = row.finished && !isLeader ? row.diff - leaderDiff : 0;
       const subLine = !row.finished
         ? 'partie non terminée'
@@ -87,7 +95,27 @@ const leaderDiff = leaderRow?.diff ?? 0;
             </span>
             <span class="lb-sub">{subLine}</span>
           </div>
-          <span class="lb-medal" aria-hidden="true">{medal}</span>
+          <span class="lb-medal" aria-hidden="true">
+            {medalColors && rank !== null && (
+              <svg viewBox="0 0 24 24" width="22" height="22" class="medal-svg" data-rank={rank}>
+                <circle
+                  cx="12" cy="12" r="10"
+                  fill={medalColors.fill}
+                  stroke={medalColors.stroke}
+                  stroke-width="1.25"
+                  class="medal-rim"
+                />
+                <text
+                  x="12" y="16"
+                  text-anchor="middle"
+                  font-family="var(--font-display, Georgia, serif)"
+                  font-weight="800"
+                  font-size="11"
+                  fill={medalColors.text}
+                >{rank}</text>
+              </svg>
+            )}
+          </span>
           {row.finished ? (
             <span class="lb-score">
               <strong>{row.strokes}</strong>
@@ -199,10 +227,22 @@ const leaderDiff = leaderRow?.diff ?? 0;
     letter-spacing: 0.02em;
   }
   .lb-medal {
-    font-size: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
     line-height: 1;
-    min-width: 22px;
-    text-align: center;
+  }
+  .medal-svg {
+    display: block;
+    filter: drop-shadow(0 1px 2px rgba(15, 42, 30, 0.15));
+  }
+  .medal-rim {
+    /* dasharray + dashoffset prêts pour un stroke-draw animé en PR2+
+       (recap.ts pourra animer .medal-rim depuis dashoffset=63 → 0). */
+    stroke-linecap: round;
   }
   .lb-score {
     display: flex;
