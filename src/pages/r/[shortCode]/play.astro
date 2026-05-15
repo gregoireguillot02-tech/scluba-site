@@ -198,7 +198,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       <button type="submit" class="finish-btn" data-finish-btn>Terminer maintenant</button>
     </form>
 
-    <p class="play-status" data-status></p>
+    <p class="play-status" data-status role="status" aria-live="polite"></p>
   </main>
 
   <script>
@@ -717,13 +717,35 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         return currentPlayerId === meIdEntry ? null : currentPlayerId;
       }
 
+      // === Status helpers — SVG checkmark animé (PR5 polish) =============
+      // Le checkmark draw via stroke-dasharray + animation CSS (cf. style
+      // bloc en bas du fichier). Réutilisable pour les 2 success states.
+      // Le `text` est passé en .textContent (anti-XSS) après injection HTML.
+      function showStatusSuccess(text: string) {
+        statusEl.innerHTML = `
+          <svg class="check-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+          <span class="status-text"></span>
+        `;
+        const span = statusEl.querySelector<HTMLElement>('.status-text');
+        if (span) span.textContent = text;
+      }
+      function showStatusInfo(text: string) {
+        statusEl.textContent = text;
+      }
+      function showStatusError(text: string) {
+        statusEl.textContent = `Erreur : ${text}`;
+      }
+      function clearStatus() {
+        statusEl.textContent = '';
+      }
+
       async function saveScore(strokes: number, options: { advance?: boolean } = {}) {
         const scores = scoresOf(currentPlayerId);
         const pickedUp = pickedUpOf(currentPlayerId);
         scores[currentHole] = strokes;
         pickedUp.delete(currentHole); // saisir un score annule l'abandon
         render();
-        statusEl.textContent = 'Sauvegarde…';
+        showStatusInfo('Sauvegarde…');
         try {
           const body: Record<string, unknown> = { hole: currentHole, strokes };
           const hint = targetPlayerHint();
@@ -734,13 +756,13 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
             body: JSON.stringify(body),
           });
           if (!res.ok) throw new Error(await res.text());
-          statusEl.textContent = '✓ Enregistré';
-          setTimeout(() => { statusEl.textContent = ''; }, 1200);
+          showStatusSuccess('Enregistré');
+          setTimeout(clearStatus, 1200);
           // Si la save vient d'un bouton score (par-relative ou Autre),
           // on enchaîne automatiquement sur le prochain trou vide.
           if (options.advance) autoAdvance();
         } catch (e) {
-          statusEl.textContent = `Erreur : ${(e as Error).message}`;
+          showStatusError((e as Error).message);
         }
       }
 
@@ -750,7 +772,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         delete scores[currentHole];
         pickedUp.add(currentHole);
         render();
-        statusEl.textContent = 'Sauvegarde…';
+        showStatusInfo('Sauvegarde…');
         try {
           const body: Record<string, unknown> = { hole: currentHole, picked_up: true };
           const hint = targetPlayerHint();
@@ -761,10 +783,10 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
             body: JSON.stringify(body),
           });
           if (!res.ok) throw new Error(await res.text());
-          statusEl.textContent = '✓ Trou abandonné';
-          setTimeout(() => { statusEl.textContent = ''; }, 1200);
+          showStatusSuccess('Trou abandonné');
+          setTimeout(clearStatus, 1200);
         } catch (e) {
-          statusEl.textContent = `Erreur : ${(e as Error).message}`;
+          showStatusError((e as Error).message);
         }
       }
 
@@ -1167,11 +1189,41 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     }
 
     .play-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       text-align: center;
       padding: var(--space-3);
       font-size: 13px;
-      color: var(--muted);
+      color: var(--accent);
       min-height: 1.2em;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    /* SVG checkmark animé — remplace l'ancien '✓' Unicode (PR5).
+       Le polyline démarre invisible (stroke-dashoffset = path length),
+       puis stroke-dashoffset → 0 en 250ms ease-out → impression de
+       dessin à la main. La SVG est recréée à chaque innerHTML donc
+       l'animation rejoue à chaque save success. */
+    .check-icon {
+      display: inline-block;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .check-icon polyline {
+      stroke-dasharray: 26;
+      stroke-dashoffset: 26;
+      animation: check-draw 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes check-draw {
+      to { stroke-dashoffset: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .check-icon polyline {
+        animation: none;
+        stroke-dashoffset: 0;
+      }
     }
   </style>
 </PlayerLayout>

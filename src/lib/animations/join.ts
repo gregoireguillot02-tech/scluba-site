@@ -10,7 +10,7 @@
  * déjà la page en état final.
  */
 
-import { registerGsap, getAutoAnimate } from './registry';
+import { loadGsap, getAutoAnimate } from './registry';
 import { prefersReducedMotion, EASE } from './utils';
 
 export async function initJoinAnimations(): Promise<void> {
@@ -28,7 +28,8 @@ export async function initJoinAnimations(): Promise<void> {
   }
 
   if (prefersReducedMotion()) return;
-  const { gsap } = await registerGsap();
+  // /join n'a pas besoin de plugins GSAP — juste gsap core.
+  const { gsap } = await loadGsap();
 
   gsap.context(() => {
     // Claim title + hint

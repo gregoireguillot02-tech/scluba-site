@@ -228,6 +228,15 @@ const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
   .rel-btn:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 3px;
+    /* Double-ring : la dark inner glow garantit le contraste sur fond
+       honey-soft (is-par) ET sur fond honey filled (is-selected). */
+    box-shadow: 0 0 0 5px rgba(15, 42, 30, 0.16);
+  }
+  /* Dots progression : focus visible avec la même stratégie. */
+  .hole-dot:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    box-shadow: 0 0 0 6px rgba(15, 42, 30, 0.12);
   }
 
   .rel-label {
@@ -300,11 +309,18 @@ const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
     transition: border-color 150ms, color 150ms, background 150ms;
     touch-action: manipulation;
   }
-  .score-pill:hover,
+  .score-pill:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+  /* PR5 a11y : focus-visible double-ring (accent outline + dark inner
+     glow) pour rester visible sur fond honey-soft comme sur paper. */
   .score-pill:focus-visible {
     border-color: var(--ink);
     color: var(--ink);
-    outline: none;
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 5px rgba(15, 42, 30, 0.12);
   }
   .score-pill:active { transform: scale(0.97); }
   .score-pill[aria-expanded="true"] {
@@ -370,6 +386,11 @@ const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
   }
   .other-picker-btn:hover {
     border-color: var(--accent);
+  }
+  .other-picker-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(15, 42, 30, 0.12);
   }
   .other-picker-btn:active { transform: scale(0.94); }
   .other-picker-btn.is-selected {

@@ -60,20 +60,32 @@ const bodyStyle = [
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
   <!-- === Fonts : Fraunces (display) + JetBrains Mono (labels) ===
-       Preconnect aux origines Google Fonts pour réduire la latence de la
-       première requête. Preload sur le seul weight critique (Fraunces 700)
-       en woff2 pour éviter un round-trip CSS avant le premier render.
-       font-display: swap (configuré côté Google Fonts via &display=swap)
-       → pas de FOIT, fallback Georgia immédiat puis swap silencieux.
+       Strategy PR5 :
+        1. preconnect aux 2 origines Google Fonts (DNS + TLS warm-up)
+        2. preload de la CSS comme "style" (discovery prioritaire avant
+           le HTML parser n'atteigne le <link rel="stylesheet"> classique)
+        3. stylesheet load standard avec font-display: swap (fallback
+           Georgia immédiat, swap silencieux quand Fraunces arrive)
+        4. URL Fraunces réduite aux 3 weights effectivement utilisés
+           (700 titres / 800 chiffres / 900 code XL) — les autres
+           weights (400/500/600) ne sont jamais référencés en CSS,
+           pas la peine de générer leurs @font-face.
+        5. Fraunces étant un variable font, le browser télécharge UN
+           SEUL woff2 qui couvre toute la range wght 100-900. Les
+           weights listés ne changent pas la taille du fichier — juste
+           la taille de la CSS Google (économie marginale mais propre).
 
-       Note: la fonctionnalité variable de Fraunces (opsz + wght) est
-       préservée par le subset latin variable. JetBrains Mono : un seul
-       weight 500 suffit pour les eyebrow uppercase. -->
+       JetBrains Mono : un seul weight 500 suffit pour les eyebrow micro-caps. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
+    rel="preload"
+    as="style"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800;9..144,900&family=JetBrains+Mono:wght@500&display=swap"
+  />
+  <link
     rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800;9..144,900&family=JetBrains+Mono:wght@500&display=swap"
   />
 </head>
 <body style={bodyStyle} class={bodyClass}>

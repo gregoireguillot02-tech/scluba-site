@@ -14,7 +14,7 @@
  * Reduced-motion : SplitText skip, autoAnimate respecte nativement.
  */
 
-import { registerGsap, getAutoAnimate } from './registry';
+import { loadSplitText, getAutoAnimate } from './registry';
 import { prefersReducedMotion, EASE } from './utils';
 
 export async function initLobbyAnimations(): Promise<void> {
@@ -34,7 +34,9 @@ export async function initLobbyAnimations(): Promise<void> {
 
   // === GSAP : SplitText sur code + QR popover spring + entrées staggered ===
   if (prefersReducedMotion()) return;
-  const { gsap, SplitText } = await registerGsap();
+  // /lobby a besoin de gsap + SplitText (pour le code XL drop-in) mais
+  // ni ScrollTrigger ni Flip → code-split via loadSplitText().
+  const { gsap, SplitText } = await loadSplitText();
 
   gsap.context(() => {
     // Code de la partie : SplitText chars drop-in
