@@ -197,7 +197,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       <p class="add-player-error" data-add-player-error hidden></p>
     </section>
 
-    <form method="POST" action={`/api/rounds/${shortCode}/start`} class="start-form" data-start-form data-pending-count={pendingCount} data-host-mode={String(isHostMode)}>
+    <form method="POST" action={`/api/rounds/${shortCode}/start`} class="start-form" data-start-form data-pending-count={pendingCount} data-host-mode={String(isHostMode)} data-astro-reload>
       <button
         type="submit"
         class="start-btn"

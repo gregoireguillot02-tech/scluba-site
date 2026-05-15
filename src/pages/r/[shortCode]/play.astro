@@ -257,7 +257,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       <Scorecard sections={roundSections} mode="live" />
     </section>
 
-    <form method="POST" action={`/api/rounds/${r.short_code}/finish`} class="finish-form" data-finish-form>
+    <form method="POST" action={`/api/rounds/${r.short_code}/finish`} class="finish-form" data-finish-form data-astro-reload>
       <button type="submit" class="finish-btn" data-finish-btn>Terminer maintenant</button>
     </form>
 
