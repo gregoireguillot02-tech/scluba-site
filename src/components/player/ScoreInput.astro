@@ -1,0 +1,388 @@
+---
+/**
+ * Saisie de score par-relative XL — refonte ergonomique PR3.
+ *
+ * Remplace l'ancien double système (stepper +/− + grid 1-9) par 5 gros
+ * boutons par-relative (Eagle / Birdie / Par / Bogey / Double) que les
+ * golfeurs raisonnent nativement, + une pill "Autre" pour les cas rares
+ * (>=Triple) et une pill "Abandonner" pour le pickup.
+ *
+ * Le composant rend UNIQUEMENT la structure SSR. Toute la logique (save,
+ * sync realtime, navigation entre trous) est dans play.astro qui :
+ *   - met à jour les data-rel-strokes des boutons via render() au
+ *     changement de trou (le par change donc les numéros aussi)
+ *   - toggle .is-selected sur le bouton correspondant au score saisi
+ *   - écoute les data-rel / data-pill / data-hole-jump / data-abs-strokes
+ *
+ * Props :
+ *   holeCount    nombre de trous (9, 18, ou subset)
+ *   currentHole  trou actif au premier render (depuis nextEmptyHole)
+ *   currentPar   par du currentHole (pour calculer les chiffres initiaux)
+ */
+
+interface Props {
+  holeCount: number;
+  currentHole: number;
+  currentPar: number;
+}
+
+const { holeCount, currentHole, currentPar } = Astro.props;
+
+// Label par-relative — golfer-native (Ace sur par 3, Birdie/Eagle/etc.).
+function relLabel(par: number, offset: number): string {
+  if (offset === -2 && par === 3) return 'Ace';
+  if (offset === -2) return 'Eagle';
+  if (offset === -1) return 'Birdie';
+  if (offset === 0) return 'Par';
+  if (offset === 1) return 'Bogey';
+  if (offset === 2) return 'Double';
+  return '';
+}
+
+const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
+---
+
+<div class="score-input" data-score-input data-current-hole={currentHole}>
+  {/* Progression : 18 dots (ou holeCount) tap-to-jump, dot actuel élargi.
+       Permet de naviguer rapidement entre trous sans utiliser de
+       boutons prev/next encombrants. Le swipe horizontal sur le bloc
+       principal est l'autre voie de navigation (gérée en JS). */}
+  <nav class="hole-progress" aria-label="Navigation entre trous">
+    {Array.from({ length: holeCount }).map((_, i) => {
+      const n = i + 1;
+      const isCurrent = n === currentHole;
+      return (
+        <button
+          type="button"
+          class={`hole-dot${isCurrent ? ' is-current' : ''}`}
+          data-hole-jump={n}
+          aria-label={`Trou ${n}`}
+          aria-current={isCurrent ? 'true' : 'false'}
+        ></button>
+      );
+    })}
+  </nav>
+
+  {/* 5 boutons par-relative XL. Le bouton "Par" a la valeur par défaut
+       (fond honey-soft + ring honey) pour suggérer le choix le plus
+       commun (~60% des saisies en golf amateur). */}
+  <div class="rel-buttons" data-rel-buttons role="group" aria-label="Choisir ton score">
+    {REL_OFFSETS.map((offset) => {
+      const strokes = currentPar + offset;
+      const label = relLabel(currentPar, offset);
+      return (
+        <button
+          type="button"
+          class={`rel-btn${offset === 0 ? ' is-par' : ''}`}
+          data-rel={offset}
+          aria-label={`${label} (${strokes} coup${strokes > 1 ? 's' : ''})`}
+        >
+          <span class="rel-label" data-rel-label>{label}</span>
+          <span class="rel-strokes" data-rel-strokes>{strokes}</span>
+        </button>
+      );
+    })}
+  </div>
+
+  {/* Feedback live : "−1 vs par" en honey quand birdie sélectionné,
+       "±0" en muted pour par, etc. Mis à jour par render() en JS. */}
+  <p class="score-feedback" data-score-feedback aria-live="polite"></p>
+
+  {/* Pills : Autre (pour les triple bogey+, expand un mini-picker
+       inline) et Abandonner (pickup, compté par + 2 — Rules of Golf
+       2023 Maximum Score). */}
+  <div class="score-pills">
+    <button
+      type="button"
+      class="score-pill"
+      data-pill="other"
+      aria-expanded="false"
+      aria-controls="other-picker"
+    >
+      <span>Autre score…</span>
+    </button>
+    <button
+      type="button"
+      class="score-pill score-pill-pickup"
+      data-pill="pickup"
+      aria-label="Abandonner ce trou (compte par + 2)"
+      title="Trou abandonné — compté Par + 2"
+    >
+      <span class="pill-pickup-letter" aria-hidden="true">C</span>
+      <span>Abandonner</span>
+    </button>
+  </div>
+
+  {/* Mini-picker "Autre" : grille 1-15, expand sous la rangée
+       quand l'utilisateur tap "Autre". Tap sur un numéro = save. */}
+  <div class="other-picker" id="other-picker" data-other-picker hidden>
+    <p class="other-picker-hint">Choisis ton score précis :</p>
+    <div class="other-picker-grid">
+      {Array.from({ length: 15 }).map((_, i) => {
+        const n = i + 1;
+        return (
+          <button type="button" class="other-picker-btn" data-abs-strokes={n}>{n}</button>
+        );
+      })}
+    </div>
+  </div>
+</div>
+
+<style>
+  .score-input {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: 0 var(--space-4);
+    margin: var(--space-4) 0;
+  }
+
+  /* === Progression dots === */
+  .hole-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: var(--space-2) 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .hole-progress::-webkit-scrollbar { display: none; }
+  .hole-dot {
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    border-radius: 50%;
+    background: var(--line);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: width 200ms var(--ease-expo), background 150ms;
+    /* Hit area étendue pour faciliter le tap : 24px ≥ 44pt avec padding
+       transparent (touch-area sans changer le visuel). */
+    position: relative;
+  }
+  .hole-dot::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+  }
+  .hole-dot.is-current {
+    width: 22px;
+    background: var(--clubColor, var(--primary));
+    border-radius: 999px;
+  }
+  .hole-dot.is-played:not(.is-current) {
+    background: var(--accent);
+    opacity: 0.7;
+  }
+
+  /* === 5 boutons par-relative === */
+  .rel-buttons {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .rel-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 84px;
+    padding: 10px 4px;
+    border-radius: 14px;
+    border: 1.5px solid var(--line);
+    background: #fff;
+    cursor: pointer;
+    transition:
+      background 180ms var(--ease-expo),
+      border-color 180ms var(--ease-expo),
+      transform 120ms var(--ease-out),
+      box-shadow 180ms var(--ease-expo);
+    color: var(--ink);
+    /* Touch-action: manipulation supprime le 300ms tap delay sur iOS
+       legacy + désactive le double-tap zoom sur les boutons. */
+    touch-action: manipulation;
+  }
+  .rel-btn:active {
+    transform: scale(0.96);
+  }
+  /* Bouton Par mis en valeur par défaut (suggestion, pas sélection) */
+  .rel-btn.is-par {
+    background: rgba(212, 165, 116, 0.10);
+    border-color: rgba(212, 165, 116, 0.45);
+  }
+  /* Bouton sélectionné (= correspond au score saisi) — fill honey,
+     ring honey-deep, texte forest dark. Visible et net. */
+  .rel-btn.is-selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--primary-deep);
+    box-shadow:
+      0 0 0 3px rgba(212, 165, 116, 0.25),
+      0 4px 12px rgba(212, 165, 116, 0.30);
+  }
+  .rel-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .rel-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    line-height: 1;
+  }
+  .rel-btn.is-par .rel-label {
+    color: var(--accent);
+  }
+  .rel-btn.is-selected .rel-label {
+    color: var(--primary-deep);
+    opacity: 0.7;
+  }
+  .rel-strokes {
+    font-family: var(--font-display, var(--font-serif));
+    font-size: clamp(1.6rem, 7vw, 2rem);
+    font-weight: 800;
+    color: var(--clubColor, var(--primary));
+    line-height: 1;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .rel-btn.is-selected .rel-strokes {
+    color: var(--primary-deep);
+  }
+
+  /* === Feedback live === */
+  .score-feedback {
+    margin: 0;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    min-height: 1.2em;
+  }
+  .score-feedback.is-under { color: var(--accent); font-weight: 600; }
+  .score-feedback.is-over { color: var(--muted); }
+  .score-feedback.is-par { color: var(--clubColor, var(--primary)); font-weight: 600; }
+
+  /* === Pills (Autre + Abandonner) === */
+  .score-pills {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .score-pill {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    border: 1px dashed var(--muted);
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: border-color 150ms, color 150ms, background 150ms;
+    touch-action: manipulation;
+  }
+  .score-pill:hover,
+  .score-pill:focus-visible {
+    border-color: var(--ink);
+    color: var(--ink);
+    outline: none;
+  }
+  .score-pill:active { transform: scale(0.97); }
+  .score-pill[aria-expanded="true"] {
+    background: rgba(15, 42, 30, 0.06);
+    border-color: var(--ink);
+    color: var(--ink);
+    border-style: solid;
+  }
+  .score-pill-pickup {
+    color: var(--muted);
+  }
+  .pill-pickup-letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    font-family: var(--font-display, var(--font-serif));
+    font-weight: 800;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  /* === Other picker (expand) === */
+  .other-picker {
+    margin-top: var(--space-2);
+    padding: var(--space-3);
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .other-picker[hidden] { display: none; }
+  .other-picker-hint {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+  .other-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .other-picker-btn {
+    aspect-ratio: 1;
+    min-height: 44px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    font-family: var(--font-display, var(--font-serif));
+    font-size: 18px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background 150ms, border-color 150ms, transform 100ms;
+  }
+  .other-picker-btn:hover {
+    border-color: var(--accent);
+  }
+  .other-picker-btn:active { transform: scale(0.94); }
+  .other-picker-btn.is-selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--primary-deep);
+  }
+
+  /* Responsive : iPhone SE 375px — tighter spacing */
+  @media (max-width: 380px) {
+    .rel-buttons { gap: 4px; }
+    .rel-btn { min-height: 76px; padding: 8px 2px; }
+    .rel-strokes { font-size: 1.5rem; }
+    .hole-dot.is-current { width: 18px; }
+  }
+</style>

@@ -3,6 +3,7 @@ export const prerender = false;
 
 import PlayerLayout from '../../../layouts/PlayerLayout.astro';
 import Scorecard from '../../../components/player/Scorecard.astro';
+import ScoreInput from '../../../components/player/ScoreInput.astro';
 import { serviceClient } from '../../../lib/supabase';
 import type { Club, Round, RoundPlayer, Score } from '../../../lib/clubs-types';
 import { resolveRoundHoles, resolveRoundSections } from '../../../lib/clubs-types';
@@ -85,6 +86,24 @@ const canHostSwitch = me.is_creator && allPlayers.length > 1;
 
 const holesByNumber: Record<number, number> = {};
 for (const h of roundHoles) holesByNumber[h.number] = h.par;
+
+// Détermine le trou actif au premier render (premier trou non joué et
+// non abandonné). Sans ça, on SSR la page sur le trou 1 et le JS doit
+// faire un "saut" visuel après hydratation → flicker. En calculant
+// server-side, les boutons par-relative XL affichent les bonnes
+// valeurs (par - 2 … par + 2) dès le premier paint.
+function nextEmptyHoleSSR(): number {
+  for (const h of roundHoles) {
+    if (scoresByHole[h.number] === undefined && !pickedUpHoles.includes(h.number)) {
+      return h.number;
+    }
+  }
+  return roundHoles[roundHoles.length - 1]?.number ?? 1;
+}
+const initialHole = nextEmptyHoleSSR();
+const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
+  ?? roundHoles[0]?.par
+  ?? 4;
 ---
 
 <PlayerLayout
@@ -151,44 +170,20 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       <div class="hole-meta">
         <span class="hole-meta-label">Trou</span>
         <span class="hole-meta-count">
-          <span data-hole-number>1</span> / {roundHoles.length}
+          <span data-hole-number>{initialHole}</span> / {roundHoles.length}
         </span>
       </div>
 
       <div class="hole-par-block">
         <div class="hole-par-label">PAR</div>
-        <div class="hole-par-value" data-par-value>4</div>
+        <div class="hole-par-value" data-par-value>{initialPar}</div>
       </div>
 
-      <div class="score-control">
-        <button type="button" class="score-step" data-step="-1" aria-label="Diminuer">−</button>
-        <div class="score-display" data-strokes-display>—</div>
-        <button type="button" class="score-step" data-step="+1" aria-label="Augmenter">+</button>
-      </div>
-
-      <p class="score-hint" data-score-hint>Choisis ton score</p>
-
-      <div class="quick-buttons">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-          <button type="button" class="quick-btn" data-quick={n}>{n}</button>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        class="pickup-btn"
-        data-pickup
-        aria-label="Marquer ce trou comme abandonné (chablis)"
-        title="Trou abandonné — compté Par + 2 (Maximum Score)"
-      >
-        <span class="pickup-letter">C</span>
-        <span class="pickup-text">Abandonner ce trou</span>
-      </button>
-
-      <div class="nav-buttons">
-        <button type="button" class="nav-btn nav-prev" data-nav="prev">← Précédent</button>
-        <button type="button" class="nav-btn nav-next" data-nav="next">Suivant →</button>
-      </div>
+      <ScoreInput
+        holeCount={roundHoles.length}
+        currentHole={initialHole}
+        currentPar={initialPar}
+      />
     </section>
 
     <section class="leaderboard">
@@ -208,6 +203,7 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
 
   <script>
     import { subscribeToRound, unsubscribeFromRound } from '../../../lib/realtime';
+    import { flashPar, flashSelected, flashFeedback } from '../../../lib/animations/play';
 
     type CourseData = { holes: { number: number; par: number }[] };
     type LivePlayer = { id: string; name: string };
@@ -477,16 +473,43 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       }
 
       let currentHole = nextEmptyHole();
+      let lastRenderedHole = currentHole;
+      let lastRenderedFeedback = '';
 
+      // === Refs DOM ===
       const holeNumberEl = root.querySelector<HTMLElement>('[data-hole-number]')!;
       const parValueEl = root.querySelector<HTMLElement>('[data-par-value]')!;
-      const strokesEl = root.querySelector<HTMLElement>('[data-strokes-display]')!;
-      const hintEl = root.querySelector<HTMLElement>('[data-score-hint]')!;
       const totalStrokesEl = document.querySelector<HTMLElement>('[data-total-strokes]')!;
       const finishForm = document.querySelector<HTMLFormElement>('[data-finish-form]')!;
       const statusEl = document.querySelector<HTMLElement>('[data-status]')!;
       const cells = Array.from(document.querySelectorAll<HTMLElement>('[data-cell-hole]'));
       const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-player-tabs] [data-player-id]'));
+
+      // Score input PR3 refs
+      const relBtns = Array.from(
+        root.querySelectorAll<HTMLButtonElement>('[data-rel-buttons] [data-rel]'),
+      );
+      const holeDots = Array.from(
+        root.querySelectorAll<HTMLButtonElement>('[data-hole-jump]'),
+      );
+      const feedbackEl = root.querySelector<HTMLElement>('[data-score-feedback]')!;
+      const otherPicker = root.querySelector<HTMLElement>('[data-other-picker]')!;
+      const otherPickerBtns = Array.from(
+        otherPicker.querySelectorAll<HTMLButtonElement>('[data-abs-strokes]'),
+      );
+      const pillOther = root.querySelector<HTMLButtonElement>('[data-pill="other"]')!;
+      const pillPickup = root.querySelector<HTMLButtonElement>('[data-pill="pickup"]')!;
+
+      // Label par-relative (matche le helper SSR dans ScoreInput.astro)
+      function relLabelFor(par: number, offset: number): string {
+        if (offset === -2 && par === 3) return 'Ace';
+        if (offset === -2) return 'Eagle';
+        if (offset === -1) return 'Birdie';
+        if (offset === 0) return 'Par';
+        if (offset === 1) return 'Bogey';
+        if (offset === 2) return 'Double';
+        return '';
+      }
 
       function nextEmptyHole(): number {
         const scores = scoresOf(currentPlayerId);
@@ -528,17 +551,63 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
 
         const s = scores[currentHole];
         const isPickup = pickedUp.has(currentHole);
-        if (isPickup) {
-          strokesEl.textContent = 'C';
-          hintEl.textContent = `Abandonné — compté ${hole.par + 2} (Par + 2)`;
-        } else if (s === undefined) {
-          strokesEl.textContent = '—';
-          hintEl.textContent = 'Choisis ton score';
-        } else {
-          strokesEl.textContent = String(s);
-          hintEl.textContent = diffLabel(s, hole.par);
+
+        // === Met à jour les 5 boutons par-relative ===
+        // Pour chaque offset (-2..+2), recalcule label + strokes selon
+        // le par du trou courant, et applique is-par (defaut)/is-selected
+        // (matche le score saisi).
+        for (const btn of relBtns) {
+          const offset = Number(btn.dataset.rel);
+          const strokes = hole.par + offset;
+          const label = relLabelFor(hole.par, offset);
+          btn.querySelector<HTMLElement>('[data-rel-label]')!.textContent = label;
+          btn.querySelector<HTMLElement>('[data-rel-strokes]')!.textContent = String(strokes);
+          btn.setAttribute('aria-label', `${label} (${strokes} coup${strokes > 1 ? 's' : ''})`);
+          btn.classList.toggle('is-par', offset === 0);
+          btn.classList.toggle('is-selected', !isPickup && s !== undefined && s === strokes);
         }
 
+        // === Met à jour la rangée 1-15 du picker "Autre" ===
+        for (const btn of otherPickerBtns) {
+          const n = Number(btn.dataset.absStrokes);
+          btn.classList.toggle('is-selected', !isPickup && s === n);
+        }
+
+        // === Met à jour l'état pill Abandonner ===
+        pillPickup.classList.toggle('is-selected', isPickup);
+
+        // === Feedback live ===
+        if (isPickup) {
+          feedbackEl.textContent = `Abandonné · compté ${hole.par + 2} (Par + 2)`;
+          feedbackEl.className = 'score-feedback is-over';
+        } else if (s !== undefined) {
+          const d = s - hole.par;
+          const label = relLabelFor(hole.par, d) || diffLabel(s, hole.par);
+          if (d < 0) {
+            feedbackEl.textContent = `${label} · ${d} vs par`;
+            feedbackEl.className = 'score-feedback is-under';
+          } else if (d === 0) {
+            feedbackEl.textContent = `${label} · ±0`;
+            feedbackEl.className = 'score-feedback is-par';
+          } else {
+            feedbackEl.textContent = `${label} · +${d} vs par`;
+            feedbackEl.className = 'score-feedback is-over';
+          }
+        } else {
+          feedbackEl.textContent = '';
+          feedbackEl.className = 'score-feedback';
+        }
+
+        // === Met à jour les dots progression (current + played) ===
+        for (const dot of holeDots) {
+          const h = Number(dot.dataset.holeJump);
+          const played = scores[h] !== undefined || pickedUp.has(h);
+          dot.classList.toggle('is-current', h === currentHole);
+          dot.classList.toggle('is-played', played && h !== currentHole);
+          dot.setAttribute('aria-current', h === currentHole ? 'true' : 'false');
+        }
+
+        // === Cells de la scorecard inline (Scorecard mode='live') ===
         let total = 0;
         let played = 0;
         let playedPar = 0;
@@ -572,9 +641,6 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
             : `${total} sur ${played}/${holeCount} (${diffLbl})`;
 
         const allDone = played === holeCount;
-        // Finish form is always visible: lets the player stop early (the
-        // remaining holes show as NC on the recap). Label adapts so a partial
-        // submission gets a confirmation prompt.
         finishForm.hidden = false;
         const finishBtn = finishForm.querySelector<HTMLButtonElement>('[data-finish-btn]');
         if (finishBtn) {
@@ -584,15 +650,54 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
           finishBtn.dataset.holeCount = String(holeCount);
         }
 
-        const prevBtn = root!.querySelector<HTMLButtonElement>('[data-nav="prev"]')!;
-        const nextBtn = root!.querySelector<HTMLButtonElement>('[data-nav="next"]')!;
-        prevBtn.disabled = currentHole === 1;
-        nextBtn.disabled = currentHole === holeCount;
-
-        // Met à jour l'état actif des tabs (mode host).
+        // Tabs host mode
         for (const tab of tabs) {
           tab.classList.toggle('is-active', tab.dataset.playerId === currentPlayerId);
         }
+
+        // === Animations sobres ===
+        // PAR : flash quand le trou change (subtile fade-y + back).
+        if (currentHole !== lastRenderedHole) {
+          flashPar(parValueEl);
+          lastRenderedHole = currentHole;
+        }
+        // Feedback line : fade-in si le contenu a changé.
+        if (feedbackEl.textContent && feedbackEl.textContent !== lastRenderedFeedback) {
+          flashFeedback(feedbackEl);
+        }
+        lastRenderedFeedback = feedbackEl.textContent ?? '';
+        // Selected button : pulse bounce sur le bouton qui vient de
+        // recevoir is-selected (uniquement les rel-buttons, pas le
+        // picker "Autre" qui auto-ferme avant le re-render).
+        const selectedRelBtn = relBtns.find((b) => b.classList.contains('is-selected'));
+        if (selectedRelBtn) flashSelected(selectedRelBtn);
+      }
+
+      // Auto-advance : après une sauvegarde réussie, si on n'est pas
+      // sur le dernier trou ET que tous les autres trous ne sont pas
+      // remplis, on saute au prochain trou vide après 250ms. Donne
+      // l'impression d'un flow "tap et hop, trou suivant" sans avoir
+      // à toucher la nav. Le délai laisse le temps de voir le bouton
+      // sélectionné (feedback visuel avant transition).
+      function autoAdvance() {
+        const scores = scoresOf(currentPlayerId);
+        const pickedUp = pickedUpOf(currentPlayerId);
+        // Cherche le prochain trou vide APRÈS currentHole, puis avant
+        // si on a déjà passé le dernier vide à droite.
+        for (let h = currentHole + 1; h <= holeCount; h++) {
+          if (scores[h] === undefined && !pickedUp.has(h)) {
+            setTimeout(() => { currentHole = h; render(); }, 250);
+            return;
+          }
+        }
+        for (let h = 1; h < currentHole; h++) {
+          if (scores[h] === undefined && !pickedUp.has(h)) {
+            setTimeout(() => { currentHole = h; render(); }, 250);
+            return;
+          }
+        }
+        // Tous les trous remplis : on reste sur le trou courant. Le
+        // bouton "Terminer la partie" est déjà mis à jour par render().
       }
 
       // Intercept the early-finish submission to confirm. Skip the confirm
@@ -612,7 +717,7 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
         return currentPlayerId === meIdEntry ? null : currentPlayerId;
       }
 
-      async function saveScore(strokes: number) {
+      async function saveScore(strokes: number, options: { advance?: boolean } = {}) {
         const scores = scoresOf(currentPlayerId);
         const pickedUp = pickedUpOf(currentPlayerId);
         scores[currentHole] = strokes;
@@ -631,6 +736,9 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
           if (!res.ok) throw new Error(await res.text());
           statusEl.textContent = '✓ Enregistré';
           setTimeout(() => { statusEl.textContent = ''; }, 1200);
+          // Si la save vient d'un bouton score (par-relative ou Autre),
+          // on enchaîne automatiquement sur le prochain trou vide.
+          if (options.advance) autoAdvance();
         } catch (e) {
           statusEl.textContent = `Erreur : ${(e as Error).message}`;
         }
@@ -660,37 +768,90 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
         }
       }
 
-      root.querySelectorAll<HTMLElement>('[data-quick]').forEach((btn) => {
+      // === Boutons par-relative (Eagle/Birdie/Par/Bogey/Double) ===
+      // Tap = save immédiat (offset → absolute via hole.par) + auto-advance.
+      for (const btn of relBtns) {
         btn.addEventListener('click', () => {
-          const n = Number(btn.dataset.quick);
-          saveScore(n);
+          const offset = Number(btn.dataset.rel);
+          const strokes = holeAt(currentHole).par + offset;
+          saveScore(strokes, { advance: true });
         });
+      }
+
+      // === Dots progression : tap-to-jump ===
+      for (const dot of holeDots) {
+        dot.addEventListener('click', () => {
+          const h = Number(dot.dataset.holeJump);
+          if (h < 1 || h > holeCount || h === currentHole) return;
+          currentHole = h;
+          // Ferme le picker "Autre" si ouvert
+          closeOtherPicker();
+          render();
+        });
+      }
+
+      // === Pill "Autre" : toggle le mini-picker 1-15 ===
+      function openOtherPicker() {
+        otherPicker.hidden = false;
+        pillOther.setAttribute('aria-expanded', 'true');
+      }
+      function closeOtherPicker() {
+        otherPicker.hidden = true;
+        pillOther.setAttribute('aria-expanded', 'false');
+      }
+      pillOther.addEventListener('click', () => {
+        if (otherPicker.hidden) openOtherPicker();
+        else closeOtherPicker();
       });
 
-      root.querySelectorAll<HTMLElement>('[data-step]').forEach((btn) => {
+      // === Picker "Autre" boutons 1-15 ===
+      for (const btn of otherPickerBtns) {
         btn.addEventListener('click', () => {
-          const delta = Number(btn.dataset.step);
-          const current = scoresOf(currentPlayerId)[currentHole] ?? holeAt(currentHole).par;
-          const next = Math.max(1, Math.min(20, current + delta));
-          saveScore(next);
+          const n = Number(btn.dataset.absStrokes);
+          closeOtherPicker();
+          saveScore(n, { advance: true });
         });
-      });
+      }
 
-      const pickupBtn = root.querySelector<HTMLButtonElement>('[data-pickup]');
-      pickupBtn?.addEventListener('click', () => {
+      // === Pill "Abandonner" (pickup) ===
+      pillPickup.addEventListener('click', () => {
         if (pickedUpOf(currentPlayerId).has(currentHole)) return; // déjà abandonné
+        closeOtherPicker();
         savePickup();
       });
 
-      root.querySelectorAll<HTMLElement>('[data-nav]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const dir = btn.dataset.nav;
-          if (dir === 'prev' && currentHole > 1) currentHole--;
-          if (dir === 'next' && currentHole < holeCount) currentHole++;
+      // === Swipe horizontal entre trous (touch natif) ===
+      // Threshold : 25% de la largeur du hole-card OU 80px minimum.
+      // Distance verticale > 50px → ignore (l'utilisateur scrolle).
+      const swipeRoot = root.querySelector<HTMLElement>('[data-play-root]') ?? root;
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchActive = false;
+      swipeRoot.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) { touchActive = false; return; }
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchActive = true;
+      }, { passive: true });
+      swipeRoot.addEventListener('touchend', (e) => {
+        if (!touchActive) return;
+        touchActive = false;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        if (Math.abs(dy) > 50) return; // scroll vertical, pas un swipe
+        const threshold = Math.max(80, swipeRoot.clientWidth * 0.25);
+        if (Math.abs(dx) < threshold) return;
+        if (dx < 0 && currentHole < holeCount) {
+          currentHole++;
+          closeOtherPicker();
           render();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-      });
+        } else if (dx > 0 && currentHole > 1) {
+          currentHole--;
+          closeOtherPicker();
+          render();
+        }
+      }, { passive: true });
 
       // Tabs joueurs (mode host) : switch currentPlayerId + reset currentHole
       // au prochain trou vide du joueur sélectionné.
@@ -953,113 +1114,9 @@ for (const h of roundHoles) holesByNumber[h.number] = h.par;
       font-variant-numeric: tabular-nums;
     }
 
-    .score-control {
-      display: grid;
-      grid-template-columns: 56px 1fr 56px;
-      gap: var(--space-4);
-      align-items: center;
-      max-width: 320px;
-      margin: 0 auto;
-    }
-    .score-step {
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      border: 1.5px solid var(--line);
-      background: #fff;
-      color: var(--clubColor);
-      font-size: 28px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform 0.1s, border-color 0.15s;
-    }
-    .score-step:hover { border-color: var(--primary-soft); }
-    .score-step:active { transform: scale(0.95); }
-    .score-display {
-      font-family: var(--font-serif);
-      font-size: clamp(4rem, 18vw, 6rem);
-      font-weight: 800;
-      color: var(--clubColor);
-      line-height: 1;
-      font-variant-numeric: tabular-nums;
-    }
-    .score-hint {
-      margin: var(--space-4) 0 0;
-      font-size: var(--text-sm);
-      color: var(--muted);
-      letter-spacing: 0.04em;
-    }
-
-    .quick-buttons {
-      display: grid;
-      grid-template-columns: repeat(9, 1fr);
-      gap: 6px;
-      max-width: 360px;
-      margin: var(--space-6) auto 0;
-    }
-    .quick-btn {
-      aspect-ratio: 1;
-      border-radius: 10px;
-      border: 1px solid var(--line);
-      background: #fff;
-      color: var(--ink);
-      font-size: 14px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      cursor: pointer;
-    }
-    .quick-btn:hover { background: var(--bg-soft); }
-    .quick-btn:active { transform: scale(0.96); }
-
-    .pickup-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin: var(--space-4) auto 0;
-      padding: 10px 18px;
-      border-radius: 10px;
-      border: 1px dashed var(--muted);
-      background: transparent;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .pickup-btn:hover { border-color: var(--ink); color: var(--ink); }
-    .pickup-btn:active { transform: scale(0.97); }
-    .pickup-letter {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 1.5px solid currentColor;
-      font-family: var(--font-serif);
-      font-weight: 800;
-      font-size: 13px;
-    }
-
-    .nav-buttons {
-      display: flex;
-      justify-content: space-between;
-      gap: var(--space-3);
-      margin-top: var(--space-6);
-    }
-    .nav-btn {
-      flex: 1;
-      padding: 12px 16px;
-      border-radius: 10px;
-      border: 1px solid var(--line);
-      background: #fff;
-      color: var(--clubColor);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* Score input (par-relative XL, dots, Autre/Abandonner pills)
+       → src/components/player/ScoreInput.astro. La saisie + le pickup
+       + la navigation entre trous sont concentrés dans ce composant. */
 
     .leaderboard {
       margin: 0 var(--space-5) var(--space-5);
