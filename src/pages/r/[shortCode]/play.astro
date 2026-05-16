@@ -181,19 +181,19 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       </li>
     </template>
 
+    {/* Player-tabs retirés : le live-board (haut) est maintenant le hub
+        central pour sélectionner un joueur en mode host. Tap sur une card
+        joueur → switche le ScoreInput. Voir le JS plus bas (live-board
+        click handler) + le banner "TOUR DE" ci-dessous. */}
+
     {canHostSwitch && (
-      <nav class="player-tabs" data-player-tabs aria-label="Saisir le score d'un joueur">
-        {allPlayers.map((p) => (
-          <button
-            type="button"
-            class={`player-tab${p.id === me.id ? ' is-me is-active' : ''}`}
-            data-player-id={p.id}
-            data-player-name={p.display_name}
-          >
-            {p.display_name}{p.id === me.id ? ' (toi)' : ''}
-          </button>
-        ))}
-      </nav>
+      <div class="current-player-banner" data-current-player-banner aria-live="polite">
+        <span class="cpb-avatar" data-cpb-avatar aria-hidden="true"></span>
+        <div class="cpb-text">
+          <span class="cpb-eyebrow">TOUR DE</span>
+          <span class="cpb-name" data-cpb-name>{me.display_name}</span>
+        </div>
+      </div>
     )}
 
     {isSpectator && (
@@ -266,6 +266,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
 
   <script>
     import { subscribeToRound, unsubscribeFromRound } from '../../../lib/realtime';
+    import { hueFromId, initialOf } from '../../../lib/avatar';
     import {
       flashPar,
       flashSelected,
@@ -273,6 +274,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       flipLeaderboard,
       countUp,
       pulseLeaderRing,
+      flashPlayerSwitch,
     } from '../../../lib/animations/play';
 
     type CourseData = { holes: { number: number; par: number }[] };
@@ -324,16 +326,8 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         return diff > 0 ? `+${diff}` : String(diff);
       }
 
-      // Avatar : couleur HSL stable dérivée du player_id (hash simple) +
-      // initiale du prénom. Même couleur au refresh — repère visuel.
-      function hueFromId(id: string): number {
-        let h = 0;
-        for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
-        return h;
-      }
-      function initialOf(name: string): string {
-        return (name.trim()[0] ?? '?').toUpperCase();
-      }
+      // Avatar : utilise les helpers hueFromId/initialOf importés depuis
+      // lib/avatar (couleur HSL stable + initiale, repère visuel constant).
 
       // Template HTML cloné pour chaque row (cf. <template id="live-card-tpl">
       // dans le markup). Évite la string interpolation innerHTML côté client
@@ -568,7 +562,26 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       const finishForm = document.querySelector<HTMLFormElement>('[data-finish-form]')!;
       const statusEl = document.querySelector<HTMLElement>('[data-status]')!;
       const cells = Array.from(document.querySelectorAll<HTMLElement>('[data-cell-hole]'));
-      const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-player-tabs] [data-player-id]'));
+
+      // Banner "TOUR DE [joueur]" (mode host uniquement, null sinon).
+      const banner = document.querySelector<HTMLElement>('[data-current-player-banner]');
+      const bannerAvatar = banner?.querySelector<HTMLElement>('[data-cpb-avatar]') ?? null;
+      const bannerName = banner?.querySelector<HTMLElement>('[data-cpb-name]') ?? null;
+
+      // Lecture de l'ordre des joueurs depuis le data-attr du live-board.
+      // Ordre stable (= joined_at DB), nécessaire pour le smart next-slot.
+      const liveBoardForOrder = document.querySelector<HTMLElement>('[data-live-board]');
+      const orderedPlayerIds: string[] = liveBoardForOrder
+        ? (JSON.parse(liveBoardForOrder.dataset.players ?? '[]') as { id: string }[]).map((p) => p.id)
+        : [meIdEntry];
+      // Map nom par pid pour le banner (sans re-fetcher).
+      const playerNameById = new Map<string, string>();
+      if (liveBoardForOrder) {
+        for (const p of JSON.parse(liveBoardForOrder.dataset.players ?? '[]') as { id: string; name: string }[]) {
+          playerNameById.set(p.id, p.name);
+        }
+      }
+      playerNameById.set(meIdEntry, root.querySelector<HTMLElement>('.play-player')?.textContent ?? '');
 
       // Score input PR3 refs
       const relBtns = Array.from(
@@ -735,9 +748,27 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           finishBtn.dataset.holeCount = String(holeCount);
         }
 
-        // Tabs host mode
-        for (const tab of tabs) {
-          tab.classList.toggle('is-active', tab.dataset.playerId === currentPlayerId);
+        // Banner "TOUR DE [joueur]" — syncé avec currentPlayerId (mode host).
+        if (banner && bannerAvatar && bannerName) {
+          const name = playerNameById.get(currentPlayerId) ?? '';
+          const newName = name;
+          const oldName = bannerName.textContent;
+          bannerAvatar.style.background = `hsl(${hueFromId(currentPlayerId)}, 55%, 55%)`;
+          bannerAvatar.textContent = initialOf(name);
+          bannerName.textContent = newName;
+          if (oldName && oldName !== newName) {
+            flashPlayerSwitch(banner);
+          }
+        }
+
+        // Live-board : highlight la card du joueur courant (mode host).
+        if (canHostSwitch) {
+          const liveList = document.querySelector<HTMLElement>('[data-live-list]');
+          if (liveList) {
+            for (const li of Array.from(liveList.children) as HTMLElement[]) {
+              li.classList.toggle('is-current', li.dataset.pid === currentPlayerId);
+            }
+          }
         }
 
         // === Animations sobres ===
@@ -758,17 +789,60 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         if (selectedRelBtn) flashSelected(selectedRelBtn);
       }
 
-      // Auto-advance : après une sauvegarde réussie, si on n'est pas
-      // sur le dernier trou ET que tous les autres trous ne sont pas
-      // remplis, on saute au prochain trou vide après 250ms. Donne
-      // l'impression d'un flow "tap et hop, trou suivant" sans avoir
-      // à toucher la nav. Le délai laisse le temps de voir le bouton
-      // sélectionné (feedback visuel avant transition).
+      // Auto-advance : après une sauvegarde réussie, l'app passe au
+      // prochain slot vide. Logique :
+      //  - Mode solo / each : prochain trou vide pour ME (comportement
+      //    historique).
+      //  - Mode HOST : prochain (joueur, trou) non-saisi en priorisant
+      //    de FINIR le trou courant pour tout le monde avant de passer
+      //    au trou suivant. C'est cohérent avec le flow IRL où chaque
+      //    joueur termine son trou puis on passe au tee suivant.
+      // Délai 250ms : feedback visuel sur le bouton avant transition.
+      function isEmptyFor(pid: string, hole: number): boolean {
+        const sc = scoresOf(pid);
+        const pu = pickedUpOf(pid);
+        return sc[hole] === undefined && !pu.has(hole);
+      }
+
+      function nextSlotHost(): { pid: string; hole: number } | null {
+        // 1. Trou courant : reste-t-il un joueur non-saisi ?
+        const currentIdx = orderedPlayerIds.indexOf(currentPlayerId);
+        // Boucle depuis le joueur SUIVANT le courant (round-robin) pour
+        // privilégier l'ordre naturel du flight.
+        for (let i = 1; i <= orderedPlayerIds.length; i++) {
+          const pid = orderedPlayerIds[(currentIdx + i) % orderedPlayerIds.length];
+          if (isEmptyFor(pid, currentHole)) return { pid, hole: currentHole };
+        }
+        // 2. Tous saisi pour ce trou → trou suivant, joueur de tête.
+        for (let h = currentHole + 1; h <= holeCount; h++) {
+          for (const pid of orderedPlayerIds) {
+            if (isEmptyFor(pid, h)) return { pid, hole: h };
+          }
+        }
+        // 3. Wrap-around : trous précédents non-saisis.
+        for (let h = 1; h < currentHole; h++) {
+          for (const pid of orderedPlayerIds) {
+            if (isEmptyFor(pid, h)) return { pid, hole: h };
+          }
+        }
+        return null; // partie complète
+      }
+
       function autoAdvance() {
+        if (canHostSwitch) {
+          const slot = nextSlotHost();
+          if (slot) {
+            setTimeout(() => {
+              currentPlayerId = slot.pid;
+              currentHole = slot.hole;
+              render();
+            }, 250);
+          }
+          return;
+        }
+        // Mode solo / each : prochain trou vide pour ME.
         const scores = scoresOf(currentPlayerId);
         const pickedUp = pickedUpOf(currentPlayerId);
-        // Cherche le prochain trou vide APRÈS currentHole, puis avant
-        // si on a déjà passé le dernier vide à droite.
         for (let h = currentHole + 1; h <= holeCount; h++) {
           if (scores[h] === undefined && !pickedUp.has(h)) {
             setTimeout(() => { currentHole = h; render(); }, 250);
@@ -781,8 +855,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
             return;
           }
         }
-        // Tous les trous remplis : on reste sur le trou courant. Le
-        // bouton "Terminer la partie" est déjà mis à jour par render().
+        // Tous les trous remplis : on reste sur le trou courant.
       }
 
       // Intercept the early-finish submission to confirm. Skip the confirm
@@ -970,16 +1043,27 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         }
       }, { passive: true });
 
-      // Tabs joueurs (mode host) : switch currentPlayerId + reset currentHole
-      // au prochain trou vide du joueur sélectionné.
-      for (const tab of tabs) {
-        tab.addEventListener('click', () => {
-          const pid = tab.dataset.playerId;
-          if (!pid || pid === currentPlayerId) return;
-          currentPlayerId = pid;
-          currentHole = nextEmptyHole();
-          render();
-        });
+      // Sélection joueur (mode host) : passe désormais par tap sur une card
+      // du live-board (cf. handler dans le bloc live-board plus haut), pas
+      // par des onglets dédiés. Le live-list a data-host-interactive="true"
+      // pour activer les styles hover/cursor + ring honey.
+      if (canHostSwitch) {
+        const liveList = document.querySelector<HTMLElement>('[data-live-list]');
+        if (liveList) {
+          liveList.dataset.hostInteractive = 'true';
+          liveList.addEventListener('click', (e) => {
+            const target = (e.target as HTMLElement).closest<HTMLElement>('[data-pid]');
+            if (!target) return;
+            const pid = target.dataset.pid;
+            if (!pid || pid === currentPlayerId) return;
+            currentPlayerId = pid;
+            currentHole = nextEmptyHole();
+            render();
+            // Scroll smooth vers le ScoreInput pour ne pas que le joueur
+            // ait à scroll lui-même après un switch.
+            root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        }
       }
 
       // === Realtime score sync ===
@@ -1267,35 +1351,90 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     .live-diff.over { color: #C0392B; }
     .live-diff.under { color: #1B4332; }
 
-    /* === Player tabs (host mode only) === */
-    .player-tabs {
+    /* === Current player banner (host mode) ===
+       Remplace les anciens player-tabs. Le live-board (haut) est désormais
+       l'unique surface de sélection joueur. Ce banner agit comme un
+       feedback explicite "tu es en train de saisir pour X". Layout :
+       avatar à gauche, eyebrow micro-caps + nom Fraunces XL à droite. */
+    .current-player-banner {
       display: flex;
-      gap: 6px;
-      padding: var(--space-3) var(--space-4) 0;
-      overflow-x: auto;
-      scrollbar-width: none;
+      align-items: center;
+      gap: 12px;
+      margin: var(--space-3) var(--space-4) 0;
+      padding: 10px 14px;
+      background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--clubColor) 12%, transparent),
+        color-mix(in srgb, var(--clubColor) 4%, transparent)
+      );
+      border: 1px solid color-mix(in srgb, var(--clubColor) 35%, transparent);
+      border-radius: 12px;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 2px 6px -2px color-mix(in srgb, var(--clubColor) 18%, transparent);
     }
-    .player-tabs::-webkit-scrollbar { display: none; }
-    .player-tab {
+    .cpb-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: var(--font-serif);
+      font-weight: 700;
+      font-size: 16px;
       flex-shrink: 0;
-      padding: 8px 14px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: #fff;
-      color: var(--ink);
-      font-size: 13px;
+      box-shadow:
+        inset 0 -2px 0 rgba(0, 0, 0, 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    }
+    .cpb-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .cpb-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 10px;
       font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .cpb-name {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--clubColor);
+      line-height: 1.1;
+      letter-spacing: 0.005em;
+      overflow: hidden;
+      text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .player-tab:hover { border-color: var(--clubColor); }
-    .player-tab.is-active {
-      background: var(--clubColor);
-      color: #FAF7EE;
-      border-color: var(--clubColor);
+
+    /* === Live-board card interactive (mode host) ===
+       Quand canHostSwitch=true, chaque .live-card devient un bouton qui
+       switche le joueur courant. Le joueur actif a un ring honey épais. */
+    .live-list[data-host-interactive="true"] .live-card {
+      cursor: pointer;
+      transition: transform 0.18s var(--ease-expo), box-shadow 0.18s, border-color 0.18s;
     }
-    .player-tab.is-me { font-style: italic; }
+    .live-list[data-host-interactive="true"] .live-card:hover {
+      transform: translateY(-1px);
+    }
+    .live-list[data-host-interactive="true"] .live-card:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .live-list[data-host-interactive="true"] .live-card.is-current {
+      transform: scale(1.015);
+      box-shadow:
+        0 0 0 2px var(--clubColor),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 6px 18px -8px color-mix(in srgb, var(--clubColor) 38%, transparent);
+    }
 
     .play-header {
       color: #FAF7EE;

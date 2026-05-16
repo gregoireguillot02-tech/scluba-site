@@ -156,6 +156,22 @@ export async function countUp(
 }
 
 /**
+ * Fade-y subtil sur le banner "TOUR DE [joueur]" quand le joueur courant
+ * change (mode host). Communique le switch sans agresser — l'auto-advance
+ * peut chaîner plusieurs switches, le banner doit "respirer" entre eux.
+ * Spring elastic léger pour matcher le pattern des autres feedbacks.
+ */
+export async function flashPlayerSwitch(banner: HTMLElement | null): Promise<void> {
+  if (!banner || prefersReducedMotion()) return;
+  const { gsap } = await gsapBundle();
+  gsap.fromTo(
+    banner,
+    { y: -6, autoAlpha: 0.4 },
+    { y: 0, autoAlpha: 1, duration: 0.4, ease: 'expo.out' },
+  );
+}
+
+/**
  * Ring honey burst depuis une card (utilisée quand un joueur prend la
  * tête du classement). Overlay div positionné absolu sur la card, anime
  * scale 1 → 1.08 + opacity 0.7 → 0, puis se retire du DOM.
