@@ -1,0 +1,467 @@
+---
+/**
+ * Variant C — Arc'teryx / Hoka-style (premium minimal techwear)
+ *
+ * Mood : minimal premium techwear / outdoor pro gear, confiance silencieuse.
+ * Inspirations : Arc'teryx Veilance, Hoka, Bang & Olufsen Beoplay, Norse Projects.
+ *
+ * Caractéristiques :
+ *  - Fond #0D0D0D quasi noir, surface #181818, accents honey #D4A574 SUBTILS
+ *  - Geist sans-serif partout + tabular nums
+ *  - Lignes graphiques fines 1px, beaucoup d'espace négatif
+ *  - Pas de gradients, pas de shadows lourdes
+ *  - Honey est utilisé comme accent ponctuel, pas comme marque dominante
+ *  - Mood : fonctionnel, premium, silencieux
+ */
+export const prerender = false;
+
+import { FIXTURE, orderedLeaderboard, totalsFor, scoreFor } from './_fixture';
+
+const currentHoleObj = FIXTURE.holes.find((h) => h.number === FIXTURE.currentHole)!;
+const me = FIXTURE.players.find((p) => p.id === FIXTURE.currentPlayerId)!;
+const leaderboard = orderedLeaderboard();
+const totalPar = FIXTURE.holes.reduce((s, h) => s + h.par, 0);
+const myTotals = totalsFor(me.id);
+---
+
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="color-scheme" content="dark" />
+  <title>Variant C · Arc'teryx-style</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" />
+  <style is:global>
+    :root {
+      --bg: #0D0D0D;
+      --surface: #181818;
+      --surface-2: #222222;
+      --line: rgba(255, 255, 255, 0.07);
+      --line-strong: rgba(255, 255, 255, 0.14);
+      --text: #F2F2F2;
+      --text-soft: #A8A8A8;
+      --text-muted: #6E6E6E;
+      --honey: #D4A574;
+      --honey-soft: rgba(212, 165, 116, 0.08);
+      --green-good: #94D2BD;
+      --red-bad: #E07A5F;
+      --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100dvh;
+    }
+  </style>
+</head>
+<body>
+  <main class="play">
+    <!-- Top : two thin lines (rule + club name + hole counter) -->
+    <header class="top">
+      <div class="top-line top-line-thin"></div>
+      <div class="top-row">
+        <p class="top-club">{FIXTURE.club.name}</p>
+        <p class="top-hole">{String(FIXTURE.currentHole).padStart(2, '0')} <span class="top-sep">/</span> {FIXTURE.holes.length}</p>
+      </div>
+      <div class="top-line top-line-thin"></div>
+    </header>
+
+    <!-- Live leaderboard : list minimal -->
+    <section class="board">
+      <header class="board-head">
+        <span class="board-label">CLASSEMENT</span>
+        <span class="board-label board-label-faint">LIVE</span>
+      </header>
+      <ul class="board-list">
+        {leaderboard.map((row, i) => (
+          <li class={`row${row.id === FIXTURE.currentPlayerId ? ' is-current' : ''}${i === 0 ? ' is-leader' : ''}`}>
+            <span class="row-rank">{i + 1}</span>
+            <span class="row-name">{row.name}{row.is_me && <span class="row-me"> · moi</span>}</span>
+            <span class="row-played">{row.played} trous</span>
+            <span class="row-strokes">{row.strokes}</span>
+            <span class={`row-diff ${row.diff < 0 ? 'is-under' : row.diff > 0 ? 'is-over' : 'is-even'}`}>
+              {row.diff === 0 ? '±0' : row.diff > 0 ? `+${row.diff}` : row.diff}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <!-- Current player block : large discrete name -->
+    <section class="now">
+      <div class="now-rule"></div>
+      <div class="now-content">
+        <span class="now-label">EN SAISIE</span>
+        <h1 class="now-name">{me.name}</h1>
+        <span class="now-hole">Trou {FIXTURE.currentHole} · {currentHoleObj.name}</span>
+      </div>
+      <div class="now-rule"></div>
+    </section>
+
+    <!-- Par display : single big number, centered -->
+    <section class="par-block">
+      <span class="par-label">PAR</span>
+      <span class="par-num">{currentHoleObj.par}</span>
+    </section>
+
+    <!-- Par-relative buttons : minimal pill row -->
+    <section class="rel-buttons">
+      <button type="button" class="rel-btn">
+        <span class="rel-label">Eagle</span>
+        <span class="rel-strokes">{currentHoleObj.par - 2}</span>
+      </button>
+      <button type="button" class="rel-btn">
+        <span class="rel-label">Birdie</span>
+        <span class="rel-strokes">{currentHoleObj.par - 1}</span>
+      </button>
+      <button type="button" class="rel-btn is-par">
+        <span class="rel-label">Par</span>
+        <span class="rel-strokes">{currentHoleObj.par}</span>
+      </button>
+      <button type="button" class="rel-btn">
+        <span class="rel-label">Bogey</span>
+        <span class="rel-strokes">{currentHoleObj.par + 1}</span>
+      </button>
+      <button type="button" class="rel-btn">
+        <span class="rel-label">Double</span>
+        <span class="rel-strokes">{currentHoleObj.par + 2}</span>
+      </button>
+    </section>
+
+    <div class="pill-row">
+      <button type="button" class="pill">Autre score</button>
+      <button type="button" class="pill">Abandonner</button>
+    </div>
+
+    <!-- Scorecard : numbers as poetry -->
+    <section class="card">
+      <header class="card-head">
+        <span class="card-label">CARTE</span>
+        <span class="card-total">
+          <span class="card-strokes">{myTotals.strokes}</span>
+          <span class="card-par">/ Par {totalPar}</span>
+        </span>
+      </header>
+      <div class="grid">
+        {FIXTURE.holes.map((h) => {
+          const s = scoreFor(me.id, h.number);
+          const cls = s === null
+            ? 'cell-empty'
+            : s < h.par ? 'cell-under'
+            : s === h.par ? 'cell-par'
+            : 'cell-over';
+          return (
+            <div class={`cell ${cls}${h.number === FIXTURE.currentHole ? ' cell-current' : ''}`}>
+              <span class="cell-strokes">{s ?? '—'}</span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+
+    <p class="proto-note">VARIANT C · ARC'TERYX-STYLE · MINIMAL</p>
+  </main>
+
+  <style>
+    .play {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+      min-height: 100dvh;
+    }
+
+    /* === Top === */
+    .top { padding-top: 28px; margin-bottom: 32px; }
+    .top-line-thin {
+      height: 1px;
+      background: var(--line-strong);
+    }
+    .top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+    }
+    .top-club {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: 0.005em;
+    }
+    .top-hole {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+    }
+    .top-sep { color: var(--text-muted); margin: 0 2px; }
+
+    /* === Board === */
+    .board { margin-bottom: 36px; }
+    .board-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .board-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      color: var(--text-soft);
+    }
+    .board-label-faint { color: var(--text-muted); }
+    .board-list { list-style: none; margin: 0; padding: 0; }
+    .row {
+      display: grid;
+      grid-template-columns: 16px 1fr auto auto auto;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .row:first-child { border-top: 1px solid var(--line); }
+    .row.is-leader .row-rank { color: var(--honey); font-weight: 600; }
+    .row.is-current {
+      background: linear-gradient(90deg, var(--honey-soft) 0%, transparent 60%);
+      padding-left: 8px;
+      padding-right: 8px;
+      margin: 0 -8px;
+      border-bottom-color: rgba(212, 165, 116, 0.25);
+    }
+    .row-rank {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .row-name {
+      font-size: 14.5px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.005em;
+    }
+    .row-me { color: var(--honey); font-weight: 400; font-size: 12px; margin-left: 4px; }
+    .row-played {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      letter-spacing: 0.01em;
+    }
+    .row-strokes {
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      min-width: 28px;
+      text-align: right;
+    }
+    .row-diff {
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      min-width: 32px;
+      text-align: right;
+      letter-spacing: 0.02em;
+    }
+    .row-diff.is-under { color: var(--green-good); }
+    .row-diff.is-over  { color: var(--red-bad); }
+    .row-diff.is-even  { color: var(--text-soft); }
+
+    /* === Now === */
+    .now { margin-bottom: 40px; }
+    .now-rule {
+      height: 1px;
+      background: var(--line-strong);
+    }
+    .now-content {
+      padding: 28px 0 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      text-align: center;
+    }
+    .now-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      color: var(--honey);
+    }
+    .now-name {
+      margin: 0;
+      font-size: 36px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .now-hole {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    /* === Par block === */
+    .par-block {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+    .par-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      color: var(--text-muted);
+    }
+    .par-num {
+      font-size: 96px;
+      font-weight: 300;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    /* === Rel buttons === */
+    .rel-buttons {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .rel-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 16px 4px 14px;
+      background: transparent;
+      border: 1px solid var(--line-strong);
+      border-radius: 4px;
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      min-height: 88px;
+    }
+    .rel-btn:hover { border-color: rgba(255, 255, 255, 0.3); }
+    .rel-btn.is-par {
+      border-color: var(--honey);
+      background: var(--honey-soft);
+    }
+    .rel-label {
+      font-size: 10.5px;
+      font-weight: 500;
+      color: var(--text-soft);
+      letter-spacing: 0.04em;
+    }
+    .rel-btn.is-par .rel-label { color: var(--honey); }
+    .rel-strokes {
+      font-size: 26px;
+      font-weight: 400;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    /* === Pills === */
+    .pill-row { display: flex; gap: 8px; margin-bottom: 36px; }
+    .pill {
+      flex: 1;
+      padding: 12px 16px;
+      background: transparent;
+      border: 1px solid var(--line-strong);
+      border-radius: 4px;
+      color: var(--text-soft);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      letter-spacing: 0.005em;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .pill:hover { border-color: rgba(255, 255, 255, 0.3); color: var(--text); }
+
+    /* === Card === */
+    .card {
+      margin-bottom: 32px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line-strong);
+    }
+    .card-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      color: var(--text-muted);
+    }
+    .card-total {
+      font-variant-numeric: tabular-nums;
+    }
+    .card-strokes {
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .card-par {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 1px;
+      background: var(--line);
+      padding: 1px;
+    }
+    .cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+    }
+    .cell-strokes {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.005em;
+    }
+    .cell-empty .cell-strokes { color: var(--text-muted); }
+    .cell-under .cell-strokes { color: var(--green-good); font-weight: 500; }
+    .cell-par .cell-strokes { color: var(--honey); font-weight: 500; }
+    .cell-over .cell-strokes { color: var(--red-bad); }
+    .cell-current { background: var(--honey-soft); }
+    .cell-current .cell-strokes { color: var(--honey); font-weight: 500; }
+
+    .proto-note {
+      text-align: center;
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: var(--text-muted);
+      opacity: 0.4;
+      margin-top: 40px;
+    }
+  </style>
+</body>
+</html>
