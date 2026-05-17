@@ -124,6 +124,68 @@
   --content-width: 1080px;
 }
 
+/* === Athletic Pro Dark — switch des pages player vers Variant B golf vert ===
+   Scopé à body[data-player-flow] (mis par PlayerLayout sur les 4 pages
+   /r/[shortCode]/{join,index,play,recap}). N'impacte pas la landing
+   scluba.com ni /ops. Bascule de "Editorial Country-Club" vers
+   "Athletic Pro Dark" : fond near-black, accent vert vibrant fairway,
+   Inter + Sora à la place de Fraunces + JetBrains Mono.
+
+   Si la direction est validée en test prod, on industrialise proprement
+   en PR ultérieure (réécriture du tokens.css au lieu d'overrides).
+   Pour l'instant : overrides minimaux qui basculent l'ensemble en
+   cascade via la propagation des CSS variables. */
+body[data-player-flow] {
+  /* Surfaces — passe du paper crème au dark near-black */
+  --paper:       #0F0F0F;
+  --paper-deep:  #1C1C1E;
+  --paper-warm:  #28282A;
+  --bg:          #0F0F0F;
+  --bg-soft:     #1C1C1E;
+
+  /* Lignes — opacité élevée sur dark */
+  --rule:        rgba(255, 255, 255, 0.08);
+  --rule-strong: rgba(255, 255, 255, 0.16);
+  --line:        rgba(255, 255, 255, 0.08);
+  --line-soft:   rgba(255, 255, 255, 0.04);
+
+  /* Texte — inversion contrastée */
+  --ink:         #FAFAFA;
+  --ink-soft:    #E5E5E5;
+  --muted:       #B5B5B5;
+  --muted-soft:  #7E7E7E;
+
+  /* Accent — vert fairway vibrant à la place du honey */
+  --accent:        #10D277;
+  --accent-soft:   rgba(16, 210, 119, 0.14);
+  --accent-bright: #2BE085;
+
+  /* Primary (forest) — gardé pour le brand mais ajusté pour visibilité dark */
+  --primary:      #10D277;
+  --primary-soft: #5EEAD4;
+  --primary-bg:   rgba(16, 210, 119, 0.08);
+  --primary-deep: #0A9D5C;
+
+  /* Typo — Sora display + Inter body à la place de Fraunces + JetBrains */
+  --font-display: 'Sora', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif:   'Sora', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* font-mono inchangé : JetBrains Mono reste pour les eyebrows micro-caps */
+
+  /* Shadow — tinted vert au lieu de forest */
+  --shadow-sm:
+    0 1px 2px rgba(0, 0, 0, 0.32),
+    0 2px 4px rgba(0, 0, 0, 0.20);
+  --shadow-md:
+    0 1px 2px rgba(0, 0, 0, 0.32),
+    0 4px 12px rgba(0, 0, 0, 0.32),
+    0 12px 32px rgba(0, 0, 0, 0.24);
+  --shadow-lg:
+    0 1px 3px rgba(0, 0, 0, 0.32),
+    0 8px 20px rgba(0, 0, 0, 0.40),
+    0 24px 56px rgba(0, 0, 0, 0.40);
+}
+
 /* === Glass Forest — Liquid Glass adapté à l'identité éditoriale ===
    Pas le Liquid Glass iOS 26 blanc/bleu futuriste : un "papier glacé"
    forest/honey qui s'intègre dans le carnet de partie. À appliquer

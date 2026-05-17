@@ -31,18 +31,20 @@ interface Props {
 
 const {
   title,
-  themeColor = '#FAF7EE',
+  themeColor = '#0F0F0F',
   clubColor = '#1B4332',
   bodyClass = '',
   lockOverscroll = false,
 } = Astro.props;
 
-// Inline style sur <body> : expose --clubColor + bg + overscroll.
-// On garde #FAF7EE en bg pour la parité visuelle PR1 — le swap vers --paper
-// (#FAF5E8) se fera en PR2 où les pages joueur basculent sur le crème.
+// Switch Athletic Pro Dark (Variant B golf vert) : tout le flow joueur
+// bascule sur fond near-black + accent vert vibrant + Inter/Sora.
+// Le data-attribute `player-flow` permet aux tokens.css de scoper les
+// overrides à /r/* (pas la landing, pas /ops).
 const bodyStyle = [
   `--clubColor: ${clubColor}`,
-  'background: #FAF7EE',
+  'background: #0F0F0F',
+  'color: #FAFAFA',
   'min-height: 100dvh',
   'margin: 0',
   'overflow-x: hidden',
@@ -60,33 +62,21 @@ const bodyStyle = [
   <meta name="theme-color" content={themeColor} />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-  <!-- === Fonts : Fraunces (display) + JetBrains Mono (labels) ===
-       Strategy PR5 :
-        1. preconnect aux 2 origines Google Fonts (DNS + TLS warm-up)
-        2. preload de la CSS comme "style" (discovery prioritaire avant
-           le HTML parser n'atteigne le <link rel="stylesheet"> classique)
-        3. stylesheet load standard avec font-display: swap (fallback
-           Georgia immédiat, swap silencieux quand Fraunces arrive)
-        4. URL Fraunces réduite aux 3 weights effectivement utilisés
-           (700 titres / 800 chiffres / 900 code XL) — les autres
-           weights (400/500/600) ne sont jamais référencés en CSS,
-           pas la peine de générer leurs @font-face.
-        5. Fraunces étant un variable font, le browser télécharge UN
-           SEUL woff2 qui couvre toute la range wght 100-900. Les
-           weights listés ne changent pas la taille du fichier — juste
-           la taille de la CSS Google (économie marginale mais propre).
-
-       JetBrains Mono : un seul weight 500 suffit pour les eyebrow micro-caps. -->
+  <!-- === Fonts Athletic Pro Dark : Inter (body) + Sora (display) ===
+       Switch direction "Variant B golf vert" : on remplace Fraunces
+       (serif éditorial) par Sora pour les titres XL (sans-serif geometric
+       énergique) + Inter pour le body (lisibilité optimale sur dark).
+       JetBrains Mono reste disponible pour les éventuels eyebrows mono. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     rel="preload"
     as="style"
-    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800;9..144,900&family=JetBrains+Mono:wght@500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
   />
   <link
     rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800;9..144,900&family=JetBrains+Mono:wght@500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
   />
 
   <!-- === View Transitions (Astro 6 ClientRouter) ===
@@ -104,7 +94,7 @@ const bodyStyle = [
        défaut, comportement gracieusement dégradé. -->
   <ClientRouter />
 </head>
-<body style={bodyStyle} class={bodyClass}>
+<body style={bodyStyle} class={bodyClass} data-player-flow>
   <slot />
 </body>
 </html>
