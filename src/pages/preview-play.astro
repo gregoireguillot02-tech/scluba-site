@@ -1,0 +1,209 @@
+---
+/**
+ * /preview-play — preview du flow joueur avec données mock (sans DB).
+ *
+ * Utilise le vrai PlayerLayout → bénéficie du data-player-flow et donc
+ * du switch Athletic Pro Dark via tokens.css. Affichage statique
+ * read-only : pas de saisie, pas de realtime, juste le rendu visuel
+ * pour valider rapidement le design sans avoir à créer une partie.
+ *
+ * URL publique : https://scluba.com/preview-play
+ * noindex pour ne pas polluer le SEO.
+ */
+export const prerender = false;
+
+import PlayerLayout from '../layouts/PlayerLayout.astro';
+
+// Mock data — round fictif Caen-la-Mer, 3 joueurs, 5/18 trous joués
+const club = { name: 'Golf de Caen-La-Mer', primary_color: '#1A4490' };
+const players = [
+  { id: 'p1', name: 'Gregoire', is_creator: true,  is_me: true,  diff: 2,  strokes: 22, played: 5 },
+  { id: 'p2', name: 'Martin',   is_creator: false, is_me: false, diff: 3,  strokes: 23, played: 5 },
+  { id: 'p3', name: 'Jean',     is_creator: false, is_me: false, diff: 0,  strokes: 20, played: 5 },
+];
+const leaderboard = [...players].sort((a, b) => a.diff - b.diff);
+const holes = [
+  { number: 1,  par: 4 }, { number: 2,  par: 3 }, { number: 3,  par: 5 },
+  { number: 4,  par: 4 }, { number: 5,  par: 4 }, { number: 6,  par: 4 },
+  { number: 7,  par: 3 }, { number: 8,  par: 5 }, { number: 9,  par: 4 },
+  { number: 10, par: 4 }, { number: 11, par: 3 }, { number: 12, par: 5 },
+  { number: 13, par: 4 }, { number: 14, par: 4 }, { number: 15, par: 5 },
+  { number: 16, par: 3 }, { number: 17, par: 4 }, { number: 18, par: 4 },
+];
+const currentHole = 6;
+const currentHoleObj = holes.find((h) => h.number === currentHole)!;
+const me = players.find((p) => p.id === 'p2')!;
+const totalPar = holes.reduce((s, h) => s + h.par, 0);
+const myScores: Record<number, number> = { 1: 4, 2: 4, 3: 5, 4: 5, 5: 5 };
+---
+
+<PlayerLayout
+  title={`${club.name} — Preview · Scluba`}
+  themeColor="#0F0F0F"
+  clubColor={club.primary_color}
+  lockOverscroll={true}
+>
+  <main class="play">
+    <p class="demo-banner">PREVIEW · données fictives · Athletic Pro Dark Variant B</p>
+
+    <header class="play-header" style={`background: ${club.primary_color}`}>
+      <div class="play-header-inner">
+        <div class="play-header-text">
+          <p class="play-club">{club.name}</p>
+          <p class="play-player">{me.name}</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="live-board" aria-label="Classement en direct">
+      <ul class="live-list">
+        {leaderboard.map((row, i) => (
+          <li class={`live-card${row.id === me.id ? ' is-current' : ''}${i === 0 ? ' is-leader' : ''}`}>
+            <span class="live-avatar" style={`background: hsl(${i * 80 + 40}, 55%, 55%)`}>{row.name[0]}</span>
+            <div class="live-info">
+              <span class="live-name">{row.name}{row.is_me && <em> (vous)</em>}</span>
+              <span class="live-sub">{i === 0 ? `${row.played} TROUS JOUÉS` : `+${row.diff - leaderboard[0].diff} VS LEADER`}</span>
+            </div>
+            <span class="live-medal" aria-hidden="true">
+              {i === 0 && <svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="10" fill="#10D277" stroke="#0F0F0F" stroke-width="1.25"/><text x="12" y="16" text-anchor="middle" font-family="Sora" font-weight="800" font-size="11" fill="#0F0F0F">1</text></svg>}
+              {i === 1 && <svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="10" fill="#D5D8DD" stroke="#0F0F0F" stroke-width="1.25"/><text x="12" y="16" text-anchor="middle" font-family="Sora" font-weight="800" font-size="11" fill="#0F0F0F">2</text></svg>}
+              {i === 2 && <svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="10" fill="#B07D5B" stroke="#0F0F0F" stroke-width="1.25"/><text x="12" y="16" text-anchor="middle" font-family="Sora" font-weight="800" font-size="11" fill="#FAFAFA">3</text></svg>}
+            </span>
+            <span class="live-score">
+              <strong class="live-strokes">{row.strokes}</strong>
+              <span class={`live-diff ${row.diff < 0 ? 'under' : row.diff > 0 ? 'over' : ''}`}>{row.diff === 0 ? '±0' : row.diff > 0 ? `+${row.diff}` : row.diff}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <div class="current-player-banner">
+      <span class="cpb-avatar" style="background: hsl(120, 55%, 55%)">M</span>
+      <div class="cpb-text">
+        <span class="cpb-eyebrow">TOUR DE</span>
+        <span class="cpb-name">{me.name}</span>
+      </div>
+    </div>
+
+    <section class="hole-card">
+      <div class="hole-meta">
+        <span class="hole-meta-label">Trou</span>
+        <span class="hole-meta-count">{currentHole} / {holes.length}</span>
+      </div>
+      <div class="hole-par-block">
+        <div class="hole-par-label">PAR</div>
+        <div class="hole-par-value">{currentHoleObj.par}</div>
+      </div>
+
+      <div class="rel-buttons">
+        <button type="button" class="rel-btn" disabled><span class="rel-label">Eagle</span><span class="rel-strokes">{currentHoleObj.par - 2}</span></button>
+        <button type="button" class="rel-btn" disabled><span class="rel-label">Birdie</span><span class="rel-strokes">{currentHoleObj.par - 1}</span></button>
+        <button type="button" class="rel-btn is-par" disabled><span class="rel-label">Par</span><span class="rel-strokes">{currentHoleObj.par}</span></button>
+        <button type="button" class="rel-btn" disabled><span class="rel-label">Bogey</span><span class="rel-strokes">{currentHoleObj.par + 1}</span></button>
+        <button type="button" class="rel-btn" disabled><span class="rel-label">Double</span><span class="rel-strokes">{currentHoleObj.par + 2}</span></button>
+      </div>
+
+      <div class="pill-row">
+        <button type="button" class="pill" disabled>Autre score</button>
+        <button type="button" class="pill pill-warn" disabled>Abandonner</button>
+      </div>
+    </section>
+
+    <section class="card-grid-wrap">
+      <header class="card-head">
+        <span>Carte de {me.name}</span>
+        <span class="card-total"><strong>{me.strokes}</strong> coups · par {totalPar}</span>
+      </header>
+      <div class="grid">
+        {holes.map((h) => {
+          const s = myScores[h.number];
+          const cls = !s ? 'cell-empty' : s < h.par ? 'cell-under' : s === h.par ? 'cell-par' : s === h.par + 1 ? 'cell-bogey' : 'cell-over';
+          return (
+            <div class={`cell ${cls}${h.number === currentHole ? ' cell-current' : ''}`}>
+              <span class="cell-strokes">{s ?? '–'}</span>
+              <span class="cell-num">{h.number}</span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+
+    <button type="button" class="finish-btn" disabled>Terminer maintenant</button>
+
+    <p class="proto-note">PREVIEW PUBLIC · scluba.com/preview-play</p>
+  </main>
+</PlayerLayout>
+
+<style>
+  .play { max-width: 480px; margin: 0 auto; padding: 0 0 80px; min-height: 100dvh; }
+  .demo-banner {
+    margin: 0;
+    padding: 8px 16px;
+    background: var(--accent-soft, rgba(16, 210, 119, 0.14));
+    color: var(--accent, #10D277);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-align: center;
+    border-bottom: 1px solid rgba(16, 210, 119, 0.25);
+  }
+  .play-header { color: #FAFAFA; padding: 18px 20px; }
+  .play-header-inner { display: flex; align-items: center; gap: 12px; }
+  .play-club { margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .play-player { margin: 2px 0 0; font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.8; }
+  .live-board { padding: 12px 16px; background: var(--paper-deep); border-bottom: 1px solid var(--rule); }
+  .live-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .live-card { display: grid; grid-template-columns: 40px 1fr auto auto; align-items: center; gap: 12px; padding: 12px 14px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--rule); border-radius: 12px; }
+  .live-card.is-leader { background: linear-gradient(135deg, rgba(16, 210, 119, 0.18) 0%, rgba(16, 210, 119, 0.06) 100%); border-color: rgba(16, 210, 119, 0.45); }
+  .live-card.is-current { box-shadow: 0 0 0 2px var(--clubColor); }
+  .live-avatar { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 17px; }
+  .live-info { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+  .live-name { font-family: var(--font-display); font-weight: 600; font-size: 14.5px; color: var(--ink); }
+  .live-name em { font-style: italic; font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 2px; }
+  .live-sub { font-family: var(--font-mono); font-weight: 500; font-size: 10.5px; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; }
+  .live-medal { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; }
+  .live-score { display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; min-width: 64px; justify-content: flex-end; }
+  .live-strokes { font-family: var(--font-display); font-size: 24px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .live-diff { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--muted); min-width: 28px; text-align: right; }
+  .live-diff.over { color: #FB7185; }
+  .live-diff.under { color: #5EEAD4; }
+  .current-player-banner { display: flex; align-items: center; gap: 12px; margin: 12px 16px 0; padding: 14px 16px; background: linear-gradient(135deg, var(--accent) 0%, #0A9D5C 100%); border-radius: 14px; box-shadow: 0 12px 32px -12px rgba(16, 210, 119, 0.48); }
+  .cpb-avatar { width: 42px; height: 42px; border-radius: 50%; background: rgba(0, 0, 0, 0.25); display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 18px; font-weight: 800; color: #fff; }
+  .cpb-text { display: flex; flex-direction: column; gap: 2px; }
+  .cpb-eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; }
+  .cpb-name { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
+  .hole-card { padding: 20px; margin: 12px 16px 0; background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 14px; position: relative; }
+  .hole-meta { display: flex; gap: 6px; align-items: baseline; justify-content: flex-end; color: var(--accent); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; font-family: var(--font-mono); }
+  .hole-meta-label { font-weight: 600; }
+  .hole-meta-count { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+  .hole-par-block { text-align: center; padding: 8px 0 20px; }
+  .hole-par-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.3em; color: var(--muted); text-transform: uppercase; }
+  .hole-par-value { font-family: var(--font-display); font-size: 86px; font-weight: 800; color: var(--ink); line-height: 0.9; }
+  .rel-buttons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px; }
+  .rel-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 4px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--rule); border-radius: 12px; color: var(--ink); cursor: not-allowed; opacity: 0.6; min-height: 88px; }
+  .rel-btn.is-par { opacity: 1; background: linear-gradient(135deg, var(--accent) 0%, #0A9D5C 100%); border-color: var(--accent); box-shadow: 0 8px 24px -8px rgba(16, 210, 119, 0.55); }
+  .rel-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+  .rel-btn.is-par .rel-label { color: rgba(255, 255, 255, 0.85); }
+  .rel-strokes { font-family: var(--font-display); font-size: 26px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .rel-btn.is-par .rel-strokes { color: #fff; }
+  .pill-row { display: flex; gap: 6px; }
+  .pill { flex: 1; padding: 12px 16px; background: transparent; border: 1px solid var(--rule-strong); border-radius: 999px; color: var(--muted); font-family: var(--font-sans); font-size: 13px; font-weight: 600; cursor: not-allowed; opacity: 0.5; }
+  .pill-warn { border-color: rgba(251, 113, 133, 0.4); color: #FB7185; }
+  .card-grid-wrap { margin: 20px 16px 0; padding: 16px; background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 14px; }
+  .card-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--ink); }
+  .card-total strong { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--accent); }
+  .card-total { font-size: 11px; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; }
+  .cell { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: #0F0F0F; border: 1px solid var(--rule); border-radius: 6px; }
+  .cell-strokes { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1; font-variant-numeric: tabular-nums; }
+  .cell-num { font-family: var(--font-mono); font-size: 9px; font-weight: 500; color: var(--muted); }
+  .cell-empty .cell-strokes { color: var(--muted); opacity: 0.4; }
+  .cell-under { background: rgba(94, 234, 212, 0.10); border-color: rgba(94, 234, 212, 0.30); }
+  .cell-under .cell-strokes { color: #5EEAD4; }
+  .cell-par .cell-strokes { color: var(--accent); }
+  .cell-bogey .cell-strokes { color: var(--muted); }
+  .cell-over .cell-strokes { color: #FB7185; }
+  .cell-current { box-shadow: 0 0 0 2px var(--accent); }
+  .finish-btn { width: calc(100% - 32px); margin: 20px 16px 0; padding: 18px; background: linear-gradient(135deg, var(--accent) 0%, #0A9D5C 100%); border: none; border-radius: 14px; color: #fff; font-family: var(--font-display); font-size: 16px; font-weight: 700; cursor: not-allowed; opacity: 0.7; box-shadow: 0 12px 32px -8px rgba(16, 210, 119, 0.55); }
+  .proto-note { text-align: center; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.3em; color: var(--muted); opacity: 0.4; margin: 40px 0 0; }
+</style>
