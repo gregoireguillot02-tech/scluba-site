@@ -207,7 +207,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 
 <PlayerLayout
   title={`Carte du ${fmtDate(r.started_at ?? r.created_at)} — ${r.club.name} · Scluba`}
-  themeColor="#FAF7EE"
+  themeColor="#FFFFFF"
   clubColor={clubColor}
 >
   <main class="card">
@@ -441,9 +441,9 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: var(--space-3);
-      background: rgba(212, 165, 116, 0.10);
-      border-top: 1px solid rgba(212, 165, 116, 0.4);
-      border-bottom: 1px solid rgba(212, 165, 116, 0.4);
+      background: var(--accent-soft);
+      border-top: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
     }
     .meta-strip li {
       display: flex; flex-direction: column; gap: 4px; text-align: center;
@@ -639,8 +639,8 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       gap: var(--space-3);
       padding: var(--space-4) 0;
       margin-top: var(--space-4);
-      border-top: 1px dashed rgba(212, 165, 116, 0.5);
-      border-bottom: 1px dashed rgba(212, 165, 116, 0.5);
+      border-top: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+      border-bottom: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
     }
     .player-row > div { display: flex; flex-direction: column; gap: 4px; }
     .player-name {
