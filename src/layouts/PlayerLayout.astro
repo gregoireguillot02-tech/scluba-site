@@ -31,20 +31,19 @@ interface Props {
 
 const {
   title,
-  themeColor = '#0F0F0F',
-  clubColor = '#1B4332',
+  themeColor = '#FFFFFF',
+  clubColor = '#0EA968',
   bodyClass = '',
   lockOverscroll = false,
 } = Astro.props;
 
-// Switch Athletic Pro Dark (Variant B golf vert) : tout le flow joueur
-// bascule sur fond near-black + accent vert vibrant + Inter/Sora.
+// Strava Light Green — flow joueur sur fond white avec accent vert vibrant.
 // Le data-attribute `player-flow` permet aux tokens.css de scoper les
-// overrides à /r/* (pas la landing, pas /ops).
+// overrides à /r/* + /[slug] (pas la landing, pas /ops).
 const bodyStyle = [
   `--clubColor: ${clubColor}`,
-  'background: #0F0F0F',
-  'color: #FAFAFA',
+  'background: #FFFFFF',
+  'color: #0A0A0A',
   'min-height: 100dvh',
   'margin: 0',
   'overflow-x: hidden',

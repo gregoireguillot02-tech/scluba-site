@@ -124,66 +124,64 @@
   --content-width: 1080px;
 }
 
-/* === Athletic Pro Dark — switch des pages player vers Variant B golf vert ===
-   Scopé à body[data-player-flow] (mis par PlayerLayout sur les 4 pages
-   /r/[shortCode]/{join,index,play,recap}). N'impacte pas la landing
-   scluba.com ni /ops. Bascule de "Editorial Country-Club" vers
-   "Athletic Pro Dark" : fond near-black, accent vert vibrant fairway,
-   Inter + Sora à la place de Fraunces + JetBrains Mono.
+/* === Strava Light Green — direction validée 2026-05-15 ===
+   Scopé à body[data-player-flow] (PlayerLayout + [slug].astro). Mood
+   Strava-inspired (energetic, cards nettes, gros chiffres, accent vif)
+   mais en LIGHT theme : fond white/off-white, texte dark lisible, accent
+   vert vibrant #10D277 comme signature golf.
 
-   Si la direction est validée en test prod, on industrialise proprement
-   en PR ultérieure (réécriture du tokens.css au lieu d'overrides).
-   Pour l'instant : overrides minimaux qui basculent l'ensemble en
-   cascade via la propagation des CSS variables. */
+   Feedback Grégoire (test prod 2026-05-15) : le dark mode strict créait
+   des incohérences (mix dark+clair sur les pages mal patchées) et un
+   contraste catastrophique avec le bleu marine du club. Strava lui-même
+   est en light theme par défaut → on reprend cette base. */
 body[data-player-flow] {
-  /* Surfaces — passe du paper crème au dark near-black */
-  --paper:       #0F0F0F;
-  --paper-deep:  #1C1C1E;
-  --paper-warm:  #28282A;
-  --bg:          #0F0F0F;
-  --bg-soft:     #1C1C1E;
+  /* Surfaces — light theme propre */
+  --paper:       #FFFFFF;
+  --paper-deep:  #F9FAFB;
+  --paper-warm:  #F4F4F5;
+  --bg:          #FFFFFF;
+  --bg-soft:     #FAFAFA;
 
-  /* Lignes — opacité élevée sur dark */
-  --rule:        rgba(255, 255, 255, 0.08);
-  --rule-strong: rgba(255, 255, 255, 0.16);
-  --line:        rgba(255, 255, 255, 0.08);
-  --line-soft:   rgba(255, 255, 255, 0.04);
+  /* Lignes — opacité subtile sur clair */
+  --rule:        rgba(15, 23, 42, 0.08);
+  --rule-strong: rgba(15, 23, 42, 0.16);
+  --line:        rgba(15, 23, 42, 0.10);
+  --line-soft:   rgba(15, 23, 42, 0.05);
 
-  /* Texte — inversion contrastée */
-  --ink:         #FAFAFA;
-  --ink-soft:    #E5E5E5;
-  --muted:       #B5B5B5;
-  --muted-soft:  #7E7E7E;
+  /* Texte — dark sur clair (contraste WCAG AAA) */
+  --ink:         #0A0A0A;
+  --ink-soft:    #18181B;
+  --muted:       #71717A;
+  --muted-soft:  #A1A1AA;
 
-  /* Accent — vert fairway vibrant à la place du honey */
+  /* Accent — vert vibrant signature golf (sport-tech moderne) */
   --accent:        #10D277;
-  --accent-soft:   rgba(16, 210, 119, 0.14);
+  --accent-soft:   rgba(16, 210, 119, 0.10);
   --accent-bright: #2BE085;
 
-  /* Primary (forest) — gardé pour le brand mais ajusté pour visibilité dark */
-  --primary:      #10D277;
-  --primary-soft: #5EEAD4;
-  --primary-bg:   rgba(16, 210, 119, 0.08);
-  --primary-deep: #0A9D5C;
+  /* Primary — vert au lieu de forest pour cohérence */
+  --primary:      #0EA968;
+  --primary-soft: #34D399;
+  --primary-bg:   rgba(16, 210, 119, 0.06);
+  --primary-deep: #047857;
 
-  /* Typo — Sora display + Inter body à la place de Fraunces + JetBrains */
+  /* Typo — Sora display + Inter body (Strava-style sans-serif moderne) */
   --font-display: 'Sora', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-serif:   'Sora', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  /* font-mono inchangé : JetBrains Mono reste pour les eyebrows micro-caps */
 
-  /* Shadow — tinted vert au lieu de forest */
+  /* Shadow — tinted dark slate (cohérent light theme premium) */
   --shadow-sm:
-    0 1px 2px rgba(0, 0, 0, 0.32),
-    0 2px 4px rgba(0, 0, 0, 0.20);
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 2px 4px rgba(15, 23, 42, 0.04);
   --shadow-md:
-    0 1px 2px rgba(0, 0, 0, 0.32),
-    0 4px 12px rgba(0, 0, 0, 0.32),
-    0 12px 32px rgba(0, 0, 0, 0.24);
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 4px 12px rgba(15, 23, 42, 0.08),
+    0 12px 32px rgba(15, 23, 42, 0.08);
   --shadow-lg:
-    0 1px 3px rgba(0, 0, 0, 0.32),
-    0 8px 20px rgba(0, 0, 0, 0.40),
-    0 24px 56px rgba(0, 0, 0, 0.40);
+    0 1px 3px rgba(15, 23, 42, 0.07),
+    0 8px 20px rgba(15, 23, 42, 0.10),
+    0 24px 56px rgba(15, 23, 42, 0.10);
 }
 
 /* === Glass Forest — Liquid Glass adapté à l'identité éditoriale ===

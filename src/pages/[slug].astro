@@ -108,10 +108,9 @@ function fmtTime(iso: string | null): string {
   <title>{c.name} — Démarrer une partie · Scluba</title>
   <meta name="description" content={`Scorecard digitale pour ${c.name}. Démarrez une partie en quelques secondes.`} />
   <meta name="robots" content="noindex, nofollow" />
-  <meta name="theme-color" content="#0F0F0F" />
-  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#FFFFFF" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  {/* Fonts Athletic Pro Dark — Inter (body) + Sora (display). Cohérent
+  {/* Fonts Strava Light Green — Inter (body) + Sora (display). Cohérent
        avec le flow joueur (cf. PlayerLayout). */}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -120,7 +119,7 @@ function fmtTime(iso: string | null): string {
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
   />
 </head>
-<body data-player-flow style="background: #0F0F0F; color: #FAFAFA; min-height: 100dvh; margin: 0;">
+<body data-player-flow style="background: #FFFFFF; color: #0A0A0A; min-height: 100dvh; margin: 0;">
   <main class="club-page">
     <header class="masthead">
       {c.photo_url ? (
