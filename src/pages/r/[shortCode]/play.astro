@@ -120,18 +120,21 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
   lockOverscroll={true}
 >
   <main class="play">
-    {/* play-header est l'équivalent local du Masthead — bande colorée
-         clubColor + logo + nom club + prénom joueur. Les transition:name
-         matchent les éléments du Masthead (lobby/recap) pour que le logo
-         et le nom du club continuent visuellement entre les 3 pages. */}
-    <header class="play-header" style={`background: ${clubColor}`}>
+    {/* play-header : passé en dark sobre (Athletic Pro Dark). La couleur
+         du club est conservée mais en micro-accent (dot 14px) pour éviter
+         que l'aplat plein ne jure avec la palette vert+dark. Le logo club
+         garde sa place si présent. */}
+    <header class="play-header">
       <div class="play-header-inner">
-        {r.club.logo_url && (
-          <img class="play-header-logo" src={r.club.logo_url} alt="" transition:name="player-club-logo" />
-        )}
+        {r.club.logo_url
+          ? <img class="play-header-logo" src={r.club.logo_url} alt="" transition:name="player-club-logo" />
+          : <span class="play-header-mark" aria-hidden="true">
+              <span class="mark-dot" style={`background: ${clubColor}`}></span>
+            </span>
+        }
         <div class="play-header-text">
+          <p class="play-eyebrow">EN COURS · {me.display_name.toUpperCase()}</p>
           <p class="play-club" transition:name="player-club-name">{r.club.name}</p>
-          <p class="play-player">{me.display_name}</p>
         </div>
       </div>
     </header>
@@ -1230,10 +1233,10 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
        le repère "c'est toi". Si me === leader, la card leader prime
        (cascade naturelle, .is-leader vient en dernier en CSS). */
     .live-card.is-me {
-      border-color: var(--clubColor);
+      border-color: var(--accent);
       border-width: 1.5px;
       background:
-        linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--clubColor) 7%, transparent) 100%),
+        linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--accent) 7%, transparent) 100%),
         rgba(255, 255, 248, 0.92);
     }
     .live-card.is-me.is-leader {
@@ -1336,7 +1339,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       font-family: var(--font-serif);
       font-size: 24px;
       font-weight: 800;
-      color: var(--clubColor);
+      color: var(--accent);
       line-height: 1;
     }
     .live-diff {
@@ -1364,14 +1367,14 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       padding: 10px 14px;
       background: linear-gradient(
         135deg,
-        color-mix(in srgb, var(--clubColor) 12%, transparent),
-        color-mix(in srgb, var(--clubColor) 4%, transparent)
+        color-mix(in srgb, var(--accent) 12%, transparent),
+        color-mix(in srgb, var(--accent) 4%, transparent)
       );
-      border: 1px solid color-mix(in srgb, var(--clubColor) 35%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
       border-radius: 12px;
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.5),
-        0 2px 6px -2px color-mix(in srgb, var(--clubColor) 18%, transparent);
+        0 2px 6px -2px color-mix(in srgb, var(--accent) 18%, transparent);
     }
     .cpb-avatar {
       width: 38px; height: 38px;
@@ -1406,7 +1409,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       font-family: var(--font-serif);
       font-size: 20px;
       font-weight: 800;
-      color: var(--clubColor);
+      color: var(--accent);
       line-height: 1.1;
       letter-spacing: 0.005em;
       overflow: hidden;
@@ -1431,28 +1434,58 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     .live-list[data-host-interactive="true"] .live-card.is-current {
       transform: scale(1.015);
       box-shadow:
-        0 0 0 2px var(--clubColor),
+        0 0 0 2px var(--accent),
         inset 0 1px 0 rgba(255, 255, 255, 0.6),
-        0 6px 18px -8px color-mix(in srgb, var(--clubColor) 38%, transparent);
+        0 6px 18px -8px color-mix(in srgb, var(--accent) 38%, transparent);
     }
 
+    /* Header dark sobre — Athletic Pro Dark. Plus d'aplat couleur club
+       (qui jurait avec la palette dark+vert), juste un dot identitaire
+       qui rappelle la couleur du club. Border-bottom honey-vert subtil. */
     .play-header {
-      color: #FAF7EE;
-      padding: var(--space-4) var(--space-5);
+      position: relative;
+      color: #FAFAFA;
+      padding: 20px var(--space-5) 16px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, transparent 100%);
+    }
+    .play-header::after {
+      content: '';
+      position: absolute;
+      left: var(--space-5);
+      right: var(--space-5);
+      bottom: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(16, 210, 119, 0.4) 50%, transparent 100%);
     }
     .play-header-inner {
       display: flex;
       align-items: center;
-      gap: var(--space-3);
+      gap: 14px;
     }
     .play-header-logo {
       width: 36px;
       height: 36px;
       object-fit: contain;
-      background: rgba(250, 247, 238, 0.92);
-      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
       padding: 4px;
       flex-shrink: 0;
+    }
+    .play-header-mark {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .mark-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
     }
     .play-header-text {
       flex: 1;
@@ -1461,22 +1494,34 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       gap: 2px;
       min-width: 0;
     }
+    .play-eyebrow {
+      margin: 0;
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
     .play-club {
       margin: 0;
-      font-family: var(--font-serif);
-      font-size: var(--text-md);
-      font-weight: 600;
-      letter-spacing: 0.02em;
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.015em;
+      color: #FAFAFA;
+      line-height: 1.1;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
     .play-player {
       margin: 0;
+      font-family: var(--font-mono);
       font-size: 11px;
       letter-spacing: 0.18em;
       text-transform: uppercase;
-      opacity: 0.85;
+      opacity: 0.6;
     }
 
     .hole-card {
@@ -1520,7 +1565,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       font-size: 10px;
       font-weight: 600;
       letter-spacing: 0.16em;
-      color: var(--clubColor);
+      color: var(--accent);
       text-transform: uppercase;
       pointer-events: none;
     }
@@ -1560,7 +1605,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.7);
       border: 1px solid rgba(212, 165, 116, 0.55);
-      color: var(--clubColor);
+      color: var(--accent);
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
@@ -1573,9 +1618,9 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       box-shadow: 0 0 0 5px rgba(15, 42, 30, 0.12);
     }
     .spectator-toggle-btn.is-active {
-      background: var(--clubColor);
+      background: var(--accent);
       color: #FAF7EE;
-      border-color: var(--clubColor);
+      border-color: var(--accent);
     }
 
     .hole-meta {
@@ -1595,7 +1640,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     .hole-meta-count {
       font-family: var(--font-serif);
       font-size: var(--text-md);
-      color: var(--clubColor);
+      color: var(--accent);
       font-weight: 700;
       letter-spacing: 0.05em;
     }
@@ -1615,7 +1660,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       font-family: var(--font-serif);
       font-size: clamp(3rem, 14vw, 4.5rem);
       font-weight: 800;
-      color: var(--clubColor);
+      color: var(--accent);
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
@@ -1644,7 +1689,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     }
     .leaderboard-head span:last-child {
       font-family: var(--font-serif);
-      color: var(--clubColor);
+      color: var(--accent);
       font-size: var(--text-sm);
       letter-spacing: 0;
       text-transform: none;
@@ -1664,7 +1709,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       padding: 16px 24px;
       border-radius: 12px;
       border: none;
-      background: var(--clubColor);
+      background: var(--accent);
       color: #FAF7EE;
       font-size: 16px;
       font-weight: 600;
