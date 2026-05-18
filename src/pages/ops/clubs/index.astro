@@ -43,16 +43,19 @@ function fmtDate(iso: string): string {
       <h1 class="ops-page-title">Clubs</h1>
       <p class="ops-page-subtitle">{allClubs.length} club{allClubs.length > 1 ? 's' : ''} avec page active</p>
     </div>
-    <form method="GET" class="search-form">
-      <input
-        class="ops-input"
-        type="search"
-        name="q"
-        value={q}
-        placeholder="Chercher par nom, ville, slug…"
-      />
-      <button type="submit" class="ops-btn">Filtrer</button>
-    </form>
+    <div class="header-actions">
+      <a href="/ops/clubs/import" class="ops-btn ops-btn-primary">+ Importer depuis URL</a>
+      <form method="GET" class="search-form">
+        <input
+          class="ops-input"
+          type="search"
+          name="q"
+          value={q}
+          placeholder="Chercher par nom, ville, slug…"
+        />
+        <button type="submit" class="ops-btn">Filtrer</button>
+      </form>
+    </div>
   </div>
 
   {allClubs.length === 0 ? (
@@ -104,13 +107,20 @@ function fmtDate(iso: string): string {
 </OpsLayout>
 
 <style>
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
   .search-form {
     display: flex;
     gap: 8px;
     align-items: center;
   }
-  .search-form .ops-input { width: 280px; }
+  .search-form .ops-input { width: 240px; }
   @media (max-width: 700px) {
+    .header-actions { width: 100%; }
     .search-form { width: 100%; flex-wrap: wrap; }
     .search-form .ops-input { flex: 1; min-width: 200px; }
   }
