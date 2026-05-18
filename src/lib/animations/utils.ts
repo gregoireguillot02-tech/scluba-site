@@ -75,3 +75,27 @@ export const EASE = {
   smooth: 'power3.inOut' as const,
   out: 'power2.out' as const,
 } as const;
+
+/**
+ * Haptic feedback léger via Vibration API. No-op silencieux si l'API
+ * n'est pas dispo (iOS Safari ne l'expose pas, c'est attendu et accepté
+ * — le tactile premium reste pour Android Chrome). Si l'OS a coupé les
+ * vibrations, vibrate() est aussi un no-op natif côté navigateur.
+ *
+ * Patterns utilisés (cf. plan Joyful Mist) :
+ *   - tap sélection score      : 8
+ *   - validation trou          : [8, 30, 8]
+ *   - long-press undo          : [10, 40, 10]
+ *   - first_birdie / eagle / hio : durées croissantes pour l'event
+ */
+export function haptic(pattern: number | number[]): void {
+  if (typeof navigator === 'undefined') return;
+  // navigator.vibrate retourne false si non supporté — pas une exception,
+  // donc try/catch est défensif uniquement pour les implems exotiques.
+  try {
+    const v = (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate;
+    if (typeof v === 'function') v.call(navigator, pattern);
+  } catch {
+    /* no-op silencieux */
+  }
+}

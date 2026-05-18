@@ -274,7 +274,15 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       countUp,
       pulseLeaderRing,
       flashPlayerSwitch,
+      drawStar,
+      applyHoleHalos,
+      pulseStreakRing,
+      paperTransitionToHole,
+      showEditorialLine,
     } from '../../../lib/animations/play';
+    import { haptic } from '../../../lib/animations/utils';
+    import { detectEvent, type ScoresMap, type ParsMap } from '../../../lib/events/round-events';
+    import { lineFor, canShowLine } from '../../../lib/events/templates';
 
     type CourseData = { holes: { number: number; par: number }[] };
     type LivePlayer = { id: string; name: string };
@@ -554,6 +562,46 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       let lastRenderedHole = currentHole;
       let lastRenderedFeedback = '';
 
+      // Joyful Mist : dernier trou pour lequel une ligne éditoriale a été
+      // affichée — sert à l'anti-spam (cf. templates.canShowLine). Null
+      // tant que rien n'a été dit ; reset implicite par partie (le state
+      // ne survit pas au reload de la page, ce qui est OK : un golfeur
+      // recharge rarement entre les holes).
+      let lastLineHole: number | null = null;
+      // ScoresMap immutable construit pour l'event detection — réutilisé
+      // pour chaque appel detectEvent dans saveScore.
+      const parsMap: ParsMap = Object.fromEntries(
+        course.holes.map((h) => [h.number, h.par]),
+      );
+      function buildScoresMap(pid: string): ScoresMap {
+        const sc = scoresOf(pid);
+        const pu = pickedUpOf(pid);
+        const out: Record<number, number | null> = {};
+        for (const [hStr, strokes] of Object.entries(sc)) {
+          out[Number(hStr)] = strokes;
+        }
+        for (const h of pu) {
+          out[h] = null; // pickup
+        }
+        return out;
+      }
+      function effectiveByHoleMap(pid: string): Map<number, number | null> {
+        const sc = scoresOf(pid);
+        const pu = pickedUpOf(pid);
+        const map = new Map<number, number | null>();
+        for (const [hStr, strokes] of Object.entries(sc)) {
+          map.set(Number(hStr), strokes);
+        }
+        for (const h of pu) {
+          const par = parsMap[h] ?? 0;
+          map.set(h, par + 2);
+        }
+        return map;
+      }
+      const parByHoleMap = new Map<number, number>(
+        course.holes.map((h) => [h.number, h.par] as const),
+      );
+
       // === Refs DOM ===
       const holeNumberEl = root.querySelector<HTMLElement>('[data-hole-number]')!;
       const parValueEl = root.querySelector<HTMLElement>('[data-par-value]')!;
@@ -590,6 +638,8 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         root.querySelectorAll<HTMLButtonElement>('[data-hole-jump]'),
       );
       const feedbackEl = root.querySelector<HTMLElement>('[data-score-feedback]')!;
+      const editorialLineEl = root.querySelector<HTMLElement>('[data-editorial-line]');
+      const parContainerEl = parValueEl.closest<HTMLElement>('.hole-par-block') ?? parValueEl.parentElement;
       const otherPicker = root.querySelector<HTMLElement>('[data-other-picker]')!;
       const otherPickerBtns = Array.from(
         otherPicker.querySelectorAll<HTMLButtonElement>('[data-abs-strokes]'),
@@ -633,7 +683,8 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
 
       function diffClass(strokes: number, par: number): string {
         const d = strokes - par;
-        if (d <= -1) return 'cell-birdie';
+        if (d <= -2) return 'cell-eagle';
+        if (d === -1) return 'cell-birdie';
         if (d === 0) return 'cell-par';
         if (d === 1) return 'cell-bogey';
         return 'cell-double';
@@ -703,6 +754,13 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           dot.classList.toggle('is-played', played && h !== currentHole);
           dot.setAttribute('aria-current', h === currentHole ? 'true' : 'false');
         }
+        // === Joyful Mist : halos par-relative sur les chips (birdie+ et
+        //     double bogey+) pour faire émerger le relief de la partie. */
+        applyHoleHalos(
+          holeDots as HTMLElement[],
+          effectiveByHoleMap(currentPlayerId),
+          parByHoleMap,
+        );
 
         // === Cells de la scorecard inline (Scorecard mode='live') ===
         let total = 0;
@@ -711,7 +769,16 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         for (let h = 1; h <= holeCount; h++) {
           const cell = cells.find((c) => Number(c.dataset.cellHole) === h);
           if (!cell) continue;
+          // Le reset du className supprime aussi nos étoiles Joyful Mist
+          // (enfants directs) — on les redessine si la cell mérite
+          // encore. Le data-has-star est aussi reset pour redrawStar.
+          const hadStar = cell.dataset.hasStar === '1';
           cell.className = 'grid-cell';
+          if (hadStar) {
+            cell.dataset.hasStar = '';
+            const star = cell.querySelector('.joyful-star');
+            if (star) star.remove();
+          }
           const hp = holeAt(h).par;
           if (pickedUp.has(h)) {
             cell.textContent = 'C';
@@ -721,7 +788,13 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
             playedPar += hp;
           } else if (scores[h] !== undefined) {
             cell.textContent = String(scores[h]);
-            cell.classList.add(diffClass(scores[h], hp));
+            const cls = diffClass(scores[h], hp);
+            cell.classList.add(cls);
+            // Joyful Mist : étoile honey discrète sur les sub-par
+            // (birdie & eagle). Idempotent — pas de doublon.
+            if (cls === 'cell-birdie' || cls === 'cell-eagle') {
+              drawStar(cell);
+            }
             total += scores[h];
             played++;
             playedPar += hp;
@@ -774,6 +847,10 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         // PAR : flash quand le trou change (subtile fade-y + back).
         if (currentHole !== lastRenderedHole) {
           flashPar(parValueEl);
+          // Joyful Mist : paper micro-translate sur le bloc PAR + haptic
+          // pattern [8, 30, 8] = "validation trou" (Android Chrome).
+          paperTransitionToHole(parContainerEl);
+          haptic([8, 30, 8]);
           lastRenderedHole = currentHole;
         }
         // Feedback line : fade-in si le contenu a changé.
@@ -906,12 +983,79 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         statusEl.textContent = '';
       }
 
+      /**
+       * Joyful Mist : déclenche, le cas échéant, les effets liés à l'event
+       * détecté pour le score qu'on vient de poser. Trois canaux :
+       *
+       *   1. Haptic — pattern croissant selon la rareté de l'event.
+       *   2. Streak ring sur la live-card du joueur — toggle classe
+       *      `has-streak` selon que ce score termine ou non un run de pars.
+       *   3. Ligne éditoriale italique — UNIQUEMENT si le score saisi est
+       *      le mien (currentPlayerId === meIdEntry). Sinon l'attribution
+       *      "Premier birdie" sans nom serait ambiguë côté mode host —
+       *      les autres canaux (étoile, halo chip, ring) restent localisés
+       *      à leur target visuel donc gardent le sens.
+       *
+       * `savedHole` est passé en param pour éviter une race si autoAdvance
+       * a déjà bumpé currentHole entre saveScore() et ce call.
+       */
+      function triggerJoyfulMist(savedHole: number): void {
+        const scoresMap = buildScoresMap(currentPlayerId);
+        const event = detectEvent(scoresMap, parsMap, savedHole);
+
+        // Streak ring : si l'event courant est un streak_pars on active,
+        // sinon on désactive (toute saisie non-par casse le streak). Cible
+        // = la live-card du joueur dans le leaderboard mode host. En mode
+        // solo on cible la card meIdEntry, qui est l'unique row.
+        const liveListEl = document.querySelector<HTMLElement>('[data-live-list]');
+        const playerCard = liveListEl
+          ? Array.from(liveListEl.children).find(
+              (li) => (li as HTMLElement).dataset.pid === currentPlayerId,
+            ) as HTMLElement | undefined
+          : undefined;
+        pulseStreakRing(playerCard ?? null, event?.type === 'streak_pars');
+
+        if (!event) return;
+
+        // Haptic : patterns plan Joyful Mist.
+        switch (event.type) {
+          case 'hio':
+            haptic([20, 60, 20]);
+            break;
+          case 'eagle':
+            haptic([12, 40, 12]);
+            break;
+          case 'first_birdie':
+          case 'streak_pars':
+            haptic([8, 30, 8]);
+            break;
+          // 'declic' : silencieux côté haptic — événement narratif, pas un
+          // succès brut, on garde uniquement la ligne éditoriale.
+          default:
+            break;
+        }
+
+        // Ligne éditoriale : seulement pour mes propres scores en mode
+        // host (cf. doc ci-dessus). En solo, currentPlayerId == meIdEntry.
+        if (currentPlayerId !== meIdEntry) return;
+        if (!canShowLine(event, savedHole, lastLineHole)) return;
+        showEditorialLine(editorialLineEl, lineFor(event));
+        lastLineHole = savedHole;
+      }
+
       async function saveScore(strokes: number, options: { advance?: boolean } = {}) {
         const scores = scoresOf(currentPlayerId);
         const pickedUp = pickedUpOf(currentPlayerId);
-        scores[currentHole] = strokes;
-        pickedUp.delete(currentHole); // saisir un score annule l'abandon
+        const savedHole = currentHole; // capture avant tout auto-advance
+        scores[savedHole] = strokes;
+        pickedUp.delete(savedHole); // saisir un score annule l'abandon
         render();
+
+        // Joyful Mist : détection events + ligne éditoriale + streak ring.
+        // On le fait *après* render() pour que les classes (cell-birdie,
+        // halos chips) soient déjà appliquées, et l'étoile soit en place.
+        triggerJoyfulMist(savedHole);
+
         showStatusInfo('Sauvegarde…');
         try {
           const body: Record<string, unknown> = { hole: currentHole, strokes };
@@ -961,6 +1105,10 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       // Tap = save immédiat (offset → absolute via hole.par) + auto-advance.
       for (const btn of relBtns) {
         btn.addEventListener('click', () => {
+          // Joyful Mist : tactile sec sur sélection (8ms). Le pattern
+          // d'event marquant (eagle/birdie/HIO) viendra après dans
+          // triggerJoyfulMist si applicable — additif, pas remplaçant.
+          haptic(8);
           const offset = Number(btn.dataset.rel);
           const strokes = holeAt(currentHole).par + offset;
           saveScore(strokes, { advance: true });
@@ -996,6 +1144,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       // === Picker "Autre" boutons 1-15 ===
       for (const btn of otherPickerBtns) {
         btn.addEventListener('click', () => {
+          haptic(8); // Joyful Mist : tactile sec sur sélection
           const n = Number(btn.dataset.absStrokes);
           closeOtherPicker();
           saveScore(n, { advance: true });
@@ -1262,6 +1411,20 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     }
     @media (prefers-reduced-motion: reduce) {
       .live-card.is-leader { animation: none; }
+    }
+
+    /* Joyful Mist : streak ring autour de l'avatar quand le joueur est
+       sur un run de 3+ pars. Visible et net sans agressivité — ring honey
+       épais qui s'efface dès qu'un non-par casse le streak. */
+    .live-card.has-streak .live-avatar {
+      box-shadow:
+        0 0 0 3px var(--accent, #D4A574),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      transition: box-shadow 400ms var(--ease-expo);
+    }
+    .live-card .live-avatar {
+      transition: box-shadow 400ms var(--ease-expo);
     }
 
     .live-avatar {

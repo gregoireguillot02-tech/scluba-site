@@ -95,6 +95,13 @@ const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
        "±0" en muted pour par, etc. Mis à jour par render() en JS. */}
   <p class="score-feedback" data-score-feedback aria-live="polite"></p>
 
+  {/* Ligne éditoriale (Joyful Mist) : message court italique Fraunces qui
+       apparaît sur les events rares (premier birdie, eagle, HIO, streak
+       3+ pars, déclic). Caché par défaut, animé par showEditorialLine()
+       côté play.astro. Bouchon DOM pré-rendu pour permettre l'animation
+       sans flash de fallback. */}
+  <p class="editorial-line" data-editorial-line aria-live="polite"></p>
+
   {/* Pills : Autre (pour les triple bogey+, expand un mini-picker
        inline) et Abandonner (pickup, compté par + 2 — Rules of Golf
        2023 Maximum Score). */}
@@ -219,6 +226,18 @@ const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
     border-color: var(--accent);
     color: var(--primary-deep);
   }
+  /* Halos Joyful Mist : marquent visuellement les trous remarquables
+     directement dans la mini-progression. Préservent .is-current et
+     .is-played — c'est un overlay de bord, pas un remplacement. */
+  .hole-chip.scored-below-par:not(.is-current) {
+    border-width: 2px;
+    border-color: var(--accent, #D4A574);
+    box-shadow: 0 0 0 1px var(--accent-soft, rgba(212, 165, 116, 0.30)) inset;
+  }
+  .hole-chip.scored-above-par-2:not(.is-current) {
+    background: rgba(192, 57, 43, 0.06);
+    border-color: rgba(192, 57, 43, 0.35);
+  }
   .hole-chip:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 3px;
@@ -337,6 +356,27 @@ const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
   .score-feedback.is-under { color: var(--accent); font-weight: 600; }
   .score-feedback.is-over { color: var(--muted); }
   .score-feedback.is-par { color: var(--clubColor, var(--primary)); font-weight: 600; }
+
+  /* === Ligne éditoriale (Joyful Mist) ===
+     Apparaît sur les events rares (premier birdie, eagle, HIO, streak,
+     déclic). Fraunces italique pour la sensation magazine country-club,
+     muted pour rester discrète. Caché par défaut (opacity 0), animé par
+     showEditorialLine() côté play.astro. min-height évite le layout
+     shift quand le texte apparaît/disparaît. */
+  .editorial-line {
+    margin: 0;
+    text-align: center;
+    font-family: var(--font-serif, Georgia, serif);
+    font-style: italic;
+    font-size: 14px;
+    line-height: 1.3;
+    color: var(--ink-soft, #2D2D2D);
+    opacity: 0;
+    min-height: 1.3em;
+    letter-spacing: 0.005em;
+    /* Empty text + opacity 0 = aria-live ne lit rien tant qu'on n'écrit
+       pas de contenu via showEditorialLine. */
+  }
 
   /* === Pills (Autre + Abandonner) === */
   .score-pills {
