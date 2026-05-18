@@ -54,17 +54,20 @@ export async function flashPar(el: HTMLElement | null): Promise<void> {
 
 /**
  * Quick pulse sur le bouton par-relative qui vient d'être sélectionné.
- * Spring physique : elastic.out(1, 0.4) simule un vrai ressort qui se
- * libère du tap — le bouton dépasse légèrement la cible puis se stabilise.
- * Inspiré SwiftUI .spring(response: 0.4, dampingFraction: 0.6).
+ *
+ * Amplifié dans le cadre du fil rouge Joyful Mist : scale 0.85 → 1 avec
+ * back.out(2.2) qui produit un overshoot net (le bouton dépasse ~1.04 puis
+ * se stabilise). Plus tactile que l'ancien elastic.out subtle (0.9 → 1) —
+ * un golfeur qui tap doit *sentir* le bouton répondre, surtout sur Android
+ * où l'haptic prend le relais.
  */
 export async function flashSelected(btn: HTMLElement | null): Promise<void> {
   if (!btn || prefersReducedMotion()) return;
   const { gsap } = await gsapBundle();
   gsap.fromTo(
     btn,
-    { scale: 0.9 },
-    { scale: 1, duration: 0.55, ease: 'elastic.out(1, 0.4)' },
+    { scale: 0.85 },
+    { scale: 1, duration: 0.55, ease: 'back.out(2.2)' },
   );
 }
 
@@ -169,6 +172,158 @@ export async function flashPlayerSwitch(banner: HTMLElement | null): Promise<voi
     { y: -6, autoAlpha: 0.4 },
     { y: 0, autoAlpha: 1, duration: 0.4, ease: 'expo.out' },
   );
+}
+
+/**
+ * Étoile honey discrète qui se "dessine" à côté d'un score birdie+ dans
+ * la scorecard live. SVG 12px injecté en absolute dans la cell, anim de
+ * scale 0.4 → 1 + rotate −30° → 0 + autoAlpha 0 → 1, back-ease.
+ *
+ * Idempotent : si la cell a déjà une étoile (data-has-star), no-op. Permet
+ * d'appeler en boucle dans render() sans accumuler des SVG.
+ *
+ * Reduced-motion : on injecte l'étoile mais sans animation (state final
+ * immédiat) — le golfeur garde le repère visuel, juste pas le motion.
+ */
+export async function drawStar(cell: HTMLElement | null): Promise<void> {
+  if (!cell) return;
+  if (cell.dataset.hasStar === '1') return;
+  // S'assurer que le parent est position-able. La grid-cell est inline-block
+  // ou flex (cf. Scorecard.astro), donc on positionne en relative.
+  if (getComputedStyle(cell).position === 'static') {
+    cell.style.position = 'relative';
+  }
+  const star = document.createElement('span');
+  star.className = 'joyful-star';
+  star.setAttribute('aria-hidden', 'true');
+  star.innerHTML =
+    '<svg width="12" height="12" viewBox="0 0 12 12" focusable="false">' +
+    '<polygon points="6,0.8 7.5,4.3 11.3,4.6 8.4,7.1 9.3,10.8 6,8.9 2.7,10.8 3.6,7.1 0.7,4.6 4.5,4.3" />' +
+    '</svg>';
+  Object.assign(star.style, {
+    position: 'absolute',
+    top: '-4px',
+    right: '-4px',
+    width: '12px',
+    height: '12px',
+    color: 'var(--accent, #D4A574)',
+    pointerEvents: 'none',
+    lineHeight: '0',
+  } as Partial<CSSStyleDeclaration>);
+  cell.appendChild(star);
+  cell.dataset.hasStar = '1';
+  if (prefersReducedMotion()) return;
+  const { gsap } = await gsapBundle();
+  gsap.fromTo(
+    star,
+    { autoAlpha: 0, scale: 0.4, rotation: -30 },
+    {
+      autoAlpha: 1,
+      scale: 1,
+      rotation: 0,
+      duration: 0.6,
+      ease: 'back.out(2.4)',
+    },
+  );
+}
+
+/**
+ * Applique les classes de halo à chaque hole-chip de la mini-progression
+ * (composant ScoreInput.astro, `.hole-progress`). Les classes existantes
+ * `.is-current` et `.is-played` sont laissées intactes — on ajoute :
+ *   - `.scored-below-par` si le trou a été joué sous le par (birdie+)
+ *   - `.scored-above-par-2` si ≥ 2 strokes au-dessus du par (double bogey+)
+ *
+ * Pickup compte comme par + 2, donc déclenche `scored-above-par-2`.
+ *
+ * Idempotent : on supprime puis on ré-applique à chaque appel (cheap, le
+ * nombre de chips reste petit — 9 à 27 typiquement).
+ */
+export function applyHoleHalos(
+  chips: HTMLElement[],
+  effectiveByHole: Map<number, number | null>,
+  parByHole: Map<number, number>,
+): void {
+  for (const chip of chips) {
+    const h = Number(chip.dataset.holeJump);
+    if (!Number.isFinite(h)) continue;
+    const eff = effectiveByHole.get(h);
+    const par = parByHole.get(h);
+    chip.classList.remove('scored-below-par', 'scored-above-par-2');
+    if (eff === null || eff === undefined || par === undefined) continue;
+    const diff = eff - par;
+    if (diff < 0) chip.classList.add('scored-below-par');
+    else if (diff >= 2) chip.classList.add('scored-above-par-2');
+  }
+}
+
+/**
+ * Active ou désactive l'effet "streak ring" sur une live-card du
+ * leaderboard. Le ring autour de l'avatar passe à un stroke plus marqué
+ * (géré en CSS via la classe `.has-streak`).
+ *
+ * `pulseLeaderRing` (burst one-shot quand un joueur prend la tête) reste
+ * disponible séparément — c'est complémentaire, pas redondant.
+ */
+export function pulseStreakRing(card: HTMLElement | null, active: boolean): void {
+  if (!card) return;
+  card.classList.toggle('has-streak', active);
+}
+
+/**
+ * Micro paper-transition appliquée au container du PAR/score quand on
+ * change de trou. Subtil : y 6 → 0 + autoAlpha 0.6 → 1, 320ms expo.out.
+ * Renforce la sensation tactile sans détourner l'œil du score.
+ *
+ * Idempotent (lance un nouveau tween qui overwrite le précédent grâce à
+ * overwrite: 'auto'). Reduced-motion : no-op total (pas d'effet visuel
+ * désagréable possible — on garde la transition CSS du browser).
+ */
+export async function paperTransitionToHole(container: HTMLElement | null): Promise<void> {
+  if (!container || prefersReducedMotion()) return;
+  const { gsap } = await gsapBundle();
+  gsap.fromTo(
+    container,
+    { y: 6, autoAlpha: 0.6 },
+    {
+      y: 0,
+      autoAlpha: 1,
+      duration: 0.32,
+      ease: EASE.expo,
+      overwrite: 'auto',
+    },
+  );
+}
+
+/**
+ * Affiche une ligne éditoriale dans la zone dédiée (`[data-editorial-line]`)
+ * et la fait disparaître après 2.2s. Fraunces italique, fade-up 4px, expo.
+ *
+ * L'élément doit exister dans le DOM (rendu par ScoreInput.astro). On set
+ * son textContent puis on enchaîne l'animation. Reduced-motion : opacity
+ * 0 → 1 simple, même durée totale.
+ *
+ * Pas d'anti-spam ici — la décision (afficher ou non) est prise en amont
+ * par templates.canShowLine() côté play.astro.
+ */
+export async function showEditorialLine(
+  el: HTMLElement | null,
+  text: string,
+): Promise<void> {
+  if (!el || !text) return;
+  el.textContent = text;
+  const { gsap } = await gsapBundle();
+  if (prefersReducedMotion()) {
+    gsap.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 });
+    gsap.to(el, { autoAlpha: 0, duration: 0.2, delay: 2.4 });
+    return;
+  }
+  gsap.fromTo(
+    el,
+    { autoAlpha: 0, y: 4 },
+    { autoAlpha: 1, y: 0, duration: 0.32, ease: EASE.expo },
+  );
+  gsap.to(el, { autoAlpha: 0, duration: 0.28, delay: 2.2, ease: EASE.expo });
 }
 
 /**
