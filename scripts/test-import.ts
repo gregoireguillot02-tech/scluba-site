@@ -48,8 +48,8 @@ async function main(): Promise<void> {
   const apiKey = process.env.ANTHROPIC_API_KEY || envFallback.ANTHROPIC_API_KEY;
   if (!apiKey) {
     console.error('ANTHROPIC_API_KEY manquante.');
-    console.error('Soit: ANTHROPIC_API_KEY=sk-ant-... node --experimental-strip-types scripts/test-import.ts <URL>');
-    console.error("Soit: ajoute la ligne 'ANTHROPIC_API_KEY=sk-ant-...' dans scluba-site/.dev.vars puis relance.");
+    console.error('Soit: ANTHROPIC_API_KEY=sk-ant-... npm run test:import -- <URL>');
+    console.error("Soit: ajoute la ligne 'ANTHROPIC_API_KEY=sk-ant-...' dans scluba-site/.dev.vars puis: npm run test:import -- <URL>");
     process.exit(1);
   }
 
