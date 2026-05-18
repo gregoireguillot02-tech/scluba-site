@@ -11,7 +11,8 @@
     "preview": "astro preview",
     "astro": "astro",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:import": "tsx scripts/test-import.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
@@ -34,6 +35,7 @@
     "@astrojs/check": "^0.9.9",
     "@vitest/ui": "^3.2.4",
     "jsdom": "^25.0.1",
+    "tsx": "^4.22.2",
     "typescript": "^6.0.3",
     "vitest": "^3.2.4"
   }
