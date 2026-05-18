@@ -1,0 +1,503 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../../layouts/OpsLayout.astro';
+---
+
+<OpsLayout title="Importer un club" active="clubs">
+  <div class="ops-page-header">
+    <div>
+      <a href="/ops/clubs" class="back-link">← Tous les clubs</a>
+      <h1 class="ops-page-title">Importer un club depuis son site</h1>
+      <p class="ops-page-subtitle">
+        Colle l'URL du site officiel du club. Scluba récupère logo, photo, couleur, nom, parcours et pars. Tu corriges si besoin avant de sauver.
+      </p>
+    </div>
+  </div>
+
+  <section class="ops-card import-launcher">
+    <form id="import-form" class="launcher-form">
+      <label for="url" class="ops-label">URL du site (https://…)</label>
+      <div class="launcher-row">
+        <input class="ops-input" type="url" id="url" name="url" placeholder="https://www.golf-lyon-tassin.fr" required />
+        <button type="submit" class="ops-btn ops-btn-primary" id="import-btn">Importer</button>
+      </div>
+      <p class="hint">Comptez ~10s : on lit la page d'accueil + les pages parcours, on télécharge le logo, et Claude structure les infos.</p>
+    </form>
+  </section>
+
+  <section id="status" class="status" hidden>
+    <div class="status-spinner" aria-hidden="true"></div>
+    <span id="status-text">Analyse en cours…</span>
+  </section>
+
+  <section id="error" class="ops-flash ops-flash-err" hidden></section>
+
+  <section id="preview" class="preview-wrap" hidden>
+    <header class="preview-head">
+      <h2>Aperçu</h2>
+      <p class="hint">Vérifie chaque champ. Les warnings ci-dessous demandent ton attention.</p>
+    </header>
+
+    <ul id="warnings" class="warnings" hidden></ul>
+    <p id="llm-notes" class="llm-notes" hidden></p>
+
+    <form id="save-form" class="preview-form">
+      <div class="preview-grid">
+        <div>
+          <label class="ops-label" for="name">Nom du club</label>
+          <input class="ops-input" type="text" id="name" name="name" required maxlength="120" />
+        </div>
+
+        <div>
+          <label class="ops-label" for="city">Ville</label>
+          <input class="ops-input" type="text" id="city" name="city" maxlength="120" />
+        </div>
+
+        <div>
+          <label class="ops-label" for="primary_color">Couleur primaire</label>
+          <div class="color-row">
+            <input class="color-picker" type="color" id="primary_color_picker" />
+            <input class="ops-input color-hex" type="text" id="primary_color" name="primary_color" pattern="#[0-9A-Fa-f]{6}" maxlength="7" />
+          </div>
+        </div>
+      </div>
+
+      <div class="assets-row">
+        <div class="asset-card">
+          <span class="ops-label">Logo</span>
+          <div class="asset-frame" id="logo-frame">
+            <img id="logo-img" alt="logo détecté" />
+            <p id="logo-missing" class="asset-missing" hidden>Pas de logo détecté</p>
+          </div>
+          <p class="hint" id="logo-source"></p>
+        </div>
+        <div class="asset-card">
+          <span class="ops-label">Photo</span>
+          <div class="asset-frame asset-frame-wide" id="photo-frame">
+            <img id="photo-img" alt="photo détectée" />
+            <p id="photo-missing" class="asset-missing" hidden>Pas de photo détectée</p>
+          </div>
+          <p class="hint" id="photo-source"></p>
+        </div>
+      </div>
+
+      <div id="loops" class="loops"></div>
+
+      <div class="save-actions">
+        <button type="submit" id="save-btn" class="ops-btn ops-btn-primary">Créer le club</button>
+        <a href="/ops/clubs" class="ops-btn ops-btn-ghost">Annuler</a>
+      </div>
+    </form>
+  </section>
+</OpsLayout>
+
+<script>
+type Hole = { number: number; par: number };
+type Loop = { id: string; name: string; holes: Hole[] };
+type CourseData = { holes: Hole[]; loops?: Loop[]; formats?: { id: string; label: string; loop_ids: string[] }[] };
+type ImportResult = {
+  source_url: string;
+  name: string;
+  city: string | null;
+  primary_color: string;
+  logo_url: string | null;
+  photo_url: string | null;
+  course_data: CourseData;
+  warnings: string[];
+  llm_notes: string | null;
+};
+
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+let current: ImportResult | null = null;
+
+function showError(msg: string) {
+  const el = $<HTMLElement>('error');
+  el.textContent = msg;
+  el.hidden = false;
+}
+function clearError() { $<HTMLElement>('error').hidden = true; }
+
+function setStatus(text: string | null) {
+  const wrap = $<HTMLElement>('status');
+  if (!text) { wrap.hidden = true; return; }
+  $<HTMLElement>('status-text').textContent = text;
+  wrap.hidden = false;
+}
+
+function renderLoops(course: CourseData) {
+  const root = $<HTMLElement>('loops');
+  root.innerHTML = '';
+  const loops = course.loops ?? [{ id: 'main', name: 'Parcours', holes: course.holes }];
+  loops.forEach((loop, loopIdx) => {
+    const section = document.createElement('section');
+    section.className = 'loop-card';
+    const header = document.createElement('header');
+    header.className = 'loop-head';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'ops-input loop-name';
+    nameInput.value = loop.name;
+    nameInput.dataset.loopIdx = String(loopIdx);
+    nameInput.maxLength = 80;
+    const meta = document.createElement('span');
+    meta.className = 'loop-meta';
+    meta.textContent = `${loop.holes.length} trou${loop.holes.length > 1 ? 's' : ''} · par total ${loop.holes.reduce((s, h) => s + h.par, 0)}`;
+    header.appendChild(nameInput);
+    header.appendChild(meta);
+    section.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.className = 'hole-grid';
+    loop.holes.forEach((h, holeIdx) => {
+      const cell = document.createElement('label');
+      cell.className = 'hole-cell';
+      const num = document.createElement('span');
+      num.className = 'hole-num';
+      num.textContent = String(h.number);
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '3';
+      input.max = '6';
+      input.value = String(h.par);
+      input.className = 'hole-par';
+      input.dataset.loopIdx = String(loopIdx);
+      input.dataset.holeIdx = String(holeIdx);
+      input.required = true;
+      input.addEventListener('input', () => {
+        const v = Number(input.value);
+        if (Number.isFinite(v)) {
+          loop.holes[holeIdx].par = v;
+          meta.textContent = `${loop.holes.length} trou${loop.holes.length > 1 ? 's' : ''} · par total ${loop.holes.reduce((s, h) => s + h.par, 0)}`;
+        }
+      });
+      cell.appendChild(num);
+      cell.appendChild(input);
+      grid.appendChild(cell);
+    });
+    section.appendChild(grid);
+    root.appendChild(section);
+
+    nameInput.addEventListener('input', () => {
+      loop.name = nameInput.value;
+    });
+  });
+}
+
+function renderPreview(r: ImportResult) {
+  current = r;
+  $<HTMLInputElement>('name').value = r.name;
+  $<HTMLInputElement>('city').value = r.city ?? '';
+  $<HTMLInputElement>('primary_color').value = r.primary_color;
+  $<HTMLInputElement>('primary_color_picker').value = r.primary_color;
+
+  const logoImg = $<HTMLImageElement>('logo-img');
+  const logoMissing = $<HTMLElement>('logo-missing');
+  const logoSource = $<HTMLElement>('logo-source');
+  if (r.logo_url) {
+    logoImg.src = r.logo_url;
+    logoImg.hidden = false;
+    logoMissing.hidden = true;
+    logoSource.textContent = `Source : ${r.logo_url}`;
+  } else {
+    logoImg.removeAttribute('src');
+    logoImg.hidden = true;
+    logoMissing.hidden = false;
+    logoSource.textContent = '';
+  }
+
+  const photoImg = $<HTMLImageElement>('photo-img');
+  const photoMissing = $<HTMLElement>('photo-missing');
+  const photoSource = $<HTMLElement>('photo-source');
+  if (r.photo_url) {
+    photoImg.src = r.photo_url;
+    photoImg.hidden = false;
+    photoMissing.hidden = true;
+    photoSource.textContent = `Source : ${r.photo_url}`;
+  } else {
+    photoImg.removeAttribute('src');
+    photoImg.hidden = true;
+    photoMissing.hidden = false;
+    photoSource.textContent = '';
+  }
+
+  const warnList = $<HTMLElement>('warnings');
+  warnList.innerHTML = '';
+  if (r.warnings.length) {
+    for (const w of r.warnings) {
+      const li = document.createElement('li');
+      li.textContent = w;
+      warnList.appendChild(li);
+    }
+    warnList.hidden = false;
+  } else {
+    warnList.hidden = true;
+  }
+
+  const notes = $<HTMLElement>('llm-notes');
+  if (r.llm_notes) {
+    notes.textContent = `Note de l'IA : ${r.llm_notes}`;
+    notes.hidden = false;
+  } else {
+    notes.hidden = true;
+  }
+
+  renderLoops(r.course_data);
+
+  $<HTMLElement>('preview').hidden = false;
+}
+
+$<HTMLFormElement>('import-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearError();
+  $<HTMLElement>('preview').hidden = true;
+  const url = $<HTMLInputElement>('url').value.trim();
+  if (!url) return;
+  const btn = $<HTMLButtonElement>('import-btn');
+  btn.disabled = true;
+  setStatus('Analyse en cours… (peut prendre 10-20s)');
+  try {
+    const res = await fetch('/api/ops/clubs/import', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+    renderPreview(json.data as ImportResult);
+  } catch (err) {
+    showError(err instanceof Error ? err.message : 'Erreur inconnue');
+  } finally {
+    setStatus(null);
+    btn.disabled = false;
+  }
+});
+
+$<HTMLInputElement>('primary_color_picker').addEventListener('input', (e) => {
+  const v = (e.target as HTMLInputElement).value.toUpperCase();
+  $<HTMLInputElement>('primary_color').value = v;
+});
+$<HTMLInputElement>('primary_color').addEventListener('input', (e) => {
+  const v = (e.target as HTMLInputElement).value;
+  if (/^#[0-9A-Fa-f]{6}$/.test(v)) {
+    $<HTMLInputElement>('primary_color_picker').value = v;
+  }
+});
+
+$<HTMLFormElement>('save-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!current) return;
+  clearError();
+
+  const courseData = current.course_data;
+  // Reflatten holes 1..N from current loops state (loops are mutated in place by inputs).
+  const loops = courseData.loops;
+  if (loops) {
+    let n = 1;
+    courseData.holes = [];
+    for (const loop of loops) {
+      for (const h of loop.holes) {
+        courseData.holes.push({ number: n, par: h.par });
+        h.number = n;
+        n++;
+      }
+    }
+  }
+
+  const payload = {
+    name: $<HTMLInputElement>('name').value.trim(),
+    city: $<HTMLInputElement>('city').value.trim() || null,
+    primary_color: $<HTMLInputElement>('primary_color').value.toUpperCase(),
+    source_logo_url: current.logo_url,
+    source_photo_url: current.photo_url,
+    course_data: courseData,
+  };
+
+  const btn = $<HTMLButtonElement>('save-btn');
+  btn.disabled = true;
+  setStatus('Création du club et upload des assets…');
+  try {
+    const res = await fetch('/api/ops/clubs/from-import', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+    window.location.href = json.redirect ?? `/ops/clubs/${json.club_id}/edit?ok=1`;
+  } catch (err) {
+    showError(err instanceof Error ? err.message : 'Erreur inconnue');
+    btn.disabled = false;
+  } finally {
+    setStatus(null);
+  }
+});
+</script>
+
+<style>
+  .back-link {
+    display: inline-block;
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    margin-bottom: 6px;
+  }
+  .back-link:hover { color: var(--ink); }
+
+  .import-launcher { padding: 18px 20px; }
+  .launcher-form { display: flex; flex-direction: column; gap: 8px; }
+  .launcher-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+  .launcher-row .ops-input { flex: 1; min-width: 280px; }
+  .ops-label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .hint { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(212, 165, 116, 0.10);
+    border: 1px solid rgba(212, 165, 116, 0.4);
+    border-radius: 8px;
+    margin-top: 18px;
+    font-size: 14px;
+  }
+  .status-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(27, 67, 50, 0.2);
+    border-top-color: var(--primary, #1B4332);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .preview-wrap { margin-top: 24px; }
+  .preview-head { margin-bottom: 14px; }
+  .preview-head h2 {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    margin: 0 0 4px;
+  }
+
+  .warnings {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    background: #FEF3C7;
+    border: 1px solid #FBBF24;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: #78350F;
+  }
+  .warnings li::before { content: '⚠ '; font-weight: 700; }
+
+  .llm-notes {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    background: rgba(27, 67, 50, 0.06);
+    border-left: 3px solid var(--primary, #1B4332);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--ink);
+  }
+
+  .preview-form { display: flex; flex-direction: column; gap: 20px; }
+
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+  }
+  .color-row { display: flex; gap: 8px; align-items: stretch; }
+  .color-picker {
+    width: 48px;
+    height: 38px;
+    border: 1px solid var(--line, #ddd);
+    border-radius: 6px;
+    padding: 0;
+    cursor: pointer;
+  }
+  .color-hex { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  .assets-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 16px;
+  }
+  @media (max-width: 700px) {
+    .assets-row { grid-template-columns: 1fr; }
+  }
+  .asset-card { display: flex; flex-direction: column; gap: 6px; }
+  .asset-frame {
+    border: 1px dashed var(--line, #ccc);
+    border-radius: 8px;
+    background: rgba(0,0,0,0.02);
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 12px;
+  }
+  .asset-frame img { max-width: 100%; max-height: 180px; object-fit: contain; }
+  .asset-frame-wide { min-height: 220px; }
+  .asset-frame-wide img { max-height: 320px; }
+  .asset-missing { color: var(--muted); font-size: 13px; margin: 0; }
+
+  .loops { display: flex; flex-direction: column; gap: 14px; }
+  .loop-card {
+    border: 1px solid var(--line, #ddd);
+    border-radius: 10px;
+    padding: 14px;
+    background: var(--bg, #fff);
+  }
+  .loop-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .loop-name { flex: 1; min-width: 180px; font-weight: 600; }
+  .loop-meta { font-size: 12px; color: var(--muted); }
+
+  .hole-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(54px, 1fr));
+    gap: 6px;
+  }
+  .hole-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    border: 1px solid var(--line-soft, #eee);
+    border-radius: 6px;
+    background: rgba(0,0,0,0.015);
+  }
+  .hole-num { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .hole-par {
+    width: 100%;
+    text-align: center;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    -moz-appearance: textfield;
+  }
+  .hole-par::-webkit-inner-spin-button { display: none; }
+
+  .save-actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+</style>
