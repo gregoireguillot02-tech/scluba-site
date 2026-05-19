@@ -273,9 +273,7 @@ body[data-landing-mode="dark"] .lang-switch:hover {
 }
 
 /* V4.8 — Balle 3D strictement derrière tout le contenu (canvas z:0 fixed).
-   Sections transparentes pour la révéler entre les cards opaques. Plus
-   d'override text z:2 (V4.7 droppé) — toutes les cards et leur contenu
-   restent au-dessus de la balle naturellement. */
+   Sections transparentes pour la révéler entre les cards opaques. */
 body[data-landing-mode="dark"] .steps,
 body[data-landing-mode="dark"] .showcase,
 body[data-landing-mode="dark"] .showcase-section,
@@ -285,6 +283,17 @@ body[data-landing-mode="dark"] .faq,
 body[data-landing-mode="dark"] .cta,
 body[data-landing-mode="dark"] .problem {
   background: transparent;
+}
+
+/* V4.9 — CTAForm card semi-transparent : la balle 3D (z:0 behind) traverse
+   visuellement le cadre (effet glass premium), tandis que le texte +
+   inputs + bouton à l'intérieur restent opaques par dessus. */
+body[data-landing-mode="dark"] .cta-card {
+  background:
+    linear-gradient(135deg, rgba(18, 18, 18, 0.62) 0%, rgba(10, 10, 10, 0.55) 100%);
+  -webkit-backdrop-filter: blur(8px) saturate(125%);
+          backdrop-filter: blur(8px) saturate(125%);
+  border-color: rgba(31, 31, 31, 0.5);
 }
 
 /* Footer V4.1 — override pour ne pas suivre les semantics globales
