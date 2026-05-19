@@ -1,0 +1,97 @@
+---
+/**
+ * WordmarkScluba — direction validée 2026-05-19 (Variant C "Modern Mono").
+ *
+ * Sans-serif expanded bold capitales "SCLUBA". Police : Big Shoulders
+ * Display (Google, variable, gratuit) — alternative crédible à Druk Wide
+ * pour un wordmark monolithique éditorial-industrial. Tracking légèrement
+ * serré (-0.005em), couleur unie warm-charcoal. Vibe oryzo / umano /
+ * drinksom — moderne, tech, distinctif.
+ *
+ * La police Big Shoulders Display est chargée dans Base.astro (preload
+ * weight 800 latin uniquement, ~12kb gzipped).
+ *
+ * Props:
+ *   size      → hauteur cible en px (Nav: 28, Footer: 48)
+ *   tone      → 'wood' (warm-charcoal sur fond clair) | 'inverted' (cream sur dark)
+ *   withBall  → afficher la balle de golf après "SCLUBA" (default false, utilisé en Footer)
+ */
+
+interface Props {
+  size?: number;
+  tone?: 'wood' | 'inverted';
+  withBall?: boolean;
+  class?: string;
+}
+
+const {
+  size = 28,
+  tone = 'wood',
+  withBall = false,
+  class: className = '',
+} = Astro.props;
+
+// BSD est plus haut visuellement → on rabaisse le ratio à 0.92.
+const fontSize = Math.round(size * 0.92);
+const ballSize = Math.round(size * 0.36);
+const uid = Math.random().toString(36).slice(2, 8);
+---
+
+<span
+  class:list={['wordmark-scluba', `tone-${tone}`, className]}
+  style={`font-size:${fontSize}px;`}
+  aria-label="Scluba"
+>
+  <span class="ws-text">SCLUBA</span>
+
+  {withBall && (
+    <span class="ws-ball" style={`width:${ballSize}px;height:${ballSize}px;`} aria-hidden="true">
+      <svg viewBox="0 0 32 32">
+        <defs>
+          <radialGradient id={`wsBall-${uid}`} cx="32%" cy="28%" r="78%">
+            <stop offset="0%"   stop-color="#FFFFFF" />
+            <stop offset="55%"  stop-color="#F2F0E8" />
+            <stop offset="100%" stop-color="#A8A296" />
+          </radialGradient>
+        </defs>
+        <circle cx="16" cy="16" r="13.8" fill={`url(#wsBall-${uid})`} />
+        <g fill="#000" opacity="0.13">
+          <circle cx="11" cy="10" r="0.8" /><circle cx="16" cy="10" r="0.8" /><circle cx="21" cy="10" r="0.8" />
+          <circle cx="11" cy="16" r="0.8" /><circle cx="16" cy="16" r="0.8" /><circle cx="21" cy="16" r="0.8" />
+          <circle cx="11" cy="22" r="0.8" /><circle cx="16" cy="22" r="0.8" /><circle cx="21" cy="22" r="0.8" />
+        </g>
+        <ellipse cx="11.5" cy="9" rx="3.6" ry="2.2" fill="#FFFFFF" opacity="0.6" />
+      </svg>
+    </span>
+  )}
+</span>
+
+<style>
+  .wordmark-scluba {
+    display: inline-flex;
+    align-items: baseline;
+    line-height: 0.9;
+  }
+  .ws-text {
+    /* Big Shoulders Display : variable expanded sans-serif, weight 100-900.
+       Fallback Impact (système, condensé bold) puis sans-serif générique. */
+    font-family: 'Big Shoulders Display', 'Impact', 'Haettenschweiler', sans-serif;
+    font-weight: 800;
+    font-stretch: 110%;
+    letter-spacing: -0.005em;
+    line-height: 0.85;
+  }
+  .tone-wood .ws-text {
+    color: #2D1B0E; /* warm-charcoal sur fond clair */
+  }
+  .tone-inverted .ws-text {
+    color: #F4EEDD; /* cream sur fond forest profond */
+  }
+  .ws-ball {
+    display: inline-block;
+    margin-left: 0.08em;
+    align-self: center;
+    flex-shrink: 0;
+  }
+  .ws-ball svg { width: 100%; height: 100%; display: block; }
+</style>
