@@ -1,6 +1,5 @@
 ---
 import { useT, altLocaleHref, type Locale } from '../i18n';
-import WordmarkWood from './WordmarkWood.astro';
 
 interface Props {
   locale: Locale;
@@ -18,7 +17,7 @@ const privacyHref = locale === 'fr' ? '/legal/confidentialite/' : '/en/legal/pri
 <footer class="footer">
   <div class="container footer-inner">
     <div class="footer-brand">
-      <WordmarkWood size="lg" tone="inverted" class="footer-wordmark" />
+      <span class="footer-mark">Scluba<span class="footer-dot">.</span></span>
       <p class="footer-tagline">{t.footer.tagline}</p>
     </div>
 
@@ -53,10 +52,16 @@ const privacyHref = locale === 'fr' ? '/legal/confidentialite/' : '/en/legal/pri
   @media (min-width: 768px) {
     .footer-inner { grid-template-columns: 2fr 1fr; }
   }
-  .footer-wordmark {
-    display: inline-flex;
+  .footer-mark {
+    font-family: var(--font-serif);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--bg);
+    letter-spacing: -0.02em;
+    display: block;
     margin-bottom: var(--space-3);
   }
+  .footer-dot { color: var(--accent); }
   .footer-tagline {
     font-size: var(--text-base);
     color: rgba(255, 255, 255, 0.55);
