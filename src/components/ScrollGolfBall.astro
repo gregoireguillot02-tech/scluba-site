@@ -162,57 +162,56 @@
     camera.position.set(0, 0, 5);
     camera.lookAt(0, 0, 0);
 
-    // === HDRI procédural neon grid + Lighting =======================
-    // V4 Tech Bold : drop RoomEnvironment (studio générique) au profit
-    // d'un equirectangular canvas custom — grille fine + flashes accent
-    // green aux intersections. Le chrome de la balle réfléchit ce "Tron
-    // premium tech" environment, lit immédiatement Linear/Vercel.
-    function createNeonGridHDRI() {
+    // === HDRI procédural rich (V4.3) =================================
+    // Drop la grille statique V4. Replace par radial gradients sweep
+    // colorés (green accent + bleu froid + chaud orange) + highlights
+    // blancs ponctuels + horizon green. Le chrome catch des reflets
+    // organiques, l'iridescence catch les couleurs froides/chaudes aux
+    // angles rasants.
+    function createRichHDRI() {
       const W = 2048, H = 1024;
       const cnv = document.createElement('canvas');
       cnv.width = W; cnv.height = H;
       const ctx = cnv.getContext('2d')!;
 
-      // Fond noir profond
+      // Base sombre
       ctx.fillStyle = '#050505';
       ctx.fillRect(0, 0, W, H);
 
-      // Grille verticale + horizontale gris-foncé (lignes fines)
-      ctx.strokeStyle = '#181818';
-      ctx.lineWidth = 1;
-      const step = 64;
-      for (let x = 0; x <= W; x += step) {
-        ctx.beginPath();
-        ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, H);
-        ctx.stroke();
-      }
-      for (let y = 0; y <= H; y += step) {
-        ctx.beginPath();
-        ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5);
-        ctx.stroke();
-      }
+      // Zone 1 — Green accent radial sweep (top-left)
+      const greenZone = ctx.createRadialGradient(W * 0.20, H * 0.35, 0, W * 0.20, H * 0.35, W * 0.30);
+      greenZone.addColorStop(0, 'rgba(0, 220, 130, 0.55)');
+      greenZone.addColorStop(0.5, 'rgba(0, 220, 130, 0.18)');
+      greenZone.addColorStop(1, 'rgba(0, 220, 130, 0)');
+      ctx.fillStyle = greenZone;
+      ctx.fillRect(0, 0, W, H);
 
-      // Flashes accent green aux intersections principales (every 6 cells)
-      ctx.fillStyle = 'rgba(0, 220, 130, 0.55)';
-      for (let x = step * 3; x < W; x += step * 6) {
-        for (let y = step * 3; y < H; y += step * 6) {
-          ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
+      // Zone 2 — Bleu froid (top-right) pour iridescence catch
+      const coolZone = ctx.createRadialGradient(W * 0.78, H * 0.28, 0, W * 0.78, H * 0.28, W * 0.25);
+      coolZone.addColorStop(0, 'rgba(80, 120, 220, 0.40)');
+      coolZone.addColorStop(0.6, 'rgba(80, 120, 220, 0.10)');
+      coolZone.addColorStop(1, 'rgba(80, 120, 220, 0)');
+      ctx.fillStyle = coolZone;
+      ctx.fillRect(0, 0, W, H);
 
-      // Highlights ponctuels — V4.1 attenués pour éviter le bloom blow-out
+      // Zone 3 — Chaud orange subtle (mid bottom) pour warm pop
+      const warmZone = ctx.createRadialGradient(W * 0.50, H * 0.75, 0, W * 0.50, H * 0.75, W * 0.22);
+      warmZone.addColorStop(0, 'rgba(255, 160, 80, 0.32)');
+      warmZone.addColorStop(1, 'rgba(255, 160, 80, 0)');
+      ctx.fillStyle = warmZone;
+      ctx.fillRect(0, 0, W, H);
+
+      // Highlights ponctuels blancs (simulent lights distantes)
       const highlights = [
-        [W * 0.25, H * 0.30, 8],
-        [W * 0.75, H * 0.35, 6],
-        [W * 0.50, H * 0.20, 10],
-        [W * 0.10, H * 0.60, 5],
-        [W * 0.90, H * 0.65, 7],
+        [W * 0.30, H * 0.20, 7],
+        [W * 0.70, H * 0.45, 6],
+        [W * 0.45, H * 0.65, 8],
+        [W * 0.85, H * 0.55, 5],
+        [W * 0.15, H * 0.70, 6],
       ];
       for (const [x, y, r] of highlights) {
         const grad = ctx.createRadialGradient(x, y, 0, x, y, r * 6);
-        grad.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.30)');
         grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = grad;
         ctx.beginPath();
@@ -220,10 +219,10 @@
         ctx.fill();
       }
 
-      // Horizon bas vert très subtil (ground reflection bonus)
+      // Horizon green ground reflection
       const horizon = ctx.createLinearGradient(0, H * 0.7, 0, H);
       horizon.addColorStop(0, 'rgba(5, 5, 5, 0)');
-      horizon.addColorStop(1, 'rgba(0, 220, 130, 0.08)');
+      horizon.addColorStop(1, 'rgba(0, 220, 130, 0.10)');
       ctx.fillStyle = horizon;
       ctx.fillRect(0, H * 0.7, W, H * 0.3);
 
@@ -236,7 +235,7 @@
 
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
-    const gridTex = createNeonGridHDRI();
+    const gridTex = createRichHDRI();
     scene.environment = pmremGenerator.fromEquirectangular(gridTex).texture;
     gridTex.dispose();
     pmremGenerator.dispose();
@@ -336,8 +335,9 @@
     // matériau original (white plastic standard) est dropé : on veut
     // chrome pur qui réfléchit l'HDRI neon grid.
     function chromifyBall(ball: any) {
-      // V4.1 : envMapIntensity 1.4→1.0 et clearcoatRoughness 0.1→0.2
-      // pour réduire le blow-out des highlights post-bloom.
+      // V4.3 : ajout iridescence (thin-film rainbow Fresnel effet Linear /
+      // Vision Pro). Aux angles rasants la surface chrome catch des reflets
+      // arc-en-ciel — signature premium tech 2026.
       const chromeMaterial = new THREE.MeshPhysicalMaterial({
         color: 0xF5F5F5,
         metalness: 1.0,
@@ -345,6 +345,9 @@
         clearcoat: 1.0,
         clearcoatRoughness: 0.2,
         envMapIntensity: 1.0,
+        iridescence: 1.0,
+        iridescenceIOR: 1.3,
+        iridescenceThicknessRange: [100, 800],
       });
       ball.traverse((child: any) => {
         if (child.isMesh) {
@@ -380,15 +383,19 @@
         if (shadow) shadow.dataset.ready = 'true';
         requestRender();
 
-        // Rotation auto continue Y ralentie (~3°/s) — la balle reste
-        // "vivante" sans tourner trop vite. Le chrome catch des reflets
-        // différents à chaque angle de l'HDRI, ce qui donne la vie.
+        // Rotation auto continue Y ralentie (~3°/s) + float bob sinusoïdal
+        // continu (V4.3) — la balle lévite doucement même hors scroll.
+        // Le bobOffset s'additionne au ballState.y du voyage scroll-tied,
+        // sans casser les keyframes.
         if (!prefersReduced) {
           let lastTime = performance.now();
+          const bobStartTime = performance.now();
           function tick(time: number) {
             const delta = (time - lastTime) / 1000;
             lastTime = time;
             ballGroup.rotation.y += delta * 0.05;
+            const bobOffset = Math.sin(((time - bobStartTime) / 4000) * Math.PI * 2) * 0.03;
+            ballGroup.position.y = ballState.y + bobOffset;
             if (ballGroup.visible) {
               composer.render();
             }
