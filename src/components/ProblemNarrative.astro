@@ -61,30 +61,26 @@ const t = useT(locale);
     margin-bottom: var(--space-9);
   }
   .problem-line {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: clamp(2rem, 5.5vw, 4rem);
     line-height: 1.05;
     letter-spacing: -0.045em;
-    color: var(--cream-soft);
+    color: var(--cream, var(--ink));
     max-width: 22ch;
     margin: 0 auto;
     font-weight: 700;
-    font-style: italic;
-    font-variation-settings: 'opsz' 144, 'SOFT' 60;
   }
-  /* Dernière ligne = la chute du poème : honey accent + plus de poids */
+  /* Dernière ligne = la chute : accent green + plus de poids */
   .problem-line.is-last {
     color: var(--accent);
     font-weight: 900;
-    font-style: normal;
-    font-variation-settings: 'opsz' 144, 'SOFT' 40;
   }
 
-  /* Punchline avec rule décorative au-dessus (pattern jeskojets) */
+  /* Punchline avec rule décorative au-dessus */
   .problem-punch {
+    font-family: var(--font-display);
     font-size: var(--text-md);
     color: var(--muted);
-    font-style: italic;
     max-width: 48ch;
     margin: 0 auto;
     line-height: 1.55;

@@ -46,10 +46,10 @@ const t = useT(locale);
     left: 5%;
     right: 5%;
     height: 1px;
-    background: linear-gradient(90deg, var(--grass-bright, var(--accent)), var(--accent), var(--wood, var(--primary)));
+    background: linear-gradient(90deg, transparent, var(--accent) 30%, var(--accent) 70%, transparent);
     transform-origin: left center;
     z-index: 0;
-    opacity: 0.55;
+    opacity: 0.65;
   }
   @media (max-width: 767px) {
     .how-line { display: none; }
@@ -77,18 +77,17 @@ const t = useT(locale);
   /* Numérotation XXL au lieu de cercle — pattern donmolinico.
      Le chiffre devient le héros visuel, plus de "petit cercle décoratif". */
   .how-num {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: clamp(3rem, 6vw, 5rem);
     font-weight: 900;
     line-height: 0.85;
-    letter-spacing: -0.05em;
+    letter-spacing: -0.045em;
     color: var(--accent);
-    font-variation-settings: 'opsz' 144;
     display: block;
     margin: 0 auto var(--space-4);
-    /* Petit halo honey derrière pour faire ressortir le chiffre sur la line */
+    /* Halo accent green derrière pour faire ressortir le chiffre sur la line */
     text-shadow:
-      0 0 24px rgba(212, 165, 116, 0.35),
+      0 0 24px rgba(0, 220, 130, 0.35),
       0 0 8px var(--bg);
   }
 

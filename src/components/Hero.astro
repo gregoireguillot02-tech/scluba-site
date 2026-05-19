@@ -19,7 +19,7 @@ const t = useT(locale);
   <div class="container hero-content">
     <div class="hero-text">
       <span class="hero-eyebrow eyebrow-mono" data-anim="hero-eyebrow">{t.hero.eyebrow}</span>
-      <h1 class="hero-logo text-mega"><span class="hero-logo-text" data-anim="hero-logo">SCLUBA</span></h1>
+      <h1 class="hero-logo text-mega"><span class="hero-logo-text" data-anim="hero-logo">Scluba</span></h1>
       <p class="hero-tagline" data-anim="hero-tagline">{t.hero.tagline}</p>
       <p class="hero-sub" data-anim="hero-sub">{t.hero.subtagline}</p>
       <a href="#cta" class="btn btn-accent hero-cta" data-anim="hero-cta">
@@ -31,7 +31,7 @@ const t = useT(locale);
       </a>
     </div>
 
-    <div class="hero-visual glow-honey" data-anim="hero-phone" aria-hidden="true">
+    <div class="hero-visual glow-accent" data-anim="hero-phone" aria-hidden="true">
       <div class="hero-phone-stage">
         <div class="hero-phone">
           <!-- Boutons latéraux -->
@@ -299,11 +299,10 @@ const t = useT(locale);
     overflow: hidden;
   }
   .hero-logo .hero-logo-text {
-    font-family: 'Big Shoulders Display', 'Impact', 'Haettenschweiler', sans-serif;
-    font-weight: 800;
-    font-stretch: 110%;
-    letter-spacing: -0.01em;
-    color: var(--primary);
+    font-family: var(--font-display);
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    color: var(--cream, var(--primary));
     display: inline-block;
   }
 
@@ -313,13 +312,14 @@ const t = useT(locale);
   }
 
   .hero-tagline {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
+    font-weight: 700;
     font-size: clamp(1.5rem, 3vw, 2.25rem);
-    line-height: 1.2;
-    color: var(--ink);
+    line-height: 1.15;
+    color: var(--cream, var(--ink));
     margin-bottom: var(--space-4);
-    max-width: 18ch;
-    letter-spacing: -0.01em;
+    max-width: 22ch;
+    letter-spacing: -0.025em;
   }
 
   .hero-sub {
