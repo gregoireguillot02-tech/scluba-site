@@ -76,8 +76,20 @@ const t = useT(locale);
 
 <style>
   .showcase {
-    background: var(--bg);
+    background: transparent; /* Laisse passer l'atmospheric gradient + grain canvas */
     overflow: hidden;
+  }
+  /* Section-header décalé légèrement à droite pour laisser haut-gauche à la balle
+     qui voyage là (K5 keyframe x=-2.4 y=+0.8) */
+  .showcase :global(.section-header) {
+    text-align: left;
+    margin-left: 20%;
+  }
+  @media (max-width: 900px) {
+    .showcase :global(.section-header) {
+      text-align: center;
+      margin-left: auto;
+    }
   }
 
   .showcase-grid {

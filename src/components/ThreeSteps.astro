@@ -92,6 +92,10 @@ const t = useT(locale);
     .step-grid {
       grid-template-columns: repeat(3, 1fr);
       gap: var(--space-5);
+      /* Décalage à gauche pour laisser ~25% droite à la balle qui voyage là (K3 keyframe x=+2.6) */
+      max-width: 78%;
+      margin-right: auto;
+      margin-left: 0;
     }
   }
 

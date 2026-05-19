@@ -1,42 +1,48 @@
 ---
 /**
- * ScrollGolfBall — scène Three.js plein écran avec balle de golf 3D 3D pilotée
- * par 5 keyframes scroll précises (apparait au Hero, disparait dans les
- * sections texte, réapparait grosse au CTA final).
- *
- * Inspiration : oryzo.ai — canvas WebGL fixed inset 0 derrière le DOM, scroll
- * pilote une timeline d'états (position + scale + visibilité) de la balle.
+ * ScrollGolfBall — scène Three.js plein écran avec balle de golf 3D qui
+ * VOYAGE dans le viewport au scroll (pattern oryzo.ai — V3 2026-05-19).
  *
  * Architecture :
  *   - <canvas> position:fixed inset:0 z-index:1 pointer-events:none
  *   - Contenu HTML (Nav z:100, sections z:auto) reste cliquable au-dessus
- *   - Cam fixée distance 5, FOV 35° + orbite ¼ tour (theta 0→60°, phi 75→85→75)
- *   - Balle au centre 3D, scale & visibility pilotés par 5 keyframes scroll
+ *   - Camera FIXÉE à (0, 0, 5) lookAt origin — pas d'orbite, la balle
+ *     elle-même se déplace dans le monde 3D selon les keyframes scroll
+ *   - 10 keyframes (x, y, scale) interpolées smoothement → balle "voyage"
  *
- * Keyframes scroll (timeline GSAP scrub 0.6) :
- *   ┌─────────┬──────────┬─────────────────────────────────┐
- *   │ scroll% │ section  │ balle                            │
- *   ├─────────┼──────────┼─────────────────────────────────┤
- *   │ 0-12%   │ Hero     │ centrée, scale 1.0, OPAQUE      │
- *   │ 12-22%  │ Problem  │ shrink + fade (scale 1→0)       │
- *   │ 22-78%  │ texte sections │ HIDDEN (scale 0)         │
- *   │ 78-92%  │ FAQ→CTA  │ grow + fade in (scale 0→1.2)   │
- *   │ 92-100% │ CTAForm  │ centrée scale 1.2, OPAQUE       │
- *   └─────────┴──────────┴─────────────────────────────────┘
+ * Camera FOV 35°, distance 5 → viewport vertical visible ≈ 3.15 units,
+ * horizontal ≈ 5.6 units sur 16:9. Donc :
+ *   x = ±2.5  = bords gauche/droite du viewport
+ *   y = ±1.5  = haut/bas du viewport
+ *
+ * Map des 10 keyframes (scroll % → position) :
+ *   ┌─────────┬────────────────┬──────┬──────┬───────┐
+ *   │ scroll% │ section        │   x  │   y  │ scale │
+ *   ├─────────┼────────────────┼──────┼──────┼───────┤
+ *   │ 0%      │ Hero start     │ +2.0 │ -0.2 │  1.0  │
+ *   │ 10%     │ Problem (haut) │  0   │ +1.4 │ 0.55  │
+ *   │ 20%     │ Problem (bas)  │  0   │ -1.4 │ 0.55  │
+ *   │ 25%     │ ThreeSteps     │ +2.6 │  0   │ 0.50  │
+ *   │ 38%     │ → PhoneSh.     │ +2.6 │  0   │  0    │ ← HIDDEN
+ *   │ 55%     │ Clubs (h-gche) │ -2.4 │ +0.8 │ 0.65  │
+ *   │ 68%     │ HowItWorks     │  0   │ +1.8 │ 0.50  │
+ *   │ 78%     │ Pricing        │ +2.3 │ -0.9 │ 0.40  │
+ *   │ 86%     │ FAQ            │ -2.0 │  0   │ 0.55  │
+ *   │ 93%     │ → CTAForm      │  0   │  0   │  1.0  │
+ *   │ 100%    │ CTAForm final  │  0   │  0   │  1.3  │
+ *   └─────────┴────────────────┴──────┴──────┴───────┘
  *
  * Rendu :
  *   - WebGLRenderer alpha:true antialias:true dpr capé 2
  *   - RoomEnvironment (PMREMGenerator) → reflections IBL subtiles
- *   - 3-point lighting (key 2.0 + fill warm 0.8 + rim cool 0.4 + ambient 0.15)
+ *   - 3-point lighting (key + fill + rim + ambient)
  *   - ACESFilmicToneMapping exposure 1.1, SRGBColorSpace
  *   - frameloop on-demand (re-render sur scroll/resize/load uniquement)
  *
  * Guards :
- *   - prefers-reduced-motion : balle visible immobile au centre
+ *   - prefers-reduced-motion : balle figée à la position initiale (K0)
  *   - mobile portrait < 640px : canvas display:none
  *   - lazy import three + addons + GSAP/ScrollTrigger après DOMContentLoaded
- *
- * Inclusion : conditionnelle depuis Base.astro — uniquement sur la home (/, /en/).
  */
 ---
 
@@ -95,30 +101,16 @@
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.1;
 
-    // === Scene + Camera =============================================
+    // === Scene + Camera (FIXÉE) =====================================
     const scene = new THREE.Scene();
-
     const camera = new THREE.PerspectiveCamera(
       35,
       window.innerWidth / window.innerHeight,
       0.1,
       100
     );
-
-    // Distance 5 (au lieu de 3.5 V1) → balle ~32% du viewport au lieu de 72%.
-    // Orbite limitée à ¼ tour (theta 0→60°, phi 75→85→75) — moins envahissant
-    // que le 360° complet de V1.
-    const camState = { theta: 0, phi: 75, distance: 5 };
-    function applyCameraState() {
-      const phiRad = (camState.phi * Math.PI) / 180;
-      const thetaRad = (camState.theta * Math.PI) / 180;
-      const sinPhi = Math.sin(phiRad);
-      camera.position.x = camState.distance * sinPhi * Math.sin(thetaRad);
-      camera.position.y = camState.distance * Math.cos(phiRad);
-      camera.position.z = camState.distance * sinPhi * Math.cos(thetaRad);
-      camera.lookAt(0, 0, 0);
-    }
-    applyCameraState();
+    camera.position.set(0, 0, 5);
+    camera.lookAt(0, 0, 0);
 
     // === Environment + Lighting =====================================
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
@@ -139,16 +131,17 @@
     const ambient = new THREE.AmbientLight(0xffffff, 0.15);
     scene.add(ambient);
 
-    // === Ball state (driven by scroll keyframes) ====================
-    // ballGroup wrap le gltf.scene → on anime le groupe, pas la balle elle-même
-    // (ça nous permet de garder la rotation auto Y sur la balle interne).
+    // === Ball state (voyage scroll-tied) ============================
+    // ballGroup wrap le gltf.scene → on anime le groupe, pas la balle
+    // (la rotation auto Y reste sur la balle interne).
     const ballGroup = new THREE.Group();
     scene.add(ballGroup);
 
+    // État initial = K0 (Hero start) : droite, scale plein
     const ballState = {
-      x: 0,
-      y: 0,
-      scale: 1.0, // 0 = hidden, 1.0 = normal, 1.2 = final
+      x: 2.0,
+      y: -0.2,
+      scale: 1.0,
     };
     function applyBallState() {
       ballGroup.position.x = ballState.x;
@@ -156,6 +149,7 @@
       ballGroup.scale.setScalar(Math.max(ballState.scale, 0));
       ballGroup.visible = ballState.scale > 0.01;
     }
+    applyBallState();
 
     // === Render à la demande ========================================
     let renderRequested = false;
@@ -175,7 +169,6 @@
       (gltf) => {
         const ball = gltf.scene;
 
-        // Auto-center + fit : diamètre cible 1.0 (au lieu de 1.6 V1)
         const box = new THREE.Box3().setFromObject(ball);
         const size = new THREE.Vector3();
         box.getSize(size);
@@ -194,15 +187,13 @@
         canvas.dataset.ready = 'true';
         requestRender();
 
-        // Rotation auto continue (~9°/s) — donne la "vie" même quand stationnaire
+        // Rotation auto continue Y (~9°/s) — balle reste "vivante"
         if (!prefersReduced) {
           let lastTime = performance.now();
           function tick(time: number) {
             const delta = (time - lastTime) / 1000;
             lastTime = time;
             ball.rotation.y += delta * 0.15;
-            // Re-render seulement si la balle est visible (perf : sinon on
-            // anime sans afficher)
             if (ballGroup.visible) {
               renderer.render(scene, camera);
             }
@@ -217,7 +208,7 @@
       }
     );
 
-    // === Scroll-driven animations ===================================
+    // === Voyage timeline (10 keyframes) =============================
     if (!prefersReduced) {
       // Sync ScrollTrigger avec Lenis si présent
       const lenis = (window as unknown as { __lenis?: { on: (ev: string, cb: () => void) => void } }).__lenis;
@@ -225,9 +216,12 @@
         lenis.on('scroll', ScrollTrigger.update);
       }
 
-      // === Master timeline pour la balle (scale + position) ===
-      // 5 keyframes précis pilotés par le scrollProgress de la page.
+      // Master timeline qui couvre 0% → 100% du scroll document.
+      // Chaque .to() interpole smoothement vers la prochaine keyframe.
+      // Easing power2.inOut pour mouvement organique entre positions.
+      // scrub 0.6 = léger lag "physique" derrière le scroll utilisateur.
       const tl = gsap.timeline({
+        defaults: { ease: 'power2.inOut' },
         scrollTrigger: {
           trigger: document.documentElement,
           start: 'top top',
@@ -241,114 +235,37 @@
         },
       });
 
-      // Helper : convertit un % du scroll en position sur la timeline.
-      // La durée totale de la timeline = 1 (normalisée). Les .to() prennent
-      // des durations qui sont des fractions de cette durée totale.
-      //   0%  → Hero : centrée scale 1.0
-      //  12%  → début sortie Hero : commence à shrink
-      //  22%  → tout petit, off-screen droite (préparé à disparaître)
-      //  25%  → HIDDEN (scale 0)
-      //  78%  → encore HIDDEN
-      //  85%  → réapparait du centre (scale 0 → 0.8)
-      //  92%  → grosse au centre (scale 1.2)
-      // 100%  → final, reste scale 1.2
+      // K0 → K1 (0% → 10%) : Hero droite → ProblemNarrative haut centre
+      tl.to(ballState, { duration: 0.10, x: 0, y: 1.4, scale: 0.55 });
 
-      // Segment 1 : 0% → 12% — balle stable centrée
-      tl.to(ballState, { duration: 0.12, scale: 1.0, x: 0, y: 0, ease: 'none' });
+      // K1 → K2 (10% → 20%) : Problem haut → bas (traverse vertical)
+      tl.to(ballState, { duration: 0.10, x: 0, y: -1.4, scale: 0.55 });
 
-      // Segment 2 : 12% → 22% — slide-out vers la droite + shrink
-      tl.to(ballState, {
-        duration: 0.10,
-        scale: 0.4,
-        x: 2.5,
-        y: 0,
-        ease: 'power2.in',
-      });
+      // K2 → K3 (20% → 25%) : transition vers ThreeSteps droite
+      tl.to(ballState, { duration: 0.05, x: 2.6, y: 0, scale: 0.50 });
 
-      // Segment 3 : 22% → 25% — disparait complètement (scale 0)
-      tl.to(ballState, {
-        duration: 0.03,
-        scale: 0,
-        x: 2.5,
-        y: 0,
-        ease: 'power2.in',
-      });
+      // K3 → K4 (25% → 38%) : ThreeSteps stable puis fade vers PhoneShowcase HIDDEN
+      tl.to(ballState, { duration: 0.13, x: 2.6, y: 0, scale: 0 });
 
-      // Segment 4 : 25% → 78% — HIDDEN (long plateau pour les sections texte)
-      tl.to(ballState, {
-        duration: 0.53,
-        scale: 0,
-        x: 0,
-        y: 0,
-        ease: 'none',
-      });
+      // K4 → K5 (38% → 55%) : HIDDEN, puis transition vers ClubsShowcase haut-gauche
+      // Pendant PhoneShowcase (focus phone mockup), balle invisible.
+      // Au début de Clubs, elle réapparaît grandit haut-gauche.
+      tl.to(ballState, { duration: 0.17, x: -2.4, y: 0.8, scale: 0.65 });
 
-      // Segment 5 : 78% → 85% — réapparition depuis le centre (scale 0 → 0.8)
-      tl.to(ballState, {
-        duration: 0.07,
-        scale: 0.8,
-        x: 0,
-        y: 0,
-        ease: 'power2.out',
-      });
+      // K5 → K6 (55% → 68%) : Clubs haut-gauche → HowItWorks haut centre (suit la line)
+      tl.to(ballState, { duration: 0.13, x: 0, y: 1.8, scale: 0.50 });
 
-      // Segment 6 : 85% → 92% — grossit jusqu'à scale 1.2 (final glory)
-      tl.to(ballState, {
-        duration: 0.07,
-        scale: 1.2,
-        x: 0,
-        y: 0,
-        ease: 'power2.out',
-      });
+      // K6 → K7 (68% → 78%) : HowItWorks → Pricing droite-bas (petit)
+      tl.to(ballState, { duration: 0.10, x: 2.3, y: -0.9, scale: 0.40 });
 
-      // Segment 7 : 92% → 100% — reste stable centrée scale 1.2
-      tl.to(ballState, {
-        duration: 0.08,
-        scale: 1.2,
-        x: 0,
-        y: 0,
-        ease: 'none',
-      });
+      // K7 → K8 (78% → 86%) : Pricing → FAQ gauche
+      tl.to(ballState, { duration: 0.08, x: -2.0, y: 0, scale: 0.55 });
 
-      // === Cam orbite subtile (parallèle, ¼ tour total) ===
-      // Donne un léger mouvement "vivant" sans masquer les écritures.
-      gsap.to(camState, {
-        theta: 60,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: document.documentElement,
-          start: 'top top',
-          end: 'bottom bottom',
-          scrub: 0.6,
-          invalidateOnRefresh: true,
-          onUpdate: () => {
-            applyCameraState();
-            requestRender();
-          },
-        },
-      });
+      // K8 → K9 (86% → 93%) : FAQ gauche → CTAForm transition retour centre
+      tl.to(ballState, { duration: 0.07, x: 0, y: 0, scale: 1.0 });
 
-      // Phi cloche (75 → 85 → 75) — léger survol au-dessus au milieu de page
-      gsap.to(camState, {
-        phi: 85,
-        ease: 'sine.inOut',
-        scrollTrigger: {
-          trigger: document.documentElement,
-          start: 'top top',
-          end: '50% center',
-          scrub: 0.6,
-        },
-      });
-      gsap.to(camState, {
-        phi: 75,
-        ease: 'sine.inOut',
-        scrollTrigger: {
-          trigger: document.documentElement,
-          start: '50% center',
-          end: 'bottom bottom',
-          scrub: 0.6,
-        },
-      });
+      // K9 → K10 (93% → 100%) : CTAForm grandit final glory (scale 1.3)
+      tl.to(ballState, { duration: 0.07, x: 0, y: 0, scale: 1.3 });
     }
 
     // === Resize handler =============================================

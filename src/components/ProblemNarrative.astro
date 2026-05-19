@@ -33,9 +33,10 @@ const t = useT(locale);
     padding: 0;
   }
   .problem-wrap {
-    min-height: 100vh;
+    min-height: 110vh; /* Plus d'air pour que la balle voyage haut → bas dans la section */
     display: flex;
     align-items: center;
+    padding: var(--space-9) 0;
     /* Gradient atmosphérique repris des tokens dark — laisse passer la balle 3D derrière */
     background:
       radial-gradient(ellipse 80% 50% at 50% 50%, rgba(212, 165, 116, 0.06), transparent 60%);
