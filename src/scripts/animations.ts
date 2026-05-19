@@ -139,6 +139,21 @@ function initPhoneShowcase() {
   if (shareApps.length) gsap.set(shareApps, { opacity: 0, y: 10, scale: 0.9 });
   if (shareToast) gsap.set(shareToast, { opacity: 0, y: -12 });
 
+  // V4.1 Néon vert outline — se dessine au scroll-in de la section
+  const neonPath = wrap.querySelector<SVGRectElement>('[data-neon-path]');
+  if (neonPath) {
+    gsap.to(neonPath, {
+      strokeDashoffset: 0,
+      ease: 'power2.out',
+      scrollTrigger: {
+        trigger: wrap,
+        start: 'top 85%',
+        end: 'top 25%',
+        scrub: 0.8,
+      },
+    });
+  }
+
   const tl = gsap.timeline({
     scrollTrigger: {
       trigger: wrap,
@@ -454,6 +469,43 @@ function initCTAForm() {
 }
 
 
+/* ---------- PALETTE CYCLER (V4.1) ----------
+   1-card morph cycle dans ClubsShowcase : la card unique cycle entre 3-4
+   palettes toutes les 4.5s, change --p-primary/--p-accent/--p-ground
+   + le tagline + le name + le indicator actif. */
+function initPaletteCycler() {
+  const cycler = document.querySelector<HTMLElement>('[data-palette-cycler]');
+  if (!cycler) return;
+
+  let palettes: Array<{ primary: string; accent: string; ground: string; name: string; tagline: string }>;
+  try {
+    palettes = JSON.parse(cycler.dataset.palettes || '[]');
+  } catch {
+    return;
+  }
+  if (!palettes.length) return;
+
+  const tagline = cycler.querySelector<HTMLElement>('[data-palette-tagline]');
+  const name = cycler.querySelector<HTMLElement>('[data-palette-name]');
+  const indicators = document.querySelectorAll<HTMLElement>('[data-palette-indicator]');
+
+  const target = cycler;
+  let idx = 0;
+  function tick() {
+    idx = (idx + 1) % palettes.length;
+    const p = palettes[idx];
+    target.style.setProperty('--p-primary', p.primary);
+    target.style.setProperty('--p-accent', p.accent);
+    target.style.setProperty('--p-ground', p.ground);
+    if (tagline) tagline.textContent = p.tagline;
+    if (name) name.textContent = p.name;
+    indicators.forEach((el, i) => {
+      el.classList.toggle('is-active', i === idx);
+    });
+  }
+  setInterval(tick, 4500);
+}
+
 /* ---------- INIT ---------- */
 function initAll() {
   initHero();
@@ -461,6 +513,7 @@ function initAll() {
   initSteps();
   initPhoneShowcase();
   initShowcase();
+  initPaletteCycler();
   initHow();
   initPricing();
   initFAQ();
