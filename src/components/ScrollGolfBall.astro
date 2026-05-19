@@ -55,7 +55,11 @@
     inset: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 1;
+    /* V4.5 — z-index 0 : la balle passe DERRIÈRE le contenu pour effet
+       de profondeur parallax. Les sections doivent avoir bg transparent
+       sur la landing dark mode pour qu'elle reste visible (override en
+       global.css body[data-landing-mode="dark"]). */
+    z-index: 0;
     pointer-events: none;
     opacity: 0;
     transition: opacity 600ms ease-out;
@@ -84,9 +88,8 @@
     transform: translate(-1000px, -1000px);
     transform-origin: 50% 50%;
     will-change: transform, opacity;
-    /* Même z que le canvas → fixed positionné AVANT canvas dans le DOM,
-       donc le canvas (et donc la balle) passe au-dessus à l'overlap. */
-    z-index: 1;
+    /* V4.5 — z-index 0 (même que canvas) pour rester derrière contenu */
+    z-index: 0;
     opacity: 0;
     transition: opacity 400ms ease-out;
     /* Multiply pour que l'ombre s'intègre quel que soit le bg de section */

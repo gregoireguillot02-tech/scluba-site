@@ -272,6 +272,23 @@ body[data-landing-mode="dark"] .lang-switch:hover {
   border-color: var(--accent);
 }
 
+/* V4.5 — Sections transparentes pour que la balle 3D (z-index 0 fixed)
+   soit visible derrière elles. Le body bg (#0A0A0A) reste solide ; les
+   sections deviennent transparentes pour révéler le canvas derrière.
+   Cards/text à l'intérieur des sections gardent leurs bg opaques. */
+body[data-landing-mode="dark"] .steps,
+body[data-landing-mode="dark"] .showcase,
+body[data-landing-mode="dark"] .showcase-section,
+body[data-landing-mode="dark"] .how,
+body[data-landing-mode="dark"] .pricing,
+body[data-landing-mode="dark"] .faq,
+body[data-landing-mode="dark"] .cta {
+  background: transparent;
+}
+body[data-landing-mode="dark"] .problem {
+  background: transparent;
+}
+
 /* Footer V4.1 — override pour ne pas suivre les semantics globales
    (avant fix sémantique --ink, footer rendait cream sur cream invisible) */
 body[data-landing-mode="dark"] .footer {
