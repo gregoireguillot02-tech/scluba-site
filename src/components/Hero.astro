@@ -46,54 +46,69 @@ const t = useT(locale);
               <span class="hero-phone-camera"></span>
             </div>
 
-            <!-- Carte récap brandée (statique, version condensée du magic moment) -->
-            <div class="hero-card">
-              <!-- Photo -->
+            <!-- V4.4 : Hero phone = écran "Démarrer une partie" (entry point
+                 du flow joueur, mirror Scluba webapp réelle). Photo Golf du
+                 Soleil + logo + identité + stats + form solo/multi. -->
+            <div class="hero-card hero-card-start">
+              <!-- Photo banner top -->
               <div class="hero-card-photo">
-                <img src="/photos/golf-du-soleil.jpg" alt="" width="280" height="110" loading="eager" decoding="async" fetchpriority="high" />
-                <div class="hero-card-photo-fade"></div>
+                <img src="/photos/golf-du-soleil.jpg" alt="" width="280" height="180" loading="eager" decoding="async" fetchpriority="high" />
               </div>
 
-              <!-- Logo + nom -->
-              <div class="hero-card-brand">
-                <img src="/logos/golf-du-soleil.svg" alt="" class="hero-card-logo" width="50" height="50" loading="eager" decoding="async" />
-                <div class="hero-card-meta">
-                  <small>Carte récap</small>
-                  <strong>Golf du Soleil</strong>
+              <!-- Logo circle overlapping -->
+              <div class="hero-card-logo-wrap">
+                <img src="/logos/golf-du-soleil.svg" alt="" class="hero-card-logo" width="60" height="60" loading="eager" decoding="async" />
+              </div>
+
+              <!-- Club identity -->
+              <div class="hero-card-identity">
+                <span class="hero-card-city">HAUTS-DE-FRANCE</span>
+                <h3 class="hero-card-name">GOLF DU SOLEIL</h3>
+                <span class="hero-card-rule" aria-hidden="true"></span>
+              </div>
+
+              <!-- Stats strip -->
+              <div class="hero-card-stats">
+                <div class="hero-card-stat">
+                  <span class="hero-card-stat-label">TROUS</span>
+                  <span class="hero-card-stat-value">18</span>
+                </div>
+                <div class="hero-card-stat">
+                  <span class="hero-card-stat-label">PAR</span>
+                  <span class="hero-card-stat-value">72</span>
+                </div>
+                <div class="hero-card-stat">
+                  <span class="hero-card-stat-label">DÉPART</span>
+                  <span class="hero-card-stat-value">Libre</span>
                 </div>
               </div>
 
-              <!-- Body -->
-              <div class="hero-card-body">
-                <div class="hero-card-divider">
-                  <span></span><em>SCORE · 18 TROUS</em><span></span>
-                </div>
-                <div class="hero-card-score">87</div>
-                <div class="hero-card-score-meta">+15 · Par 72</div>
+              <!-- Action section -->
+              <div class="hero-card-action">
+                <span class="hero-card-eyebrow">SCORECARD DIGITALE</span>
+                <h4 class="hero-card-title">Démarrer une partie</h4>
 
-                <div class="hero-card-grid">
-                  {Array.from({ length: 18 }, (_, i) => (
-                    <span class={`hero-card-cell ${i % 5 === 0 ? 'is-birdie' : i % 3 === 0 ? 'is-bogey' : ''}`}>{(i % 4) + 3}</span>
-                  ))}
+                <div class="hero-card-tabs" aria-hidden="true">
+                  <span class="hero-card-tab is-active">En solo</span>
+                  <span class="hero-card-tab">À plusieurs</span>
                 </div>
 
-                <button class="hero-share-cta" type="button" tabindex="-1" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                    <polyline points="16 6 12 2 8 6"/>
-                    <line x1="12" y1="2" x2="12" y2="15"/>
+                <div class="hero-card-field">
+                  <label>TON PRÉNOM</label>
+                  <div class="hero-card-input">
+                    <span class="hero-card-input-placeholder">Antoine</span>
+                    <span class="hero-card-input-caret"></span>
+                  </div>
+                </div>
+
+                <button class="hero-card-cta" type="button" tabindex="-1" aria-hidden="true">
+                  Créer la partie
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14"/>
+                    <path d="m12 5 7 7-7 7"/>
                   </svg>
-                  <span>{t.share.ctaButton}</span>
                 </button>
-
-                <div class="hero-card-footer">
-                  <span>FAIT À</span><strong>Scluba<em>.</em></strong>
-                </div>
               </div>
-
-              {/* V4.1 : iOS Share Sheet supprimée — Grégoire a explicitement
-                  demandé la refonte. Le néon vert PhoneShowcase prend la relève
-                  comme magic moment. */}
             </div>
           </div>
         </div>
@@ -409,7 +424,9 @@ const t = useT(locale);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
   }
 
-  /* Hero card — version condensée carte récap */
+  /* V4.4 — Hero card "Démarrer une partie" (Grégoire spec image 1).
+     Mirror Scluba webapp entry point : photo + logo + identité + stats
+     + form solo/multi avec CTA dark navy. */
   .hero-card {
     width: 100%;
     height: 100%;
@@ -418,7 +435,7 @@ const t = useT(locale);
   }
   .hero-card-photo {
     position: relative;
-    height: 110px;
+    height: 130px;
     overflow: hidden;
     flex-shrink: 0;
   }
@@ -426,153 +443,198 @@ const t = useT(locale);
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center 60%;
-  }
-  .hero-card-photo-fade {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 36px;
-    background: linear-gradient(180deg, transparent, #E8E1D0);
+    object-position: center 50%;
   }
 
-  .hero-card-brand {
-    margin-top: -38px;
-    text-align: center;
+  .hero-card-logo-wrap {
+    width: 64px;
+    height: 64px;
+    margin: -32px auto 0;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+    padding: 4px;
+    position: relative;
     z-index: 2;
-    padding: 0 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
   .hero-card-logo {
-    width: 50px;
-    height: 50px;
-    margin: 0 auto;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
     display: block;
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
-  }
-  .hero-card-meta { margin-top: 4px; }
-  .hero-card-meta small {
-    display: block;
-    font-size: 6.5px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    font-weight: 600;
-  }
-  .hero-card-meta strong {
-    display: block;
-    font-family: var(--font-serif);
-    font-size: 12px;
-    color: var(--primary);
-    font-weight: 700;
-    margin-top: 1px;
   }
 
-  .hero-card-body {
-    padding: 8px 12px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
+  .hero-card-identity {
+    text-align: center;
+    padding: 6px 16px 0;
   }
-  .hero-card-divider {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 4px;
+  .hero-card-city {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 4px;
   }
-  .hero-card-divider span {
-    flex: 1;
+  .hero-card-name {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: -0.015em;
+    color: var(--primary);
+    margin: 0 0 4px;
+    text-transform: uppercase;
+    line-height: 1.1;
+  }
+  .hero-card-rule {
+    display: block;
+    width: 36px;
     height: 1px;
     background: var(--accent);
+    margin: 0 auto;
     opacity: 0.5;
   }
-  .hero-card-divider em {
-    font-style: normal;
-    font-size: 6.5px;
-    color: var(--accent);
-    letter-spacing: 0.16em;
-    font-weight: 600;
+
+  .hero-card-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    padding: 8px 10px;
+    margin: 10px 12px 0;
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 6px;
   }
-  .hero-card-score {
+  .hero-card-stat {
     text-align: center;
-    font-family: var(--font-serif);
-    font-size: 44px;
+  }
+  .hero-card-stat-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+  .hero-card-stat-value {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.02em;
+  }
+
+  .hero-card-action {
+    padding: 10px 16px 14px;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .hero-card-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: var(--accent);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .hero-card-title {
+    font-family: var(--font-display);
+    font-size: 16px;
     font-weight: 800;
     color: var(--primary);
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-  }
-  .hero-card-score-meta {
-    text-align: center;
-    font-size: 8px;
-    color: var(--muted);
-    letter-spacing: 0.04em;
-  }
-  .hero-card-grid {
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    gap: 2px;
-    margin-top: 2px;
-  }
-  .hero-card-cell {
-    aspect-ratio: 1;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 2px;
-    text-align: center;
-    font-size: 7.5px;
-    font-weight: 700;
-    color: var(--ink);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-variant-numeric: tabular-nums;
-  }
-  .hero-card-cell.is-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
-  .hero-card-cell.is-bogey { color: var(--muted); }
-  .hero-card-footer {
-    text-align: center;
-    font-size: 6.5px;
-    color: var(--muted);
-    letter-spacing: 0.16em;
-    margin-top: auto;
-    padding-top: 4px;
-  }
-  .hero-card-footer strong {
-    font-family: var(--font-serif);
-    color: var(--primary);
-    font-size: 8px;
-    margin-left: 3px;
-  }
-  .hero-card-footer em {
-    font-style: normal;
-    color: var(--accent);
+    margin: 0 0 10px;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
   }
 
-  /* CTA Partager dans la carte */
-  .hero-share-cta {
-    margin-top: 4px;
+  .hero-card-tabs {
+    display: inline-flex;
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 16px;
+    padding: 3px;
+    margin: 0 auto 12px;
+    border: 1px solid var(--line);
+  }
+  .hero-card-tab {
+    padding: 4px 12px;
+    border-radius: 14px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .hero-card-tab.is-active {
+    background: var(--bg);
+    color: var(--primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .hero-card-field {
+    text-align: left;
+    margin-bottom: 12px;
+  }
+  .hero-card-field label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .hero-card-input {
+    background: rgba(255, 255, 255, 0.45);
+    border: 1.5px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .hero-card-input-placeholder {
+    color: var(--muted);
+    flex: 1;
+  }
+  .hero-card-input-caret {
+    display: inline-block;
+    width: 1.5px;
+    height: 14px;
+    background: var(--accent);
+    animation: heroCaretBlink 1s infinite;
+  }
+  @keyframes heroCaretBlink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  .hero-card-cta {
+    margin-top: auto;
     width: 100%;
+    padding: 11px;
     background: var(--primary);
     color: var(--bg);
-    border-radius: 6px;
-    padding: 6px;
-    font-size: 8.5px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    display: flex;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.2s;
+    gap: 6px;
+    cursor: default;
+    letter-spacing: -0.01em;
   }
-  .hero-share-cta:hover {
-    background: var(--primary-soft);
-    transform: scale(1.02);
+  .hero-card-cta svg {
+    display: inline-block;
   }
-  .hero-share-cta:active { transform: scale(0.98); }
-
-  /* iOS Share Sheet CSS supprimée (V4.1) — voir HTML drop ci-dessus */
 
   .hero-scroll {
     position: absolute;
