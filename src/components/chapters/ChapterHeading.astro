@@ -1,0 +1,108 @@
+---
+/**
+ * En-tête de chapitre éditorial — eyebrow mono + numéro romain + titre Fraunces italic.
+ *
+ * Style "magazine cover" : la numérotation romaine (I, II, III) ancre la
+ * narration et signale au lecteur qu'on est dans un texte composé, pas une
+ * grille de features SaaS. Le titre passe en Fraunces italic XXL avec
+ * text-wrap balance pour éviter les orphans.
+ *
+ * Usage:
+ *   <ChapterHeading
+ *     numeral="I"
+ *     eyebrow="Le constat"
+ *     title="Une carte papier qui finit en photo, sans votre club."
+ *   />
+ */
+
+interface Props {
+  /** Numéro romain du chapitre (I, II, III…). Affiché en monospace brass. */
+  numeral?: string;
+  /** Eyebrow court — sera mis en uppercase tracked. */
+  eyebrow: string;
+  /** Titre principal du chapitre — Fraunces italic XXL. */
+  title: string;
+  /** Sous-titre optionnel — Newsreader regular, sous le titre. */
+  subtitle?: string;
+  /** Alignement. Default 'left'. 'center' pour les chapitres "cover". */
+  align?: 'left' | 'center';
+  /** Classe additionnelle pour spacing externe. */
+  class?: string;
+}
+
+const {
+  numeral,
+  eyebrow,
+  title,
+  subtitle,
+  align = 'left',
+  class: className = '',
+} = Astro.props;
+---
+
+<header class:list={['chapter-heading', `align-${align}`, className]}>
+  <p class="chapter-eyebrow">
+    {numeral && <span class="chapter-numeral">{numeral}.</span>}
+    <span class="chapter-eyebrow-text">{eyebrow}</span>
+  </p>
+  <h2 class="chapter-title">{title}</h2>
+  {subtitle && <p class="chapter-subtitle">{subtitle}</p>}
+</header>
+
+<style>
+  .chapter-heading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-width: 38ch;
+  }
+  .align-center {
+    align-items: center;
+    text-align: center;
+    margin-inline: auto;
+  }
+
+  .chapter-eyebrow {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6em;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--brass);
+  }
+  .chapter-numeral {
+    color: var(--brass-deep);
+    font-weight: 600;
+  }
+  .chapter-eyebrow-text {
+    color: var(--brass);
+  }
+
+  .chapter-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: italic;
+    font-size: clamp(2.25rem, 5.5vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    color: var(--wood);
+    text-wrap: balance;
+    font-variation-settings: 'opsz' 96, 'SOFT' 50, 'WONK' 0;
+  }
+
+  .chapter-subtitle {
+    margin: 0;
+    font-family: var(--font-body-serif);
+    font-size: 1.125rem;
+    line-height: 1.5;
+    color: var(--wood-soft);
+    max-width: 50ch;
+    font-style: italic;
+    font-weight: 400;
+  }
+</style>

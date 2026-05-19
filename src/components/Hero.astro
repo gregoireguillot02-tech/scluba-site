@@ -1,4 +1,21 @@
 ---
+/**
+ * Hero éditorial "The Golfer's Journal" — banner-first cinematic.
+ *
+ * Composition magazine cover :
+ *   1. Banner photo full-bleed (wordmark-fairway.jpg, 1904×544 ratio 3.5:1)
+ *      avec vignette dégradée bas pour la lisibilité du text en dessous.
+ *   2. Content : eyebrow mono "— PRÉFACE", titre Fraunces italic XL,
+ *      sub Newsreader, CTA brass-plate.
+ *   3. Scroll hint discret.
+ *
+ * Animations : intro stagger fade-up (eyebrow → titre → sub → CTA) + parallax
+ * subtil sur la banner image (translateY tied au scroll). Toutes guards
+ * prefers-reduced-motion via @media query CSS + check JS au runtime.
+ *
+ * Out of scope : pas de phone mockup (re-créé en Chapter02 PR #3) ni de
+ * iOS Share Sheet (déplacé en Chapter04 PR #3).
+ */
 import { useT, type Locale } from '../i18n';
 
 interface Props {
@@ -9,894 +26,238 @@ const { locale } = Astro.props;
 const t = useT(locale);
 ---
 
-<section class="hero">
-  <div class="hero-bg" aria-hidden="true">
-    <div class="bg-gradient"></div>
-    <div class="bg-glow bg-glow-1"></div>
-    <div class="bg-glow bg-glow-2"></div>
+<section class="hero hero-editorial">
+  <!-- Banner photo full-bleed — lettres bois sur fairway au lever du soleil. -->
+  <div class="hero-banner" data-anim="hero-banner">
+    <picture>
+      <img
+        src="/brand/wordmark-fairway.jpg"
+        alt=""
+        width="1904"
+        height="544"
+        fetchpriority="high"
+        decoding="sync"
+        class="hero-banner-img"
+      />
+    </picture>
+    <div class="hero-banner-vignette" aria-hidden="true"></div>
+    <div class="hero-banner-grain" aria-hidden="true"></div>
   </div>
 
   <div class="container hero-content">
-    <div class="hero-text">
-      <h1 class="hero-logo"><span class="hero-logo-text" data-anim="hero-logo">Scluba</span><span class="hero-ball" data-hero-ball aria-hidden="true">
-        <svg viewBox="0 0 32 32">
-          <defs>
-            <radialGradient id="ballBody" cx="32%" cy="28%" r="78%">
-              <stop offset="0%" stop-color="#FFFFFF"/>
-              <stop offset="55%" stop-color="#F2F0E8"/>
-              <stop offset="100%" stop-color="#A8A296"/>
-            </radialGradient>
-            <clipPath id="ballClip">
-              <circle cx="16" cy="16" r="13.6"/>
-            </clipPath>
-          </defs>
-          <circle cx="16" cy="16" r="13.8" fill="url(#ballBody)"/>
-          <g clip-path="url(#ballClip)" fill="#000" opacity="0.13">
-            <circle cx="10" cy="9" r="0.7"/><circle cx="13.2" cy="9" r="0.7"/><circle cx="16.4" cy="9" r="0.7"/><circle cx="19.6" cy="9" r="0.7"/><circle cx="22.8" cy="9" r="0.7"/>
-            <circle cx="8.4" cy="11.8" r="0.7"/><circle cx="11.6" cy="11.8" r="0.7"/><circle cx="14.8" cy="11.8" r="0.7"/><circle cx="18" cy="11.8" r="0.7"/><circle cx="21.2" cy="11.8" r="0.7"/><circle cx="24.4" cy="11.8" r="0.7"/>
-            <circle cx="10" cy="14.6" r="0.7"/><circle cx="13.2" cy="14.6" r="0.7"/><circle cx="16.4" cy="14.6" r="0.7"/><circle cx="19.6" cy="14.6" r="0.7"/><circle cx="22.8" cy="14.6" r="0.7"/>
-            <circle cx="8.4" cy="17.4" r="0.7"/><circle cx="11.6" cy="17.4" r="0.7"/><circle cx="14.8" cy="17.4" r="0.7"/><circle cx="18" cy="17.4" r="0.7"/><circle cx="21.2" cy="17.4" r="0.7"/><circle cx="24.4" cy="17.4" r="0.7"/>
-            <circle cx="10" cy="20.2" r="0.7"/><circle cx="13.2" cy="20.2" r="0.7"/><circle cx="16.4" cy="20.2" r="0.7"/><circle cx="19.6" cy="20.2" r="0.7"/><circle cx="22.8" cy="20.2" r="0.7"/>
-            <circle cx="11.6" cy="23" r="0.7"/><circle cx="14.8" cy="23" r="0.7"/><circle cx="18" cy="23" r="0.7"/><circle cx="21.2" cy="23" r="0.7"/>
-          </g>
-          <ellipse cx="11.5" cy="9" rx="3.8" ry="2.4" fill="#FFFFFF" opacity="0.6"/>
-          <circle cx="16" cy="16" r="13.8" fill="none" stroke="#7A7468" stroke-width="0.5" opacity="0.45"/>
-        </svg>
-      </span></h1>
-      <p class="hero-tagline" data-anim="hero-tagline">{t.hero.tagline}</p>
-      <p class="hero-sub" data-anim="hero-sub">{t.hero.subtagline}</p>
-      <a href="#cta" class="btn btn-accent hero-cta" data-anim="hero-cta">
-        {t.hero.cta}
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M5 12h14"/>
-          <path d="m12 5 7 7-7 7"/>
+    <p class="hero-eyebrow" data-anim="hero-eyebrow">
+      <span class="hero-eyebrow-rule" aria-hidden="true"></span>
+      <span class="hero-eyebrow-text">{t.hero.eyebrow}</span>
+    </p>
+
+    <h1 class="hero-title" data-anim="hero-title">
+      {t.hero.tagline}
+    </h1>
+
+    <p class="hero-sub" data-anim="hero-sub">{t.hero.subtagline}</p>
+
+    <div class="hero-cta-row" data-anim="hero-cta">
+      <a href="#cta" class="btn-brass hero-cta">
+        <span>{t.hero.cta}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h14" />
+          <path d="m12 5 7 7-7 7" />
         </svg>
       </a>
-    </div>
-
-    <div class="hero-visual" data-anim="hero-phone" aria-hidden="true">
-      <div class="hero-phone-stage">
-        <div class="hero-phone">
-          <!-- Boutons latéraux -->
-          <span class="hero-phone-btn hero-phone-btn-action"></span>
-          <span class="hero-phone-btn hero-phone-btn-volup"></span>
-          <span class="hero-phone-btn hero-phone-btn-voldown"></span>
-          <span class="hero-phone-btn hero-phone-btn-side"></span>
-
-          <div class="hero-phone-screen">
-            <!-- Dynamic Island -->
-            <div class="hero-phone-island">
-              <span class="hero-phone-camera"></span>
-            </div>
-
-            <!-- Carte récap brandée (statique, version condensée du magic moment) -->
-            <div class="hero-card">
-              <!-- Photo -->
-              <div class="hero-card-photo">
-                <img src="/photos/golf-du-soleil.jpg" alt="" width="280" height="110" loading="eager" decoding="async" fetchpriority="high" />
-                <div class="hero-card-photo-fade"></div>
-              </div>
-
-              <!-- Logo + nom -->
-              <div class="hero-card-brand">
-                <img src="/logos/golf-du-soleil.svg" alt="" class="hero-card-logo" width="50" height="50" loading="eager" decoding="async" />
-                <div class="hero-card-meta">
-                  <small>Carte récap</small>
-                  <strong>Golf du Soleil</strong>
-                </div>
-              </div>
-
-              <!-- Body -->
-              <div class="hero-card-body">
-                <div class="hero-card-divider">
-                  <span></span><em>SCORE · 18 TROUS</em><span></span>
-                </div>
-                <div class="hero-card-score">87</div>
-                <div class="hero-card-score-meta">+15 · Par 72</div>
-
-                <div class="hero-card-grid">
-                  {Array.from({ length: 18 }, (_, i) => (
-                    <span class={`hero-card-cell ${i % 5 === 0 ? 'is-birdie' : i % 3 === 0 ? 'is-bogey' : ''}`}>{(i % 4) + 3}</span>
-                  ))}
-                </div>
-
-                <button class="hero-share-cta" type="button" data-share-open aria-label={t.share.ctaButton}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                    <polyline points="16 6 12 2 8 6"/>
-                    <line x1="12" y1="2" x2="12" y2="15"/>
-                  </svg>
-                  <span>{t.share.ctaButton}</span>
-                </button>
-
-                <div class="hero-card-footer">
-                  <span>FAIT À</span><strong>Scluba<em>.</em></strong>
-                </div>
-              </div>
-
-              <!-- iOS Share Sheet -->
-              <div class="ios-sheet-backdrop" data-share-backdrop aria-hidden="true"></div>
-
-              <aside class="ios-sheet" data-share-sheet aria-hidden="true">
-                <div class="ios-sheet-handle"></div>
-
-                <div class="ios-sheet-preview">
-                  <div class="ios-preview-icon">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/>
-                      <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                  </div>
-                  <div class="ios-preview-meta">
-                    <strong>{t.share.previewName}</strong>
-                    <span>{t.share.previewLabel}</span>
-                  </div>
-                </div>
-
-                <div class="ios-sheet-row ios-row-contacts">
-                  {t.share.contacts.map((c) => (
-                    <button class="ios-contact" type="button" data-share-action={c.name} style={`--ava-bg: ${c.color}`}>
-                      <span class="ios-avatar">
-                        <span class="ios-avatar-initials">{c.initials}</span>
-                        <span class="ios-avatar-badge">
-                          <svg viewBox="0 0 24 24" width="6" height="6" fill="white" aria-hidden="true">
-                            <path d="M19.7 4.3c-.4-.4-1-.4-1.4 0L9 13.6 5.7 10.3c-.4-.4-1-.4-1.4 0s-.4 1 0 1.4L9 16.4l9.7-9.7c.4-.4.4-1 0-1.4z"/>
-                          </svg>
-                        </span>
-                      </span>
-                      <span class="ios-contact-name">{c.name}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div class="ios-sheet-row ios-row-apps">
-                  {t.share.apps.map((app) => (
-                    <button class={`ios-app ios-app-${app.toLowerCase()}`} type="button" data-share-action={app} aria-label={app}>
-                      <span class="ios-app-icon">
-                        {app === 'Instagram' && (
-                          <svg viewBox="0 0 24 24" width="20" height="20" fill="white" aria-hidden="true">
-                            <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="white" stroke-width="2"/>
-                            <circle cx="12" cy="12" r="4" fill="none" stroke="white" stroke-width="2"/>
-                            <circle cx="17.5" cy="6.5" r="1.2" fill="white"/>
-                          </svg>
-                        )}
-                        {app === 'WhatsApp' && (
-                          <svg viewBox="0 0 24 24" width="20" height="20" fill="white" aria-hidden="true">
-                            <path d="M17.5 14.4c-.3-.1-1.7-.8-2-1-.3-.1-.5-.1-.7.2-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5l.3-.4c.1-.2 0-.3 0-.5l-.9-2c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2 0 1.3.9 2.6 1.1 2.8.1.2 1.9 2.9 4.6 4 .6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.7.4 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/>
-                          </svg>
-                        )}
-                        {app === 'Snapchat' && (
-                          <svg viewBox="0 0 24 24" width="22" height="22" fill="#000" aria-hidden="true">
-                            <path d="M12 2.5c2.7 0 5 2.2 5 5 0 1.5-.1 2.7-.2 3.4.4.2.8.4 1.3.6.5.2 1 .4 1.5.4.3 0 .5.2.5.5 0 .4-.4.7-1 1-.7.3-1.5.5-1.6.7-.1.2 0 .5.4 1.2.4.6.9 1.1 1.7 1.4.5.2.7.3.7.6 0 .5-1.5.9-2.4 1-.3 0-.4.1-.5.4 0 .2-.1.4-.2.6-.1.3-.4.4-.7.4-.3 0-.6-.1-.9-.2-.6-.2-1.2-.3-2-.3-.4 0-.8.1-1.2.3-.7.4-1.4.9-2.4.9-.9 0-1.6-.5-2.3-.9-.4-.2-.8-.3-1.2-.3-.8 0-1.4.1-2 .3-.3.1-.6.2-.9.2-.4 0-.7-.2-.8-.5-.1-.2-.1-.4-.1-.6-.1-.2-.2-.3-.5-.3-.9-.1-2.4-.5-2.4-1 0-.3.2-.4.7-.6.8-.3 1.4-.8 1.7-1.4.4-.7.4-1 .3-1.2-.1-.2-.9-.4-1.6-.7-.6-.3-1-.6-1-1 0-.3.2-.5.5-.5.5 0 1-.2 1.5-.4.5-.2.9-.4 1.3-.6-.1-.7-.2-1.9-.2-3.4 0-2.7 2.3-5 5-5z"/>
-                          </svg>
-                        )}
-                        {app === 'X' && (
-                          <svg viewBox="0 0 24 24" width="18" height="18" fill="white" aria-hidden="true">
-                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                          </svg>
-                        )}
-                        {app === 'Facebook' && (
-                          <svg viewBox="0 0 24 24" width="22" height="22" fill="white" aria-hidden="true">
-                            <path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.43H7.08v-3.5h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.69.24 2.69.24v2.97h-1.52c-1.49 0-1.95.93-1.95 1.89v2.26h3.33l-.53 3.5h-2.8V24C19.61 23.1 24 18.1 24 12.07z"/>
-                          </svg>
-                        )}
-                        {app === 'Mail' && (
-                          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="2" y="4" width="20" height="16" rx="2"/>
-                            <path d="m22 7-10 5L2 7"/>
-                          </svg>
-                        )}
-                      </span>
-                      <span class="ios-app-name">{app}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <ul class="ios-sheet-actions">
-                  {t.share.actions.map((action, i) => (
-                    <li>
-                      <button class="ios-action" type="button" data-share-action={action}>
-                        <span>{action}</span>
-                        <span class="ios-action-icon">
-                          {i === 0 && (
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                            </svg>
-                          )}
-                          {i === 1 && (
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <circle cx="12" cy="12" r="10"/>
-                              <path d="M2 12h20"/>
-                              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                            </svg>
-                          )}
-                          {i === 2 && (
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                              <polyline points="7 10 12 15 17 10"/>
-                              <line x1="12" y1="15" x2="12" y2="3"/>
-                            </svg>
-                          )}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-
-                <button class="ios-sheet-cancel" type="button" data-share-close>
-                  {locale === 'fr' ? 'Annuler' : 'Cancel'}
-                </button>
-
-                <div class="ios-sheet-toast" data-share-toast>{t.share.linkCopied}</div>
-              </aside>
-            </div>
-          </div>
-        </div>
-      </div>
+      <span class="hero-cta-meta">{t.hero.scroll}</span>
     </div>
   </div>
 
-  <a href="#problem" class="hero-scroll" aria-label={t.hero.scroll}>
-    <span>{t.hero.scroll}</span>
-    <svg width="14" height="20" viewBox="0 0 14 20" fill="none" aria-hidden="true">
-      <path d="M7 1v18m0 0L1 13m6 6 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
+  <a href="#chapter-1" class="hero-scroll" aria-label={t.hero.scroll}>
+    <span class="hero-scroll-rule" aria-hidden="true"></span>
   </a>
 </section>
 
 <style>
   .hero {
     position: relative;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-    padding: 160px 0 80px;
-  }
-
-  .hero-bg {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-  }
-  .bg-gradient {
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(ellipse at 80% 20%, rgba(212, 165, 116, 0.18), transparent 60%),
-      radial-gradient(ellipse at 20% 80%, rgba(45, 106, 79, 0.10), transparent 55%),
-      linear-gradient(180deg, var(--primary-bg) 0%, var(--bg) 100%);
-  }
-  .bg-glow {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(100px);
-    opacity: 0.45;
-  }
-  .bg-glow-1 {
-    width: 500px; height: 500px;
-    background: var(--accent);
-    top: -10%; right: -10%;
-  }
-  .bg-glow-2 {
-    width: 400px; height: 400px;
-    background: var(--primary-soft);
-    bottom: -20%; left: -10%;
-    opacity: 0.25;
-  }
-
-  .hero-content {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-7);
-    align-items: center;
-  }
-
-  @media (min-width: 1024px) {
-    .hero-content {
-      grid-template-columns: 1.1fr 1fr;
-      gap: var(--space-8);
-    }
-  }
-
-  .hero-logo {
-    font-family: var(--font-serif);
-    font-size: var(--text-hero);
-    line-height: 0.95;
-    margin-bottom: var(--space-5);
-    color: var(--primary);
-    overflow: hidden;
-  }
-
-  .hero-logo :global(.char) {
-    display: inline-block;
-    will-change: transform;
-  }
-
-  .hero-tagline {
-    font-family: var(--font-serif);
-    font-size: clamp(1.5rem, 3vw, 2.25rem);
-    line-height: 1.2;
-    color: var(--ink);
-    margin-bottom: var(--space-4);
-    max-width: 18ch;
-    letter-spacing: -0.01em;
-  }
-
-  .hero-sub {
-    font-size: var(--text-md);
-    color: var(--muted);
-    margin-bottom: var(--space-6);
-    max-width: 32ch;
-    line-height: 1.5;
-  }
-
-  .hero-cta {
-    padding: 14px 28px;
-    font-size: var(--text-base);
-  }
-
-  /* Phone preview hero — virage.one : panneau pastel + phone vertical face-on */
-  .hero-visual {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  .hero-phone-stage {
-    position: relative;
-  }
-
-  /* === Progressive enhancement : scroll-driven CSS natif ===
-     Chrome 115+ / Edge 115+ / Safari 18+. Sur les autres browsers, les
-     keyframes ne s'exécutent pas → rendu standard inchangé (aucune régression). */
-  @media (prefers-reduced-motion: no-preference) {
-    @supports (animation-timeline: view()) {
-      .hero-tagline,
-      .hero-sub {
-        animation: heroFadeOut linear both;
-        animation-timeline: view();
-        animation-range: cover 40% cover 90%;
-      }
-      @keyframes heroFadeOut {
-        to { opacity: 0.35; transform: translateY(-24px); }
-      }
-
-      .hero-phone-stage {
-        animation: heroPhoneRise linear both;
-        animation-timeline: view();
-        animation-range: entry 0% cover 30%;
-      }
-      @keyframes heroPhoneRise {
-        from { transform: translateY(28px); }
-        to   { transform: translateY(0); }
-      }
-    }
-  }
-
-  /* Balle de golf — point du wordmark "Scluba." */
-  .hero-ball {
-    display: inline-block;
-    width: 0.42em;
-    height: 0.42em;
-    vertical-align: -0.02em;
-    margin-left: 0.05em;
-    filter: drop-shadow(1.5px 3px 4px rgba(27, 67, 50, 0.28));
-    will-change: transform, opacity;
-  }
-  .hero-ball svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-
-  .hero-phone {
-    position: relative;
-    height: min(64vh, 580px);
-    aspect-ratio: 9 / 19.5;
-    width: auto;
-    background: linear-gradient(135deg, #5a5a5d 0%, #2a2a2c 18%, #1a1a1c 40%, #2a2a2c 60%, #4a4a4d 78%, #2a2a2c 100%);
-    border-radius: 46px;
-    padding: 10px;
-    /* Ombre verticale propre (phone face-on, virage.one style) */
-    box-shadow:
-      0 32px 64px rgba(27, 67, 50, 0.28),
-      0 12px 24px rgba(0, 0, 0, 0.18),
-      inset 0 1px 0 rgba(255, 255, 255, 0.18),
-      0 0 0 1.2px rgba(0, 0, 0, 0.6);
-    will-change: transform;
-    z-index: 1;
-  }
-
-  .hero-phone-btn {
-    position: absolute;
-    background: linear-gradient(180deg, #3a3a3c, #1a1a1c, #3a3a3c);
-    border-radius: 1.5px;
-  }
-  .hero-phone-btn-action { left: -2px; top: 70px; width: 4px; height: 24px; }
-  .hero-phone-btn-volup { left: -2px; top: 104px; width: 4px; height: 42px; }
-  .hero-phone-btn-voldown { left: -2px; top: 152px; width: 4px; height: 42px; }
-  .hero-phone-btn-side { right: -2px; top: 104px; width: 4px; height: 66px; }
-
-  .hero-phone-screen {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(180deg, #FAF7EE 0%, #F4F8F5 100%);
-    border-radius: 40px;
-    overflow: hidden;
-  }
-  .hero-phone-island {
-    position: absolute;
-    top: 9px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 30%;
-    max-width: 92px;
-    min-width: 68px;
-    height: 24px;
-    background: #000;
-    border-radius: 14px;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-right: 6px;
-  }
-  .hero-phone-camera {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, #2a3a40, #050a0c);
-  }
-
-  /* Hero card — version condensée carte récap */
-  .hero-card {
-    width: 100%;
-    height: 100%;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
-  }
-  .hero-card-photo {
-    position: relative;
-    height: 110px;
+    background: var(--paper);
     overflow: hidden;
-    flex-shrink: 0;
   }
-  .hero-card-photo img {
+
+  /* === Banner image — full-bleed top ============================== */
+  .hero-banner {
+    position: relative;
+    width: 100%;
+    /* Hauteur fluide : ~38vh sur mobile, ~52vh desktop. Garde un ratio
+       proche du source (3.5:1) sans crop dramatique. */
+    height: clamp(280px, 48vh, 520px);
+    overflow: hidden;
+    background: var(--paper-deep);
+    will-change: transform;
+  }
+  .hero-banner-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center 60%;
+    object-position: center 52%;
+    display: block;
   }
-  .hero-card-photo-fade {
+  /* Vignette bas — fond papier qui remonte progressivement pour lier la
+     bannière au content cream en dessous. Pas un dark vignette dramatique
+     hollywoodien, juste un fade naturel. */
+  .hero-banner-vignette {
     position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 36px;
-    background: linear-gradient(180deg, transparent, #FAF7EE);
+    inset: auto 0 0 0;
+    height: 50%;
+    background: linear-gradient(180deg, transparent 0%, var(--paper) 100%);
+    pointer-events: none;
   }
-
-  .hero-card-brand {
-    margin-top: -38px;
-    text-align: center;
-    z-index: 2;
-    padding: 0 12px;
-  }
-  .hero-card-logo {
-    width: 50px;
-    height: 50px;
-    margin: 0 auto;
-    display: block;
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
-  }
-  .hero-card-meta { margin-top: 4px; }
-  .hero-card-meta small {
-    display: block;
-    font-size: 6.5px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    font-weight: 600;
-  }
-  .hero-card-meta strong {
-    display: block;
-    font-family: var(--font-serif);
-    font-size: 12px;
-    color: var(--primary);
-    font-weight: 700;
-    margin-top: 1px;
-  }
-
-  .hero-card-body {
-    padding: 8px 12px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-  }
-  .hero-card-divider {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 4px;
-  }
-  .hero-card-divider span {
-    flex: 1;
-    height: 1px;
-    background: var(--accent);
-    opacity: 0.5;
-  }
-  .hero-card-divider em {
-    font-style: normal;
-    font-size: 6.5px;
-    color: var(--accent);
-    letter-spacing: 0.16em;
-    font-weight: 600;
-  }
-  .hero-card-score {
-    text-align: center;
-    font-family: var(--font-serif);
-    font-size: 44px;
-    font-weight: 800;
-    color: var(--primary);
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-  }
-  .hero-card-score-meta {
-    text-align: center;
-    font-size: 8px;
-    color: var(--muted);
-    letter-spacing: 0.04em;
-  }
-  .hero-card-grid {
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    gap: 2px;
-    margin-top: 2px;
-  }
-  .hero-card-cell {
-    aspect-ratio: 1;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 2px;
-    text-align: center;
-    font-size: 7.5px;
-    font-weight: 700;
-    color: var(--ink);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-variant-numeric: tabular-nums;
-  }
-  .hero-card-cell.is-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
-  .hero-card-cell.is-bogey { color: var(--muted); }
-  .hero-card-footer {
-    text-align: center;
-    font-size: 6.5px;
-    color: var(--muted);
-    letter-spacing: 0.16em;
-    margin-top: auto;
-    padding-top: 4px;
-  }
-  .hero-card-footer strong {
-    font-family: var(--font-serif);
-    color: var(--primary);
-    font-size: 8px;
-    margin-left: 3px;
-  }
-  .hero-card-footer em {
-    font-style: normal;
-    color: var(--accent);
-  }
-
-  /* CTA Partager dans la carte */
-  .hero-share-cta {
-    margin-top: 4px;
-    width: 100%;
-    background: var(--primary);
-    color: var(--bg);
-    border-radius: 6px;
-    padding: 6px;
-    font-size: 8.5px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.2s;
-  }
-  .hero-share-cta:hover {
-    background: var(--primary-soft);
-    transform: scale(1.02);
-  }
-  .hero-share-cta:active { transform: scale(0.98); }
-
-  /* === iOS Share Sheet === */
-  .ios-sheet-backdrop {
+  /* Grain papier discret over la bannière pour cohérence avec le cream. */
+  .hero-banner-grain {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-    opacity: 0;
+    background-image: var(--noise-svg);
+    background-size: 240px 240px;
+    opacity: 0.18;
+    mix-blend-mode: multiply;
     pointer-events: none;
-    z-index: 8;
-    border-radius: 40px;
-    overflow: hidden;
   }
 
-  .ios-sheet {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(245, 245, 247, 0.94);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-radius: 18px 18px 0 0;
-    padding: 8px 10px 12px;
-    z-index: 9;
-    max-height: 88%;
-    overflow: hidden;
-    pointer-events: none;
-    will-change: transform;
-  }
-  .ios-sheet.is-interactive {
-    pointer-events: auto;
-  }
-  .ios-sheet-backdrop.is-interactive {
-    pointer-events: auto;
-  }
-
-  .ios-sheet-handle {
-    width: 32px;
-    height: 4px;
-    border-radius: 2px;
-    background: rgba(60, 60, 67, 0.3);
-    margin: 0 auto 8px;
-  }
-
-  .ios-sheet-preview {
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 10px;
-    padding: 8px 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-  .ios-preview-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    background: linear-gradient(135deg, var(--primary), var(--primary-soft));
-    color: var(--accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .ios-preview-meta {
+  /* === Content ===================================================== */
+  .hero-content {
     flex: 1;
-    min-width: 0;
-  }
-  .ios-preview-meta strong {
-    display: block;
-    font-size: 9.5px;
-    font-weight: 600;
-    color: #000;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .ios-preview-meta span {
-    display: block;
-    font-size: 7.5px;
-    color: rgba(60, 60, 67, 0.6);
-    margin-top: 1px;
-  }
-
-  .ios-sheet-row {
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 10px;
-    padding: 10px 6px;
-    margin-bottom: 8px;
-  }
-
-  /* Contacts */
-  .ios-row-contacts {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .ios-row-contacts::-webkit-scrollbar { display: none; }
-  .ios-contact {
-    flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 2px;
-    width: calc(25% - 5px);
-    min-width: 50px;
-    cursor: pointer;
-    transition: transform 0.15s;
-  }
-  .ios-contact:active { transform: scale(0.92); }
-  .ios-avatar {
-    position: relative;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background: var(--ava-bg, var(--primary));
-    display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    gap: var(--space-5);
+    padding-top: var(--space-7);
+    padding-bottom: var(--space-7);
+    max-width: 880px;
   }
-  .ios-avatar-initials {
-    color: white;
-    font-family: var(--font-serif);
-    font-size: 13px;
-    font-weight: 700;
-  }
-  .ios-avatar-badge {
-    position: absolute;
-    bottom: -2px;
-    right: -2px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #25D366;
-    border: 2px solid rgba(245, 245, 247, 0.94);
+
+  .hero-eyebrow {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 0.8em;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--brass);
   }
-  .ios-contact-name {
-    font-size: 7.5px;
-    color: #000;
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    width: 100%;
+  .hero-eyebrow-rule {
+    display: inline-block;
+    width: 32px;
+    height: 1px;
+    background: var(--brass);
   }
 
-  /* Apps */
-  .ios-row-apps {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 4px;
+  .hero-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-style: italic;
+    font-size: clamp(2.5rem, 7vw, 5.25rem);
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    color: var(--wood);
+    text-wrap: balance;
+    max-width: 22ch;
+    font-variation-settings: 'opsz' 144, 'SOFT' 30, 'WONK' 0;
   }
-  .ios-app {
+
+  .hero-sub {
+    margin: 0;
+    font-family: var(--font-body-serif);
+    font-size: clamp(1.125rem, 1.6vw, 1.375rem);
+    line-height: 1.5;
+    color: var(--wood-soft);
+    max-width: 42ch;
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  /* CTA brass-plate — bouton "plaque gravée" du club. Pas un CTA SaaS plat. */
+  .hero-cta-row {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
-    padding: 2px;
-    cursor: pointer;
-    transition: transform 0.15s;
+    gap: var(--space-5);
+    margin-top: var(--space-3);
   }
-  .ios-app:active { transform: scale(0.88); }
-  .ios-app-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 9px;
-    display: flex;
+  .btn-brass {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    gap: 0.6em;
+    padding: 14px 28px;
+    background: var(--brass);
+    color: var(--ink-editorial);
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: 1px solid var(--brass-deep);
+    border-radius: 2px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+      0 8px 18px rgba(61, 41, 20, 0.18);
+    transition: transform var(--motion-fast) var(--ease-out), background var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out);
   }
-  .ios-app-instagram .ios-app-icon { background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
-  .ios-app-whatsapp .ios-app-icon { background: #25D366; }
-  .ios-app-snapchat .ios-app-icon { background: #FFFC00; }
-  .ios-app-x .ios-app-icon { background: #000000; }
-  .ios-app-facebook .ios-app-icon { background: #1877F2; }
-  .ios-app-mail .ios-app-icon { background: linear-gradient(160deg, #41a0ff, #2875e2); }
-  .ios-app-name {
-    font-size: 7px;
-    color: #000;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
-    text-align: center;
+  .btn-brass:hover {
+    background: var(--brass-deep);
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.32),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+      0 12px 24px rgba(61, 41, 20, 0.24);
   }
-
-  /* Actions list */
-  .ios-sheet-actions {
-    list-style: none;
-    margin: 0 0 8px;
-    padding: 0;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .ios-sheet-actions li:not(:last-child) {
-    border-bottom: 0.5px solid rgba(60, 60, 67, 0.15);
-  }
-  .ios-action {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 12px;
-    font-size: 10px;
-    color: #000;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .ios-action:hover { background: rgba(0, 0, 0, 0.04); }
-  .ios-action:active { background: rgba(0, 0, 0, 0.08); }
-  .ios-action-icon { color: rgba(60, 60, 67, 0.6); }
-
-  /* Cancel button */
-  .ios-sheet-cancel {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.94);
-    border-radius: 10px;
-    padding: 11px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #007AFF;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .ios-sheet-cancel:hover { background: white; }
-  .ios-sheet-cancel:active { background: rgba(0, 0, 0, 0.05); }
-
-  /* Toast */
-  .ios-sheet-toast {
-    position: absolute;
-    top: 14px;
-    left: 50%;
-    transform: translate(-50%, -16px);
-    background: rgba(0, 0, 0, 0.85);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 14px;
-    font-size: 9px;
-    font-weight: 600;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s, transform 0.3s var(--ease-out);
-    z-index: 11;
-    backdrop-filter: blur(10px);
-  }
-  .ios-sheet-toast.is-visible {
-    opacity: 1;
-    transform: translate(-50%, 0);
+  .btn-brass:active { transform: translateY(0); }
+  .btn-brass:focus-visible {
+    outline: 2px solid var(--sage-deep);
+    outline-offset: 3px;
   }
 
+  .hero-cta-meta {
+    font-family: var(--font-body-serif);
+    font-style: italic;
+    font-size: 0.95rem;
+    color: var(--graphite);
+  }
+
+  /* === Scroll hint — minimaliste, rail brass vertical ============== */
   .hero-scroll {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    bottom: 32px;
+    bottom: 28px;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    color: var(--muted);
-    z-index: 1;
-    opacity: 0.65;
-    animation: scrollHint 2.4s ease-in-out infinite;
+    justify-content: center;
+    width: 1px;
+    height: 56px;
+    overflow: hidden;
   }
-  @keyframes scrollHint {
-    0%, 100% { transform: translate(-50%, 0); }
-    50% { transform: translate(-50%, 8px); }
+  .hero-scroll-rule {
+    display: block;
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(180deg, transparent 0%, var(--brass) 50%, transparent 100%);
+    animation: scrollRule 2.6s ease-in-out infinite;
+  }
+  @keyframes scrollRule {
+    0%, 100% { transform: translateY(-30%); opacity: 0; }
+    35%, 65% { opacity: 1; }
+    100% { transform: translateY(30%); }
+  }
+
+  /* === Reduced motion ============================================== */
+  @media (prefers-reduced-motion: reduce) {
+    .hero-scroll-rule { animation: none; opacity: 0.6; }
+    .hero-banner { will-change: auto; }
   }
 </style>
 
@@ -906,96 +267,52 @@ const t = useT(locale);
 
   gsap.registerPlugin(ScrollTrigger);
 
-  function initShareSheet() {
-    const opener = document.querySelector<HTMLButtonElement>('[data-share-open]');
-    const closers = document.querySelectorAll<HTMLElement>('[data-share-close], [data-share-backdrop]');
-    const sheet = document.querySelector<HTMLElement>('[data-share-sheet]');
-    const backdrop = document.querySelector<HTMLElement>('[data-share-backdrop]');
-    const toast = document.querySelector<HTMLElement>('[data-share-toast]');
-    const actions = document.querySelectorAll<HTMLElement>('[data-share-action]');
-    const heroPhone = document.querySelector<HTMLElement>('.hero-phone');
-    if (!opener || !sheet || !backdrop || !heroPhone) return;
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const children = Array.from(sheet.children).filter((el) => !el.matches('[data-share-toast]')) as HTMLElement[];
+  function initHeroEditorial() {
+    if (prefersReduced) return;
 
-    // États initiaux
-    gsap.set(sheet, { yPercent: 100 });
-    gsap.set(backdrop, { autoAlpha: 0 });
-    gsap.set(children, { autoAlpha: 0, y: 12 });
+    // === Intro stagger : eyebrow → titre → sub → CTA ===
+    const items = [
+      '[data-anim="hero-eyebrow"]',
+      '[data-anim="hero-title"]',
+      '[data-anim="hero-sub"]',
+      '[data-anim="hero-cta"]',
+    ];
 
-    const enableInteract = () => {
-      sheet.classList.add('is-interactive');
-      backdrop.classList.add('is-interactive');
-      sheet.setAttribute('aria-hidden', 'false');
-      backdrop.setAttribute('aria-hidden', 'false');
-    };
-    const disableInteract = () => {
-      sheet.classList.remove('is-interactive');
-      backdrop.classList.remove('is-interactive');
-      sheet.setAttribute('aria-hidden', 'true');
-      backdrop.setAttribute('aria-hidden', 'true');
-    };
-
-    // === Animation scroll-driven : la sheet monte progressivement avec le scroll ===
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: heroPhone,
-        start: 'top 70%',     // commence quand le top du téléphone est à 70 % du viewport (très tôt, juste après le 1er scroll)
-        end: 'bottom 60%',    // finit quand le bas du téléphone est à 60 % du viewport (la sheet est pleine bien avant qu'on quitte le hero)
-        scrub: 1.2,           // smooth lag derrière le scroll
-        onUpdate: (self) => {
-          if (self.progress > 0.6) enableInteract();
-          else disableInteract();
-        },
-      },
+    gsap.set(items, { opacity: 0, y: 24 });
+    gsap.to(items, {
+      opacity: 1,
+      y: 0,
+      duration: 0.9,
+      ease: 'power3.out',
+      stagger: 0.12,
+      delay: 0.25,
     });
 
-    tl.to(sheet, { yPercent: 0, ease: 'none' }, 0);
-    tl.to(backdrop, { autoAlpha: 1, ease: 'none' }, 0);
-    tl.to(children, { autoAlpha: 1, y: 0, stagger: 0.04, ease: 'power2.out' }, 0.35);
-
-    // === Bouton manuel "Partager" : force open immédiat ===
-    const forceOpen = () => {
-      gsap.to(sheet, { yPercent: 0, duration: 0.55, ease: 'power3.out', overwrite: true });
-      gsap.to(backdrop, { autoAlpha: 1, duration: 0.4, overwrite: true });
-      gsap.to(children, { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.04, overwrite: true });
-      enableInteract();
-    };
-
-    const forceClose = () => {
-      gsap.to(sheet, { yPercent: 100, duration: 0.45, ease: 'power3.in', overwrite: true });
-      gsap.to(backdrop, { autoAlpha: 0, duration: 0.3, overwrite: true });
-      gsap.to(children, { autoAlpha: 0, y: 12, duration: 0.2, overwrite: true });
-      disableInteract();
-    };
-
-    opener.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (sheet.classList.contains('is-interactive')) forceClose();
-      else forceOpen();
-    });
-    closers.forEach((el) => el.addEventListener('click', forceClose));
-
-    // Click action : toast + close
-    actions.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (toast) {
-          toast.classList.add('is-visible');
-          setTimeout(() => toast.classList.remove('is-visible'), 1400);
+    // === Parallax subtil sur la banner image ===
+    const banner = document.querySelector<HTMLElement>('[data-anim="hero-banner"]');
+    if (banner) {
+      gsap.fromTo(
+        banner.querySelector('.hero-banner-img'),
+        { y: 0 },
+        {
+          y: -36,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: banner,
+            start: 'top top',
+            end: 'bottom top',
+            scrub: 0.6,
+          },
         }
-        setTimeout(forceClose, 300);
-      });
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && sheet.classList.contains('is-interactive')) forceClose();
-    });
+      );
+    }
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initShareSheet);
+    document.addEventListener('DOMContentLoaded', initHeroEditorial);
   } else {
-    initShareSheet();
+    initHeroEditorial();
   }
 </script>

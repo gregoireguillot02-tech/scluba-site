@@ -27,16 +27,25 @@ const t = useT(locale);
   <meta name="theme-color" content="#1B4332" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-  <!-- Fonts éditoriales "The Golfer's Journal" — Fraunces italic pour le
-       wordmark bois. Charge minimum en PR #1 (Nav + Footer). PR #2 étendra
-       avec Newsreader (body éditorial) et JetBrains Mono (eyebrows chapitres).
-       display=swap : pas de FOIT, fallback Georgia visible jusqu'au load. -->
+  <!-- Fonts éditoriales "The Golfer's Journal" :
+       - Fraunces (display) — italic 700-900 pour wordmark + headlines.
+                              Roman 600-800 pour les titres chapitres.
+       - Newsreader (body)  — italic 400-600 pour pull-quotes/captions,
+                              roman 400 pour les paragraphes éditoriaux.
+       - JetBrains Mono     — 500 pour les eyebrows micro-caps et la
+                              numérotation romaine des chapitres.
+       display=swap : pas de FOIT, fallback Georgia/system visible jusqu'au load. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,700..900&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600..900;1,9..144,600..900&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=JetBrains+Mono:wght@500&display=swap"
   />
+  <!-- Preload de l'image hero — LCP critique sur la home. Cloudflare CDN
+       sert ça en HTTP/2 push potentiel. -->
+  {Astro.url.pathname === '/' || Astro.url.pathname === '/en/' || Astro.url.pathname === '/en' ? (
+    <link rel="preload" as="image" href="/brand/wordmark-fairway.jpg" fetchpriority="high" />
+  ) : null}
 </head>
 <body>
   <LaunchBanner locale={locale} />

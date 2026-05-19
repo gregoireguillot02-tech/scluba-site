@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Hero from '../components/Hero.astro';
-import ProblemNarrative from '../components/ProblemNarrative.astro';
+import Chapter01Constat from '../components/chapters/Chapter01Constat.astro';
 import ThreeSteps from '../components/ThreeSteps.astro';
 import PhoneShowcase from '../components/PhoneShowcase.astro';
 import ClubsShowcase from '../components/ClubsShowcase.astro';
@@ -14,8 +14,12 @@ const locale = 'fr' as const;
 ---
 
 <Base locale={locale}>
+  {/* PR #2 — Hero éditorial + Chapitre I (Le Constat) refondus.
+      Les sections en-dessous restent en mode hybride pour cette PR ;
+      Chapters II-V arrivent en PR #3, ProblemNarrative est désormais
+      remplacé par Chapter01Constat. */}
   <Hero locale={locale} />
-  <ProblemNarrative locale={locale} />
+  <Chapter01Constat locale={locale} />
   <ThreeSteps locale={locale} />
   <PhoneShowcase locale={locale} />
   <ClubsShowcase locale={locale} />
