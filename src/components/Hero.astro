@@ -33,6 +33,7 @@ const t = useT(locale);
 
     <div class="hero-visual glow-accent" data-anim="hero-phone" aria-hidden="true">
       <div class="hero-phone-stage">
+        <span class="hero-phone-neon" aria-hidden="true"></span>
         <div class="hero-phone">
           <!-- Boutons latéraux -->
           <span class="hero-phone-btn hero-phone-btn-action"></span>
@@ -244,6 +245,70 @@ const t = useT(locale);
   }
   .hero-phone-stage {
     position: relative;
+    display: inline-block;
+    line-height: 0;
+  }
+
+  /* V5 — Néon vert conic sweep autour du Hero phone (même pattern que
+     PhoneShowcase). Span absolu positionné aux mêmes dimensions que
+     .hero-phone, masqué en anneau (mask xor) avec drop-shadow glow. */
+  @property --hero-neon-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  .hero-phone-neon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    height: min(75vh, 680px);
+    aspect-ratio: 9 / 19.5;
+    width: auto;
+    border-radius: 60px;
+    padding: 4px;
+    background: conic-gradient(
+      from var(--hero-neon-angle),
+      transparent 0deg,
+      transparent 265deg,
+      rgba(0, 220, 130, 0.35) 295deg,
+      rgba(0, 220, 130, 0.85) 340deg,
+      #00FF9A 357deg,
+      rgba(0, 220, 130, 0.85) 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+            mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    z-index: 0;
+    filter:
+      drop-shadow(0 0 6px rgba(0, 220, 130, 0.85))
+      drop-shadow(0 0 18px rgba(0, 220, 130, 0.55));
+    animation: heroNeonSweep 4s linear infinite;
+  }
+  @keyframes heroNeonSweep {
+    to { --hero-neon-angle: 360deg; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-phone-neon {
+      animation: none;
+      background: rgba(0, 220, 130, 0.55);
+    }
+  }
+  @supports not (background: paint(angle-painter)) {
+    .hero-phone-neon {
+      background: rgba(0, 220, 130, 0.55);
+      animation: heroNeonPulse 3s ease-in-out infinite;
+    }
+    @keyframes heroNeonPulse {
+      0%, 100% { opacity: 0.45; }
+      50%      { opacity: 0.90; }
+    }
   }
 
   /* === Progressive enhancement : scroll-driven CSS natif ===
