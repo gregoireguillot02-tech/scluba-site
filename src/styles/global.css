@@ -160,6 +160,114 @@ section {
   }
 }
 
+/* ============================================================
+   Landing dark mode — V1 (2026-05-19)
+   Scope `body[data-landing-mode="dark"]` activé uniquement sur la home
+   FR + EN via Base.astro. Override les tokens couleur pour passer
+   l'ensemble de la landing sur fond forest deep, et faire ressortir
+   la balle 3D blanche centrale. Honey (#D4A574) devient le primary
+   pour les titres, cream pour le body.
+   Les pages utilitaires (legal, demo, etc.) restent en light.
+   ============================================================ */
+body[data-landing-mode="dark"] {
+  /* Surfaces */
+  --bg: #0B1F16;             /* Forest 950 — plus profond que primary-deep */
+  --bg-soft: #0F2A1E;        /* Forest 900 */
+  --paper: #0F2A1E;
+  --paper-deep: #133326;
+  --paper-warm: #1A3B2C;
+
+  /* Lignes — cream alpha */
+  --line: rgba(245, 235, 216, 0.10);
+  --line-soft: rgba(245, 235, 216, 0.05);
+  --rule: rgba(245, 235, 216, 0.12);
+  --rule-strong: rgba(245, 235, 216, 0.24);
+
+  /* Texte — cream warm sur dark (contraste AAA) */
+  --ink: #F5EBD8;
+  --ink-soft: #E5DAC6;
+  --muted: #8A9089;          /* Sage muted */
+  --muted-soft: #5C6259;
+
+  /* Primary — Honey devient le primary sur dark (titres, brand) */
+  --primary: #D4A574;        /* Honey 500 */
+  --primary-soft: #B8895C;
+  --primary-bg: rgba(212, 165, 116, 0.06);
+  --primary-deep: #8B6A40;
+
+  /* Accent — Honey reste accent + variations plus saturées */
+  --accent: #D4A574;
+  --accent-soft: rgba(212, 165, 116, 0.12);
+  --accent-bright: #E8C089;
+
+  /* Shadows — tinted forest deep */
+  --shadow-sm:
+    0 1px 2px rgba(0, 0, 0, 0.30),
+    0 2px 4px rgba(0, 0, 0, 0.20);
+  --shadow-md:
+    0 1px 2px rgba(0, 0, 0, 0.30),
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    0 12px 32px rgba(0, 0, 0, 0.22);
+  --shadow-lg:
+    0 2px 4px rgba(0, 0, 0, 0.32),
+    0 8px 20px rgba(0, 0, 0, 0.30),
+    0 24px 56px rgba(0, 0, 0, 0.28);
+
+  /* Atmospheric gradients — honey glow plus fort sur dark pour donner
+     une lueur "country-club éclairage chaud" autour de la balle. */
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 30%, rgba(212, 165, 116, 0.14), transparent 60%),
+    radial-gradient(ellipse 80% 60% at 18% 85%, rgba(45, 106, 79, 0.18), transparent 60%),
+    var(--bg) !important;
+  background-attachment: fixed, fixed, scroll !important;
+}
+
+/* Nav en mode dark : forest deep semi-transparent au lieu du blanc */
+body[data-landing-mode="dark"] .nav {
+  background: rgba(11, 31, 22, 0.78);
+  border-bottom-color: rgba(245, 235, 216, 0.08);
+}
+
+/* Wordmark "tone-wood" en mode dark : force en cream (vs warm-charcoal
+   #2D1B0E qui serait invisible sur dark). Le composant WordmarkScluba
+   garde son API, juste l'override CSS contextuel. */
+body[data-landing-mode="dark"] .wordmark-scluba.tone-wood .ws-text {
+  color: #F5EBD8;
+}
+
+/* Lang switch + nav-links : couleur cream + hover honey */
+body[data-landing-mode="dark"] .nav-links a {
+  color: var(--ink-soft);
+}
+body[data-landing-mode="dark"] .nav-links a:hover {
+  color: var(--accent);
+}
+body[data-landing-mode="dark"] .lang-switch {
+  color: var(--ink-soft);
+  border-color: rgba(245, 235, 216, 0.18);
+}
+body[data-landing-mode="dark"] .lang-switch:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Boutons sur dark : ajuster contraste */
+body[data-landing-mode="dark"] .btn-primary {
+  background: var(--accent);
+  color: #0B1F16;
+}
+body[data-landing-mode="dark"] .btn-primary:hover {
+  background: var(--accent-bright);
+}
+body[data-landing-mode="dark"] .btn-ghost {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+body[data-landing-mode="dark"] .btn-ghost:hover {
+  background: var(--accent);
+  color: #0B1F16;
+}
+
 /* Honeypot: visually & assistively hidden, but still submittable by bots. */
 .hp-field {
   position: absolute !important;

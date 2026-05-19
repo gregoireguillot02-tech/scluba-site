@@ -47,7 +47,7 @@ const isHomeRoute = pathname === '/' || pathname === '/en' || pathname === '/en/
     href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,900&family=Big+Shoulders+Display:wght@800&display=swap"
   />
 </head>
-<body>
+<body data-landing-mode={isHomeRoute ? 'dark' : undefined}>
   <LaunchBanner locale={locale} />
   <Nav locale={locale} />
   {isHomeRoute && <ScrollGolfBall />}
