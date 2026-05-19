@@ -1,0 +1,125 @@
+---
+/**
+ * ScrollGolfBall — balle de golf SVG en position fixed qui tombe le long du
+ * scroll global de la page. Inspiration : oryzo.ai (cup de liège qui tombe au
+ * scroll). Step 1a refonte landing 2026-05-19.
+ *
+ * Animation : la balle commence en haut à droite (sous le Nav), descend
+ * progressivement sur ~75vh tout au long du scroll de la page, en tournant
+ * sur elle-même (3 tours complets entre le top et le bottom du document).
+ *
+ * Inclusion : conditionnelle depuis Base.astro — uniquement sur la home
+ * (`/` et `/en/`). Désactivée sur les pages player `/r/*`, `/demo`,
+ * `/legal/*`, `/ops/*` (Base.astro filtre).
+ *
+ * Reduced-motion : balle visible en position initiale, pas d'animation.
+ * Mobile portrait < 640px : balle masquée pour ne pas encombrer.
+ */
+---
+
+<div class="scroll-golfball" data-scroll-golfball aria-hidden="true">
+  <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="sgbBody" cx="32%" cy="28%" r="78%">
+        <stop offset="0%" stop-color="#FFFFFF" />
+        <stop offset="55%" stop-color="#F2F0E8" />
+        <stop offset="100%" stop-color="#A8A296" />
+      </radialGradient>
+      <clipPath id="sgbClip">
+        <circle cx="16" cy="16" r="13.6" />
+      </clipPath>
+    </defs>
+    <circle cx="16" cy="16" r="13.8" fill="url(#sgbBody)" />
+    <g clip-path="url(#sgbClip)" fill="#000" opacity="0.13">
+      <circle cx="10" cy="9" r="0.7" /><circle cx="13.2" cy="9" r="0.7" /><circle cx="16.4" cy="9" r="0.7" /><circle cx="19.6" cy="9" r="0.7" /><circle cx="22.8" cy="9" r="0.7" />
+      <circle cx="8.4" cy="11.8" r="0.7" /><circle cx="11.6" cy="11.8" r="0.7" /><circle cx="14.8" cy="11.8" r="0.7" /><circle cx="18" cy="11.8" r="0.7" /><circle cx="21.2" cy="11.8" r="0.7" /><circle cx="24.4" cy="11.8" r="0.7" />
+      <circle cx="10" cy="14.6" r="0.7" /><circle cx="13.2" cy="14.6" r="0.7" /><circle cx="16.4" cy="14.6" r="0.7" /><circle cx="19.6" cy="14.6" r="0.7" /><circle cx="22.8" cy="14.6" r="0.7" />
+      <circle cx="8.4" cy="17.4" r="0.7" /><circle cx="11.6" cy="17.4" r="0.7" /><circle cx="14.8" cy="17.4" r="0.7" /><circle cx="18" cy="17.4" r="0.7" /><circle cx="21.2" cy="17.4" r="0.7" /><circle cx="24.4" cy="17.4" r="0.7" />
+      <circle cx="10" cy="20.2" r="0.7" /><circle cx="13.2" cy="20.2" r="0.7" /><circle cx="16.4" cy="20.2" r="0.7" /><circle cx="19.6" cy="20.2" r="0.7" /><circle cx="22.8" cy="20.2" r="0.7" />
+      <circle cx="11.6" cy="23" r="0.7" /><circle cx="14.8" cy="23" r="0.7" /><circle cx="18" cy="23" r="0.7" /><circle cx="21.2" cy="23" r="0.7" />
+    </g>
+    <ellipse cx="11.5" cy="9" rx="3.8" ry="2.4" fill="#FFFFFF" opacity="0.6" />
+    <circle cx="16" cy="16" r="13.8" fill="none" stroke="#7A7468" stroke-width="0.5" opacity="0.45" />
+  </svg>
+</div>
+
+<style>
+  .scroll-golfball {
+    position: fixed;
+    top: 12vh;
+    right: 8vw;
+    width: clamp(48px, 7vw, 96px);
+    height: clamp(48px, 7vw, 96px);
+    z-index: 90;
+    pointer-events: none;
+    /* Drop-shadow propre — tinté forest comme le reste de l'identité */
+    filter: drop-shadow(0 12px 24px rgba(27, 67, 50, 0.22)) drop-shadow(0 4px 8px rgba(15, 42, 30, 0.18));
+    will-change: transform;
+  }
+  .scroll-golfball svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Masquer sur mobile portrait — l'écran est trop petit, la balle encombrerait */
+  @media (max-width: 640px) {
+    .scroll-golfball { display: none; }
+  }
+
+  /* Reduced-motion : balle visible mais immobile */
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-golfball {
+      /* GSAP est skip dans le JS aussi (cf. guard) — ici juste rassure le rendering */
+      will-change: auto;
+    }
+  }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+  function initScrollGolfBall() {
+    const ball = document.querySelector<HTMLElement>('[data-scroll-golfball]');
+    if (!ball) return;
+
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    // Skip aussi sur mobile portrait pour cohérence avec le CSS display:none
+    if (window.innerWidth <= 640) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Sync ScrollTrigger avec Lenis (Lenis stocke l'instance sur window.__lenis,
+    // cf. Base.astro). Si Lenis n'est pas prêt encore (race condition), on
+    // attache plus tard. Sans Lenis, ScrollTrigger fonctionne aussi mais avec
+    // un léger décalage par rapport au smooth-scroll.
+    const lenis = (window as unknown as { __lenis?: { on: (ev: string, cb: () => void) => void } }).__lenis;
+    if (lenis && typeof lenis.on === 'function') {
+      lenis.on('scroll', ScrollTrigger.update);
+    }
+
+    // Animation principale : la balle tombe (~75% du viewport height) et tourne
+    // sur elle-même au fur et à mesure du scroll de la page.
+    gsap.to(ball, {
+      y: () => window.innerHeight * 0.75,
+      rotation: 1080, // 3 tours complets
+      ease: 'none',
+      scrollTrigger: {
+        trigger: document.documentElement,
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: 0.6, // léger lag derrière le scroll pour effet "physique"
+        invalidateOnRefresh: true, // recalcule y si le viewport change (resize)
+      },
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initScrollGolfBall);
+  } else {
+    initScrollGolfBall();
+  }
+</script>
