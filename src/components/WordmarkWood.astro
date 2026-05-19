@@ -1,0 +1,173 @@
+---
+/**
+ * Wordmark Scluba "lettres bois" centralisé.
+ *
+ * Variant 'text' (par défaut) : Fraunces 800 italic, color --wood. Fonctionne
+ * sans assets externes (fallback Georgia si Fraunces ne charge pas). Utilisé
+ * partout par défaut tant que la version image n'est pas finalisée.
+ *
+ * Variant 'image' : <picture> sur /brand/wordmark-flat.jpg (Midjourney lettres
+ * bois flat lay). À activer dans une PR ultérieure quand Grégoire aura déposé
+ * l'asset HD et qu'on aura généré les variantes (webp + dimensions cropées).
+ *
+ * La balle de golf (point du wordmark "Scluba.") est conservée — élément de
+ * continuité visuelle avec le Hero/Nav précédents et avec la webapp player.
+ *
+ * Usage:
+ *   <WordmarkWood size="md" />                  → Nav (28px)
+ *   <WordmarkWood size="lg" tone="inverted" />  → Footer dark
+ *   <WordmarkWood size="xl" as="h1" />          → Hero
+ */
+
+interface Props {
+  /** Taille du wordmark. Mappe sur des heights pixel-perfect. */
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** 'wood' (par défaut, sur fond paper) ou 'inverted' (sur fond sombre). */
+  tone?: 'wood' | 'inverted';
+  /** Inclure la balle de golf en point. Default true. */
+  withBall?: boolean;
+  /** Sémantique HTML. Default 'span'. Utiliser 'h1' uniquement dans le Hero. */
+  as?: 'span' | 'h1';
+  /** Variant d'affichage. 'text' par défaut tant que l'asset image n'est pas finalisé. */
+  variant?: 'text' | 'image';
+  /** Classe additionnelle pour positionnement (margin, etc.). */
+  class?: string;
+}
+
+const {
+  size = 'md',
+  tone = 'wood',
+  withBall = true,
+  as: Tag = 'span',
+  variant = 'text',
+  class: className = '',
+} = Astro.props;
+
+const sizeClass = `wm-size-${size}`;
+const toneClass = `wm-tone-${tone}`;
+const variantClass = `wm-variant-${variant}`;
+---
+
+<Tag
+  class:list={['wordmark-wood', sizeClass, toneClass, variantClass, className]}
+  aria-label="Scluba"
+>
+  {variant === 'text' && (
+    <span class="wm-text">
+      <span class="wm-text-letters">Scluba</span>
+      {withBall && (
+        <span class="wm-ball" aria-hidden="true">
+          <svg viewBox="0 0 32 32">
+            <defs>
+              <radialGradient id={`wmBall-${size}`} cx="32%" cy="28%" r="78%">
+                <stop offset="0%" stop-color="#FFFFFF" />
+                <stop offset="55%" stop-color="#F2F0E8" />
+                <stop offset="100%" stop-color="#A8A296" />
+              </radialGradient>
+              <clipPath id={`wmBallClip-${size}`}>
+                <circle cx="16" cy="16" r="13.6" />
+              </clipPath>
+            </defs>
+            <circle cx="16" cy="16" r="13.8" fill={`url(#wmBall-${size})`} />
+            <g clip-path={`url(#wmBallClip-${size})`} fill="#000" opacity="0.13">
+              <circle cx="11" cy="10" r="0.8" /><circle cx="16" cy="10" r="0.8" /><circle cx="21" cy="10" r="0.8" />
+              <circle cx="11" cy="16" r="0.8" /><circle cx="16" cy="16" r="0.8" /><circle cx="21" cy="16" r="0.8" />
+              <circle cx="11" cy="22" r="0.8" /><circle cx="16" cy="22" r="0.8" /><circle cx="21" cy="22" r="0.8" />
+            </g>
+            <ellipse cx="11.5" cy="9" rx="3.6" ry="2.2" fill="#FFFFFF" opacity="0.6" />
+            <circle cx="16" cy="16" r="13.8" fill="none" stroke="#7A7468" stroke-width="0.5" opacity="0.45" />
+          </svg>
+        </span>
+      )}
+    </span>
+  )}
+
+  {variant === 'image' && (
+    <picture class="wm-picture">
+      <source srcset="/brand/wordmark-flat.webp" type="image/webp" />
+      <img
+        src="/brand/wordmark-flat.jpg"
+        alt="Scluba"
+        loading="eager"
+        decoding="sync"
+        fetchpriority="high"
+      />
+    </picture>
+  )}
+</Tag>
+
+<style>
+  .wordmark-wood {
+    display: inline-flex;
+    align-items: baseline;
+    line-height: 1;
+    letter-spacing: -0.025em;
+    font-style: italic;
+    /* Pas de transition au mount — le wordmark doit être stable au load. */
+  }
+
+  .wm-text {
+    display: inline-flex;
+    align-items: baseline;
+  }
+  .wm-text-letters {
+    font-family: var(--font-display);
+    font-weight: 800;
+    /* font-variation-settings exploite les axes Fraunces si disponible.
+       opsz max (144) = optical sizing pour gros affichage. SOFT léger
+       arrondit subtilement, WONK 0 garde la précision. Fallback Georgia
+       ignore ces paramètres sans erreur. */
+    font-variation-settings: 'opsz' 96, 'SOFT' 50, 'WONK' 0;
+  }
+
+  /* Sizes — heights cohérentes avec les containers Nav/Footer/Hero. */
+  .wm-size-sm .wm-text-letters { font-size: 1.125rem; }     /* 18px */
+  .wm-size-sm .wm-ball { width: 0.36em; height: 0.36em; }
+
+  .wm-size-md .wm-text-letters { font-size: 1.625rem; }     /* 26px */
+  .wm-size-md .wm-ball { width: 0.40em; height: 0.40em; }
+
+  .wm-size-lg .wm-text-letters { font-size: 2.5rem; }        /* 40px */
+  .wm-size-lg .wm-ball { width: 0.40em; height: 0.40em; }
+
+  .wm-size-xl .wm-text-letters {
+    font-size: clamp(3.5rem, 9vw, 7rem);
+    font-variation-settings: 'opsz' 144, 'SOFT' 30, 'WONK' 0;
+  }
+  .wm-size-xl .wm-ball { width: 0.38em; height: 0.38em; }
+
+  /* Tones */
+  .wm-tone-wood .wm-text-letters { color: var(--wood); }
+  .wm-tone-inverted .wm-text-letters { color: var(--paper); }
+
+  /* Balle de golf — drop-shadow tinté wood pour cohérence */
+  .wm-ball {
+    display: inline-block;
+    margin-left: 0.06em;
+    align-self: baseline;
+    filter: drop-shadow(1px 2px 3px rgba(61, 41, 20, 0.28));
+  }
+  .wm-tone-inverted .wm-ball {
+    filter: drop-shadow(1px 2px 3px rgba(0, 0, 0, 0.45));
+  }
+  .wm-ball svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Variant image — out of scope PR #1, prêt pour PR #2 */
+  .wm-picture {
+    display: inline-block;
+    line-height: 0;
+  }
+  .wm-picture img {
+    display: block;
+    height: auto;
+    width: auto;
+  }
+  .wm-size-sm.wm-variant-image .wm-picture img { height: 18px; }
+  .wm-size-md.wm-variant-image .wm-picture img { height: 28px; }
+  .wm-size-lg.wm-variant-image .wm-picture img { height: 56px; }
+  .wm-size-xl.wm-variant-image .wm-picture img { height: clamp(80px, 14vw, 180px); }
+</style>

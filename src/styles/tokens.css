@@ -47,9 +47,25 @@
   --paper-deep: #F4EEDD;
   --paper-warm: #F0E6CD;
 
+  /* === Palette éditoriale "The Golfer's Journal" ===
+     Tokens ajoutés pour la refonte landing 2026-05-19. Additifs uniquement,
+     ne touchent pas --primary/--accent existants. Le monde du country-club au
+     lever du soleil : lettres bois patiné, fairway sage à l'aube, plaques brass
+     gravées des membres, encre noire éditoriale, crayon HB de scorecard. */
+  --wood: #3D2914;          /* Wood espresso — lettres bois, encre éditoriale */
+  --wood-soft: #5C4435;     /* Wood lighter — hover, body éditorial alt */
+  --sage: #5C7A4A;          /* Fairway sage at dawn — accent vivant */
+  --sage-deep: #3F5F3C;     /* Sage darker — borders, focused state */
+  --brass: #B08D57;         /* Brass plaque — CTAs rares, accents éditoriaux */
+  --brass-deep: #9A7642;    /* Brass darker — hover state CTAs brass */
+  --ink-editorial: #0F0E0C; /* Encre éditoriale — jamais #000 pur */
+  --graphite: #3A3A3A;      /* Crayon HB — meta secondaires, captions */
+
   /* Hairline rules — pour les title-rail, colophon-rail, séparateurs */
   --rule: rgba(15, 42, 30, 0.12);
   --rule-strong: rgba(15, 42, 30, 0.24);
+  --rule-wood: rgba(61, 41, 20, 0.18);     /* Rules sur fond paper, monde bois */
+  --rule-brass: rgba(176, 141, 87, 0.42);  /* Rules brass — séparateurs chapitres */
 
   /* === Typographie ===
      --font-display : Fraunces variable (opsz + wght) prepended sur la stack.
@@ -59,6 +75,10 @@
   --font-serif: 'Fraunces', Georgia, 'Times New Roman', 'Cormorant Garamond', serif;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* Body serif éditorial pour les longs paragraphes "magazine vivant".
+     Fraunces reste display ; Newsreader prend les paragraphes de chapitre
+     pour la lisibilité (optical sizing au 16-18px). Fallback Georgia. */
+  --font-body-serif: 'Newsreader', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
 
   /* Tailles texte */
   --text-xs: 0.75rem;
