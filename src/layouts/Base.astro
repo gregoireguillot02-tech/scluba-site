@@ -27,14 +27,17 @@ const t = useT(locale);
   <meta name="theme-color" content="#1B4332" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-  <!-- Fraunces 900 italic uniquement (step 1b refonte landing 2026-05-19).
-       Chargement minimal : 1 weight pour le wordmark bois Nav + Footer.
-       display=swap : fallback Georgia visible jusqu'au load (acceptable). -->
+  <!-- Fonts landing :
+       - Fraunces 900 italic : titres + display tokens dans la majorité
+         des composants landing (Hero, Chapters, CTA, etc.).
+       - Big Shoulders Display 800 : wordmark SCLUBA (Nav + Footer),
+         direction Modern Mono validée 2026-05-19 (PR #95).
+       display=swap : fallback Georgia/Impact visible jusqu'au load. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,900&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,900&family=Big+Shoulders+Display:wght@800&display=swap"
   />
 </head>
 <body>
