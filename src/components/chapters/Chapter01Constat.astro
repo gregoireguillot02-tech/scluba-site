@@ -1,0 +1,225 @@
+---
+/**
+ * Chapitre I — Le Constat
+ *
+ * Refonte éditoriale de l'ancien ProblemNarrative.astro. Trois temps :
+ *   1. ChapterHeading (eyebrow mono "— I. LE CONSTAT" + titre italic)
+ *   2. Pull-quote XL italic — la punchline magazine ("Chaque partie est une
+ *      opportunité de visibilité perdue.")
+ *   3. Body éditorial 2-col Newsreader reprenant les 4 lignes du constat
+ *      en prose continue (plus de stack vertical robotique).
+ *   4. Photo intercalée full-bleed wordmark-flat.jpg avec caption italic.
+ *
+ * Le scroll reveal est subtil : on ne split pas par char (overkill ici).
+ * Simple fade-up sur entry du heading + de la pull-quote.
+ */
+import { useT, type Locale } from '../../i18n';
+import ChapterHeading from './ChapterHeading.astro';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useT(locale);
+---
+
+<section id="chapter-1" class="chapter chapter-01">
+  <div class="container chapter-inner">
+    <ChapterHeading
+      numeral="I"
+      eyebrow={t.chapter01.eyebrow}
+      title={t.chapter01.title}
+      class="chapter-01-heading"
+    />
+
+    <blockquote class="chapter-pullquote" data-anim="ch1-pullquote">
+      <span class="chapter-pullquote-mark" aria-hidden="true">«</span>
+      {t.chapter01.pullquote}
+      <span class="chapter-pullquote-mark chapter-pullquote-mark-end" aria-hidden="true">»</span>
+    </blockquote>
+
+    <div class="chapter-body" data-anim="ch1-body">
+      {t.chapter01.body.map((para: string) => <p>{para}</p>)}
+    </div>
+  </div>
+
+  <!-- Photo intercalée — full-bleed, sépare le constat de la promesse à venir. -->
+  <figure class="chapter-figure" data-anim="ch1-figure">
+    <picture>
+      <img
+        src="/brand/wordmark-flat.jpg"
+        alt=""
+        width="1904"
+        height="544"
+        loading="lazy"
+        decoding="async"
+        class="chapter-figure-img"
+      />
+    </picture>
+    <figcaption class="chapter-figure-caption">
+      <span class="chapter-figure-caption-rule" aria-hidden="true"></span>
+      <em>{t.chapter01.caption}</em>
+    </figcaption>
+  </figure>
+</section>
+
+<style>
+  .chapter {
+    position: relative;
+    background: var(--paper);
+    color: var(--wood);
+  }
+  .chapter-01 {
+    padding-top: var(--space-9);
+    padding-bottom: var(--space-7);
+  }
+
+  .chapter-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-7);
+  }
+
+  .chapter-01-heading {
+    max-width: 36ch;
+  }
+
+  /* === Pull-quote magazine — Fraunces italic XL, optical wonk doux. */
+  .chapter-pullquote {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 600;
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    line-height: 1.18;
+    letter-spacing: -0.015em;
+    color: var(--wood);
+    text-wrap: balance;
+    max-width: 28ch;
+    position: relative;
+    /* Petit padding pour aérer les guillemets typographiques. */
+    padding-left: 0;
+    border-left: none;
+    font-variation-settings: 'opsz' 96, 'SOFT' 60, 'WONK' 1;
+  }
+  .chapter-pullquote-mark {
+    color: var(--brass);
+    font-style: normal;
+    opacity: 0.55;
+    margin-right: 0.15em;
+  }
+  .chapter-pullquote-mark-end {
+    margin-right: 0;
+    margin-left: 0.1em;
+  }
+
+  /* === Body éditorial 2-col Newsreader =========================== */
+  .chapter-body {
+    font-family: var(--font-body-serif);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    color: var(--wood-soft);
+    max-width: 60ch;
+    /* Default single column ; passe en 2-col sur écrans larges. */
+    column-count: 1;
+    column-gap: var(--space-7);
+  }
+  .chapter-body p {
+    margin: 0 0 1em 0;
+    /* Évite les orphans entre colonnes. */
+    break-inside: avoid;
+  }
+  .chapter-body p:last-child { margin-bottom: 0; }
+
+  @media (min-width: 900px) {
+    .chapter-body {
+      max-width: 100%;
+      column-count: 2;
+    }
+    .chapter-01 .chapter-body {
+      max-width: 78ch;
+    }
+  }
+
+  /* === Figure intercalée =========================================== */
+  .chapter-figure {
+    margin: var(--space-9) 0 0 0;
+    padding: 0;
+    width: 100%;
+    background: var(--paper-warm);
+  }
+  .chapter-figure picture {
+    display: block;
+    line-height: 0;
+  }
+  .chapter-figure-img {
+    width: 100%;
+    height: clamp(220px, 36vh, 420px);
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+  .chapter-figure-caption {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    padding: var(--space-4) var(--space-5);
+    font-family: var(--font-body-serif);
+    font-size: 0.875rem;
+    color: var(--graphite);
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule-wood);
+  }
+  .chapter-figure-caption-rule {
+    display: inline-block;
+    width: 24px;
+    height: 1px;
+    background: var(--brass);
+    flex-shrink: 0;
+  }
+  .chapter-figure-caption em {
+    font-style: italic;
+  }
+
+  @media (min-width: 768px) {
+    .chapter-figure-caption {
+      padding: var(--space-4) var(--space-7);
+    }
+  }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!prefersReduced) {
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Subtle fade-up on entry — pull-quote, body, figure.
+    const targets = [
+      '[data-anim="ch1-pullquote"]',
+      '[data-anim="ch1-body"]',
+      '[data-anim="ch1-figure"]',
+    ];
+
+    targets.forEach((sel, idx) => {
+      const el = document.querySelector<HTMLElement>(sel);
+      if (!el) return;
+      gsap.fromTo(
+        el,
+        { opacity: 0, y: 20 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.85,
+          ease: 'power2.out',
+          delay: idx * 0.08,
+          scrollTrigger: { trigger: el, start: 'top 82%' },
+        }
+      );
+    });
+  }
+</script>
