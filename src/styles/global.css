@@ -272,13 +272,10 @@ body[data-landing-mode="dark"] .lang-switch:hover {
   border-color: var(--accent);
 }
 
-/* V4.7 — Layering hybride : balle au-dessus des cards/cadres MAIS sous
-   le texte. Canvas est à z:1 (fixed). Cards/frames à z:auto (≤ canvas)
-   donc la balle survole leurs surfaces. Text/headings/buttons en z:2
-   (> canvas) pour rester lisibles par-dessus la balle.
-
-   Sections transparentes pour que la balle soit aussi visible dans les
-   zones vides entre cards. */
+/* V4.8 — Balle 3D strictement derrière tout le contenu (canvas z:0 fixed).
+   Sections transparentes pour la révéler entre les cards opaques. Plus
+   d'override text z:2 (V4.7 droppé) — toutes les cards et leur contenu
+   restent au-dessus de la balle naturellement. */
 body[data-landing-mode="dark"] .steps,
 body[data-landing-mode="dark"] .showcase,
 body[data-landing-mode="dark"] .showcase-section,
@@ -288,29 +285,6 @@ body[data-landing-mode="dark"] .faq,
 body[data-landing-mode="dark"] .cta,
 body[data-landing-mode="dark"] .problem {
   background: transparent;
-}
-
-/* Text + content elements above canvas (z:2 > canvas z:1).
-   Utilise :where() (zero spécificité) pour ne pas casser les rules
-   existantes des composants. */
-body[data-landing-mode="dark"] main :where(
-  h1, h2, h3, h4,
-  p,
-  label, input, textarea, select,
-  summary,
-  ul, ol,
-  .section-eyebrow, .section-title, .section-lead, .section-header,
-  .hero-text, .hero-eyebrow, .hero-logo, .hero-tagline, .hero-sub, .hero-cta,
-  .problem-line, .problem-punch, .problem-punch-rule,
-  .step-num, .step-title, .step-body, .step-icon,
-  .how-num, .how-title, .how-body, .how-line,
-  .palette-card-default, .palette-card-branded, .showcase-arrow,
-  .plan-head, .plan-features, .plan-cta, .plan-engagement, .plan-launch-badge, .plan-tagline,
-  .faq-item summary, .faq-answer,
-  .cta-content, .cta-form, .cta-qr
-) {
-  position: relative;
-  z-index: 2;
 }
 
 /* Footer V4.1 — override pour ne pas suivre les semantics globales

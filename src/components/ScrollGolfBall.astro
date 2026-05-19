@@ -55,11 +55,10 @@
     inset: 0;
     width: 100vw;
     height: 100vh;
-    /* V4.7 — z-index 1 : la balle passe AU-DESSUS des cadres/cards mais
-       SOUS le texte (qui a z:2 explicite en landing dark). Effet layering
-       hybride : on voit la balle survoler la card surface, le texte reste
-       lisible par-dessus. */
-    z-index: 1;
+    /* V4.8 — z-index 0 : la balle passe DERRIÈRE tout le contenu. Les
+       sections sont transparentes (global.css landing dark override) donc
+       la balle reste visible aux zones où les cards/text ne sont pas. */
+    z-index: 0;
     pointer-events: none;
     opacity: 0;
     transition: opacity 600ms ease-out;
@@ -88,8 +87,8 @@
     transform: translate(-1000px, -1000px);
     transform-origin: 50% 50%;
     will-change: transform, opacity;
-    /* V4.7 — z-index 1 (même que canvas) */
-    z-index: 1;
+    /* V4.8 — z-index 0 (même que canvas, derrière tout) */
+    z-index: 0;
     opacity: 0;
     transition: opacity 400ms ease-out;
     mix-blend-mode: multiply;
@@ -550,10 +549,13 @@
       // K3 → K4 (25% → 38%) : ThreeSteps stable puis fade vers PhoneShowcase HIDDEN
       tl.to(ballState, { duration: 0.13, x: 2.1, y: 0, scale: 0 });
 
-      // K4 → K5 (38% → 55%) : HIDDEN, puis transition vers ClubsShowcase haut-gauche
-      // Pendant PhoneShowcase (focus phone mockup), balle invisible.
-      // Au début de Clubs, elle réapparaît grandit haut-gauche.
-      tl.to(ballState, { duration: 0.17, x: -2.4, y: 0.8, scale: 0.65 });
+      // V4.8 — K4 → K4b (38% → 48%) : transition de HIDDEN vers BIG CENTERED
+      // pour combler le gap visuel entre PhoneShowcase (qui se termine) et
+      // ClubsShowcase (qui commence). La balle réapparaît grosse au milieu.
+      tl.to(ballState, { duration: 0.10, x: 0, y: 0, scale: 0.85 });
+
+      // K4b → K5 (48% → 55%) : drift vers ClubsShowcase haut-gauche
+      tl.to(ballState, { duration: 0.07, x: -2.4, y: 0.8, scale: 0.65 });
 
       // K5 → K6 (55% → 68%) : Clubs haut-gauche → HowItWorks haut centre (suit la line)
       tl.to(ballState, { duration: 0.13, x: 0, y: 1.8, scale: 0.50 });
