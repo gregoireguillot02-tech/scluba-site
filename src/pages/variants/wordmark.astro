@@ -2,14 +2,18 @@
 /**
  * /variants/wordmark — page interne de comparaison wordmark.
  *
- * 4 directions affichées côte à côte sur deux contextes (light / dark) :
+ * 4 directions affichées côte à côte sur trois contextes (Nav clair, Hero,
+ * Footer dark + balle) :
  *   - Current : Fraunces 900 italic + gradient CSS (état main step-1b)
- *   - A. Wood Sculpted : SVG inline + feTurbulence + feDisplacementMap (grain bois vrai)
- *   - B. Editorial Solid : Fraunces 900 italic couleur unie warm-charcoal (jeskojets vibe)
- *   - C. Modern Mono : Big Shoulders Display SCLUBA caps (oryzo/umano/drinksom vibe)
+ *   - A. Wood Sculpted : SVG inline + feTurbulence + feDisplacementMap
+ *   - B. Editorial Solid : Fraunces 900 italic couleur unie warm-charcoal
+ *   - C. Modern Mono : Big Shoulders Display SCLUBA caps
  *
  * Pas de Base.astro (donc pas de Nav/Footer/i18n) — c'est une page d'audit
  * design ; les fonts sont chargées localement à la page (pas dans Base).
+ *
+ * Sections rendues explicitement (pas .map()) pour éviter tout souci de
+ * résolution de composant Astro depuis un array de références.
  *
  * À retirer du repo quand la direction est figée (PR de cleanup).
  */
@@ -19,33 +23,6 @@ import WordmarkScluba from '../../components/WordmarkScluba.astro';
 import WordmarkWoodSculpted from '../../components/wordmark-variants/WordmarkWoodSculpted.astro';
 import WordmarkEditorialSolid from '../../components/wordmark-variants/WordmarkEditorialSolid.astro';
 import WordmarkModernMono from '../../components/wordmark-variants/WordmarkModernMono.astro';
-
-const variants = [
-  {
-    id: 'current',
-    name: 'Current (step-1b baseline)',
-    pitch: 'Fraunces 900 italic + linear-gradient bois clippé en background-clip:text. Léger, déjà en place. Pas de vraie matière "bois" — juste une coloration.',
-    Component: WordmarkScluba,
-  },
-  {
-    id: 'A',
-    name: 'A. Wood Sculpted',
-    pitch: 'SVG inline avec feTurbulence + feDisplacementMap → vraie texture grain bois sculpté. Garde l\'ADN Midjourney mais en matière réelle. Coût : un peu plus de DOM SVG par instance.',
-    Component: WordmarkWoodSculpted,
-  },
-  {
-    id: 'B',
-    name: 'B. Editorial Solid',
-    pitch: 'Fraunces 900 italic en couleur unie warm-charcoal (#2D1B0E). Pas de gradient, tracking serré -0.045em. Vibe jeskojets / donmolinico — luxe sobre, contraste AAA.',
-    Component: WordmarkEditorialSolid,
-  },
-  {
-    id: 'C',
-    name: 'C. Modern Mono',
-    pitch: 'Big Shoulders Display 800 caps "SCLUBA". Vibe oryzo / umano / drinksom — tech minimal, mono couleur, plus jeune. Aucune dépendance Fraunces.',
-    Component: WordmarkModernMono,
-  },
-];
 ---
 
 <!doctype html>
@@ -70,46 +47,139 @@ const variants = [
       <p class="eyebrow">Audit design interne</p>
       <h1>Wordmark Scluba — 4 directions</h1>
       <p class="lede">
-        Compare les 4 propositions sur les deux contextes réels du site :
-        Nav (fond clair backdrop-blur) + Footer (fond forest profond).
+        Compare les 4 propositions sur les contextes réels du site :
+        Nav (fond clair backdrop-blur) + Hero + Footer (fond forest profond).
         Choisis une direction, je nettoie les autres et j'applique sur Nav + Footer.
       </p>
     </div>
   </header>
 
   <main class="variants-grid">
-    {variants.map(({ id, name, pitch, Component }) => (
-      <article class="variant" id={`v-${id}`}>
-        <header class="variant-head">
-          <h2>{name}</h2>
-          <p>{pitch}</p>
-        </header>
 
-        <!-- Context 1 — Nav-like fond clair, size 28 -->
-        <section class="ctx ctx-light">
-          <span class="ctx-label">Nav · size 28 · tone wood</span>
-          <div class="ctx-frame ctx-frame-light">
-            <Component size={28} tone="wood" />
-          </div>
-        </section>
+    <!-- ============================================================ -->
+    <!-- CURRENT — baseline step-1b -->
+    <!-- ============================================================ -->
+    <article class="variant" id="v-current">
+      <header class="variant-head">
+        <h2>Current <span class="tag">baseline · step-1b · live sur main</span></h2>
+        <p>Fraunces 900 italic + linear-gradient bois clippé en <code>background-clip: text</code>. Léger, déjà en place. Pas de vraie matière "bois" — juste une coloration.</p>
+      </header>
 
-        <!-- Context 2 — Hero-like grand format, size 96 -->
-        <section class="ctx ctx-light">
-          <span class="ctx-label">Hero · size 96 · tone wood</span>
-          <div class="ctx-frame ctx-frame-light ctx-frame-tall">
-            <Component size={96} tone="wood" />
-          </div>
-        </section>
+      <section class="ctx">
+        <span class="ctx-label">Nav · size 28 · tone wood</span>
+        <div class="ctx-frame ctx-frame-light">
+          <WordmarkScluba size={28} tone="wood" />
+        </div>
+      </section>
 
-        <!-- Context 3 — Footer dark, size 48, balle activée -->
-        <section class="ctx ctx-dark">
-          <span class="ctx-label">Footer · size 48 · tone inverted · withBall</span>
-          <div class="ctx-frame ctx-frame-dark ctx-frame-tall">
-            <Component size={48} tone="inverted" withBall={true} />
-          </div>
-        </section>
-      </article>
-    ))}
+      <section class="ctx">
+        <span class="ctx-label">Hero · size 96 · tone wood</span>
+        <div class="ctx-frame ctx-frame-light ctx-frame-tall">
+          <WordmarkScluba size={96} tone="wood" />
+        </div>
+      </section>
+
+      <section class="ctx">
+        <span class="ctx-label">Footer · size 48 · tone inverted · withBall</span>
+        <div class="ctx-frame ctx-frame-dark ctx-frame-tall">
+          <WordmarkScluba size={48} tone="inverted" withBall={true} />
+        </div>
+      </section>
+    </article>
+
+    <!-- ============================================================ -->
+    <!-- A. Wood Sculpted -->
+    <!-- ============================================================ -->
+    <article class="variant" id="v-A">
+      <header class="variant-head">
+        <h2>A. Wood Sculpted</h2>
+        <p>SVG inline avec <code>feTurbulence</code> + <code>feDisplacementMap</code> → vraie texture grain bois sculpté. Garde l'ADN Midjourney en matière réelle. Coût : un peu plus de DOM SVG par instance.</p>
+      </header>
+
+      <section class="ctx">
+        <span class="ctx-label">Nav · size 28 · tone wood</span>
+        <div class="ctx-frame ctx-frame-light">
+          <WordmarkWoodSculpted size={28} tone="wood" />
+        </div>
+      </section>
+
+      <section class="ctx">
+        <span class="ctx-label">Hero · size 96 · tone wood</span>
+        <div class="ctx-frame ctx-frame-light ctx-frame-tall">
+          <WordmarkWoodSculpted size={96} tone="wood" />
+        </div>
+      </section>
+
+      <section class="ctx">
+        <span class="ctx-label">Footer · size 48 · tone inverted · withBall</span>
+        <div class="ctx-frame ctx-frame-dark ctx-frame-tall">
+          <WordmarkWoodSculpted size={48} tone="inverted" withBall={true} />
+        </div>
+      </section>
+    </article>
+
+    <!-- ============================================================ -->
+    <!-- B. Editorial Solid -->
+    <!-- ============================================================ -->
+    <article class="variant" id="v-B">
+      <header class="variant-head">
+        <h2>B. Editorial Solid</h2>
+        <p>Fraunces 900 italic couleur unie warm-charcoal <code>#2D1B0E</code>, tracking <code>-0.045em</code>. Vibe jeskojets / donmolinico — luxe sobre, contraste AAA.</p>
+      </header>
+
+      <section class="ctx">
+        <span class="ctx-label">Nav · size 28 · tone wood</span>
+        <div class="ctx-frame ctx-frame-light">
+          <WordmarkEditorialSolid size={28} tone="wood" />
+        </div>
+      </section>
+
+      <section class="ctx">
+        <span class="ctx-label">Hero · size 96 · tone wood</span>
+        <div class="ctx-frame ctx-frame-light ctx-frame-tall">
+          <WordmarkEditorialSolid size={96} tone="wood" />
+        </div>
+      </section>
+
+      <section class="ctx">
+        <span class="ctx-label">Footer · size 48 · tone inverted · withBall</span>
+        <div class="ctx-frame ctx-frame-dark ctx-frame-tall">
+          <WordmarkEditorialSolid size={48} tone="inverted" withBall={true} />
+        </div>
+      </section>
+    </article>
+
+    <!-- ============================================================ -->
+    <!-- C. Modern Mono -->
+    <!-- ============================================================ -->
+    <article class="variant" id="v-C">
+      <header class="variant-head">
+        <h2>C. Modern Mono</h2>
+        <p>Big Shoulders Display 800 caps <code>SCLUBA</code>. Vibe oryzo / umano / drinksom — tech minimal, aucune dépendance Fraunces.</p>
+      </header>
+
+      <section class="ctx">
+        <span class="ctx-label">Nav · size 28 · tone wood</span>
+        <div class="ctx-frame ctx-frame-light">
+          <WordmarkModernMono size={28} tone="wood" />
+        </div>
+      </section>
+
+      <section class="ctx">
+        <span class="ctx-label">Hero · size 96 · tone wood</span>
+        <div class="ctx-frame ctx-frame-light ctx-frame-tall">
+          <WordmarkModernMono size={96} tone="wood" />
+        </div>
+      </section>
+
+      <section class="ctx">
+        <span class="ctx-label">Footer · size 48 · tone inverted · withBall</span>
+        <div class="ctx-frame ctx-frame-dark ctx-frame-tall">
+          <WordmarkModernMono size={48} tone="inverted" withBall={true} />
+        </div>
+      </section>
+    </article>
+
   </main>
 
   <footer class="page-footer">
@@ -201,12 +271,35 @@ const variants = [
     font-weight: 700;
     color: #1A1A1A;
     letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .variant-head h2 .tag {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9CA3AF;
+    padding: 3px 8px;
+    background: #F3F4F6;
+    border-radius: 4px;
   }
   .variant-head p {
     margin: 0;
     font-size: 0.875rem;
     line-height: 1.5;
     color: #6B7280;
+  }
+  .variant-head code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.8125rem;
+    padding: 1px 5px;
+    background: #F3F4F6;
+    border-radius: 3px;
+    color: #1A1A1A;
   }
 
   .ctx {
