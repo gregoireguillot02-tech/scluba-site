@@ -14,6 +14,7 @@
     "demo": "See a demo"
   },
   "hero": {
+    "eyebrow": "Digital scorecard · golf clubs",
     "tagline": "The branded digital scorecard for your club.",
     "subtagline": "Your golfers play. Your club shines.",
     "cta": "See a 10-min demo",
@@ -96,13 +97,40 @@
     "previewLabel": "Round summary · 18 holes",
     "previewName": "Golf du Soleil — 87 (+15)",
     "contacts": [
-      { "initials": "SB", "name": "Sophie B.", "color": "#D4A574" },
-      { "initials": "PL", "name": "Paul L.", "color": "#1B4332" },
-      { "initials": "MT", "name": "Marc T.", "color": "#3B6B8E" },
-      { "initials": "LD", "name": "Léa D.", "color": "#7A2E1F" }
+      {
+        "initials": "SB",
+        "name": "Sophie B.",
+        "color": "#D4A574"
+      },
+      {
+        "initials": "PL",
+        "name": "Paul L.",
+        "color": "#1B4332"
+      },
+      {
+        "initials": "MT",
+        "name": "Marc T.",
+        "color": "#3B6B8E"
+      },
+      {
+        "initials": "LD",
+        "name": "Léa D.",
+        "color": "#7A2E1F"
+      }
     ],
-    "apps": ["Instagram", "WhatsApp", "Snapchat", "X", "Facebook", "Mail"],
-    "actions": ["Copy link", "AirDrop", "Save photo"],
+    "apps": [
+      "Instagram",
+      "WhatsApp",
+      "Snapchat",
+      "X",
+      "Facebook",
+      "Mail"
+    ],
+    "actions": [
+      "Copy link",
+      "AirDrop",
+      "Save photo"
+    ],
     "tapHint": "Tap to share",
     "linkCopied": "Link copied!"
   },
@@ -111,10 +139,34 @@
     "title": "One card per club identity.",
     "lead": "Coastal, forest, classic, clay: the card adopts the visual codes of your golf course. No generic templates. No third-party branding.",
     "palettes": [
-      { "name": "Coastal", "tagline": "Navy + sand", "primary": "#1B3A5C", "accent": "#D4A574", "ground": "#3B6B8E" },
-      { "name": "Forest", "tagline": "Deep green + gold", "primary": "#1B4332", "accent": "#D4A574", "ground": "#2D6A4F" },
-      { "name": "Mediterranean", "tagline": "Terracotta + cream", "primary": "#7A2E1F", "accent": "#E8C089", "ground": "#C46444" },
-      { "name": "Heritage", "tagline": "Burgundy + cream", "primary": "#5B1A1A", "accent": "#D4A574", "ground": "#8B3A3A" }
+      {
+        "name": "Coastal",
+        "tagline": "Navy + sand",
+        "primary": "#1B3A5C",
+        "accent": "#D4A574",
+        "ground": "#3B6B8E"
+      },
+      {
+        "name": "Forest",
+        "tagline": "Deep green + gold",
+        "primary": "#1B4332",
+        "accent": "#D4A574",
+        "ground": "#2D6A4F"
+      },
+      {
+        "name": "Mediterranean",
+        "tagline": "Terracotta + cream",
+        "primary": "#7A2E1F",
+        "accent": "#E8C089",
+        "ground": "#C46444"
+      },
+      {
+        "name": "Heritage",
+        "tagline": "Burgundy + cream",
+        "primary": "#5B1A1A",
+        "accent": "#D4A574",
+        "ground": "#8B3A3A"
+      }
     ]
   },
   "how": {

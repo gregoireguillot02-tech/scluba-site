@@ -18,31 +18,8 @@ const t = useT(locale);
 
   <div class="container hero-content">
     <div class="hero-text">
-      <h1 class="hero-logo"><span class="hero-logo-text" data-anim="hero-logo">Scluba</span><span class="hero-ball" data-hero-ball aria-hidden="true">
-        <svg viewBox="0 0 32 32">
-          <defs>
-            <radialGradient id="ballBody" cx="32%" cy="28%" r="78%">
-              <stop offset="0%" stop-color="#FFFFFF"/>
-              <stop offset="55%" stop-color="#F2F0E8"/>
-              <stop offset="100%" stop-color="#A8A296"/>
-            </radialGradient>
-            <clipPath id="ballClip">
-              <circle cx="16" cy="16" r="13.6"/>
-            </clipPath>
-          </defs>
-          <circle cx="16" cy="16" r="13.8" fill="url(#ballBody)"/>
-          <g clip-path="url(#ballClip)" fill="#000" opacity="0.13">
-            <circle cx="10" cy="9" r="0.7"/><circle cx="13.2" cy="9" r="0.7"/><circle cx="16.4" cy="9" r="0.7"/><circle cx="19.6" cy="9" r="0.7"/><circle cx="22.8" cy="9" r="0.7"/>
-            <circle cx="8.4" cy="11.8" r="0.7"/><circle cx="11.6" cy="11.8" r="0.7"/><circle cx="14.8" cy="11.8" r="0.7"/><circle cx="18" cy="11.8" r="0.7"/><circle cx="21.2" cy="11.8" r="0.7"/><circle cx="24.4" cy="11.8" r="0.7"/>
-            <circle cx="10" cy="14.6" r="0.7"/><circle cx="13.2" cy="14.6" r="0.7"/><circle cx="16.4" cy="14.6" r="0.7"/><circle cx="19.6" cy="14.6" r="0.7"/><circle cx="22.8" cy="14.6" r="0.7"/>
-            <circle cx="8.4" cy="17.4" r="0.7"/><circle cx="11.6" cy="17.4" r="0.7"/><circle cx="14.8" cy="17.4" r="0.7"/><circle cx="18" cy="17.4" r="0.7"/><circle cx="21.2" cy="17.4" r="0.7"/><circle cx="24.4" cy="17.4" r="0.7"/>
-            <circle cx="10" cy="20.2" r="0.7"/><circle cx="13.2" cy="20.2" r="0.7"/><circle cx="16.4" cy="20.2" r="0.7"/><circle cx="19.6" cy="20.2" r="0.7"/><circle cx="22.8" cy="20.2" r="0.7"/>
-            <circle cx="11.6" cy="23" r="0.7"/><circle cx="14.8" cy="23" r="0.7"/><circle cx="18" cy="23" r="0.7"/><circle cx="21.2" cy="23" r="0.7"/>
-          </g>
-          <ellipse cx="11.5" cy="9" rx="3.8" ry="2.4" fill="#FFFFFF" opacity="0.6"/>
-          <circle cx="16" cy="16" r="13.8" fill="none" stroke="#7A7468" stroke-width="0.5" opacity="0.45"/>
-        </svg>
-      </span></h1>
+      <span class="hero-eyebrow eyebrow-mono" data-anim="hero-eyebrow">{t.hero.eyebrow}</span>
+      <h1 class="hero-logo text-mega"><span class="hero-logo-text" data-anim="hero-logo">SCLUBA</span></h1>
       <p class="hero-tagline" data-anim="hero-tagline">{t.hero.tagline}</p>
       <p class="hero-sub" data-anim="hero-sub">{t.hero.subtagline}</p>
       <a href="#cta" class="btn btn-accent hero-cta" data-anim="hero-cta">
@@ -54,7 +31,7 @@ const t = useT(locale);
       </a>
     </div>
 
-    <div class="hero-visual" data-anim="hero-phone" aria-hidden="true">
+    <div class="hero-visual glow-honey" data-anim="hero-phone" aria-hidden="true">
       <div class="hero-phone-stage">
         <div class="hero-phone">
           <!-- Boutons latéraux -->
@@ -304,13 +281,30 @@ const t = useT(locale);
     }
   }
 
+  /* Eyebrow mono au-dessus du logo — pattern jeskojets/drinksom */
+  .hero-eyebrow {
+    display: block;
+    margin-bottom: var(--space-4);
+    color: var(--accent);
+  }
+
+  /* Hero logo SCLUBA caps Big Shoulders Display — cohérent avec le wordmark
+     Nav/Footer (Modern Mono direction validée 2026-05-19 PR #95). La balle
+     SVG inline historique est supprimée — la balle 3D Three.js (fixed
+     inset:0) joue ce rôle visuel maintenant à plus grande échelle. */
   .hero-logo {
-    font-family: var(--font-serif);
-    font-size: var(--text-hero);
-    line-height: 0.95;
+    line-height: 0.82;
     margin-bottom: var(--space-5);
     color: var(--primary);
     overflow: hidden;
+  }
+  .hero-logo .hero-logo-text {
+    font-family: 'Big Shoulders Display', 'Impact', 'Haettenschweiler', sans-serif;
+    font-weight: 800;
+    font-stretch: 110%;
+    letter-spacing: -0.01em;
+    color: var(--primary);
+    display: inline-block;
   }
 
   .hero-logo :global(.char) {

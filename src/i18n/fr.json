@@ -14,6 +14,7 @@
     "demo": "Voir une démo"
   },
   "hero": {
+    "eyebrow": "Scorecard digitale · clubs de golf",
     "tagline": "La carte de score digitale brandée pour votre club.",
     "subtagline": "Vos joueurs jouent. Votre club rayonne.",
     "cta": "Voir une démo de 10 min",
@@ -96,13 +97,40 @@
     "previewLabel": "Carte récapitulative · 18 trous",
     "previewName": "Golf du Soleil — 87 (+15)",
     "contacts": [
-      { "initials": "SB", "name": "Sophie B.", "color": "#D4A574" },
-      { "initials": "PL", "name": "Paul L.", "color": "#1B4332" },
-      { "initials": "MT", "name": "Marc T.", "color": "#3B6B8E" },
-      { "initials": "LD", "name": "Léa D.", "color": "#7A2E1F" }
+      {
+        "initials": "SB",
+        "name": "Sophie B.",
+        "color": "#D4A574"
+      },
+      {
+        "initials": "PL",
+        "name": "Paul L.",
+        "color": "#1B4332"
+      },
+      {
+        "initials": "MT",
+        "name": "Marc T.",
+        "color": "#3B6B8E"
+      },
+      {
+        "initials": "LD",
+        "name": "Léa D.",
+        "color": "#7A2E1F"
+      }
     ],
-    "apps": ["Instagram", "WhatsApp", "Snapchat", "X", "Facebook", "Mail"],
-    "actions": ["Copier le lien", "AirDrop", "Enregistrer la photo"],
+    "apps": [
+      "Instagram",
+      "WhatsApp",
+      "Snapchat",
+      "X",
+      "Facebook",
+      "Mail"
+    ],
+    "actions": [
+      "Copier le lien",
+      "AirDrop",
+      "Enregistrer la photo"
+    ],
     "tapHint": "Tap pour partager",
     "linkCopied": "Lien copié !"
   },
@@ -111,10 +139,34 @@
     "title": "Une carte par identité de club.",
     "lead": "Maritime, forestier, classique, terre battue : votre carte adopte les codes graphiques de votre golf. Aucun template générique. Aucune marque parasite.",
     "palettes": [
-      { "name": "Maritime", "tagline": "Bleu marine + sable", "primary": "#1B3A5C", "accent": "#D4A574", "ground": "#3B6B8E" },
-      { "name": "Forestier", "tagline": "Vert profond + or", "primary": "#1B4332", "accent": "#D4A574", "ground": "#2D6A4F" },
-      { "name": "Méditerranée", "tagline": "Terracotta + crème", "primary": "#7A2E1F", "accent": "#E8C089", "ground": "#C46444" },
-      { "name": "Heritage", "tagline": "Bordeaux + crème", "primary": "#5B1A1A", "accent": "#D4A574", "ground": "#8B3A3A" }
+      {
+        "name": "Maritime",
+        "tagline": "Bleu marine + sable",
+        "primary": "#1B3A5C",
+        "accent": "#D4A574",
+        "ground": "#3B6B8E"
+      },
+      {
+        "name": "Forestier",
+        "tagline": "Vert profond + or",
+        "primary": "#1B4332",
+        "accent": "#D4A574",
+        "ground": "#2D6A4F"
+      },
+      {
+        "name": "Méditerranée",
+        "tagline": "Terracotta + crème",
+        "primary": "#7A2E1F",
+        "accent": "#E8C089",
+        "ground": "#C46444"
+      },
+      {
+        "name": "Heritage",
+        "tagline": "Bordeaux + crème",
+        "primary": "#5B1A1A",
+        "accent": "#D4A574",
+        "ground": "#8B3A3A"
+      }
     ]
   },
   "how": {
