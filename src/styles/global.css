@@ -272,10 +272,10 @@ body[data-landing-mode="dark"] .lang-switch:hover {
   border-color: var(--accent);
 }
 
-/* V4.5 — Sections transparentes pour que la balle 3D (z-index 0 fixed)
-   soit visible derrière elles. Le body bg (#0A0A0A) reste solide ; les
-   sections deviennent transparentes pour révéler le canvas derrière.
-   Cards/text à l'intérieur des sections gardent leurs bg opaques. */
+/* V4.5/4.6 — Sections transparentes + container z-index pour que la
+   balle 3D (z-index 0 fixed, mix-blend screen) passe entre les pavés
+   du contenu : derrière les cards opaques, mais visible aux gaps via
+   les reflets additifs du blend mode. Effet weave depth. */
 body[data-landing-mode="dark"] .steps,
 body[data-landing-mode="dark"] .showcase,
 body[data-landing-mode="dark"] .showcase-section,
@@ -287,6 +287,12 @@ body[data-landing-mode="dark"] .cta {
 }
 body[data-landing-mode="dark"] .problem {
   background: transparent;
+}
+/* Force le contenu au-dessus du canvas (z:0) — sans ça les title/text/cards
+   peuvent rester à même z et être masqués par les zones sombres de la balle. */
+body[data-landing-mode="dark"] main .container {
+  position: relative;
+  z-index: 2;
 }
 
 /* Footer V4.1 — override pour ne pas suivre les semantics globales

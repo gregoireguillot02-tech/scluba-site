@@ -55,14 +55,16 @@
     inset: 0;
     width: 100vw;
     height: 100vh;
-    /* V4.5 — z-index 0 : la balle passe DERRIÈRE le contenu pour effet
-       de profondeur parallax. Les sections doivent avoir bg transparent
-       sur la landing dark mode pour qu'elle reste visible (override en
-       global.css body[data-landing-mode="dark"]). */
+    /* V4.6 — z-index 0 (derrière sections transparentes) + mix-blend-mode
+       screen : les reflets brillants de la balle additionnent la lumière
+       sur le contenu (cards opaques deviennent partiellement transparentes
+       aux reflets). Effet "lumière qui passe entre les pavés", weave
+       depth plutôt que background strict. */
     z-index: 0;
     pointer-events: none;
     opacity: 0;
     transition: opacity 600ms ease-out;
+    mix-blend-mode: screen;
   }
   canvas[data-scroll-golfball][data-ready="true"] {
     opacity: 1;
@@ -271,15 +273,17 @@
 
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.22,  // strength V4.5 (était 0.35, encore trop puissant)
-      1.0,   // radius V4.5 (était 0.6, plus diffus plus large)
-      0.96   // threshold V4.5 (était 0.92, seuls ultra-bright bloment)
+      0.32,  // strength V4.6 (était 0.22, plus de glow avec mix-blend screen)
+      0.95,  // radius V4.6
+      0.94   // threshold V4.6
     );
     composer.addPass(bloomPass);
 
     const vignettePass = new ShaderPass(VignetteShader);
     vignettePass.uniforms.offset.value = 0.95;
-    vignettePass.uniforms.darkness.value = 1.28;
+    // V4.6 — vignette plus légère (était 1.28) : moins de "filtre dim"
+    // perceptible au Hero, le mix-blend screen compense déjà beaucoup.
+    vignettePass.uniforms.darkness.value = 1.05;
     composer.addPass(vignettePass);
 
     // === Ball state (voyage scroll-tied) ============================
@@ -341,15 +345,15 @@
     // matériau original (white plastic standard) est dropé : on veut
     // chrome pur qui réfléchit l'HDRI neon grid.
     function chromifyBall(ball: any) {
-      // V4.3 : iridescence + V4.5 : envMapIntensity 1.0→0.8 (atténue le
-      // flash global, le bloom devient plus diffus moins concentré).
+      // V4.6 : envMapIntensity 0.8 → 1.1 (re-pop le chrome + iridescence,
+      // l'effet "filtre dim" au Hero disparaît avec mix-blend-mode screen).
       const chromeMaterial = new THREE.MeshPhysicalMaterial({
         color: 0xF5F5F5,
         metalness: 1.0,
         roughness: 0.08,
         clearcoat: 1.0,
         clearcoatRoughness: 0.2,
-        envMapIntensity: 0.8,
+        envMapIntensity: 1.1,
         iridescence: 1.0,
         iridescenceIOR: 1.3,
         iridescenceThicknessRange: [100, 800],
