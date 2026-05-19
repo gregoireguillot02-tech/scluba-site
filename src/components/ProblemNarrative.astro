@@ -1,0 +1,77 @@
+---
+import { useT, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useT(locale);
+---
+
+<section id="problem" class="problem">
+  <div class="problem-wrap" data-anim="problem">
+    <div class="container problem-inner">
+      <div class="problem-eyebrow">{t.problem.eyebrow}</div>
+
+      <div class="problem-stack">
+        {t.problem.lines.map((line) => (
+          <p class="problem-line" data-line>{line}</p>
+        ))}
+      </div>
+
+      <p class="problem-punch" data-punch>{t.problem.punchline}</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .problem {
+    padding: 0;
+  }
+  .problem-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    background:
+      linear-gradient(180deg, var(--bg) 0%, var(--primary-bg) 50%, var(--bg) 100%);
+  }
+  .problem-inner {
+    text-align: center;
+  }
+  .problem-eyebrow {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: var(--space-8);
+  }
+  .problem-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    margin-bottom: var(--space-8);
+  }
+  .problem-line {
+    font-family: var(--font-serif);
+    font-size: clamp(1.75rem, 4.5vw, 3.25rem);
+    line-height: 1.2;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    max-width: 22ch;
+    margin: 0 auto;
+  }
+  .problem-line:last-child {
+    color: var(--primary);
+    font-weight: 700;
+  }
+  .problem-punch {
+    font-size: var(--text-md);
+    color: var(--muted);
+    font-style: italic;
+    max-width: 42ch;
+    margin: 0 auto;
+  }
+</style>
