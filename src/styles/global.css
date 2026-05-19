@@ -169,129 +169,121 @@ section {
 }
 
 /* ============================================================
-   Landing dark mode — V2 "Bois et Herbe" (2026-05-19)
+   Landing dark mode — V4 "Tech Bold Chrome" (2026-05-19)
    Scope `body[data-landing-mode="dark"]` activé uniquement sur la home
-   FR + EN via Base.astro. Override les tokens couleur pour passer
-   l'ensemble de la landing sur fond forest-coffee dark, et faire ressortir
-   la balle 3D blanche centrale. Palette tridimensionnelle :
-   - WOOD (cuivre/espresso warm) → accents matériels
-   - GRASS (vert fairway + vert herbe vibrant) → signature golf
-   - HONEY (or chaud) → primary, CTA, eyebrow
-   - CREAM (text) → body + secondary
-   Les pages utilitaires (legal, demo, etc.) restent en light.
+   FR + EN via Base.astro. Refonte radicale après revert V2 Wood & Grass :
+   pivot vers Tech Startup Bold (Linear / Vercel-like) — palette dark
+   très contrastée + accent unique Vercel green + typo Geist.
+   Les pages utilitaires (legal, demo, etc.) restent en light Greenroom.
    ============================================================ */
 body[data-landing-mode="dark"] {
-  /* Surfaces — forest-coffee dark */
-  --bg: #0A1812;             /* Signature dark, plus profond que forest 950 */
-  --bg-soft: #0F2218;        /* Forest 900 + chaud */
-  --paper: #142A20;          /* Cards / panels élevés */
-  --paper-deep: #1A3528;     /* Élévation forte */
-  --paper-warm: #1F3A2A;
+  /* Surfaces — pure ink, palette resserrée */
+  --bg: #0A0A0A;             /* ink principal */
+  --bg-soft: #121212;        /* surfaces élevées */
+  --paper: #121212;          /* alias surfaces */
+  --paper-deep: #0A0A0A;     /* alias bg */
+  --ink: #0A0A0A;
+  --ink-2: #121212;
+  --ink-3: #1F1F1F;
 
-  /* Lignes — cream alpha */
-  --line: rgba(245, 235, 216, 0.10);
-  --line-soft: rgba(245, 235, 216, 0.05);
-  --rule: rgba(245, 235, 216, 0.12);
-  --rule-strong: rgba(245, 235, 216, 0.24);
+  /* Lignes — cream alpha très subtil */
+  --line: #1F1F1F;
+  --line-soft: rgba(245, 245, 245, 0.05);
+  --rule: rgba(245, 245, 245, 0.08);
+  --rule-strong: rgba(245, 245, 245, 0.18);
 
-  /* Texte — cream warm sur dark (contraste AAA) */
-  --ink: #F5EBD8;            /* Cream chaud */
-  --ink-soft: #E5DAC6;
-  --muted: #8A9089;          /* Sage muted */
-  --muted-soft: #5C6259;
-  --cream: #F5EBD8;
-  --cream-soft: #E5DAC6;
-  --cream-sage: #D6DDD2;
+  /* Texte — cream pur sur ink (contraste WCAG AAA) */
+  --cream: #F5F5F5;
+  --text: #F5F5F5;
+  --muted: #909090;          /* secondaire */
+  --muted-soft: #5C5C5C;
+  --dim: #5C5C5C;            /* labels / footers */
 
-  /* Wood — cuivre/espresso warm pour accents matériels (cards, borders, separators) */
-  --wood: #6B4F33;           /* Cuivre warm — accents bois */
-  --wood-deep: #3D2914;      /* Espresso wood */
-  --wood-soft: #8B6A40;      /* Honey deep */
+  /* Accent — Vercel green, unique sur toute la landing */
+  --primary: #F5F5F5;        /* primary = cream (titles) */
+  --primary-soft: #B5B5B5;
+  --primary-bg: rgba(0, 220, 130, 0.06);
+  --primary-deep: #F5F5F5;
+  --accent: #00DC82;
+  --accent-soft: rgba(0, 220, 130, 0.12);
+  --accent-bright: #1AE89A;
+  --accent-dim: rgba(0, 220, 130, 0.12);
 
-  /* Grass — vert herbe (signature golf) */
-  --grass: #2D6A4F;          /* Vert fairway sombre */
-  --grass-bright: #52B788;   /* Vert herbe vibrant — signature NOUVELLE */
-  --grass-deep: #1B4332;     /* Forest brand */
+  /* Typo — Geist Sans + Geist Mono (drop Fraunces + Big Shoulders Display).
+     L'override --font-serif fait que les h1..h4 héritent automatiquement
+     de Geist via la règle globale. */
+  --font-display: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Primary — Honey est le primary sur dark (titres, brand) */
-  --primary: #D4A574;        /* Honey 500 */
-  --primary-soft: #B8895C;
-  --primary-bg: rgba(212, 165, 116, 0.06);
-  --primary-deep: #8B6A40;
-
-  /* Accent — Honey + variations chaudes */
-  --accent: #D4A574;
-  --accent-soft: rgba(212, 165, 116, 0.12);
-  --accent-bright: #E8C089;
-
-  /* Shadows — tinted forest deep */
+  /* Shadows — neutre noir, plus minimal Tech Bold */
   --shadow-sm:
-    0 1px 2px rgba(0, 0, 0, 0.30),
-    0 2px 4px rgba(0, 0, 0, 0.20);
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.25);
   --shadow-md:
-    0 1px 2px rgba(0, 0, 0, 0.30),
-    0 4px 12px rgba(0, 0, 0, 0.25),
-    0 12px 32px rgba(0, 0, 0, 0.22);
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 4px 12px rgba(0, 0, 0, 0.30),
+    0 12px 32px rgba(0, 0, 0, 0.25);
   --shadow-lg:
-    0 2px 4px rgba(0, 0, 0, 0.32),
-    0 8px 20px rgba(0, 0, 0, 0.30),
-    0 24px 56px rgba(0, 0, 0, 0.28);
+    0 2px 4px rgba(0, 0, 0, 0.40),
+    0 8px 20px rgba(0, 0, 0, 0.35),
+    0 24px 56px rgba(0, 0, 0, 0.30);
 
-  /* Atmospheric gradients V2 — honey glow central (autour de la balle 3D)
-     + grass-bright glow bas-droite (suggère le fairway au loin)
-     + wood-deep glow haut-gauche (ombre éclairage tamisé). */
-  background:
-    radial-gradient(ellipse 60% 45% at 50% 35%, rgba(212, 165, 116, 0.16), transparent 65%),
-    radial-gradient(ellipse 70% 50% at 85% 90%, rgba(82, 183, 136, 0.10), transparent 60%),
-    radial-gradient(ellipse 50% 40% at 8% 12%, rgba(61, 41, 20, 0.40), transparent 55%),
-    var(--bg) !important;
-  background-attachment: fixed, fixed, fixed, scroll !important;
+  /* Background pur ink — le bloom + vignette de la balle 3D feront le mood,
+     plus besoin de gradients atmosphériques (qui parasitaient le post-pro). */
+  background: var(--bg) !important;
+  color: var(--text);
 }
 
-/* Nav en mode dark : forest deep semi-transparent au lieu du blanc */
+/* Nav en mode Tech Bold : ink semi-transparent + blur subtil */
 body[data-landing-mode="dark"] .nav {
-  background: rgba(11, 31, 22, 0.78);
-  border-bottom-color: rgba(245, 235, 216, 0.08);
+  background: rgba(10, 10, 10, 0.80);
+  border-bottom-color: var(--line);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
 }
 
-/* Wordmark "tone-wood" en mode dark : force en cream (vs warm-charcoal
-   #2D1B0E qui serait invisible sur dark). Le composant WordmarkScluba
-   garde son API, juste l'override CSS contextuel. */
-body[data-landing-mode="dark"] .wordmark-scluba.tone-wood .ws-text {
-  color: #F5EBD8;
+/* Wordmark : tone-wood / tone-inverted aboutissent tous deux à cream sur ink.
+   On garde l'API pour ne pas casser Nav/Footer. */
+body[data-landing-mode="dark"] .wordmark-scluba.tone-wood .ws-text,
+body[data-landing-mode="dark"] .wordmark-scluba.tone-inverted .ws-text {
+  color: var(--cream);
 }
 
-/* Lang switch + nav-links : couleur cream + hover honey */
 body[data-landing-mode="dark"] .nav-links a {
-  color: var(--ink-soft);
+  color: var(--muted);
 }
 body[data-landing-mode="dark"] .nav-links a:hover {
-  color: var(--accent);
+  color: var(--cream);
 }
 body[data-landing-mode="dark"] .lang-switch {
-  color: var(--ink-soft);
-  border-color: rgba(245, 235, 216, 0.18);
+  color: var(--muted);
+  border-color: var(--line);
 }
 body[data-landing-mode="dark"] .lang-switch:hover {
   color: var(--accent);
   border-color: var(--accent);
 }
 
-/* Boutons sur dark : ajuster contraste */
+/* Boutons Tech Bold : accent green sur ink, primary cream ink → fond green */
 body[data-landing-mode="dark"] .btn-primary {
   background: var(--accent);
-  color: #0B1F16;
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(0, 220, 130, 0.0);
 }
 body[data-landing-mode="dark"] .btn-primary:hover {
   background: var(--accent-bright);
+  box-shadow: 0 0 0 1px rgba(0, 220, 130, 0.25), 0 0 32px rgba(0, 220, 130, 0.18);
 }
 body[data-landing-mode="dark"] .btn-ghost {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--cream);
+  border-color: var(--line);
 }
 body[data-landing-mode="dark"] .btn-ghost:hover {
-  background: var(--accent);
-  color: #0B1F16;
+  background: var(--ink-2);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* Honeypot: visually & assistively hidden, but still submittable by bots. */
@@ -307,125 +299,56 @@ body[data-landing-mode="dark"] .btn-ghost:hover {
 }
 
 /* ============================================================
-   Utility classes V2 "Bois et Herbe" (2026-05-19)
-   Patterns transversaux empruntés à oryzo / jeskojets / donmolinico /
-   drinksom / umano. Scopés généralement à la home dark mais utilisables
-   ailleurs si besoin.
+   Utility classes V4 "Tech Bold Chrome" (2026-05-19)
+   Tokens Geist + accent Vercel green. Scopées à la landing mais
+   réutilisables ailleurs (référencent les tokens, pas des values).
    ============================================================ */
 
-/* Split-title 3 zones — pattern donmolinico :
-   small-left  +  LARGE-center  +  small-right
-   Le "large" prend sa place naturelle (auto), les "smalls" se répartissent
-   1fr de chaque côté. Sur mobile, stack vertical. */
-.split-title-3 {
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: baseline;
-  gap: var(--space-3);
-  text-align: center;
-}
-@media (min-width: 900px) {
-  .split-title-3 {
-    grid-template-columns: 1fr auto 1fr;
-    gap: var(--space-6);
-    text-align: left;
-  }
-  .split-title-3 > *:first-child { justify-self: end; text-align: right; }
-  .split-title-3 > *:last-child { justify-self: start; text-align: left; }
-}
-
-/* Eyebrow mono — alternative au eyebrow sans-serif pour les sections
-   où on veut un côté plus "technique/print" (drinksom-inspired). */
+/* Eyebrow mono — labels techniques en Geist Mono, accent green */
 .eyebrow-mono {
-  font-family: 'Big Shoulders Display', 'JetBrains Mono', ui-monospace, sans-serif;
-  font-size: var(--text-xs);
-  font-weight: 800;
-  letter-spacing: 0.18em;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--accent);
   line-height: 1;
 }
 
-/* Numérotation XXL — pattern donmolinico (01/02/03) ou jeskojets (chapitres) */
+/* Numérotation XXL — Geist 900 accent green (steps, sections) */
 .number-XL {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-weight: 900;
   font-size: clamp(4rem, 12vw, 9rem);
   line-height: 0.85;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.045em;
   color: var(--accent);
-  font-variation-settings: 'opsz' 144;
 }
 
-/* Text mega — pour les titres signature XXL (eg. SCLUBA Hero) */
+/* Text mega — titres signature Hero (Scluba wordmark display) */
 .text-mega {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(3.5rem, 11vw, 8rem);
-  line-height: 0.88;
-  letter-spacing: -0.06em;
-  color: var(--primary);
-  font-variation-settings: 'opsz' 144, 'SOFT' 80;
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  line-height: 0.85;
+  letter-spacing: -0.05em;
+  color: var(--cream);
 }
 
-/* Marquee horizontal infinie — pattern drinksom / donmolinico (logos clubs).
-   Le `.marquee-track` doit contenir le contenu dupliqué 2x pour boucle
-   sans saut. Hover pause via animation-play-state. */
-.marquee {
-  display: flex;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-          mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-  width: 100%;
-}
-.marquee-track {
-  display: flex;
-  flex-shrink: 0;
-  gap: var(--space-7);
-  align-items: center;
-  animation: marquee-scroll 35s linear infinite;
-}
-.marquee:hover .marquee-track {
-  animation-play-state: paused;
-}
-@keyframes marquee-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .marquee-track { animation: none; }
-}
-
-/* Glow honey — utility pour mettre en valeur surfaces autour de la balle.
-   Idéalement appliqué sur des conteneurs avec border-radius et position
-   relative. Le glow vient de derrière (z-index négatif via pseudo-élément). */
-.glow-honey {
+/* Glow accent — soft halo green derrière une surface (CTA, balle, hero).
+   Utility position:relative + pseudo-element blur. */
+.glow-accent {
   position: relative;
   isolation: isolate;
 }
-.glow-honey::before {
+.glow-accent::before {
   content: "";
   position: absolute;
   inset: -10%;
-  background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(212, 165, 116, 0.22), transparent 70%);
+  background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(0, 220, 130, 0.18), transparent 70%);
   filter: blur(40px);
   z-index: -1;
   pointer-events: none;
-}
-
-/* Atmospheric grain canvas overlay — pattern drinksom.
-   Le <canvas> est inséré dans Base.astro si isHomeRoute. Le dessin est
-   fait une seule fois au boot (opacity 0.04 — invisible mais ça donne
-   un grain filmique très subtil sur les aplats dark). */
-.grain-overlay {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 9;
-  pointer-events: none;
-  opacity: 0.05;
-  mix-blend-mode: overlay;
 }
 
 /* ============================================================
