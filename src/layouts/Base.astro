@@ -3,6 +3,7 @@ import '../styles/global.css';
 import LaunchBanner from '../components/LaunchBanner.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
+import ScrollGolfBall from '../components/ScrollGolfBall.astro';
 import { useT, type Locale } from '../i18n';
 
 interface Props {
@@ -11,6 +12,12 @@ interface Props {
 
 const { locale } = Astro.props;
 const t = useT(locale);
+
+// La balle de golf scroll-tied (oryzo.ai-inspired) apparaît uniquement
+// sur la home (FR + EN). Pas sur les pages utilitaires servies par Base
+// (legal, /demo, etc.) où elle distrayerait du contenu.
+const pathname = Astro.url.pathname;
+const isHomeRoute = pathname === '/' || pathname === '/en' || pathname === '/en/';
 ---
 
 <!doctype html>
@@ -43,6 +50,7 @@ const t = useT(locale);
 <body>
   <LaunchBanner locale={locale} />
   <Nav locale={locale} />
+  {isHomeRoute && <ScrollGolfBall />}
   <main>
     <slot />
   </main>
