@@ -33,10 +33,18 @@ h1, h2, h3, h4 {
   font-family: var(--font-serif);
   font-weight: 700;
   line-height: 1.05;
-  letter-spacing: -0.02em;
   color: var(--primary);
   margin: 0;
+  /* font-variation-settings : pousser l'opsz Fraunces au max pour les titres
+     display + soft légèrement arrondi (cohérent avec WordmarkScluba). */
+  font-variation-settings: 'opsz' 144, 'SOFT' 50;
 }
+/* Tracking négatif progressif sur la hiérarchie (pattern jeskojets / oryzo) :
+   plus la taille augmente, plus le tracking se resserre. */
+h1 { letter-spacing: -0.05em; font-weight: 900; }
+h2 { letter-spacing: -0.04em; font-weight: 800; }
+h3 { letter-spacing: -0.03em; }
+h4 { letter-spacing: -0.02em; }
 
 p { margin: 0; }
 
@@ -161,21 +169,24 @@ section {
 }
 
 /* ============================================================
-   Landing dark mode — V1 (2026-05-19)
+   Landing dark mode — V2 "Bois et Herbe" (2026-05-19)
    Scope `body[data-landing-mode="dark"]` activé uniquement sur la home
    FR + EN via Base.astro. Override les tokens couleur pour passer
-   l'ensemble de la landing sur fond forest deep, et faire ressortir
-   la balle 3D blanche centrale. Honey (#D4A574) devient le primary
-   pour les titres, cream pour le body.
+   l'ensemble de la landing sur fond forest-coffee dark, et faire ressortir
+   la balle 3D blanche centrale. Palette tridimensionnelle :
+   - WOOD (cuivre/espresso warm) → accents matériels
+   - GRASS (vert fairway + vert herbe vibrant) → signature golf
+   - HONEY (or chaud) → primary, CTA, eyebrow
+   - CREAM (text) → body + secondary
    Les pages utilitaires (legal, demo, etc.) restent en light.
    ============================================================ */
 body[data-landing-mode="dark"] {
-  /* Surfaces */
-  --bg: #0B1F16;             /* Forest 950 — plus profond que primary-deep */
-  --bg-soft: #0F2A1E;        /* Forest 900 */
-  --paper: #0F2A1E;
-  --paper-deep: #133326;
-  --paper-warm: #1A3B2C;
+  /* Surfaces — forest-coffee dark */
+  --bg: #0A1812;             /* Signature dark, plus profond que forest 950 */
+  --bg-soft: #0F2218;        /* Forest 900 + chaud */
+  --paper: #142A20;          /* Cards / panels élevés */
+  --paper-deep: #1A3528;     /* Élévation forte */
+  --paper-warm: #1F3A2A;
 
   /* Lignes — cream alpha */
   --line: rgba(245, 235, 216, 0.10);
@@ -184,18 +195,31 @@ body[data-landing-mode="dark"] {
   --rule-strong: rgba(245, 235, 216, 0.24);
 
   /* Texte — cream warm sur dark (contraste AAA) */
-  --ink: #F5EBD8;
+  --ink: #F5EBD8;            /* Cream chaud */
   --ink-soft: #E5DAC6;
   --muted: #8A9089;          /* Sage muted */
   --muted-soft: #5C6259;
+  --cream: #F5EBD8;
+  --cream-soft: #E5DAC6;
+  --cream-sage: #D6DDD2;
 
-  /* Primary — Honey devient le primary sur dark (titres, brand) */
+  /* Wood — cuivre/espresso warm pour accents matériels (cards, borders, separators) */
+  --wood: #6B4F33;           /* Cuivre warm — accents bois */
+  --wood-deep: #3D2914;      /* Espresso wood */
+  --wood-soft: #8B6A40;      /* Honey deep */
+
+  /* Grass — vert herbe (signature golf) */
+  --grass: #2D6A4F;          /* Vert fairway sombre */
+  --grass-bright: #52B788;   /* Vert herbe vibrant — signature NOUVELLE */
+  --grass-deep: #1B4332;     /* Forest brand */
+
+  /* Primary — Honey est le primary sur dark (titres, brand) */
   --primary: #D4A574;        /* Honey 500 */
   --primary-soft: #B8895C;
   --primary-bg: rgba(212, 165, 116, 0.06);
   --primary-deep: #8B6A40;
 
-  /* Accent — Honey reste accent + variations plus saturées */
+  /* Accent — Honey + variations chaudes */
   --accent: #D4A574;
   --accent-soft: rgba(212, 165, 116, 0.12);
   --accent-bright: #E8C089;
@@ -213,13 +237,15 @@ body[data-landing-mode="dark"] {
     0 8px 20px rgba(0, 0, 0, 0.30),
     0 24px 56px rgba(0, 0, 0, 0.28);
 
-  /* Atmospheric gradients — honey glow plus fort sur dark pour donner
-     une lueur "country-club éclairage chaud" autour de la balle. */
+  /* Atmospheric gradients V2 — honey glow central (autour de la balle 3D)
+     + grass-bright glow bas-droite (suggère le fairway au loin)
+     + wood-deep glow haut-gauche (ombre éclairage tamisé). */
   background:
-    radial-gradient(ellipse 70% 50% at 50% 30%, rgba(212, 165, 116, 0.14), transparent 60%),
-    radial-gradient(ellipse 80% 60% at 18% 85%, rgba(45, 106, 79, 0.18), transparent 60%),
+    radial-gradient(ellipse 60% 45% at 50% 35%, rgba(212, 165, 116, 0.16), transparent 65%),
+    radial-gradient(ellipse 70% 50% at 85% 90%, rgba(82, 183, 136, 0.10), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 8% 12%, rgba(61, 41, 20, 0.40), transparent 55%),
     var(--bg) !important;
-  background-attachment: fixed, fixed, scroll !important;
+  background-attachment: fixed, fixed, fixed, scroll !important;
 }
 
 /* Nav en mode dark : forest deep semi-transparent au lieu du blanc */
@@ -278,6 +304,128 @@ body[data-landing-mode="dark"] .btn-ghost:hover {
   overflow: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+/* ============================================================
+   Utility classes V2 "Bois et Herbe" (2026-05-19)
+   Patterns transversaux empruntés à oryzo / jeskojets / donmolinico /
+   drinksom / umano. Scopés généralement à la home dark mais utilisables
+   ailleurs si besoin.
+   ============================================================ */
+
+/* Split-title 3 zones — pattern donmolinico :
+   small-left  +  LARGE-center  +  small-right
+   Le "large" prend sa place naturelle (auto), les "smalls" se répartissent
+   1fr de chaque côté. Sur mobile, stack vertical. */
+.split-title-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: baseline;
+  gap: var(--space-3);
+  text-align: center;
+}
+@media (min-width: 900px) {
+  .split-title-3 {
+    grid-template-columns: 1fr auto 1fr;
+    gap: var(--space-6);
+    text-align: left;
+  }
+  .split-title-3 > *:first-child { justify-self: end; text-align: right; }
+  .split-title-3 > *:last-child { justify-self: start; text-align: left; }
+}
+
+/* Eyebrow mono — alternative au eyebrow sans-serif pour les sections
+   où on veut un côté plus "technique/print" (drinksom-inspired). */
+.eyebrow-mono {
+  font-family: 'Big Shoulders Display', 'JetBrains Mono', ui-monospace, sans-serif;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  line-height: 1;
+}
+
+/* Numérotation XXL — pattern donmolinico (01/02/03) ou jeskojets (chapitres) */
+.number-XL {
+  font-family: var(--font-serif);
+  font-weight: 900;
+  font-size: clamp(4rem, 12vw, 9rem);
+  line-height: 0.85;
+  letter-spacing: -0.05em;
+  color: var(--accent);
+  font-variation-settings: 'opsz' 144;
+}
+
+/* Text mega — pour les titres signature XXL (eg. SCLUBA Hero) */
+.text-mega {
+  font-family: var(--font-serif);
+  font-weight: 900;
+  font-size: clamp(3.5rem, 11vw, 8rem);
+  line-height: 0.88;
+  letter-spacing: -0.06em;
+  color: var(--primary);
+  font-variation-settings: 'opsz' 144, 'SOFT' 80;
+}
+
+/* Marquee horizontal infinie — pattern drinksom / donmolinico (logos clubs).
+   Le `.marquee-track` doit contenir le contenu dupliqué 2x pour boucle
+   sans saut. Hover pause via animation-play-state. */
+.marquee {
+  display: flex;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  width: 100%;
+}
+.marquee-track {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-7);
+  align-items: center;
+  animation: marquee-scroll 35s linear infinite;
+}
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
+}
+
+/* Glow honey — utility pour mettre en valeur surfaces autour de la balle.
+   Idéalement appliqué sur des conteneurs avec border-radius et position
+   relative. Le glow vient de derrière (z-index négatif via pseudo-élément). */
+.glow-honey {
+  position: relative;
+  isolation: isolate;
+}
+.glow-honey::before {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(212, 165, 116, 0.22), transparent 70%);
+  filter: blur(40px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Atmospheric grain canvas overlay — pattern drinksom.
+   Le <canvas> est inséré dans Base.astro si isHomeRoute. Le dessin est
+   fait une seule fois au boot (opacity 0.04 — invisible mais ça donne
+   un grain filmique très subtil sur les aplats dark). */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
 }
 
 /* ============================================================
