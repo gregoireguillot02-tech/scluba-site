@@ -53,15 +53,16 @@ const t = useT(locale);
   .faq-item {
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
-    background: var(--bg);
-    transition: border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+    background: var(--paper, var(--bg));
+    transition: border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out), background 0.3s var(--ease-out);
     overflow: hidden;
   }
   .faq-item:hover {
     border-color: var(--accent);
   }
   .faq-item[open] {
-    border-color: var(--primary-soft);
+    border-color: var(--accent);
+    background: var(--paper-deep, var(--bg));
     box-shadow: var(--shadow-md);
   }
 

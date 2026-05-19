@@ -75,10 +75,12 @@ const qrSvg = await QRCode.toString(demoUrl, {
   }
 
   .cta-card {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+    background:
+      linear-gradient(135deg, var(--paper-deep, var(--primary)) 0%, var(--paper, var(--primary-deep)) 100%);
+    border: 1px solid var(--wood, transparent);
     border-radius: var(--radius-xl);
     padding: var(--space-8) var(--space-6);
-    color: var(--bg);
+    color: var(--ink, var(--bg));
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--space-7);
@@ -111,11 +113,14 @@ const qrSvg = await QRCode.toString(demoUrl, {
   }
   .cta-title {
     font-family: var(--font-serif);
-    font-size: clamp(1.75rem, 3.5vw, 2.5rem);
-    line-height: 1.15;
-    color: var(--bg);
+    font-size: clamp(2rem, 4.5vw, 3.5rem);
+    line-height: 1;
+    letter-spacing: -0.045em;
+    color: var(--ink, var(--bg));
     margin-bottom: var(--space-3);
     max-width: 18ch;
+    font-weight: 900;
+    font-variation-settings: 'opsz' 144;
   }
   .cta-lead {
     color: var(--accent-soft);
@@ -144,9 +149,9 @@ const qrSvg = await QRCode.toString(demoUrl, {
     width: 100%;
     padding: 14px 16px;
     border-radius: var(--radius-md);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--bg);
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.18));
+    background: rgba(245, 235, 216, 0.04);
+    color: var(--ink, var(--bg));
     font-size: var(--text-base);
     transition:
       background 0.25s var(--ease-out),
