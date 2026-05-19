@@ -1,4 +1,15 @@
 ---
+/**
+ * ClubsShowcase V4.1 — 1-card morph cycle (decision Q4 option A).
+ *
+ * Drop la grille 4 cards (Maritime/Forestier/Méditerranée/Heritage) qui
+ * faisait folk sur la DA Tech Bold. Replace par UNE SEULE card example
+ * qui cycle entre 3-4 sets de couleurs (primary/accent/ground) toutes
+ * les 4.5s. Le message "Votre carte, vos couleurs" devient une démo en
+ * direct, pas une grille.
+ *
+ * Anim cablée dans src/scripts/animations.ts initPaletteCycler().
+ */
 import { useT, type Locale } from '../i18n';
 
 interface Props {
@@ -7,179 +18,175 @@ interface Props {
 
 const { locale } = Astro.props;
 const t = useT(locale);
+const palettes = t.showcase.palettes;
+const first = palettes[0];
 ---
 
 <section class="showcase">
   <div class="container">
     <div class="section-header" data-anim="section-header">
-      <span class="section-eyebrow">{t.showcase.eyebrow}</span>
+      <span class="section-eyebrow eyebrow-mono">{t.showcase.eyebrow}</span>
       <h2 class="section-title">{t.showcase.title}</h2>
       <p class="section-lead">{t.showcase.lead}</p>
     </div>
 
-    <div class="showcase-grid">
-      {t.showcase.palettes.map((palette) => (
-        <article
-          class="palette-card"
-          data-anim="showcase-card"
-          style={`--primary: ${palette.primary}; --accent: ${palette.accent}; --ground: ${palette.ground};`}
-        >
-          <div class="palette-photo">
-            <svg viewBox="0 0 200 110" preserveAspectRatio="xMidYMid slice">
-              <defs>
-                <linearGradient id={`sky-${palette.name}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.25"/>
-                  <stop offset="100%" stop-color="var(--ground)" stop-opacity="0.05"/>
-                </linearGradient>
-              </defs>
-              <rect width="200" height="110" fill={`url(#sky-${palette.name})`}/>
-              <ellipse cx="40" cy="60" rx="80" ry="14" fill="var(--ground)" opacity="0.5"/>
-              <ellipse cx="160" cy="56" rx="90" ry="16" fill="var(--ground)" opacity="0.4"/>
-              <path d="M 0 78 Q 50 68, 100 76 T 200 74 L 200 110 L 0 110 Z" fill="var(--ground)" opacity="0.7"/>
-              <path d="M 0 90 Q 60 84, 120 90 T 200 88 L 200 110 L 0 110 Z" fill="var(--primary)" opacity="0.8"/>
-              <line x1="80" y1="92" x2="80" y2="58" stroke="var(--primary)" stroke-width="1.4"/>
-              <path d="M 80 58 L 96 62 L 80 66 Z" fill="var(--accent)"/>
-              <circle cx="80" cy="92" r="1.4" fill="#FFFFFF"/>
-            </svg>
+    <div class="showcase-stage">
+      <article
+        class="palette-card-demo"
+        data-palette-cycler
+        data-palettes={JSON.stringify(palettes)}
+        style={`--p-primary: ${first.primary}; --p-accent: ${first.accent}; --p-ground: ${first.ground};`}
+      >
+        <div class="palette-photo">
+          <svg viewBox="0 0 200 110" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <defs>
+              <linearGradient id="paletteSky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--p-accent)" stop-opacity="0.30"/>
+                <stop offset="100%" stop-color="var(--p-ground)" stop-opacity="0.05"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="110" fill="url(#paletteSky)"/>
+            <ellipse cx="40" cy="60" rx="80" ry="14" fill="var(--p-ground)" opacity="0.5"/>
+            <ellipse cx="160" cy="56" rx="90" ry="16" fill="var(--p-ground)" opacity="0.4"/>
+            <path d="M 0 78 Q 50 68, 100 76 T 200 74 L 200 110 L 0 110 Z" fill="var(--p-ground)" opacity="0.7"/>
+            <path d="M 0 90 Q 60 84, 120 90 T 200 88 L 200 110 L 0 110 Z" fill="var(--p-primary)" opacity="0.8"/>
+            <line x1="100" y1="92" x2="100" y2="58" stroke="var(--p-primary)" stroke-width="1.6"/>
+            <path d="M 100 58 L 116 62 L 100 66 Z" fill="var(--p-accent)"/>
+            <circle cx="100" cy="92" r="1.6" fill="#FFFFFF"/>
+          </svg>
+        </div>
+
+        <div class="palette-bar">
+          <div class="palette-logo-spot"></div>
+          <div class="palette-meta">
+            <small data-palette-tagline>{first.tagline}</small>
+            <strong data-palette-name>{first.name}</strong>
+          </div>
+        </div>
+
+        <div class="palette-content">
+          <div class="palette-score-wrap">
+            <div class="palette-score">87</div>
+            <div class="palette-score-label">Par 72 · 18 trous</div>
           </div>
 
-          <div class="palette-bar">
-            <div class="palette-logo-spot"></div>
-            <div class="palette-meta">
-              <small>{palette.tagline}</small>
-              <strong>{palette.name}</strong>
-            </div>
+          <div class="palette-mini-grid" aria-hidden="true">
+            {Array.from({ length: 18 }, (_, i) => (
+              <span class={`mini-cell ${i % 5 === 0 ? 'is-birdie' : i % 3 === 0 ? 'is-bogey' : ''}`}></span>
+            ))}
           </div>
 
-          <div class="palette-content">
-            <div class="palette-score-wrap">
-              <div class="palette-score">{72 + (palette.name.length % 18)}</div>
-              <div class="palette-score-label">Par 72 · 18 trous</div>
-            </div>
-
-            <div class="palette-mini-grid" aria-hidden="true">
-              {Array.from({ length: 18 }, (_, i) => (
-                <span class={`mini-cell ${i % 5 === 0 ? 'is-birdie' : i % 3 === 0 ? 'is-bogey' : ''}`}></span>
-              ))}
-            </div>
-
-            <div class="palette-footer">
-              <span class="palette-dot"></span>
-              <span>{locale === 'fr' ? 'Votre carte. Vos couleurs.' : 'Your card. Your colors.'}</span>
-            </div>
+          <div class="palette-footer">
+            <span class="palette-dot"></span>
+            <span>{locale === 'fr' ? 'Votre carte. Vos couleurs.' : 'Your card. Your colors.'}</span>
           </div>
-        </article>
-      ))}
+        </div>
+      </article>
+
+      <!-- Indicators de la palette en cours -->
+      <div class="palette-indicators" aria-hidden="true">
+        {palettes.map((_, i) => (
+          <span class={`palette-indicator ${i === 0 ? 'is-active' : ''}`} data-palette-indicator={i}></span>
+        ))}
+      </div>
     </div>
   </div>
 </section>
 
 <style>
   .showcase {
-    background: transparent; /* Laisse passer l'atmospheric gradient + grain canvas */
+    background: transparent;
     overflow: hidden;
   }
-  /* Section-header décalé légèrement à droite pour laisser haut-gauche à la balle
-     qui voyage là (K5 keyframe x=-2.4 y=+0.8) */
   .showcase :global(.section-header) {
-    text-align: left;
-    margin-left: 20%;
-  }
-  @media (max-width: 900px) {
-    .showcase :global(.section-header) {
-      text-align: center;
-      margin-left: auto;
-    }
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto var(--space-8);
   }
 
-  .showcase-grid {
-    display: grid;
-    grid-template-columns: 1fr;
+  .showcase-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: var(--space-5);
-    align-items: stretch;
-  }
-  @media (min-width: 640px) {
-    .showcase-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-5); }
-  }
-  @media (min-width: 1024px) {
-    .showcase-grid { grid-template-columns: repeat(4, 1fr); gap: var(--space-5); }
   }
 
-  .palette-card {
-    background: var(--paper, var(--bg));
+  .palette-card-demo {
+    width: 100%;
+    max-width: 480px;
+    background: var(--ink-2, var(--bg));
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    box-shadow: var(--shadow-md);
-    transition: transform 0.5s var(--ease-out), box-shadow 0.5s var(--ease-out), border-color 0.4s var(--ease-out);
-    will-change: transform;
-    display: flex;
-    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+    transition:
+      border-color 0.6s var(--ease-out),
+      box-shadow 0.6s var(--ease-out);
   }
-  .palette-card:hover {
-    transform: translateY(-8px) rotate(-0.5deg);
-    box-shadow: var(--shadow-xl);
-    border-color: var(--accent);
+  .palette-card-demo:hover {
+    border-color: var(--p-accent);
   }
 
   .palette-photo {
-    height: 110px;
+    height: 130px;
     overflow: hidden;
-    flex-shrink: 0;
   }
   .palette-photo svg {
     width: 100%;
     height: 100%;
     display: block;
+    transition: filter 0.8s var(--ease-out);
   }
 
   .palette-bar {
-    background: var(--primary);
-    color: var(--bg);
+    background: var(--p-primary);
+    color: var(--cream, #F5F5F5);
     padding: var(--space-3) var(--space-4);
     display: flex;
     align-items: center;
     gap: var(--space-3);
+    transition: background 0.8s var(--ease-out);
   }
   .palette-logo-spot {
     width: 32px; height: 32px;
-    background: var(--bg);
+    background: var(--cream);
     border-radius: 50%;
-    border: 1.5px solid var(--accent);
+    border: 1.5px solid var(--p-accent);
     flex-shrink: 0;
     position: relative;
+    transition: border-color 0.8s var(--ease-out);
   }
   .palette-logo-spot::before {
     content: "";
     position: absolute;
     inset: 6px;
-    background:
-      linear-gradient(135deg, var(--accent), var(--primary)),
-      var(--accent);
-    background-blend-mode: multiply;
+    background: linear-gradient(135deg, var(--p-accent), var(--p-primary));
     border-radius: 50%;
     opacity: 0.7;
+    transition: background 0.8s var(--ease-out);
   }
   .palette-meta { flex: 1; min-width: 0; }
   .palette-meta small {
     display: block;
-    color: var(--accent);
+    color: var(--p-accent);
+    font-family: var(--font-mono);
     font-size: var(--text-xs);
     text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 600;
+    letter-spacing: 0.18em;
+    font-weight: 500;
     margin-bottom: 2px;
+    transition: color 0.8s var(--ease-out);
   }
   .palette-meta strong {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: var(--text-md);
     font-weight: 700;
+    letter-spacing: -0.02em;
   }
 
   .palette-content {
     padding: var(--space-4);
-    background: var(--paper-deep, var(--bg-soft));
-    flex: 1;
+    background: var(--ink, var(--bg-soft));
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
@@ -192,37 +199,40 @@ const t = useT(locale);
   }
   .palette-score {
     font-family: var(--font-display);
-    font-size: clamp(2rem, 4vw, 2.75rem);
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
     font-weight: 900;
-    color: var(--accent);
+    color: var(--p-accent);
     line-height: 0.9;
     letter-spacing: -0.045em;
     font-variant-numeric: tabular-nums;
+    transition: color 0.8s var(--ease-out);
   }
   .palette-score-label {
+    font-family: var(--font-mono);
     font-size: var(--text-xs);
     color: var(--muted);
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
   }
 
   .palette-mini-grid {
     display: grid;
     grid-template-columns: repeat(9, 1fr);
-    gap: 3px;
+    gap: 4px;
   }
   .mini-cell {
     aspect-ratio: 1;
-    border-radius: 2px;
-    background: var(--accent);
-    opacity: 0.25;
+    border-radius: 3px;
+    background: var(--p-accent);
+    opacity: 0.22;
+    transition: background 0.8s var(--ease-out);
   }
   .mini-cell.is-birdie {
-    background: var(--accent);
+    background: var(--p-accent);
     opacity: 1;
   }
   .mini-cell.is-bogey {
-    background: var(--ground);
-    opacity: 0.4;
+    background: var(--p-ground);
+    opacity: 0.45;
   }
 
   .palette-footer {
@@ -240,6 +250,24 @@ const t = useT(locale);
     width: 6px;
     height: 6px;
     border-radius: 50%;
+    background: var(--p-accent);
+    transition: background 0.8s var(--ease-out);
+  }
+
+  /* Indicators du cycle palette */
+  .palette-indicators {
+    display: flex;
+    gap: 10px;
+    margin-top: var(--space-4);
+  }
+  .palette-indicator {
+    width: 28px;
+    height: 2px;
+    background: var(--ink-3);
+    border-radius: 1px;
+    transition: background 0.4s var(--ease-out);
+  }
+  .palette-indicator.is-active {
     background: var(--accent);
   }
 </style>
