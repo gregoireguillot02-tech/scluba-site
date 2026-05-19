@@ -76,9 +76,9 @@
     pointer-events: none;
     background: radial-gradient(
       ellipse at center,
-      rgba(15, 8, 4, 0.65) 0%,
-      rgba(15, 8, 4, 0.28) 35%,
-      rgba(15, 8, 4, 0) 70%
+      rgba(0, 0, 0, 0.70) 0%,
+      rgba(0, 0, 0, 0.28) 35%,
+      rgba(0, 0, 0, 0) 70%
     );
     filter: blur(12px);
     transform: translate(-1000px, -1000px);
@@ -113,11 +113,24 @@
 
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const [THREE, { GLTFLoader }, { RoomEnvironment }, { DecalGeometry }, { gsap }, { ScrollTrigger }] = await Promise.all([
+    const [
+      THREE,
+      { GLTFLoader },
+      { EffectComposer },
+      { RenderPass },
+      { UnrealBloomPass },
+      { ShaderPass },
+      { VignetteShader },
+      { gsap },
+      { ScrollTrigger },
+    ] = await Promise.all([
       import('three'),
       import('three/examples/jsm/loaders/GLTFLoader.js'),
-      import('three/examples/jsm/environments/RoomEnvironment.js'),
-      import('three/examples/jsm/geometries/DecalGeometry.js'),
+      import('three/examples/jsm/postprocessing/EffectComposer.js'),
+      import('three/examples/jsm/postprocessing/RenderPass.js'),
+      import('three/examples/jsm/postprocessing/UnrealBloomPass.js'),
+      import('three/examples/jsm/postprocessing/ShaderPass.js'),
+      import('three/examples/jsm/shaders/VignetteShader.js'),
       import('gsap'),
       import('gsap/ScrollTrigger'),
     ]);
@@ -135,8 +148,8 @@
     renderer.setSize(window.innerWidth, window.innerHeight, false);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    // Exposure plus basse → highlights moins éclatants, surface plus mate
-    renderer.toneMappingExposure = 0.95;
+    // Exposure 1.0 — laisse le bloom faire le dramatic punch sur highlights
+    renderer.toneMappingExposure = 1.0;
 
     // === Scene + Camera (FIXÉE) =====================================
     const scene = new THREE.Scene();
@@ -149,25 +162,121 @@
     camera.position.set(0, 0, 5);
     camera.lookAt(0, 0, 0);
 
-    // === Environment + Lighting =====================================
-    const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    // Blur 0.18 (vs 0.04) → reflets atmosphériques plus diffus, moins studio
-    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.18).texture;
+    // === HDRI procédural neon grid + Lighting =======================
+    // V4 Tech Bold : drop RoomEnvironment (studio générique) au profit
+    // d'un equirectangular canvas custom — grille fine + flashes accent
+    // green aux intersections. Le chrome de la balle réfléchit ce "Tron
+    // premium tech" environment, lit immédiatement Linear/Vercel.
+    function createNeonGridHDRI() {
+      const W = 2048, H = 1024;
+      const cnv = document.createElement('canvas');
+      cnv.width = W; cnv.height = H;
+      const ctx = cnv.getContext('2d')!;
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
+      // Fond noir profond
+      ctx.fillStyle = '#050505';
+      ctx.fillRect(0, 0, W, H);
+
+      // Grille verticale + horizontale gris-foncé (lignes fines)
+      ctx.strokeStyle = '#181818';
+      ctx.lineWidth = 1;
+      const step = 64;
+      for (let x = 0; x <= W; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, H);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= H; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5);
+        ctx.stroke();
+      }
+
+      // Flashes accent green aux intersections principales (every 6 cells)
+      ctx.fillStyle = 'rgba(0, 220, 130, 0.55)';
+      for (let x = step * 3; x < W; x += step * 6) {
+        for (let y = step * 3; y < H; y += step * 6) {
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Quelques highlights ponctuels blancs (simulent rim lights distantes)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      const highlights = [
+        [W * 0.25, H * 0.30, 8],
+        [W * 0.75, H * 0.35, 6],
+        [W * 0.50, H * 0.20, 10],
+        [W * 0.10, H * 0.60, 5],
+        [W * 0.90, H * 0.65, 7],
+      ];
+      for (const [x, y, r] of highlights) {
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, r * 6);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, r * 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Horizon bas vert très subtil (ground reflection bonus)
+      const horizon = ctx.createLinearGradient(0, H * 0.7, 0, H);
+      horizon.addColorStop(0, 'rgba(5, 5, 5, 0)');
+      horizon.addColorStop(1, 'rgba(0, 220, 130, 0.08)');
+      ctx.fillStyle = horizon;
+      ctx.fillRect(0, H * 0.7, W, H * 0.3);
+
+      const tex = new THREE.CanvasTexture(cnv);
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    const gridTex = createNeonGridHDRI();
+    scene.environment = pmremGenerator.fromEquirectangular(gridTex).texture;
+    gridTex.dispose();
+    pmremGenerator.dispose();
+
+    // Lighting ajustée pour chrome — le chrome dépend surtout du envMap,
+    // les direct lights jouent juste le rôle de "rim" et fill subtil.
+    const keyLight = new THREE.DirectionalLight(0xffffff, 0.6);
     keyLight.position.set(3, 4, 5);
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xfff4e6, 0.8);
+    const fillLight = new THREE.DirectionalLight(0xfff4e6, 0.3);
     fillLight.position.set(-4, 2, 3);
     scene.add(fillLight);
 
-    const rimLight = new THREE.DirectionalLight(0xe6f0ff, 0.4);
+    // Rim light teinté green pour silhouetter le chrome contre le bg noir
+    const rimLight = new THREE.DirectionalLight(0xc0ffd6, 0.8);
     rimLight.position.set(0, -2, -5);
     scene.add(rimLight);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.15);
-    scene.add(ambient);
+    // Drop ambient — pure HDRI lighting
+
+    // === Post-processing pipeline (cinematic subtil oryzo-level) =====
+    const composer = new EffectComposer(renderer);
+    composer.setSize(window.innerWidth, window.innerHeight);
+    composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    composer.addPass(new RenderPass(scene, camera));
+
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.55,  // strength
+      0.4,   // radius
+      0.85   // threshold (highlights only)
+    );
+    composer.addPass(bloomPass);
+
+    const vignettePass = new ShaderPass(VignetteShader);
+    vignettePass.uniforms.offset.value = 0.95;
+    vignettePass.uniforms.darkness.value = 1.28;
+    composer.addPass(vignettePass);
 
     // === Ball state (voyage scroll-tied) ============================
     // ballGroup wrap le gltf.scene → on anime le groupe, pas la balle
@@ -212,143 +321,33 @@
     }
     applyBallState();
 
-    // === Render à la demande ========================================
+    // === Render à la demande (via composer pour bloom + vignette) ===
     let renderRequested = false;
     function requestRender() {
       if (renderRequested) return;
       renderRequested = true;
       requestAnimationFrame(() => {
-        renderer.render(scene, camera);
+        composer.render();
         renderRequested = false;
       });
     }
 
-    // === Logo SCLUBA (DecalGeometry × 2 sur la surface de la balle) =
-    // Vrai decal qui épouse la courbure du mesh cible. Deux décals
-    // opposés (front +Z + back -Z) pour que le logo soit visible
-    // quel que soit l'angle de rotation Y.
-    function createLogoTexture() {
-      const cnv = document.createElement('canvas');
-      cnv.width = 1024;
-      cnv.height = 256;
-      const ctx = cnv.getContext('2d');
-      if (!ctx) return null;
-
-      ctx.clearRect(0, 0, 1024, 256);
-      ctx.fillStyle = '#2D1B0E'; // warm-charcoal cohérent wordmark
-      ctx.font = '900 170px "Big Shoulders Display", "Arial Black", system-ui, sans-serif';
-      ctx.textBaseline = 'middle';
-
-      // Tracked-out caps : letter-spacing manuel
-      const text = 'SCLUBA';
-      const letterSpacing = 22;
-      const widths = text.split('').map((c) => ctx.measureText(c).width);
-      const totalW = widths.reduce((a, b) => a + b, 0) + letterSpacing * (text.length - 1);
-      let cursor = (1024 - totalW) / 2;
-      text.split('').forEach((c, i) => {
-        ctx.fillText(c, cursor, 138);
-        cursor += widths[i] + letterSpacing;
+    // Remplace les matériaux du glTF par chrome MeshPhysicalMaterial.
+    // Le glTF golf_ball.glb apporte la géométrie (dimples), mais son
+    // matériau original (white plastic standard) est dropé : on veut
+    // chrome pur qui réfléchit l'HDRI neon grid.
+    function chromifyBall(ball: any) {
+      const chromeMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0xF5F5F5,
+        metalness: 1.0,
+        roughness: 0.08,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.1,
+        envMapIntensity: 1.4,
       });
-
-      const texture = new THREE.CanvasTexture(cnv);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-      texture.needsUpdate = true;
-      return texture;
-    }
-
-    async function addLogoDecals(ball: any) {
-      try {
-        await document.fonts.load('900 170px "Big Shoulders Display"');
-        await document.fonts.ready;
-      } catch {
-        /* fallback police */
-      }
-
-      const texture = createLogoTexture();
-      if (!texture) return;
-
-      // Trouve le mesh principal (le plus gros par volume bbox)
-      let targetMesh: any = null;
-      let maxVolume = 0;
       ball.traverse((child: any) => {
         if (child.isMesh) {
-          const sz = new THREE.Vector3();
-          new THREE.Box3().setFromObject(child).getSize(sz);
-          const vol = sz.x * sz.y * sz.z;
-          if (vol > maxVolume) {
-            maxVolume = vol;
-            targetMesh = child;
-          }
-        }
-      });
-      if (!targetMesh) return;
-
-      // Reset transforms ballGroup à identité → DecalGeometry calcule
-      // en target-local clean. On restaure après.
-      const savedPos = ballGroup.position.clone();
-      const savedScale = ballGroup.scale.clone();
-      const savedRot = ballGroup.rotation.clone();
-      ballGroup.position.set(0, 0, 0);
-      ballGroup.scale.set(1, 1, 1);
-      ballGroup.rotation.set(0, 0, 0);
-      ballGroup.updateMatrixWorld(true);
-
-      const decalMaterial = new THREE.MeshStandardMaterial({
-        map: texture,
-        transparent: true,
-        alphaTest: 0.08,
-        depthTest: true,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -4,
-        roughness: 0.7,
-        metalness: 0,
-      });
-
-      // Decal size : (largeur, hauteur, profondeur projection)
-      // Aspect 4:1 → 0.55 × 0.137. Profondeur 0.2 pour limiter le wrap.
-      const decalSize = new THREE.Vector3(0.55, 0.137, 0.2);
-
-      // K_front : face +Z
-      const decalGeomFront = new DecalGeometry(
-        targetMesh,
-        new THREE.Vector3(0, 0, 0.5),
-        new THREE.Euler(0, 0, 0),
-        decalSize
-      );
-      const decalFront = new THREE.Mesh(decalGeomFront, decalMaterial);
-      targetMesh.add(decalFront);
-
-      // K_back : face -Z (rotation Y de π pour orienter le texte lisible)
-      const decalGeomBack = new DecalGeometry(
-        targetMesh,
-        new THREE.Vector3(0, 0, -0.5),
-        new THREE.Euler(0, Math.PI, 0),
-        decalSize
-      );
-      const decalBack = new THREE.Mesh(decalGeomBack, decalMaterial);
-      targetMesh.add(decalBack);
-
-      // Restaure ballState
-      ballGroup.position.copy(savedPos);
-      ballGroup.scale.copy(savedScale);
-      ballGroup.rotation.copy(savedRot);
-      ballGroup.updateMatrixWorld(true);
-
-      requestRender();
-    }
-
-    // Matière "plus réelle" : roughness ↑ sur les MeshStandardMaterial
-    // du glTF (la balle paraît moins miroir, plus usée).
-    function dirtifyBallMaterials(ball: any) {
-      ball.traverse((child: any) => {
-        if (child.isMesh && child.material) {
-          const mat = child.material;
-          if (mat instanceof THREE.MeshStandardMaterial) {
-            mat.roughness = Math.min(mat.roughness * 1.4, 1);
-            mat.needsUpdate = true;
-          }
+          child.material = chromeMaterial;
         }
       });
     }
@@ -374,16 +373,15 @@
         ball.position.set(-center.x * baseScale, -center.y * baseScale, -center.z * baseScale);
 
         ballGroup.add(ball);
-        dirtifyBallMaterials(ball);
-        addLogoDecals(ball);
+        chromifyBall(ball);
         applyBallState();
         canvas.dataset.ready = 'true';
         if (shadow) shadow.dataset.ready = 'true';
         requestRender();
 
-        // Rotation auto continue Y ralentie (~3°/s) — balle + logo
-        // restent "vivants" mais le logo reste lisible plus longtemps.
-        // On rotate ballGroup (pas ball) pour que les décals suivent.
+        // Rotation auto continue Y ralentie (~3°/s) — la balle reste
+        // "vivante" sans tourner trop vite. Le chrome catch des reflets
+        // différents à chaque angle de l'HDRI, ce qui donne la vie.
         if (!prefersReduced) {
           let lastTime = performance.now();
           function tick(time: number) {
@@ -391,7 +389,7 @@
             lastTime = time;
             ballGroup.rotation.y += delta * 0.05;
             if (ballGroup.visible) {
-              renderer.render(scene, camera);
+              composer.render();
             }
             requestAnimationFrame(tick);
           }
@@ -467,9 +465,13 @@
     // === Resize handler =============================================
     window.addEventListener('resize', () => {
       if (window.innerWidth <= 640) return;
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight, false);
+      renderer.setSize(w, h, false);
+      composer.setSize(w, h);
+      bloomPass.resolution.set(w, h);
       requestRender();
     });
   }
