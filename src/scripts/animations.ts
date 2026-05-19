@@ -163,7 +163,7 @@ function initPhoneShowcase() {
   if (screen2) tl.to(screen2, { opacity: 1, scale: 1, duration: 0.07 }, 0.36);
   if (phase2) tl.to(phase2, { opacity: 1, y: 0, duration: 0.07 }, 0.36);
   if (progressBars[0]) tl.to(progressBars[0], { width: '100%', duration: 0.05, ease: 'none' }, 0.33);
-  if (progressDots[1]) tl.to(progressDots[1], { backgroundColor: '#1B4332', duration: 0.05 }, 0.36);
+  if (progressDots[1]) tl.to(progressDots[1], { backgroundColor: '#00DC82', duration: 0.05 }, 0.36);
 
   // === PHASE 2 (0.40 → 0.66) : score compte 0→87, cells s'illuminent une par une ===
   if (scoreEl) {
@@ -191,7 +191,7 @@ function initPhoneShowcase() {
   if (screen3) tl.to(screen3, { opacity: 1, scale: 1, duration: 0.07 }, 0.69);
   if (phase3) tl.to(phase3, { opacity: 1, y: 0, duration: 0.07 }, 0.69);
   if (progressBars[1]) tl.to(progressBars[1], { width: '100%', duration: 0.05, ease: 'none' }, 0.66);
-  if (progressDots[2]) tl.to(progressDots[2], { backgroundColor: '#1B4332', duration: 0.05 }, 0.69);
+  if (progressDots[2]) tl.to(progressDots[2], { backgroundColor: '#00DC82', duration: 0.05 }, 0.69);
 
   // === PHASE 3 (0.73 → 1.0) : sheet monte, apps apparaissent, toast à la fin ===
   if (shareSheet) tl.to(shareSheet, { y: 0, opacity: 1, duration: 0.10, ease: 'power2.out' }, 0.73);
