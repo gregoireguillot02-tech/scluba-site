@@ -1,0 +1,161 @@
+---
+/**
+ * WordmarkScluba — wordmark "Scluba" inspiré des lettres bois Midjourney.
+ *
+ * Approche : Fraunces 900 italic avec un background linear-gradient wood
+ * clippé sur le texte (background-clip: text). Pas une vectorisation de
+ * l'image source — c'est une réinterprétation typographique qui évoque
+ * la même chaleur/matière sans la dépendance image-trace. Léger (~0
+ * dépendance asset), scalable, color-flexible.
+ *
+ * Optionnel : balle de golf SVG (réutilise le pattern existant dans
+ * Hero/Nav/ScrollGolfBall pour cohérence). À utiliser dans le Footer
+ * (statique) ; à éviter dans le Nav si la balle scroll-tied est active
+ * sur la même page (sinon doublon visuel).
+ *
+ * Props:
+ *   size      → hauteur cible en px (Nav: 28, Footer: 48)
+ *   tone      → 'wood' (gradient bois sur paper) | 'inverted' (cream/honey sur dark)
+ *   withBall  → afficher la balle de golf après "Scluba" (default false)
+ */
+
+interface Props {
+  size?: number;
+  tone?: 'wood' | 'inverted';
+  withBall?: boolean;
+  class?: string;
+}
+
+const {
+  size = 28,
+  tone = 'wood',
+  withBall = false,
+  class: className = '',
+} = Astro.props;
+
+// Hauteur cible → font-size (le ratio ~0.88 compense la cap-height de Fraunces 900).
+const fontSize = Math.round(size * 1.06);
+const ballSize = Math.round(size * 0.36);
+---
+
+<span
+  class:list={['wordmark-scluba', `tone-${tone}`, className]}
+  style={`font-size:${fontSize}px;`}
+  aria-label="Scluba"
+>
+  <span class="ws-text">Scluba</span>
+  {withBall && (
+    <span class="ws-ball" style={`width:${ballSize}px;height:${ballSize}px;`} aria-hidden="true">
+      <svg viewBox="0 0 32 32">
+        <defs>
+          <radialGradient id={`wsBall-${size}`} cx="32%" cy="28%" r="78%">
+            <stop offset="0%" stop-color="#FFFFFF" />
+            <stop offset="55%" stop-color="#F2F0E8" />
+            <stop offset="100%" stop-color="#A8A296" />
+          </radialGradient>
+          <clipPath id={`wsBallClip-${size}`}>
+            <circle cx="16" cy="16" r="13.6" />
+          </clipPath>
+        </defs>
+        <circle cx="16" cy="16" r="13.8" fill={`url(#wsBall-${size})`} />
+        <g clip-path={`url(#wsBallClip-${size})`} fill="#000" opacity="0.13">
+          <circle cx="11" cy="10" r="0.8" /><circle cx="16" cy="10" r="0.8" /><circle cx="21" cy="10" r="0.8" />
+          <circle cx="11" cy="16" r="0.8" /><circle cx="16" cy="16" r="0.8" /><circle cx="21" cy="16" r="0.8" />
+          <circle cx="11" cy="22" r="0.8" /><circle cx="16" cy="22" r="0.8" /><circle cx="21" cy="22" r="0.8" />
+        </g>
+        <ellipse cx="11.5" cy="9" rx="3.6" ry="2.2" fill="#FFFFFF" opacity="0.6" />
+        <circle cx="16" cy="16" r="13.8" fill="none" stroke="#7A7468" stroke-width="0.5" opacity="0.45" />
+      </svg>
+    </span>
+  )}
+</span>
+
+<style>
+  .wordmark-scluba {
+    display: inline-flex;
+    align-items: baseline;
+    line-height: 1;
+    /* Pas de transition au mount — wordmark stable au load */
+  }
+
+  .ws-text {
+    font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+    font-weight: 900;
+    font-style: italic;
+    /* Push opsz axis au max pour le mode display + soft légèrement
+       arrondi pour évoquer la sculpture bois plutôt qu'un serif raide */
+    font-variation-settings: 'opsz' 144, 'SOFT' 50, 'WONK' 0;
+    letter-spacing: -0.025em;
+    line-height: 0.9;
+    /* Subtle drop-shadow pour l'effet "objet posé" sur la page */
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.22));
+  }
+
+  /* === Tone "wood" — gradient bois espresso avec highlights cuivre ====== */
+  .tone-wood .ws-text {
+    /* Gradient multi-stop qui mime les variations naturelles du bois :
+       espresso foncé profond → highlight cuivre → ombre noire → mi-tons */
+    background: linear-gradient(
+      135deg,
+      #3D2914 0%,
+      #6B4F33 22%,
+      #2A1A0A 45%,
+      #5C4435 65%,
+      #1F1409 85%,
+      #4D3520 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* === Tone "inverted" — cream + honey pour fond sombre (Footer forest deep) */
+  .tone-inverted .ws-text {
+    background: linear-gradient(
+      135deg,
+      #F4EEDD 0%,
+      #E8C089 35%,
+      #FAF5E8 60%,
+      #D4A574 85%,
+      #F4EEDD 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.45));
+  }
+
+  /* === Balle de golf — point typographique après "Scluba" =============== */
+  .ws-ball {
+    display: inline-block;
+    margin-left: 0.06em;
+    align-self: baseline;
+    flex-shrink: 0;
+    filter: drop-shadow(1px 2px 3px rgba(0, 0, 0, 0.25));
+  }
+  .tone-inverted .ws-ball {
+    filter: drop-shadow(1px 2px 3px rgba(0, 0, 0, 0.55));
+  }
+  .ws-ball svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Fallback graceful si background-clip:text pas supporté (vieux Firefox/IE) :
+     le texte revient en couleur unie wood/cream au lieu de transparent. */
+  @supports not (background-clip: text) {
+    .tone-wood .ws-text {
+      color: #3D2914;
+      background: none;
+      -webkit-text-fill-color: initial;
+    }
+    .tone-inverted .ws-text {
+      color: #F4EEDD;
+      background: none;
+      -webkit-text-fill-color: initial;
+    }
+  }
+</style>
