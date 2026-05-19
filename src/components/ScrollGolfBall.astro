@@ -202,8 +202,7 @@
         }
       }
 
-      // Quelques highlights ponctuels blancs (simulent rim lights distantes)
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      // Highlights ponctuels — V4.1 attenués pour éviter le bloom blow-out
       const highlights = [
         [W * 0.25, H * 0.30, 8],
         [W * 0.75, H * 0.35, 6],
@@ -213,7 +212,7 @@
       ];
       for (const [x, y, r] of highlights) {
         const grad = ctx.createRadialGradient(x, y, 0, x, y, r * 6);
-        grad.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
         grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = grad;
         ctx.beginPath();
@@ -267,9 +266,9 @@
 
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.55,  // strength
-      0.4,   // radius
-      0.85   // threshold (highlights only)
+      0.35,  // strength V4.1 (était 0.55, blow-out blanc)
+      0.6,   // radius V4.1 (était 0.4, plus diffus)
+      0.92   // threshold V4.1 (était 0.85, seuls ultra-bright bloment)
     );
     composer.addPass(bloomPass);
 
@@ -337,13 +336,15 @@
     // matériau original (white plastic standard) est dropé : on veut
     // chrome pur qui réfléchit l'HDRI neon grid.
     function chromifyBall(ball: any) {
+      // V4.1 : envMapIntensity 1.4→1.0 et clearcoatRoughness 0.1→0.2
+      // pour réduire le blow-out des highlights post-bloom.
       const chromeMaterial = new THREE.MeshPhysicalMaterial({
         color: 0xF5F5F5,
         metalness: 1.0,
         roughness: 0.08,
         clearcoat: 1.0,
-        clearcoatRoughness: 0.1,
-        envMapIntensity: 1.4,
+        clearcoatRoughness: 0.2,
+        envMapIntensity: 1.0,
       });
       ball.traverse((child: any) => {
         if (child.isMesh) {
@@ -436,10 +437,11 @@
       tl.to(ballState, { duration: 0.10, x: 0, y: -1.4, scale: 0.55 });
 
       // K2 → K3 (20% → 25%) : transition vers ThreeSteps droite
-      tl.to(ballState, { duration: 0.05, x: 2.6, y: 0, scale: 0.50 });
+      // V4.1 : x 2.6 → 2.1 (était trop loin droit, coupée), scale 0.50 → 0.55
+      tl.to(ballState, { duration: 0.05, x: 2.1, y: 0, scale: 0.55 });
 
       // K3 → K4 (25% → 38%) : ThreeSteps stable puis fade vers PhoneShowcase HIDDEN
-      tl.to(ballState, { duration: 0.13, x: 2.6, y: 0, scale: 0 });
+      tl.to(ballState, { duration: 0.13, x: 2.1, y: 0, scale: 0 });
 
       // K4 → K5 (38% → 55%) : HIDDEN, puis transition vers ClubsShowcase haut-gauche
       // Pendant PhoneShowcase (focus phone mockup), balle invisible.

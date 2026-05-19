@@ -178,13 +178,12 @@ section {
    ============================================================ */
 body[data-landing-mode="dark"] {
   /* Surfaces — pure ink, palette resserrée */
-  --bg: #0A0A0A;             /* ink principal */
+  --bg: #0A0A0A;             /* bg principal */
   --bg-soft: #121212;        /* surfaces élevées */
   --paper: #121212;          /* alias surfaces */
   --paper-deep: #0A0A0A;     /* alias bg */
-  --ink: #0A0A0A;
-  --ink-2: #121212;
-  --ink-3: #1F1F1F;
+  --ink-2: #121212;          /* cards */
+  --ink-3: #1F1F1F;          /* borders */
 
   /* Lignes — cream alpha très subtil */
   --line: #1F1F1F;
@@ -192,18 +191,26 @@ body[data-landing-mode="dark"] {
   --rule: rgba(245, 245, 245, 0.08);
   --rule-strong: rgba(245, 245, 245, 0.18);
 
-  /* Texte — cream pur sur ink (contraste WCAG AAA) */
+  /* Texte — cream pur sur bg dark (contraste WCAG AAA).
+     IMPORTANT : --ink est la TEXT COLOR (sémantique restaurée) — la
+     plupart des composants utilisent var(--ink) pour le texte.
+     V4 initiale avait override --ink: #0A0A0A par erreur → bug "tout invisible". */
   --cream: #F5F5F5;
   --text: #F5F5F5;
+  --ink: #F5F5F5;            /* TEXT cream (PAS la bg color) */
+  --ink-soft: #E5E5E5;
   --muted: #909090;          /* secondaire */
   --muted-soft: #5C5C5C;
   --dim: #5C5C5C;            /* labels / footers */
 
-  /* Accent — Vercel green, unique sur toute la landing */
-  --primary: #F5F5F5;        /* primary = cream (titles) */
+  /* Brand colors — primary = cream (titres), primary-deep = darker bg pour
+     footer/chips/badges qui font background:var(--primary-deep) */
+  --primary: #F5F5F5;        /* titles cream */
   --primary-soft: #B5B5B5;
   --primary-bg: rgba(0, 220, 130, 0.06);
-  --primary-deep: #F5F5F5;
+  --primary-deep: #050505;   /* darker than --bg, footer + chips bg */
+
+  /* Accent — Vercel green, unique sur toute la landing */
   --accent: #00DC82;
   --accent-soft: rgba(0, 220, 130, 0.12);
   --accent-bright: #1AE89A;
@@ -265,10 +272,30 @@ body[data-landing-mode="dark"] .lang-switch:hover {
   border-color: var(--accent);
 }
 
-/* Boutons Tech Bold : accent green sur ink, primary cream ink → fond green */
+/* Footer V4.1 — override pour ne pas suivre les semantics globales
+   (avant fix sémantique --ink, footer rendait cream sur cream invisible) */
+body[data-landing-mode="dark"] .footer {
+  background: var(--primary-deep); /* #050505 darker than --bg */
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  margin-top: 0;
+}
+body[data-landing-mode="dark"] .footer a {
+  color: var(--cream);
+}
+body[data-landing-mode="dark"] .footer a:hover {
+  color: var(--accent);
+}
+body[data-landing-mode="dark"] .footer .lang-link {
+  color: var(--accent);
+}
+
+/* Boutons Tech Bold : accent green sur ink, primary cream ink → fond green.
+   On force color au bg dark (#0A0A0A) plutôt qu'à var(--ink) qui est
+   maintenant la text color (cream) suite au fix sémantique. */
 body[data-landing-mode="dark"] .btn-primary {
   background: var(--accent);
-  color: var(--ink);
+  color: var(--bg);
   font-weight: 600;
   box-shadow: 0 0 0 1px rgba(0, 220, 130, 0.0);
 }
@@ -284,6 +311,14 @@ body[data-landing-mode="dark"] .btn-ghost:hover {
   background: var(--ink-2);
   border-color: var(--accent);
   color: var(--accent);
+}
+body[data-landing-mode="dark"] .btn-accent {
+  background: var(--accent);
+  color: var(--bg);
+}
+body[data-landing-mode="dark"] .btn-accent:hover {
+  background: var(--accent-bright);
+  box-shadow: 0 0 32px rgba(0, 220, 130, 0.22);
 }
 
 /* Honeypot: visually & assistively hidden, but still submittable by bots. */
