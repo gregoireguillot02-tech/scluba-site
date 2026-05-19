@@ -26,6 +26,16 @@ const t = useT(locale);
   <meta property="og:type" content="website" />
   <meta name="theme-color" content="#1B4332" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <!-- Fraunces 900 italic uniquement (step 1b refonte landing 2026-05-19).
+       Chargement minimal : 1 weight pour le wordmark bois Nav + Footer.
+       display=swap : fallback Georgia visible jusqu'au load (acceptable). -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,900&display=swap"
+  />
 </head>
 <body>
   <LaunchBanner locale={locale} />
