@@ -14,21 +14,10 @@
     "demo": "Voir une démo"
   },
   "hero": {
-    "eyebrow": "Préface — Saison 2026",
-    "tagline": "La carte de score digitale, brandée pour votre club.",
-    "subtagline": "Vos joueurs jouent. Votre club rayonne, à chaque partage de carte.",
+    "tagline": "La carte de score digitale brandée pour votre club.",
+    "subtagline": "Vos joueurs jouent. Votre club rayonne.",
     "cta": "Voir une démo de 10 min",
-    "scroll": "Lire le premier chapitre"
-  },
-  "chapter01": {
-    "eyebrow": "Le constat",
-    "title": "Avant Scluba, il y avait la photo de la carte papier.",
-    "pullquote": "Chaque partie est une opportunité de visibilité perdue.",
-    "body": [
-      "Aujourd'hui, vos joueurs sortent du parcours, sortent leur smartphone et photographient leur carte de score papier. La photo part en story, en post, en messagerie privée — sans aucune mention de votre club. Pas votre logo, pas vos couleurs, pas votre nom.",
-      "Pendant ce temps, vos murs, votre clubhouse, votre putting green ne sont vus que par les membres déjà chez vous. Le golf est l'un des sports les plus partagés du monde — et le seul où la trace photographique de la partie ne mentionne presque jamais le terrain joué."
-    ],
-    "caption": "Lettres bois Scluba — premier prototype, atelier 2026."
+    "scroll": "Découvrez le concept"
   },
   "problem": {
     "eyebrow": "Le constat",

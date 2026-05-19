@@ -14,21 +14,10 @@
     "demo": "See a demo"
   },
   "hero": {
-    "eyebrow": "Prelude — 2026 Season",
     "tagline": "The branded digital scorecard for your club.",
-    "subtagline": "Your golfers play. Your club shines, with every shared card.",
+    "subtagline": "Your golfers play. Your club shines.",
     "cta": "See a 10-min demo",
-    "scroll": "Read the first chapter"
-  },
-  "chapter01": {
-    "eyebrow": "The reality",
-    "title": "Before Scluba, there was the photo of the paper card.",
-    "pullquote": "Every round is a missed opportunity for visibility.",
-    "body": [
-      "Today, your golfers walk off the course, take out their smartphone, and snap a picture of their paper scorecard. The photo goes to a story, a post, a private chat — without any mention of your club. No logo, no colors, no name.",
-      "Meanwhile, your walls, your clubhouse, your putting green are only seen by the members already there. Golf is one of the world's most shared sports — and the only one where the photographic trace of a round almost never mentions the course played."
-    ],
-    "caption": "Scluba wood letters — first prototype, 2026 workshop."
+    "scroll": "Discover the concept"
   },
   "problem": {
     "eyebrow": "The reality",
