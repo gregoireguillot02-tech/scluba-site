@@ -81,24 +81,10 @@ const back9 = [
 
       <!-- Phone droite -->
       <div class="showcase-stage" aria-hidden="true">
+        <!-- V4.2 Néon sweep conic-gradient continu — comet head + tail
+             tourne autour du phone outline en boucle 4s. Implémenté en CSS pur
+             via @property + animation @keyframes (.showcase-phone::before). -->
         <div class="showcase-phone" data-flow-phone>
-          <!-- V4.1 Néon vert outline animé au scroll (Phase C decision Q3 option A).
-               SVG rect épouse le phone-frame border-radius, stroke-dashoffset
-               animé via GSAP ScrollTrigger dans animations.ts initPhoneShowcase(). -->
-          <svg class="phone-neon-outline" viewBox="0 0 200 433" preserveAspectRatio="none" aria-hidden="true">
-            <rect
-              x="2" y="2" width="196" height="429"
-              rx="54" ry="54"
-              fill="none"
-              stroke="var(--accent)"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-dasharray="1250"
-              stroke-dashoffset="1250"
-              data-neon-path
-            />
-          </svg>
-
           <div class="phone-frame">
             <span class="phone-btn phone-btn-side-l-1"></span>
             <span class="phone-btn phone-btn-side-l-2"></span>
@@ -444,11 +430,12 @@ const back9 = [
   }
   .showcase-phone {
     position: relative;
-    height: min(72vh, 640px);
+    height: min(82vh, 740px);
     aspect-ratio: 9 / 19.5;
     will-change: transform;
   }
-  /* V4.1 — iPhone 17 Pro titanium frame (mêmes valeurs que Hero) */
+  /* V4.2 — iPhone 17 Pro titanium frame plus large + couches CSS détaillées
+     (mêmes valeurs que Hero pour cohérence) */
   .phone-frame {
     position: relative;
     width: 100%;
@@ -468,6 +455,34 @@ const back9 = [
       inset 0 1px 0 rgba(255, 255, 255, 0.22),
       0 0 0 1.5px rgba(0, 0, 0, 0.70);
   }
+  /* Bevel intérieur + gloss reflection (V4.2) */
+  .phone-frame::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border-radius: 50px;
+    pointer-events: none;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    z-index: 2;
+  }
+  .phone-frame::after {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border-radius: 44px;
+    pointer-events: none;
+    background: linear-gradient(
+      138deg,
+      rgba(255, 255, 255, 0.10) 0%,
+      rgba(255, 255, 255, 0) 35%,
+      rgba(255, 255, 255, 0) 75%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+    z-index: 4;
+    mix-blend-mode: screen;
+  }
   .phone-rim {
     position: absolute; inset: 4px;
     border-radius: 52px;
@@ -480,7 +495,11 @@ const back9 = [
     border-radius: 1.5px;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
   }
-  .phone-btn-side-l-1 { left: -2px; top: 90px; width: 4px; height: 28px; }
+  /* Action button gold/champagne — signature iPhone Pro */
+  .phone-btn-side-l-1 {
+    left: -2px; top: 90px; width: 4px; height: 28px;
+    background: linear-gradient(180deg, #C9A96A 0%, #8B7344 50%, #C9A96A 100%);
+  }
   .phone-btn-side-l-2 { left: -2px; top: 130px; width: 4px; height: 50px; }
   .phone-btn-side-l-3 { left: -2px; top: 188px; width: 4px; height: 50px; }
   .phone-btn-side-r { right: -2px; top: 130px; width: 4px; height: 80px; }
@@ -491,6 +510,20 @@ const back9 = [
     background: #FAF7EE;
     border-radius: 44px;
     overflow: hidden;
+  }
+  /* Speaker grille top (V4.2) */
+  .phone-screen::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12%;
+    max-width: 50px;
+    height: 2px;
+    border-radius: 1px;
+    background: rgba(0, 0, 0, 0.18);
+    z-index: 4;
   }
 
   /* Dynamic Island iPhone 17 Pro */
@@ -518,20 +551,64 @@ const back9 = [
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
   }
 
-  /* V4.1 Néon vert outline — SVG overlay autour du phone, anime au scroll */
-  .phone-neon-outline {
+  /* V4.2 Néon conic-gradient sweep continu — pseudo-element ::before sur
+     .showcase-phone. Comet head bright tourne 4s en boucle, fade en queue.
+     Inspiration virage.one / Vercel border-gradient.
+     @property --neon-angle pour animer la rotation en CSS pur. */
+  @property --neon-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  .showcase-phone::before {
+    content: "";
     position: absolute;
-    inset: -10px;
-    width: calc(100% + 20px);
-    height: calc(100% + 20px);
+    inset: -4px;
+    border-radius: 60px;
+    padding: 4px;
+    background: conic-gradient(
+      from var(--neon-angle),
+      transparent 0deg,
+      transparent 265deg,
+      rgba(0, 220, 130, 0.35) 295deg,
+      rgba(0, 220, 130, 0.85) 340deg,
+      #00FF9A 357deg,
+      rgba(0, 220, 130, 0.85) 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+            mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
     pointer-events: none;
-    filter: drop-shadow(0 0 10px var(--accent)) drop-shadow(0 0 24px rgba(0, 220, 130, 0.45));
-    z-index: 6;
-    overflow: visible;
+    z-index: 1;
+    filter:
+      drop-shadow(0 0 6px var(--accent))
+      drop-shadow(0 0 18px rgba(0, 220, 130, 0.55));
+    animation: neonSweep 4s linear infinite;
+  }
+  @keyframes neonSweep {
+    to { --neon-angle: 360deg; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .phone-neon-outline [data-neon-path] {
-      stroke-dashoffset: 0;
+    .showcase-phone::before {
+      animation: none;
+      background: var(--accent);
+      opacity: 0.55;
+    }
+  }
+  /* Fallback browsers sans @property : pulse opacity simple */
+  @supports not (background: paint(angle-painter)) {
+    .showcase-phone::before {
+      background: var(--accent);
+      animation: neonPulse 3s ease-in-out infinite;
+    }
+    @keyframes neonPulse {
+      0%, 100% { opacity: 0.45; }
+      50% { opacity: 0.90; }
     }
   }
 
