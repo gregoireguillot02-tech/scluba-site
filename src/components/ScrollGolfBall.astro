@@ -1,31 +1,40 @@
 ---
 /**
- * ScrollGolfBall — scène Three.js plein écran avec balle de golf 3D au centre
- * et caméra qui orbite autour de la balle au scroll de la page.
+ * ScrollGolfBall — scène Three.js plein écran avec balle de golf 3D 3D pilotée
+ * par 5 keyframes scroll précises (apparait au Hero, disparait dans les
+ * sections texte, réapparait grosse au CTA final).
  *
  * Inspiration : oryzo.ai — canvas WebGL fixed inset 0 derrière le DOM, scroll
- * pilote la caméra dans une timeline pré-animée. Step 1a refonte landing
- * 2026-05-19 (V2 — V1 SVG remplacée).
+ * pilote une timeline d'états (position + scale + visibilité) de la balle.
  *
  * Architecture :
  *   - <canvas> position:fixed inset:0 z-index:1 pointer-events:none
- *   - Le contenu HTML (Nav z:100, sections z:auto) reste cliquable au-dessus
- *   - Balle 3D au centre du monde 3D (origine), caméra à distance ~3.5
- *   - scrollProgress [0..1] → theta (0→360°) + phi (70°→90°→70°)
+ *   - Contenu HTML (Nav z:100, sections z:auto) reste cliquable au-dessus
+ *   - Cam fixée distance 5, FOV 35° + orbite ¼ tour (theta 0→60°, phi 75→85→75)
+ *   - Balle au centre 3D, scale & visibility pilotés par 5 keyframes scroll
  *
- * Stack :
- *   - Three.js WebGLRenderer alpha:true antialias:true dpr capé 2
- *   - GLTFLoader → public/models/golf_ball.glb (4.2 MB — V1, DRACO si besoin)
- *   - RoomEnvironment pour reflections subtiles
- *   - ACESFilmicToneMapping exposure 1.1
- *   - 3-point lighting (key + fill + rim + ambient)
- *   - frameloop 'demand' — re-render sur scroll/resize uniquement
- *   - GSAP ScrollTrigger scrub 0.6 + sync Lenis via window.__lenis
+ * Keyframes scroll (timeline GSAP scrub 0.6) :
+ *   ┌─────────┬──────────┬─────────────────────────────────┐
+ *   │ scroll% │ section  │ balle                            │
+ *   ├─────────┼──────────┼─────────────────────────────────┤
+ *   │ 0-12%   │ Hero     │ centrée, scale 1.0, OPAQUE      │
+ *   │ 12-22%  │ Problem  │ shrink + fade (scale 1→0)       │
+ *   │ 22-78%  │ texte sections │ HIDDEN (scale 0)         │
+ *   │ 78-92%  │ FAQ→CTA  │ grow + fade in (scale 0→1.2)   │
+ *   │ 92-100% │ CTAForm  │ centrée scale 1.2, OPAQUE       │
+ *   └─────────┴──────────┴─────────────────────────────────┘
+ *
+ * Rendu :
+ *   - WebGLRenderer alpha:true antialias:true dpr capé 2
+ *   - RoomEnvironment (PMREMGenerator) → reflections IBL subtiles
+ *   - 3-point lighting (key 2.0 + fill warm 0.8 + rim cool 0.4 + ambient 0.15)
+ *   - ACESFilmicToneMapping exposure 1.1, SRGBColorSpace
+ *   - frameloop on-demand (re-render sur scroll/resize/load uniquement)
  *
  * Guards :
- *   - prefers-reduced-motion : balle visible immobile (camera fixée à 0%)
- *   - mobile portrait < 640px : canvas masqué (perf + encombrement)
- *   - lazy import three + GLTFLoader pour ne pas bloquer LCP
+ *   - prefers-reduced-motion : balle visible immobile au centre
+ *   - mobile portrait < 640px : canvas display:none
+ *   - lazy import three + addons + GSAP/ScrollTrigger après DOMContentLoaded
  *
  * Inclusion : conditionnelle depuis Base.astro — uniquement sur la home (/, /en/).
  */
@@ -41,7 +50,6 @@
     height: 100vh;
     z-index: 1;
     pointer-events: none;
-    /* Légère opacité pendant le chargement, fade-in via JS quand le modèle est prêt */
     opacity: 0;
     transition: opacity 600ms ease-out;
   }
@@ -49,7 +57,6 @@
     opacity: 1;
   }
 
-  /* Masquer sur mobile portrait — perf + encombrement */
   @media (max-width: 640px) {
     canvas[data-scroll-golfball] {
       display: none;
@@ -58,13 +65,9 @@
 </style>
 
 <script>
-  // Lazy import : Three.js + GLTFLoader + RoomEnvironment + GSAP/ScrollTrigger
-  // chargés uniquement après DOMContentLoaded pour ne pas bloquer LCP du Hero.
   async function initScrollGolfBall() {
     const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-scroll-golfball]');
     if (!canvas) return;
-
-    // Skip mobile portrait (cohérent avec le display:none CSS)
     if (window.innerWidth <= 640) return;
 
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -94,17 +97,18 @@
 
     // === Scene + Camera =============================================
     const scene = new THREE.Scene();
-    // Pas de scene.background — alpha:true rend le canvas transparent.
 
     const camera = new THREE.PerspectiveCamera(
-      35, // FOV serré pour minimiser la perspective extrême (balle plus "stable")
+      35,
       window.innerWidth / window.innerHeight,
       0.1,
       100
     );
 
-    // Position initiale (theta=0, phi=70°, distance=3.5)
-    const camState = { theta: 0, phi: 70, distance: 3.5 };
+    // Distance 5 (au lieu de 3.5 V1) → balle ~32% du viewport au lieu de 72%.
+    // Orbite limitée à ¼ tour (theta 0→60°, phi 75→85→75) — moins envahissant
+    // que le 360° complet de V1.
+    const camState = { theta: 0, phi: 75, distance: 5 };
     function applyCameraState() {
       const phiRad = (camState.phi * Math.PI) / 180;
       const thetaRad = (camState.theta * Math.PI) / 180;
@@ -117,12 +121,9 @@
     applyCameraState();
 
     // === Environment + Lighting =====================================
-    // PMREMGenerator transforme la RoomEnvironment en cube IBL pour les
-    // reflections subtiles sur la balle (clearcoat plus convaincant).
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
 
-    // 3-point lighting classique studio
     const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
     keyLight.position.set(3, 4, 5);
     scene.add(keyLight);
@@ -138,9 +139,25 @@
     const ambient = new THREE.AmbientLight(0xffffff, 0.15);
     scene.add(ambient);
 
+    // === Ball state (driven by scroll keyframes) ====================
+    // ballGroup wrap le gltf.scene → on anime le groupe, pas la balle elle-même
+    // (ça nous permet de garder la rotation auto Y sur la balle interne).
+    const ballGroup = new THREE.Group();
+    scene.add(ballGroup);
+
+    const ballState = {
+      x: 0,
+      y: 0,
+      scale: 1.0, // 0 = hidden, 1.0 = normal, 1.2 = final
+    };
+    function applyBallState() {
+      ballGroup.position.x = ballState.x;
+      ballGroup.position.y = ballState.y;
+      ballGroup.scale.setScalar(Math.max(ballState.scale, 0));
+      ballGroup.visible = ballState.scale > 0.01;
+    }
+
     // === Render à la demande ========================================
-    // frameloop: 'demand' équivalent — on ne redessine que quand quelque
-    // chose a bougé (scroll, resize, model load).
     let renderRequested = false;
     function requestRender() {
       if (renderRequested) return;
@@ -158,9 +175,7 @@
       (gltf) => {
         const ball = gltf.scene;
 
-        // Auto-center + fit : on calcule la bounding box et on normalise
-        // la taille pour que la balle ait un diamètre de ~1.6 units quelle
-        // que soit l'échelle du .glb source.
+        // Auto-center + fit : diamètre cible 1.0 (au lieu de 1.6 V1)
         const box = new THREE.Box3().setFromObject(ball);
         const size = new THREE.Vector3();
         box.getSize(size);
@@ -168,24 +183,29 @@
         box.getCenter(center);
 
         const maxDim = Math.max(size.x, size.y, size.z);
-        const targetDiameter = 1.6;
-        const scale = targetDiameter / maxDim;
+        const targetDiameter = 1.0;
+        const baseScale = targetDiameter / maxDim;
 
-        ball.scale.setScalar(scale);
-        ball.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+        ball.scale.setScalar(baseScale);
+        ball.position.set(-center.x * baseScale, -center.y * baseScale, -center.z * baseScale);
 
-        scene.add(ball);
+        ballGroup.add(ball);
+        applyBallState();
         canvas.dataset.ready = 'true';
         requestRender();
 
-        // Rotation auto continue (toujours active sauf reduced-motion)
+        // Rotation auto continue (~9°/s) — donne la "vie" même quand stationnaire
         if (!prefersReduced) {
           let lastTime = performance.now();
           function tick(time: number) {
             const delta = (time - lastTime) / 1000;
             lastTime = time;
-            ball.rotation.y += delta * 0.15; // ~9° par seconde
-            renderer.render(scene, camera);
+            ball.rotation.y += delta * 0.15;
+            // Re-render seulement si la balle est visible (perf : sinon on
+            // anime sans afficher)
+            if (ballGroup.visible) {
+              renderer.render(scene, camera);
+            }
             requestAnimationFrame(tick);
           }
           requestAnimationFrame(tick);
@@ -197,17 +217,103 @@
       }
     );
 
-    // === Camera orbit au scroll (GSAP + ScrollTrigger) ==============
+    // === Scroll-driven animations ===================================
     if (!prefersReduced) {
-      // Sync ScrollTrigger avec Lenis si présent (smooth-scroll cohérent)
+      // Sync ScrollTrigger avec Lenis si présent
       const lenis = (window as unknown as { __lenis?: { on: (ev: string, cb: () => void) => void } }).__lenis;
       if (lenis && typeof lenis.on === 'function') {
         lenis.on('scroll', ScrollTrigger.update);
       }
 
-      // Animation principale : theta 0→360° sur la totalité du scroll du document.
+      // === Master timeline pour la balle (scale + position) ===
+      // 5 keyframes précis pilotés par le scrollProgress de la page.
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: document.documentElement,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.6,
+          invalidateOnRefresh: true,
+          onUpdate: () => {
+            applyBallState();
+            requestRender();
+          },
+        },
+      });
+
+      // Helper : convertit un % du scroll en position sur la timeline.
+      // La durée totale de la timeline = 1 (normalisée). Les .to() prennent
+      // des durations qui sont des fractions de cette durée totale.
+      //   0%  → Hero : centrée scale 1.0
+      //  12%  → début sortie Hero : commence à shrink
+      //  22%  → tout petit, off-screen droite (préparé à disparaître)
+      //  25%  → HIDDEN (scale 0)
+      //  78%  → encore HIDDEN
+      //  85%  → réapparait du centre (scale 0 → 0.8)
+      //  92%  → grosse au centre (scale 1.2)
+      // 100%  → final, reste scale 1.2
+
+      // Segment 1 : 0% → 12% — balle stable centrée
+      tl.to(ballState, { duration: 0.12, scale: 1.0, x: 0, y: 0, ease: 'none' });
+
+      // Segment 2 : 12% → 22% — slide-out vers la droite + shrink
+      tl.to(ballState, {
+        duration: 0.10,
+        scale: 0.4,
+        x: 2.5,
+        y: 0,
+        ease: 'power2.in',
+      });
+
+      // Segment 3 : 22% → 25% — disparait complètement (scale 0)
+      tl.to(ballState, {
+        duration: 0.03,
+        scale: 0,
+        x: 2.5,
+        y: 0,
+        ease: 'power2.in',
+      });
+
+      // Segment 4 : 25% → 78% — HIDDEN (long plateau pour les sections texte)
+      tl.to(ballState, {
+        duration: 0.53,
+        scale: 0,
+        x: 0,
+        y: 0,
+        ease: 'none',
+      });
+
+      // Segment 5 : 78% → 85% — réapparition depuis le centre (scale 0 → 0.8)
+      tl.to(ballState, {
+        duration: 0.07,
+        scale: 0.8,
+        x: 0,
+        y: 0,
+        ease: 'power2.out',
+      });
+
+      // Segment 6 : 85% → 92% — grossit jusqu'à scale 1.2 (final glory)
+      tl.to(ballState, {
+        duration: 0.07,
+        scale: 1.2,
+        x: 0,
+        y: 0,
+        ease: 'power2.out',
+      });
+
+      // Segment 7 : 92% → 100% — reste stable centrée scale 1.2
+      tl.to(ballState, {
+        duration: 0.08,
+        scale: 1.2,
+        x: 0,
+        y: 0,
+        ease: 'none',
+      });
+
+      // === Cam orbite subtile (parallèle, ¼ tour total) ===
+      // Donne un léger mouvement "vivant" sans masquer les écritures.
       gsap.to(camState, {
-        theta: 360,
+        theta: 60,
         ease: 'none',
         scrollTrigger: {
           trigger: document.documentElement,
@@ -222,10 +328,9 @@
         },
       });
 
-      // Sub-animation : phi varie en cloche (70 → 90 → 70) pour donner un effet
-      // "survol au-dessus" en milieu de page.
+      // Phi cloche (75 → 85 → 75) — léger survol au-dessus au milieu de page
       gsap.to(camState, {
-        phi: 90,
+        phi: 85,
         ease: 'sine.inOut',
         scrollTrigger: {
           trigger: document.documentElement,
@@ -235,29 +340,7 @@
         },
       });
       gsap.to(camState, {
-        phi: 70,
-        ease: 'sine.inOut',
-        scrollTrigger: {
-          trigger: document.documentElement,
-          start: '50% center',
-          end: 'bottom bottom',
-          scrub: 0.6,
-        },
-      });
-
-      // Sub-animation : distance varie en cloche (3.5 → 4.2 → 3.5)
-      gsap.to(camState, {
-        distance: 4.2,
-        ease: 'sine.inOut',
-        scrollTrigger: {
-          trigger: document.documentElement,
-          start: 'top top',
-          end: '50% center',
-          scrub: 0.6,
-        },
-      });
-      gsap.to(camState, {
-        distance: 3.5,
+        phi: 75,
         ease: 'sine.inOut',
         scrollTrigger: {
           trigger: document.documentElement,
@@ -270,9 +353,7 @@
 
     // === Resize handler =============================================
     window.addEventListener('resize', () => {
-      // Si on passe en mobile portrait après resize, on stoppe (rare)
       if (window.innerWidth <= 640) return;
-
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight, false);
