@@ -1,0 +1,257 @@
+---
+/**
+ * Chapitre III — Le Rituel
+ *
+ * Fusion narrative des anciens ThreeSteps (3 gestes joueur) + HowItWorks
+ * (4 étapes club). Plutôt qu'une grille features SaaS, on structure en
+ * 2 sous-actes :
+ *   - "Côté joueur" : 3 actes scroll-révélés
+ *   - "Côté club" : timeline 4 étapes de déploiement
+ *
+ * Layout : single column, alternance left/right de la photo (placeholder
+ * golfer-phone-greenscreen + photos clubs existants).
+ */
+import { useT, type Locale } from '../../i18n';
+import ChapterHeading from './ChapterHeading.astro';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useT(locale);
+---
+
+<section id="chapter-3" class="chapter chapter-03">
+  <div class="container chapter-03-inner">
+    <ChapterHeading
+      numeral="III"
+      eyebrow={t.steps.eyebrow}
+      title={t.steps.title}
+      subtitle={t.steps.lead}
+    />
+
+    <!-- Côté joueur : 3 actes -->
+    <div class="acts-block">
+      <p class="acts-eyebrow"><span class="acts-eyebrow-rule"></span>{locale === 'fr' ? 'Côté joueur' : 'Player side'}</p>
+      <ol class="acts-list" aria-label={locale === 'fr' ? 'Trois gestes côté joueur' : 'Three player gestures'}>
+        {t.steps.items.map((item) => (
+          <li class="act" data-anim="ch3-act">
+            <span class="act-num">{item.num}</span>
+            <div class="act-meta">
+              <h3 class="act-title">{item.title}</h3>
+              <p class="act-body">{item.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+
+    <!-- Côté club : timeline 4 étapes onboarding -->
+    <div class="acts-block">
+      <p class="acts-eyebrow"><span class="acts-eyebrow-rule"></span>{locale === 'fr' ? 'Côté club' : 'Club side'}</p>
+      <h3 class="acts-title">{t.how.title}</h3>
+      <ol class="timeline" aria-label={locale === 'fr' ? 'Quatre étapes de déploiement côté club' : 'Four club deployment steps'}>
+        {t.how.items.map((item) => (
+          <li class="timeline-step" data-anim="ch3-step">
+            <span class="timeline-num">{item.num}</span>
+            <div class="timeline-meta">
+              <h4 class="timeline-step-title">{item.title}</h4>
+              <p class="timeline-step-body">{item.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </div>
+</section>
+
+<style>
+  .chapter-03 {
+    background: var(--paper-deep);
+    padding-top: var(--space-9);
+    padding-bottom: var(--space-9);
+  }
+
+  .chapter-03-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-9);
+    max-width: 920px;
+  }
+
+  /* Block de chaque sous-acte */
+  .acts-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+  .acts-eyebrow {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.8em;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--sage-deep);
+  }
+  .acts-eyebrow-rule {
+    display: inline-block;
+    width: 24px;
+    height: 1px;
+    background: var(--sage-deep);
+  }
+  .acts-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: italic;
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    line-height: 1.15;
+    color: var(--wood);
+    text-wrap: balance;
+    max-width: 28ch;
+    font-variation-settings: 'opsz' 96, 'SOFT' 50, 'WONK' 0;
+  }
+
+  /* === Acts (3 gestes joueur) — XL numéro + titre + body ============ */
+  .acts-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-6);
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 720px) {
+    .acts-list { grid-template-columns: repeat(3, 1fr); gap: var(--space-7); }
+  }
+  .act {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--rule-wood);
+  }
+  .act-num {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    color: var(--brass);
+  }
+  .act-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 700;
+    font-size: 1.5rem;
+    line-height: 1.15;
+    color: var(--wood);
+    letter-spacing: -0.01em;
+    font-variation-settings: 'opsz' 72, 'SOFT' 50, 'WONK' 0;
+  }
+  .act-body {
+    margin: 0;
+    font-family: var(--font-body-serif);
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--wood-soft);
+  }
+
+  /* === Timeline (4 étapes club) — vertical avec rule brass ========== */
+  .timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    position: relative;
+    /* Rule verticale brass */
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 12px;
+    bottom: 12px;
+    width: 1px;
+    background: linear-gradient(180deg, var(--brass) 0%, var(--brass) 80%, transparent 100%);
+    opacity: 0.45;
+  }
+  .timeline-step {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: var(--space-4);
+    align-items: baseline;
+    position: relative;
+  }
+  .timeline-num {
+    grid-column: 1;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--paper);
+    color: var(--brass);
+    border: 1px solid var(--brass);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .timeline-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .timeline-step-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.125rem;
+    line-height: 1.2;
+    color: var(--wood);
+    font-style: italic;
+  }
+  .timeline-step-body {
+    margin: 0;
+    font-family: var(--font-body-serif);
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: var(--wood-soft);
+  }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!prefersReduced) {
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Stagger reveal on acts + timeline steps.
+    ['ch3-act', 'ch3-step'].forEach((key) => {
+      const items = gsap.utils.toArray<HTMLElement>(`[data-anim="${key}"]`);
+      if (items.length === 0) return;
+      gsap.fromTo(
+        items,
+        { opacity: 0, y: 18 },
+        {
+          opacity: 1, y: 0, duration: 0.7, ease: 'power2.out', stagger: 0.1,
+          scrollTrigger: { trigger: items[0], start: 'top 85%' },
+        }
+      );
+    });
+  }
+</script>

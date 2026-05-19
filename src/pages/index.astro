@@ -2,29 +2,26 @@
 import Base from '../layouts/Base.astro';
 import Hero from '../components/Hero.astro';
 import Chapter01Constat from '../components/chapters/Chapter01Constat.astro';
-import ThreeSteps from '../components/ThreeSteps.astro';
-import PhoneShowcase from '../components/PhoneShowcase.astro';
-import ClubsShowcase from '../components/ClubsShowcase.astro';
-import HowItWorks from '../components/HowItWorks.astro';
-import Pricing from '../components/Pricing.astro';
-import FAQ from '../components/FAQ.astro';
+import Chapter02Promesse from '../components/chapters/Chapter02Promesse.astro';
+import Chapter03Rituel from '../components/chapters/Chapter03Rituel.astro';
+import Chapter04Partage from '../components/chapters/Chapter04Partage.astro';
+import Chapter05Offre from '../components/chapters/Chapter05Offre.astro';
+import QandA from '../components/chapters/QandA.astro';
 import CTAForm from '../components/CTAForm.astro';
 
 const locale = 'fr' as const;
 ---
 
 <Base locale={locale}>
-  {/* PR #2 — Hero éditorial + Chapitre I (Le Constat) refondus.
-      Les sections en-dessous restent en mode hybride pour cette PR ;
-      Chapters II-V arrivent en PR #3, ProblemNarrative est désormais
-      remplacé par Chapter01Constat. */}
+  {/* "The Golfer's Journal" — narrative magazine éditorial en 6 chapitres.
+      Préface (hero) → Chapitres I→V → Q&A → CTA. Le scroll est le tourne-
+      page : chaque chapitre est un acte de la promesse Scluba. */}
   <Hero locale={locale} />
   <Chapter01Constat locale={locale} />
-  <ThreeSteps locale={locale} />
-  <PhoneShowcase locale={locale} />
-  <ClubsShowcase locale={locale} />
-  <HowItWorks locale={locale} />
-  <Pricing locale={locale} />
-  <FAQ locale={locale} />
+  <Chapter02Promesse locale={locale} />
+  <Chapter03Rituel locale={locale} />
+  <Chapter04Partage locale={locale} />
+  <Chapter05Offre locale={locale} />
+  <QandA locale={locale} />
   <CTAForm locale={locale} />
 </Base>
