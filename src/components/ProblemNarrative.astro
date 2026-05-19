@@ -12,15 +12,18 @@ const t = useT(locale);
 <section id="problem" class="problem">
   <div class="problem-wrap" data-anim="problem">
     <div class="container problem-inner">
-      <div class="problem-eyebrow">{t.problem.eyebrow}</div>
+      <span class="eyebrow-mono problem-eyebrow">{t.problem.eyebrow}</span>
 
       <div class="problem-stack">
-        {t.problem.lines.map((line) => (
-          <p class="problem-line" data-line>{line}</p>
+        {t.problem.lines.map((line, i) => (
+          <p class={`problem-line ${i === t.problem.lines.length - 1 ? 'is-last' : ''}`} data-line>{line}</p>
         ))}
       </div>
 
-      <p class="problem-punch" data-punch>{t.problem.punchline}</p>
+      <p class="problem-punch" data-punch>
+        <span class="problem-punch-rule" aria-hidden="true"></span>
+        {t.problem.punchline}
+      </p>
     </div>
   </div>
 </section>
@@ -30,48 +33,65 @@ const t = useT(locale);
     padding: 0;
   }
   .problem-wrap {
-    min-height: 100vh;
+    min-height: 110vh; /* Plus d'air pour que la balle voyage haut → bas dans la section */
     display: flex;
     align-items: center;
+    padding: var(--space-9) 0;
+    /* Gradient atmosphérique repris des tokens dark — laisse passer la balle 3D derrière */
     background:
-      linear-gradient(180deg, var(--bg) 0%, var(--primary-bg) 50%, var(--bg) 100%);
+      radial-gradient(ellipse 80% 50% at 50% 50%, rgba(212, 165, 116, 0.06), transparent 60%);
   }
   .problem-inner {
     text-align: center;
+    position: relative;
+    z-index: 2;
   }
+
+  /* Eyebrow : utility .eyebrow-mono (déjà stylée global) + spacing */
   .problem-eyebrow {
-    font-family: var(--font-sans);
-    font-size: var(--text-sm);
-    font-weight: 600;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: var(--space-8);
+    display: inline-block;
+    margin-bottom: var(--space-9);
   }
+
+  /* Stack des lignes — typo XXL Fraunces italic, tracking serré (pattern donmolinico) */
   .problem-stack {
     display: flex;
     flex-direction: column;
-    gap: var(--space-5);
-    margin-bottom: var(--space-8);
+    gap: var(--space-4);
+    margin-bottom: var(--space-9);
   }
   .problem-line {
-    font-family: var(--font-serif);
-    font-size: clamp(1.75rem, 4.5vw, 3.25rem);
-    line-height: 1.2;
-    color: var(--ink);
-    letter-spacing: -0.01em;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5.5vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: -0.045em;
+    color: var(--cream, var(--ink));
     max-width: 22ch;
     margin: 0 auto;
-  }
-  .problem-line:last-child {
-    color: var(--primary);
     font-weight: 700;
   }
+  /* Dernière ligne = la chute : accent green + plus de poids */
+  .problem-line.is-last {
+    color: var(--accent);
+    font-weight: 900;
+  }
+
+  /* Punchline avec rule décorative au-dessus */
   .problem-punch {
+    font-family: var(--font-display);
     font-size: var(--text-md);
     color: var(--muted);
-    font-style: italic;
-    max-width: 42ch;
+    max-width: 48ch;
     margin: 0 auto;
+    line-height: 1.55;
+    position: relative;
+  }
+  .problem-punch-rule {
+    display: block;
+    width: 48px;
+    height: 1px;
+    background: var(--accent);
+    opacity: 0.55;
+    margin: 0 auto var(--space-5);
   }
 </style>

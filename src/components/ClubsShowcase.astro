@@ -1,4 +1,15 @@
 ---
+/**
+ * ClubsShowcase V4.2 — split before/after (decision Q3 option B).
+ *
+ * Drop le morph cycle V4.1. Replace par 2 cards côte à côte :
+ * - LEFT : "Default" Scluba (cream + green accent générique)
+ * - ARROW au centre (responsive : vertical en mobile)
+ * - RIGHT : "Votre carte" branded (sample palette Forestier)
+ *
+ * Message immédiat sans morph animé : on voit la transformation
+ * Scluba default → Scluba branded en un glance.
+ */
 import { useT, type Locale } from '../i18n';
 
 interface Props {
@@ -7,224 +18,334 @@ interface Props {
 
 const { locale } = Astro.props;
 const t = useT(locale);
+// Sample palette branded — "Forestier" (vert + or) parmi les 4 t.showcase.palettes
+const samplePalette = t.showcase.palettes[1];
 ---
 
 <section class="showcase">
   <div class="container">
     <div class="section-header" data-anim="section-header">
-      <span class="section-eyebrow">{t.showcase.eyebrow}</span>
+      <span class="section-eyebrow eyebrow-mono">{t.showcase.eyebrow}</span>
       <h2 class="section-title">{t.showcase.title}</h2>
       <p class="section-lead">{t.showcase.lead}</p>
     </div>
 
-    <div class="showcase-grid">
-      {t.showcase.palettes.map((palette) => (
-        <article
-          class="palette-card"
-          data-anim="showcase-card"
-          style={`--primary: ${palette.primary}; --accent: ${palette.accent}; --ground: ${palette.ground};`}
-        >
-          <div class="palette-photo">
-            <svg viewBox="0 0 200 110" preserveAspectRatio="xMidYMid slice">
-              <defs>
-                <linearGradient id={`sky-${palette.name}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.25"/>
-                  <stop offset="100%" stop-color="var(--ground)" stop-opacity="0.05"/>
-                </linearGradient>
-              </defs>
-              <rect width="200" height="110" fill={`url(#sky-${palette.name})`}/>
-              <ellipse cx="40" cy="60" rx="80" ry="14" fill="var(--ground)" opacity="0.5"/>
-              <ellipse cx="160" cy="56" rx="90" ry="16" fill="var(--ground)" opacity="0.4"/>
-              <path d="M 0 78 Q 50 68, 100 76 T 200 74 L 200 110 L 0 110 Z" fill="var(--ground)" opacity="0.7"/>
-              <path d="M 0 90 Q 60 84, 120 90 T 200 88 L 200 110 L 0 110 Z" fill="var(--primary)" opacity="0.8"/>
-              <line x1="80" y1="92" x2="80" y2="58" stroke="var(--primary)" stroke-width="1.4"/>
-              <path d="M 80 58 L 96 62 L 80 66 Z" fill="var(--accent)"/>
-              <circle cx="80" cy="92" r="1.4" fill="#FFFFFF"/>
-            </svg>
+    <div class="showcase-split">
+      <!-- LEFT : default Scluba (non personnalisée) -->
+      <article class="palette-card palette-card-default">
+        <span class="card-tag">{locale === 'fr' ? 'DÉFAUT' : 'DEFAULT'}</span>
+        <div class="card-photo card-photo-default">
+          <svg viewBox="0 0 200 110" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="200" height="110" fill="#1A1A1A"/>
+            <ellipse cx="40" cy="60" rx="80" ry="14" fill="#2A2A2A" opacity="0.6"/>
+            <ellipse cx="160" cy="56" rx="90" ry="16" fill="#2A2A2A" opacity="0.5"/>
+            <path d="M 0 78 Q 50 68, 100 76 T 200 74 L 200 110 L 0 110 Z" fill="#2A2A2A" opacity="0.8"/>
+            <path d="M 0 90 Q 60 84, 120 90 T 200 88 L 200 110 L 0 110 Z" fill="#3A3A3A" opacity="0.9"/>
+            <line x1="100" y1="92" x2="100" y2="58" stroke="#4A4A4A" stroke-width="1.6"/>
+            <path d="M 100 58 L 116 62 L 100 66 Z" fill="#5A5A5A"/>
+            <circle cx="100" cy="92" r="1.6" fill="#6A6A6A"/>
+          </svg>
+        </div>
+        <div class="card-bar card-bar-default">
+          <div class="card-logo-spot card-logo-spot-default"></div>
+          <div class="card-meta">
+            <small>{locale === 'fr' ? 'SCLUBA · STANDARD' : 'SCLUBA · STANDARD'}</small>
+            <strong>{locale === 'fr' ? 'Votre golf' : 'Your club'}</strong>
           </div>
-
-          <div class="palette-bar">
-            <div class="palette-logo-spot"></div>
-            <div class="palette-meta">
-              <small>{palette.tagline}</small>
-              <strong>{palette.name}</strong>
-            </div>
+        </div>
+        <div class="card-content">
+          <div class="card-score-row">
+            <span class="card-score-default">87</span>
+            <span class="card-score-label">Par 72 · 18 trous</span>
           </div>
-
-          <div class="palette-content">
-            <div class="palette-score-wrap">
-              <div class="palette-score">{72 + (palette.name.length % 18)}</div>
-              <div class="palette-score-label">Par 72 · 18 trous</div>
-            </div>
-
-            <div class="palette-mini-grid" aria-hidden="true">
-              {Array.from({ length: 18 }, (_, i) => (
-                <span class={`mini-cell ${i % 5 === 0 ? 'is-birdie' : i % 3 === 0 ? 'is-bogey' : ''}`}></span>
-              ))}
-            </div>
-
-            <div class="palette-footer">
-              <span class="palette-dot"></span>
-              <span>{locale === 'fr' ? 'Votre carte. Vos couleurs.' : 'Your card. Your colors.'}</span>
-            </div>
+          <div class="card-mini-grid card-mini-grid-default" aria-hidden="true">
+            {Array.from({ length: 18 }, (_, i) => (
+              <span class={`mini-cell ${i % 5 === 0 ? 'is-birdie' : i % 3 === 0 ? 'is-bogey' : ''}`}></span>
+            ))}
           </div>
-        </article>
-      ))}
+          <div class="card-footer-meta">
+            {locale === 'fr' ? 'Sans personnalisation' : 'Without customization'}
+          </div>
+        </div>
+      </article>
+
+      <!-- ARROW transformation -->
+      <div class="showcase-arrow" aria-hidden="true">
+        <svg viewBox="0 0 40 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12h36"/>
+          <path d="m28 4 10 8-10 8"/>
+        </svg>
+      </div>
+
+      <!-- RIGHT : branded Scluba ("votre carte") -->
+      <article
+        class="palette-card palette-card-branded"
+        style={`--p-primary: ${samplePalette.primary}; --p-accent: ${samplePalette.accent}; --p-ground: ${samplePalette.ground};`}
+      >
+        <span class="card-tag card-tag-branded">{locale === 'fr' ? 'VOTRE CARTE' : 'YOUR CARD'}</span>
+        <div class="card-photo card-photo-branded">
+          <svg viewBox="0 0 200 110" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <defs>
+              <linearGradient id="brandedSky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--p-accent)" stop-opacity="0.30"/>
+                <stop offset="100%" stop-color="var(--p-ground)" stop-opacity="0.10"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="110" fill="url(#brandedSky)"/>
+            <ellipse cx="40" cy="60" rx="80" ry="14" fill="var(--p-ground)" opacity="0.5"/>
+            <ellipse cx="160" cy="56" rx="90" ry="16" fill="var(--p-ground)" opacity="0.4"/>
+            <path d="M 0 78 Q 50 68, 100 76 T 200 74 L 200 110 L 0 110 Z" fill="var(--p-ground)" opacity="0.7"/>
+            <path d="M 0 90 Q 60 84, 120 90 T 200 88 L 200 110 L 0 110 Z" fill="var(--p-primary)" opacity="0.85"/>
+            <line x1="100" y1="92" x2="100" y2="58" stroke="var(--p-primary)" stroke-width="1.6"/>
+            <path d="M 100 58 L 116 62 L 100 66 Z" fill="var(--p-accent)"/>
+            <circle cx="100" cy="92" r="1.6" fill="#FFFFFF"/>
+          </svg>
+        </div>
+        <div class="card-bar card-bar-branded">
+          <div class="card-logo-spot card-logo-spot-branded"></div>
+          <div class="card-meta">
+            <small>{samplePalette.tagline}</small>
+            <strong>{samplePalette.name}</strong>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="card-score-row">
+            <span class="card-score-branded">87</span>
+            <span class="card-score-label">Par 72 · 18 trous</span>
+          </div>
+          <div class="card-mini-grid card-mini-grid-branded" aria-hidden="true">
+            {Array.from({ length: 18 }, (_, i) => (
+              <span class={`mini-cell-branded ${i % 5 === 0 ? 'is-birdie' : i % 3 === 0 ? 'is-bogey' : ''}`}></span>
+            ))}
+          </div>
+          <div class="card-footer-meta card-footer-meta-branded">
+            <span class="dot-branded"></span>
+            {locale === 'fr' ? 'Votre identité, partout' : 'Your identity, everywhere'}
+          </div>
+        </div>
+      </article>
     </div>
   </div>
 </section>
 
 <style>
   .showcase {
-    background: var(--bg);
+    background: transparent;
     overflow: hidden;
   }
+  .showcase :global(.section-header) {
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto var(--space-8);
+  }
 
-  .showcase-grid {
+  .showcase-split {
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--space-5);
     align-items: stretch;
+    max-width: 900px;
+    margin: 0 auto;
   }
-  @media (min-width: 640px) {
-    .showcase-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-5); }
+  @media (min-width: 768px) {
+    .showcase-split {
+      grid-template-columns: 1fr auto 1fr;
+      gap: var(--space-6);
+      align-items: center;
+    }
   }
-  @media (min-width: 1024px) {
-    .showcase-grid { grid-template-columns: repeat(4, 1fr); gap: var(--space-5); }
+
+  .showcase-arrow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .showcase-arrow svg {
+    width: 56px;
+    height: 32px;
+    opacity: 0.75;
+    filter: drop-shadow(0 0 10px rgba(0, 220, 130, 0.35));
+  }
+  @media (max-width: 767px) {
+    .showcase-arrow svg {
+      transform: rotate(90deg);
+    }
   }
 
   .palette-card {
-    background: var(--bg);
+    background: var(--ink-2, var(--bg));
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--shadow-md);
-    transition: transform 0.5s var(--ease-out), box-shadow 0.5s var(--ease-out);
-    will-change: transform;
+    position: relative;
     display: flex;
     flex-direction: column;
+    transition: transform 0.4s var(--ease-out), border-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out);
   }
   .palette-card:hover {
-    transform: translateY(-8px) rotate(-0.5deg);
-    box-shadow: var(--shadow-xl);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+  .palette-card-default:hover { border-color: var(--muted); }
+  .palette-card-branded:hover { border-color: var(--p-accent); }
+
+  .card-tag {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    z-index: 3;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--cream);
+    text-transform: uppercase;
+  }
+  .card-tag-branded {
+    background: var(--p-accent);
+    color: #0A0A0A;
   }
 
-  .palette-photo {
-    height: 110px;
+  /* === Photo top — same height pour les 2 cards === */
+  .card-photo {
+    height: 130px;
     overflow: hidden;
     flex-shrink: 0;
   }
-  .palette-photo svg {
+  .card-photo svg {
     width: 100%;
     height: 100%;
     display: block;
   }
 
-  .palette-bar {
-    background: var(--primary);
-    color: var(--bg);
+  /* === Bar (logo + meta) === */
+  .card-bar {
     padding: var(--space-3) var(--space-4);
     display: flex;
     align-items: center;
     gap: var(--space-3);
+    flex-shrink: 0;
   }
-  .palette-logo-spot {
+  .card-bar-default {
+    background: #2A2A2A;
+    color: var(--muted);
+  }
+  .card-bar-branded {
+    background: var(--p-primary);
+    color: var(--cream);
+  }
+  .card-logo-spot {
     width: 32px; height: 32px;
-    background: var(--bg);
     border-radius: 50%;
-    border: 1.5px solid var(--accent);
     flex-shrink: 0;
     position: relative;
   }
-  .palette-logo-spot::before {
+  .card-logo-spot-default {
+    background: #404040;
+    border: 1.5px solid #5A5A5A;
+  }
+  .card-logo-spot-branded {
+    background: var(--cream);
+    border: 1.5px solid var(--p-accent);
+  }
+  .card-logo-spot-branded::before {
     content: "";
     position: absolute;
     inset: 6px;
-    background:
-      linear-gradient(135deg, var(--accent), var(--primary)),
-      var(--accent);
-    background-blend-mode: multiply;
+    background: linear-gradient(135deg, var(--p-accent), var(--p-primary));
     border-radius: 50%;
     opacity: 0.7;
   }
-  .palette-meta { flex: 1; min-width: 0; }
-  .palette-meta small {
+  .card-meta { flex: 1; min-width: 0; }
+  .card-meta small {
     display: block;
-    color: var(--accent);
-    font-size: var(--text-xs);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 600;
+    font-weight: 500;
     margin-bottom: 2px;
   }
-  .palette-meta strong {
-    font-family: var(--font-serif);
+  .card-bar-default .card-meta small { color: var(--muted); }
+  .card-bar-branded .card-meta small { color: var(--p-accent); }
+  .card-meta strong {
+    font-family: var(--font-display);
     font-size: var(--text-md);
     font-weight: 700;
+    letter-spacing: -0.02em;
   }
 
-  .palette-content {
+  /* === Content === */
+  .card-content {
     padding: var(--space-4);
-    background: var(--bg-soft);
-    flex: 1;
+    background: var(--ink, var(--bg-soft));
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+    flex: 1;
   }
-
-  .palette-score-wrap {
+  .card-score-row {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
   }
-  .palette-score {
-    font-family: var(--font-serif);
-    font-size: var(--text-2xl);
-    font-weight: 800;
-    color: var(--primary);
-    line-height: 1;
+  .card-score-default,
+  .card-score-branded {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: -0.045em;
     font-variant-numeric: tabular-nums;
   }
-  .palette-score-label {
+  .card-score-default { color: var(--muted); }
+  .card-score-branded { color: var(--p-accent); }
+  .card-score-label {
+    font-family: var(--font-mono);
     font-size: var(--text-xs);
     color: var(--muted);
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
   }
 
-  .palette-mini-grid {
+  /* Mini grid — 18 cells */
+  .card-mini-grid {
     display: grid;
     grid-template-columns: repeat(9, 1fr);
     gap: 3px;
   }
-  .mini-cell {
+  .mini-cell, .mini-cell-branded {
     aspect-ratio: 1;
     border-radius: 2px;
-    background: var(--accent);
-    opacity: 0.25;
   }
-  .mini-cell.is-birdie {
-    background: var(--accent);
-    opacity: 1;
-  }
-  .mini-cell.is-bogey {
-    background: var(--ground);
-    opacity: 0.4;
-  }
+  /* Default = monochrome muted */
+  .mini-cell { background: #404040; opacity: 0.5; }
+  .mini-cell.is-birdie { background: #6E6E6E; opacity: 1; }
+  .mini-cell.is-bogey { background: #303030; opacity: 0.7; }
+  /* Branded = accent + ground sample colors */
+  .mini-cell-branded { background: var(--p-accent); opacity: 0.25; }
+  .mini-cell-branded.is-birdie { background: var(--p-accent); opacity: 1; }
+  .mini-cell-branded.is-bogey { background: var(--p-ground); opacity: 0.5; }
 
-  .palette-footer {
+  .card-footer-meta {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--line);
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    padding-top: var(--space-2);
-    border-top: 1px dashed var(--line);
-    font-size: var(--text-xs);
-    color: var(--muted);
-    font-style: italic;
   }
-  .palette-dot {
-    width: 6px;
-    height: 6px;
+  .dot-branded {
+    width: 6px; height: 6px;
     border-radius: 50%;
-    background: var(--accent);
+    background: var(--p-accent);
   }
 </style>

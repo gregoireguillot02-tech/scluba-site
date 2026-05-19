@@ -75,10 +75,12 @@ const qrSvg = await QRCode.toString(demoUrl, {
   }
 
   .cta-card {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+    background:
+      linear-gradient(135deg, var(--ink-2, var(--primary)) 0%, var(--ink, var(--primary-deep)) 100%);
+    border: 1px solid var(--ink-3, transparent);
     border-radius: var(--radius-xl);
     padding: var(--space-8) var(--space-6);
-    color: var(--bg);
+    color: var(--cream, var(--bg));
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--space-7);
@@ -92,7 +94,7 @@ const qrSvg = await QRCode.toString(demoUrl, {
     position: absolute;
     top: -100px; right: -100px;
     width: 300px; height: 300px;
-    background: radial-gradient(circle, rgba(212, 165, 116, 0.25), transparent 70%);
+    background: radial-gradient(circle, rgba(0, 220, 130, 0.18), transparent 70%);
   }
   @media (min-width: 900px) {
     .cta-card {
@@ -110,15 +112,17 @@ const qrSvg = await QRCode.toString(demoUrl, {
     margin-bottom: var(--space-3);
   }
   .cta-title {
-    font-family: var(--font-serif);
-    font-size: clamp(1.75rem, 3.5vw, 2.5rem);
-    line-height: 1.15;
-    color: var(--bg);
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4.5vw, 3.5rem);
+    line-height: 1;
+    letter-spacing: -0.045em;
+    color: var(--cream, var(--bg));
     margin-bottom: var(--space-3);
     max-width: 18ch;
+    font-weight: 900;
   }
   .cta-lead {
-    color: var(--accent-soft);
+    color: var(--muted);
     font-size: var(--text-md);
     margin-bottom: var(--space-6);
     max-width: 48ch;
@@ -144,9 +148,9 @@ const qrSvg = await QRCode.toString(demoUrl, {
     width: 100%;
     padding: 14px 16px;
     border-radius: var(--radius-md);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--bg);
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.18));
+    background: rgba(245, 235, 216, 0.04);
+    color: var(--ink, var(--bg));
     font-size: var(--text-base);
     transition:
       background 0.25s var(--ease-out),
@@ -155,7 +159,7 @@ const qrSvg = await QRCode.toString(demoUrl, {
       box-shadow 0.25s var(--ease-out);
   }
   .form-field input::placeholder {
-    color: rgba(255, 255, 255, 0.45);
+    color: rgba(245, 245, 245, 0.55);
   }
   .form-field input:focus {
     outline: none;
@@ -165,8 +169,8 @@ const qrSvg = await QRCode.toString(demoUrl, {
   .form-field input:focus-visible {
     transform: scale(1.015);
     box-shadow:
-      0 0 0 4px rgba(212, 165, 116, 0.22),
-      0 6px 18px rgba(15, 42, 30, 0.18);
+      0 0 0 4px rgba(0, 220, 130, 0.22),
+      0 6px 18px rgba(0, 0, 0, 0.35);
   }
   @media (prefers-reduced-motion: reduce) {
     .form-field input:focus-visible { transform: none; }
@@ -191,9 +195,9 @@ const qrSvg = await QRCode.toString(demoUrl, {
     margin-top: var(--space-3);
   }
   .form-success {
-    background: rgba(212, 165, 116, 0.18);
+    background: rgba(0, 220, 130, 0.18);
     border: 1px solid var(--accent);
-    color: var(--accent-soft);
+    color: var(--cream);
   }
   .form-error {
     background: rgba(192, 57, 43, 0.18);
@@ -234,7 +238,7 @@ const qrSvg = await QRCode.toString(demoUrl, {
   }
   .cta-qr-label {
     margin-top: var(--space-3);
-    color: var(--accent-soft);
+    color: var(--muted);
     font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.16em;

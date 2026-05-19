@@ -92,12 +92,16 @@ const t = useT(locale);
     .step-grid {
       grid-template-columns: repeat(3, 1fr);
       gap: var(--space-5);
+      /* Décalage à gauche pour laisser ~25% droite à la balle qui voyage là (K3 keyframe x=+2.6) */
+      max-width: 78%;
+      margin-right: auto;
+      margin-left: 0;
     }
   }
 
   .step-card {
     position: relative;
-    background: var(--bg);
+    background: var(--paper, var(--bg));
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
     padding: var(--space-7) var(--space-5) var(--space-5);
@@ -109,7 +113,7 @@ const t = useT(locale);
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--primary), var(--accent));
+    background: linear-gradient(90deg, var(--grass-bright, var(--primary)), var(--accent));
     opacity: 0;
     transition: opacity 0.3s var(--ease-out);
   }
@@ -120,18 +124,23 @@ const t = useT(locale);
   }
   .step-card:hover::before { opacity: 1; }
 
+  /* Numérotation XXL — pattern donmolinico (01/02/03 énorme).
+     Utilise .number-XL utility en taille moyenne (ratio adapté card). */
   .step-num {
-    font-family: var(--font-serif);
-    font-size: var(--text-2xl);
-    font-weight: 800;
+    font-family: var(--font-display);
+    font-size: clamp(3.5rem, 7vw, 5.5rem);
+    font-weight: 900;
     color: var(--accent);
-    line-height: 1;
-    letter-spacing: -0.02em;
+    line-height: 0.85;
+    letter-spacing: -0.045em;
+    display: block;
+    margin-bottom: var(--space-3);
   }
   .step-title {
     font-size: var(--text-xl);
     margin: var(--space-3) 0 var(--space-3);
     color: var(--primary);
+    letter-spacing: -0.025em;
   }
   .step-body {
     font-size: var(--text-base);
@@ -146,8 +155,8 @@ const t = useT(locale);
     width: 64px;
     height: 64px;
     color: var(--primary);
-    opacity: 0.4;
+    opacity: 0.30;
     transition: opacity 0.4s var(--ease-out);
   }
-  .step-card:hover .step-icon { opacity: 1; }
+  .step-card:hover .step-icon { opacity: 0.85; }
 </style>

@@ -1,0 +1,1086 @@
+---
+/**
+ * ScrollGolfBall — scène Three.js plein écran avec balle de golf 3D
+ * + tee 3D qui VOYAGENT dans le viewport au scroll (V5 — 2026-05-20).
+ *
+ * Architecture :
+ *   - <canvas> position:fixed inset:0 z-index:0 pointer-events:none
+ *   - Contenu HTML (Nav z:100, sections z:auto) reste cliquable au-dessus
+ *   - Camera FIXÉE à (0, 0, 5) lookAt origin — pas d'orbite, balle + tee
+ *     se déplacent dans le monde 3D selon des keyframes scroll-tied
+ *   - 2 objets : ballGroup (chrome iridescent) + teeGroup (vert néon emissive)
+ *   - 2 "swing moments" iconiques : Hero (K0→K1) et CTA (K9→K10)
+ *     pendant lesquels la balle se pose sur le tee puis décolle avec un
+ *     trail de particules vertes additif
+ *   - Croisement balle/tee mi-scroll (K5/T3) avec flash bloom
+ *
+ * Camera FOV 35°, distance 5 → viewport vertical visible ≈ 3.15 units,
+ * horizontal ≈ 5.6 units sur 16:9. Donc :
+ *   x = ±2.5  = bords gauche/droite du viewport
+ *   y = ±1.5  = haut/bas du viewport
+ *
+ * Map des 10 keyframes BALLE V5 (scroll % → position) :
+ *   ┌─────────┬───────────────────┬──────┬──────┬───────┬──────────────┐
+ *   │ scroll% │ section           │   x  │   y  │ scale │ note         │
+ *   ├─────────┼───────────────────┼──────┼──────┼───────┼──────────────┤
+ *   │ 0%      │ Hero (sur tee)    │  0   │ -0.5 │  0.8  │ K0 plant     │
+ *   │ 8%      │ SWING #1 décolle  │  0   │ +1.5 │  0.7  │ K1 trail ON  │
+ *   │ 18%     │ Problem traverse  │  0   │ -1.4 │ 0.55  │ K2           │
+ *   │ 28%     │ ThreeSteps droite │ +2.1 │  0   │ 0.55  │ K3           │
+ *   │ 38%     │ PhoneShowcase     │ +1.4 │ +1.2 │ 0.45  │ K4 retrait   │
+ *   │ 48%     │ Croisement tee    │ -1.8 │  0   │  0.6  │ K5 flash     │
+ *   │ 58%     │ ClubsShowcase     │ -2.0 │ +1.4 │  0.5  │ K6           │
+ *   │ 70%     │ HowItWorks/Pricing│ +2.2 │ +0.6 │ 0.45  │ K7           │
+ *   │ 82%     │ FAQ               │ -1.6 │ -0.8 │  0.5  │ K8           │
+ *   │ 92%     │ Retour sur tee    │  0   │ -0.5 │  0.8  │ K9 plant     │
+ *   │ 100%    │ SWING #2 finale   │  0   │ +0.3 │  1.2  │ K10 trail ON │
+ *   └─────────┴───────────────────┴──────┴──────┴───────┴──────────────┘
+ *
+ * Map des 7 keyframes TEE V5 :
+ *   ┌─────────┬───────────────────┬──────┬──────┬──────┬───────┐
+ *   │ scroll% │ section           │   x  │   y  │ rotZ │ scale │
+ *   ├─────────┼───────────────────┼──────┼──────┼──────┼───────┤
+ *   │ 0%      │ Hero plant        │  0   │ -0.9 │  0   │  1.0  │
+ *   │ 8%      │ Recoil swing #1   │  0   │ -0.9 │ -8°  │  1.0  │
+ *   │ 35%     │ Drift gauche      │ -2.2 │ -0.3 │  0   │ 0.85  │
+ *   │ 50%     │ Croisement balle  │ -1.8 │  0   │ +15° │ 0.85  │
+ *   │ 75%     │ Drift droite      │ +2.0 │ -0.6 │  0   │ 0.85  │
+ *   │ 92%     │ Retour CTA plant  │  0   │ -0.9 │  0   │  1.0  │
+ *   │ 100%    │ Recoil swing #2   │  0   │ -0.9 │ -12° │  1.0  │
+ *   └─────────┴───────────────────┴──────┴──────┴──────┴───────┘
+ *
+ * Rendu :
+ *   - WebGLRenderer alpha:true antialias:true dpr capé 2
+ *   - RoomEnvironment (PMREMGenerator) → reflections IBL subtiles
+ *   - 3-point lighting (key + fill + rim + ambient)
+ *   - ACESFilmicToneMapping exposure 1.1, SRGBColorSpace
+ *   - frameloop on-demand (re-render sur scroll/resize/load uniquement)
+ *
+ * Guards :
+ *   - prefers-reduced-motion : balle figée à la position initiale (K0)
+ *   - mobile portrait < 640px : canvas display:none
+ *   - lazy import three + addons + GSAP/ScrollTrigger après DOMContentLoaded
+ */
+---
+
+<div data-ball-shadow aria-hidden="true"></div>
+<canvas data-scroll-golfball aria-hidden="true"></canvas>
+
+<style>
+  canvas[data-scroll-golfball] {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    /* V4.8 — z-index 0 : la balle passe DERRIÈRE tout le contenu. Les
+       sections sont transparentes (global.css landing dark override) donc
+       la balle reste visible aux zones où les cards/text ne sont pas. */
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 600ms ease-out;
+  }
+  canvas[data-scroll-golfball][data-ready="true"] {
+    opacity: 1;
+  }
+
+  /* Ombre portée HTML synchronisée — projection 3D→2D du ballState
+     (le canvas Three.js est transparent, donc un radial-gradient sous
+     la balle donne un "sol" sans coût GPU des shadow maps WebGL). */
+  [data-ball-shadow] {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 240px;
+    height: 60px;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(0, 0, 0, 0.70) 0%,
+      rgba(0, 0, 0, 0.28) 35%,
+      rgba(0, 0, 0, 0) 70%
+    );
+    filter: blur(12px);
+    transform: translate(-1000px, -1000px);
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
+    /* V4.8 — z-index 0 (même que canvas, derrière tout) */
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 400ms ease-out;
+    mix-blend-mode: multiply;
+  }
+  [data-ball-shadow][data-ready="true"] {
+    opacity: 1;
+  }
+
+  @media (max-width: 640px) {
+    canvas[data-scroll-golfball],
+    [data-ball-shadow] {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  async function initScrollGolfBall() {
+    const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-scroll-golfball]');
+    const shadow = document.querySelector<HTMLDivElement>('[data-ball-shadow]');
+    if (!canvas) return;
+    if (window.innerWidth <= 640) return;
+
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const [
+      THREE,
+      { GLTFLoader },
+      { DecalGeometry },
+      { EffectComposer },
+      { RenderPass },
+      { UnrealBloomPass },
+      { ShaderPass },
+      { VignetteShader },
+      { gsap },
+      { ScrollTrigger },
+    ] = await Promise.all([
+      import('three'),
+      import('three/examples/jsm/loaders/GLTFLoader.js'),
+      import('three/examples/jsm/geometries/DecalGeometry.js'),
+      import('three/examples/jsm/postprocessing/EffectComposer.js'),
+      import('three/examples/jsm/postprocessing/RenderPass.js'),
+      import('three/examples/jsm/postprocessing/UnrealBloomPass.js'),
+      import('three/examples/jsm/postprocessing/ShaderPass.js'),
+      import('three/examples/jsm/shaders/VignetteShader.js'),
+      import('gsap'),
+      import('gsap/ScrollTrigger'),
+    ]);
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    // === Renderer ====================================================
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance',
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    // Exposure 1.0 — laisse le bloom faire le dramatic punch sur highlights
+    renderer.toneMappingExposure = 1.0;
+
+    // === Scene + Camera (FIXÉE) =====================================
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      35,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+    camera.position.set(0, 0, 5);
+    camera.lookAt(0, 0, 0);
+
+    // === HDRI procédural rich (V4.3) =================================
+    // Drop la grille statique V4. Replace par radial gradients sweep
+    // colorés (green accent + bleu froid + chaud orange) + highlights
+    // blancs ponctuels + horizon green. Le chrome catch des reflets
+    // organiques, l'iridescence catch les couleurs froides/chaudes aux
+    // angles rasants.
+    function createRichHDRI() {
+      const W = 2048, H = 1024;
+      const cnv = document.createElement('canvas');
+      cnv.width = W; cnv.height = H;
+      const ctx = cnv.getContext('2d')!;
+
+      // Base sombre
+      ctx.fillStyle = '#050505';
+      ctx.fillRect(0, 0, W, H);
+
+      // Zone 1 — Green accent radial sweep (top-left)
+      const greenZone = ctx.createRadialGradient(W * 0.20, H * 0.35, 0, W * 0.20, H * 0.35, W * 0.30);
+      greenZone.addColorStop(0, 'rgba(0, 220, 130, 0.55)');
+      greenZone.addColorStop(0.5, 'rgba(0, 220, 130, 0.18)');
+      greenZone.addColorStop(1, 'rgba(0, 220, 130, 0)');
+      ctx.fillStyle = greenZone;
+      ctx.fillRect(0, 0, W, H);
+
+      // Zone 2 — Bleu froid (top-right) pour iridescence catch
+      const coolZone = ctx.createRadialGradient(W * 0.78, H * 0.28, 0, W * 0.78, H * 0.28, W * 0.25);
+      coolZone.addColorStop(0, 'rgba(80, 120, 220, 0.40)');
+      coolZone.addColorStop(0.6, 'rgba(80, 120, 220, 0.10)');
+      coolZone.addColorStop(1, 'rgba(80, 120, 220, 0)');
+      ctx.fillStyle = coolZone;
+      ctx.fillRect(0, 0, W, H);
+
+      // Zone 3 — Chaud orange subtle (mid bottom) pour warm pop
+      const warmZone = ctx.createRadialGradient(W * 0.50, H * 0.75, 0, W * 0.50, H * 0.75, W * 0.22);
+      warmZone.addColorStop(0, 'rgba(255, 160, 80, 0.32)');
+      warmZone.addColorStop(1, 'rgba(255, 160, 80, 0)');
+      ctx.fillStyle = warmZone;
+      ctx.fillRect(0, 0, W, H);
+
+      // Highlights ponctuels blancs (V4.5 : opacité 0.30 → 0.14, et radius
+      // augmenté pour plus de douceur — réduit le flash concentré sur la balle)
+      const highlights = [
+        [W * 0.30, H * 0.20, 9],
+        [W * 0.70, H * 0.45, 8],
+        [W * 0.45, H * 0.65, 10],
+        [W * 0.85, H * 0.55, 7],
+        [W * 0.15, H * 0.70, 8],
+      ];
+      for (const [x, y, r] of highlights) {
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, r * 8);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.14)');
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, r * 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Horizon green ground reflection
+      const horizon = ctx.createLinearGradient(0, H * 0.7, 0, H);
+      horizon.addColorStop(0, 'rgba(5, 5, 5, 0)');
+      horizon.addColorStop(1, 'rgba(0, 220, 130, 0.10)');
+      ctx.fillStyle = horizon;
+      ctx.fillRect(0, H * 0.7, W, H * 0.3);
+
+      const tex = new THREE.CanvasTexture(cnv);
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    const gridTex = createRichHDRI();
+    scene.environment = pmremGenerator.fromEquirectangular(gridTex).texture;
+    gridTex.dispose();
+    pmremGenerator.dispose();
+
+    // Lighting ajustée pour chrome — le chrome dépend surtout du envMap,
+    // les direct lights jouent juste le rôle de "rim" et fill subtil.
+    const keyLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    keyLight.position.set(3, 4, 5);
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xfff4e6, 0.3);
+    fillLight.position.set(-4, 2, 3);
+    scene.add(fillLight);
+
+    // Rim light teinté green pour silhouetter le chrome contre le bg noir
+    const rimLight = new THREE.DirectionalLight(0xc0ffd6, 0.8);
+    rimLight.position.set(0, -2, -5);
+    scene.add(rimLight);
+
+    // Drop ambient — pure HDRI lighting
+
+    // === Post-processing pipeline (cinematic subtil oryzo-level) =====
+    const composer = new EffectComposer(renderer);
+    composer.setSize(window.innerWidth, window.innerHeight);
+    composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    composer.addPass(new RenderPass(scene, camera));
+
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.32,  // strength V4.6 (était 0.22, plus de glow avec mix-blend screen)
+      0.95,  // radius V4.6
+      0.94   // threshold V4.6
+    );
+    composer.addPass(bloomPass);
+
+    const vignettePass = new ShaderPass(VignetteShader);
+    vignettePass.uniforms.offset.value = 0.95;
+    // V4.6 — vignette plus légère (était 1.28) : moins de "filtre dim"
+    // perceptible au Hero, le mix-blend screen compense déjà beaucoup.
+    vignettePass.uniforms.darkness.value = 1.05;
+    composer.addPass(vignettePass);
+
+    // === Ball state (voyage scroll-tied) ============================
+    // ballGroup wrap le gltf.scene → on anime le groupe, pas la balle
+    // (la rotation auto Y reste sur la balle interne).
+    const ballGroup = new THREE.Group();
+    scene.add(ballGroup);
+
+    // État initial = K0 (Hero start) : droite, scale plein
+    const ballState = {
+      x: 2.0,
+      y: -0.2,
+      scale: 1.0,
+    };
+    // Vecteur réutilisable pour la projection 3D→écran de l'ombre
+    const projVec = new THREE.Vector3();
+    const SHADOW_W = 240;
+    const SHADOW_H = 60;
+
+    function applyBallState() {
+      ballGroup.position.x = ballState.x;
+      ballGroup.position.y = ballState.y;
+      ballGroup.scale.setScalar(Math.max(ballState.scale, 0));
+      ballGroup.visible = ballState.scale > 0.01;
+
+      // Sync ombre portée HTML : projection du point sous la balle
+      if (shadow) {
+        if (ballState.scale > 0.01) {
+          // Point cible = sous la balle (y - rayon * scale), z=0
+          projVec.set(ballState.x, ballState.y - 0.45 * ballState.scale, 0);
+          projVec.project(camera);
+          const sx = (projVec.x + 1) / 2 * window.innerWidth;
+          const sy = (1 - projVec.y) / 2 * window.innerHeight;
+          // Ombre plus large/écrasée quand balle proche du sol visuel
+          const scaleX = ballState.scale * 1.0;
+          const scaleY = ballState.scale * 0.55;
+          shadow.style.transform = `translate(${sx - SHADOW_W / 2}px, ${sy - SHADOW_H / 2}px) scale(${scaleX}, ${scaleY})`;
+          shadow.style.opacity = String(Math.max(0, Math.min(1, ballState.scale * 0.85)));
+        } else {
+          shadow.style.opacity = '0';
+        }
+      }
+    }
+    applyBallState();
+
+    // === Tee state (V5 — voyage scroll-tied parallèle) ==============
+    // teeGroup wrap le gltf.scene golf_tee. Le tee est "planté" vertical
+    // (orientation par défaut du modèle), on anime position x/y + rotZ.
+    // Pas d'auto-rotation Y ni de bobbing → le tee est statique/posé.
+    const teeGroup = new THREE.Group();
+    scene.add(teeGroup);
+    // Référence vers le gltf.scene interne du tee (pour rotation auto Y
+    // continue dans le tick — analogue à ballGroup.rotation pour la balle)
+    let teeInner: any = null;
+
+    const teeState = {
+      x: 0,
+      y: -0.9,
+      rotZ: 0,
+      scale: 1.0,
+    };
+
+    function applyTeeState() {
+      teeGroup.position.x = teeState.x;
+      teeGroup.position.y = teeState.y;
+      teeGroup.rotation.z = teeState.rotZ;
+      teeGroup.scale.setScalar(Math.max(teeState.scale, 0));
+      teeGroup.visible = teeState.scale > 0.01;
+    }
+    applyTeeState();
+
+    // === Trail particles (V5 — swing #1 + #2 uniquement) ============
+    // GPU points additifs vert néon émis pendant les fenêtres swing
+    // (scroll [0, 0.10] et [0.92, 1.0]). Per-vertex color (RGB) qui fade
+    // vers noir = particule invisible avec additive blending. Coût ~0.2ms.
+    const TRAIL_COUNT = 80;
+    const TRAIL_LIFETIME_MS = 600;
+    // Couleur base : #39ff88 → (0.224, 1.0, 0.533)
+    const TRAIL_R = 0x39 / 255;
+    const TRAIL_G = 0xff / 255;
+    const TRAIL_B = 0x88 / 255;
+    const trailPositions = new Float32Array(TRAIL_COUNT * 3);
+    const trailColors = new Float32Array(TRAIL_COUNT * 3);
+    const trailLifetimes = new Float32Array(TRAIL_COUNT); // ms restant
+    const trailGeometry = new THREE.BufferGeometry();
+    trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+    trailGeometry.setAttribute('color', new THREE.BufferAttribute(trailColors, 3));
+
+    // Texture radiale soft pour points (sinon carrés visibles)
+    function createTrailTexture() {
+      const sz = 64;
+      const cnv = document.createElement('canvas');
+      cnv.width = sz; cnv.height = sz;
+      const ctx = cnv.getContext('2d')!;
+      const grad = ctx.createRadialGradient(sz / 2, sz / 2, 0, sz / 2, sz / 2, sz / 2);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      grad.addColorStop(0.4, 'rgba(255, 255, 255, 0.5)');
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, sz, sz);
+      const tex = new THREE.CanvasTexture(cnv);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    const trailMaterial = new THREE.PointsMaterial({
+      vertexColors: true,
+      size: 0.22,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 1.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      map: createTrailTexture(),
+    });
+    const trailPoints = new THREE.Points(trailGeometry, trailMaterial);
+    trailPoints.visible = false; // activé par tick quand des particules sont vivantes
+    scene.add(trailPoints);
+
+    // Init toutes les particules mortes (couleur noire = invisible additive)
+    for (let i = 0; i < TRAIL_COUNT; i++) {
+      trailLifetimes[i] = 0;
+      trailPositions[i * 3 + 0] = 0;
+      trailPositions[i * 3 + 1] = 0;
+      trailPositions[i * 3 + 2] = 0;
+      trailColors[i * 3 + 0] = 0;
+      trailColors[i * 3 + 1] = 0;
+      trailColors[i * 3 + 2] = 0;
+    }
+    let trailEmitIndex = 0; // ring buffer write head
+    let prevBallX = ballState.x;
+    let prevBallY = ballState.y;
+
+    // Émet une particule à la position actuelle de la balle avec un léger
+    // jitter, héritant d'une partie de la vélocité instantanée (effet "comète").
+    function emitTrailParticle() {
+      const i = trailEmitIndex;
+      trailEmitIndex = (trailEmitIndex + 1) % TRAIL_COUNT;
+      const vx = (ballState.x - prevBallX) * 0.3;
+      const vy = (ballState.y - prevBallY) * 0.3;
+      const jx = (Math.random() - 0.5) * 0.1;
+      const jy = (Math.random() - 0.5) * 0.1;
+      trailPositions[i * 3 + 0] = ballState.x + jx - vx;
+      trailPositions[i * 3 + 1] = ballState.y + jy - vy;
+      trailPositions[i * 3 + 2] = 0;
+      trailLifetimes[i] = TRAIL_LIFETIME_MS;
+      trailColors[i * 3 + 0] = TRAIL_R;
+      trailColors[i * 3 + 1] = TRAIL_G;
+      trailColors[i * 3 + 2] = TRAIL_B;
+    }
+
+    // === Dust particles (V5 — impact swing #1 + #2) =================
+    // Burst radial de particules tan/poussière au moment où la balle décolle
+    // du tee. Vélocité 2D radiale + gravité + drag → effet "poof" naturel.
+    const DUST_COUNT = 60;
+    const DUST_LIFETIME_MS = 700;
+    const DUST_R = 0xd4 / 255;
+    const DUST_G = 0xb3 / 255;
+    const DUST_B = 0x89 / 255;
+    const dustPositions = new Float32Array(DUST_COUNT * 3);
+    const dustColors = new Float32Array(DUST_COUNT * 3);
+    const dustVelocities = new Float32Array(DUST_COUNT * 3);
+    const dustLifetimes = new Float32Array(DUST_COUNT);
+    const dustGeometry = new THREE.BufferGeometry();
+    dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+    dustGeometry.setAttribute('color', new THREE.BufferAttribute(dustColors, 3));
+
+    const dustMaterial = new THREE.PointsMaterial({
+      vertexColors: true,
+      size: 0.20,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 1.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      map: createTrailTexture(),
+    });
+    const dustPoints = new THREE.Points(dustGeometry, dustMaterial);
+    dustPoints.visible = false;
+    scene.add(dustPoints);
+
+    function emitDustBurst(centerX: number, centerY: number) {
+      for (let i = 0; i < DUST_COUNT; i++) {
+        // Angle uniformément distribué autour du cercle + jitter
+        const angle = (i / DUST_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+        const speed = 0.8 + Math.random() * 1.2;
+        // Mostly horizontal + biais vers le haut (poussière soulevée)
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.abs(Math.sin(angle)) * speed * 0.7 + 0.2;
+        const vz = (Math.random() - 0.5) * 0.4;
+
+        dustPositions[i * 3 + 0] = centerX + (Math.random() - 0.5) * 0.15;
+        dustPositions[i * 3 + 1] = centerY + (Math.random() - 0.5) * 0.10;
+        dustPositions[i * 3 + 2] = 0;
+        dustVelocities[i * 3 + 0] = vx;
+        dustVelocities[i * 3 + 1] = vy;
+        dustVelocities[i * 3 + 2] = vz;
+        dustLifetimes[i] = DUST_LIFETIME_MS;
+        dustColors[i * 3 + 0] = DUST_R;
+        dustColors[i * 3 + 1] = DUST_G;
+        dustColors[i * 3 + 2] = DUST_B;
+      }
+    }
+
+    // Debounce burst : fire une seule fois par traversée des deux swings.
+    // Reset si user remonte (permet re-fire au prochain scroll forward).
+    let swingImpactFired1 = false;
+    let swingImpactFired2 = false;
+    function maybeFireSwingImpact() {
+      // Swing #1 : impact entre K0 et K1, déclenche à 3-6% scroll
+      if (!swingImpactFired1 && scrollProgress >= 0.03 && scrollProgress <= 0.06) {
+        swingImpactFired1 = true;
+        // Origine = tee top (tee y=-0.9 + 0.35 = -0.55)
+        emitDustBurst(0, -0.55);
+      }
+      if (swingImpactFired1 && scrollProgress < 0.01) {
+        swingImpactFired1 = false;
+      }
+      // Swing #2 : impact entre K9 et K10, déclenche à 94-97% scroll
+      if (!swingImpactFired2 && scrollProgress >= 0.94 && scrollProgress <= 0.97) {
+        swingImpactFired2 = true;
+        emitDustBurst(0, -0.55);
+      }
+      if (swingImpactFired2 && scrollProgress < 0.92) {
+        swingImpactFired2 = false;
+      }
+    }
+
+    // === Vortex particles (V5 — autour balle pendant ProblemNarrative) ===
+    // Particules vert néon qui orbitent autour de la balle en foreground
+    // (depthTest:false + renderOrder élevé → toujours visibles devant la balle).
+    // Fenêtre active : scroll [0.08, 0.20] = traverse vertical K1→K2.
+    const VORTEX_COUNT = 40;
+    const vortexAngles = new Float32Array(VORTEX_COUNT);
+    const vortexRadii = new Float32Array(VORTEX_COUNT);
+    const vortexHeights = new Float32Array(VORTEX_COUNT);
+    const vortexAngularVel = new Float32Array(VORTEX_COUNT);
+    const vortexPositions = new Float32Array(VORTEX_COUNT * 3);
+    const vortexColors = new Float32Array(VORTEX_COUNT * 3);
+    const vortexGeometry = new THREE.BufferGeometry();
+    vortexGeometry.setAttribute('position', new THREE.BufferAttribute(vortexPositions, 3));
+    vortexGeometry.setAttribute('color', new THREE.BufferAttribute(vortexColors, 3));
+
+    // Init particules : angles équidistants, rayons + hauteurs randomisés,
+    // vélocités angulaires positives (même sens de rotation → effet vortex)
+    for (let i = 0; i < VORTEX_COUNT; i++) {
+      vortexAngles[i] = (i / VORTEX_COUNT) * Math.PI * 2;
+      vortexRadii[i] = 0.45 + Math.random() * 0.45;     // 0.45 - 0.9
+      vortexHeights[i] = (Math.random() - 0.5) * 0.9;   // -0.45 à 0.45
+      vortexAngularVel[i] = 2.0 + Math.random() * 2.5;  // 2-4.5 rad/s
+    }
+
+    const vortexMaterial = new THREE.PointsMaterial({
+      vertexColors: true,
+      size: 0.14,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 1.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: false,    // Toujours rendre par-dessus (foreground)
+      map: createTrailTexture(),
+    });
+    const vortexPoints = new THREE.Points(vortexGeometry, vortexMaterial);
+    vortexPoints.renderOrder = 10;  // Render après ball/tee
+    vortexPoints.visible = false;
+    scene.add(vortexPoints);
+
+    // Suivi du scroll progress (mis à jour par ScrollTrigger onUpdate)
+    let scrollProgress = 0;
+
+    // Flash bloom debounce (single trigger par traversée K5/T3)
+    let crossingFlashFired = false;
+    function maybeTriggerCrossingFlash() {
+      const inWindow = scrollProgress >= 0.46 && scrollProgress <= 0.52;
+      if (!inWindow) {
+        crossingFlashFired = false;
+        return;
+      }
+      if (crossingFlashFired) return;
+      const dx = ballState.x - teeState.x;
+      const dy = ballState.y - teeState.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 0.5) {
+        crossingFlashFired = true;
+        gsap.to(bloomPass, {
+          strength: 2.0,
+          duration: 0.15,
+          ease: 'power2.out',
+          yoyo: true,
+          repeat: 1,
+          onComplete: () => { bloomPass.strength = 0.32; },
+        });
+      }
+    }
+
+    // === Render à la demande (via composer pour bloom + vignette) ===
+    let renderRequested = false;
+    function requestRender() {
+      if (renderRequested) return;
+      renderRequested = true;
+      requestAnimationFrame(() => {
+        composer.render();
+        renderRequested = false;
+      });
+    }
+
+    // Remplace les matériaux du glTF par chrome MeshPhysicalMaterial.
+    // Le glTF golf_ball.glb apporte la géométrie (dimples), mais son
+    // matériau original (white plastic standard) est dropé : on veut
+    // chrome pur qui réfléchit l'HDRI neon grid.
+    function chromifyBall(ball: any) {
+      // V4.6 : envMapIntensity 0.8 → 1.1 (re-pop le chrome + iridescence,
+      // l'effet "filtre dim" au Hero disparaît avec mix-blend-mode screen).
+      const chromeMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0xF5F5F5,
+        metalness: 1.0,
+        roughness: 0.08,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.2,
+        envMapIntensity: 1.1,
+        iridescence: 1.0,
+        iridescenceIOR: 1.3,
+        iridescenceThicknessRange: [100, 800],
+      });
+      ball.traverse((child: any) => {
+        if (child.isMesh) {
+          child.material = chromeMaterial;
+        }
+      });
+    }
+
+    // V4.5 — S de Scluba en decal sur la balle. Deux décals opposés
+    // (front +Z + back -Z) pour visibilité 360°. Material dark matte qui
+    // contraste avec le chrome iridescent → effet "logo gravé premium".
+    async function addSLogoDecals(ball: any) {
+      try {
+        await document.fonts.load('900 380px "Geist"');
+        await document.fonts.ready;
+      } catch {
+        /* fallback police */
+      }
+
+      // Texture S transparent (alpha mask)
+      const cnv = document.createElement('canvas');
+      cnv.width = 512;
+      cnv.height = 512;
+      const ctx = cnv.getContext('2d');
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, 512, 512);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '900 380px "Geist", "Arial Black", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('S', 256, 270);
+
+      const tex = new THREE.CanvasTexture(cnv);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      tex.needsUpdate = true;
+
+      // Trouve le mesh principal (le plus gros par volume bbox)
+      let targetMesh: any = null;
+      let maxVolume = 0;
+      ball.traverse((child: any) => {
+        if (child.isMesh) {
+          const sz = new THREE.Vector3();
+          new THREE.Box3().setFromObject(child).getSize(sz);
+          const vol = sz.x * sz.y * sz.z;
+          if (vol > maxVolume) {
+            maxVolume = vol;
+            targetMesh = child;
+          }
+        }
+      });
+      if (!targetMesh) return;
+
+      // Reset ballGroup à identité pour calcul decal en target-local clean
+      const savedPos = ballGroup.position.clone();
+      const savedScale = ballGroup.scale.clone();
+      const savedRot = ballGroup.rotation.clone();
+      ballGroup.position.set(0, 0, 0);
+      ballGroup.scale.set(1, 1, 1);
+      ballGroup.rotation.set(0, 0, 0);
+      ballGroup.updateMatrixWorld(true);
+
+      const decalMaterial = new THREE.MeshStandardMaterial({
+        map: tex,
+        color: 0x1A1A1A,
+        transparent: true,
+        alphaTest: 0.08,
+        depthTest: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -4,
+        roughness: 0.85,
+        metalness: 0.4,
+      });
+
+      const decalSize = new THREE.Vector3(0.40, 0.40, 0.25);
+
+      // Front +Z
+      const decalFront = new THREE.Mesh(
+        new DecalGeometry(targetMesh, new THREE.Vector3(0, 0, 0.5), new THREE.Euler(0, 0, 0), decalSize),
+        decalMaterial
+      );
+      targetMesh.add(decalFront);
+
+      // Back -Z (rotation π pour S lisible)
+      const decalBack = new THREE.Mesh(
+        new DecalGeometry(targetMesh, new THREE.Vector3(0, 0, -0.5), new THREE.Euler(0, Math.PI, 0), decalSize),
+        decalMaterial
+      );
+      targetMesh.add(decalBack);
+
+      // Restaure ballState
+      ballGroup.position.copy(savedPos);
+      ballGroup.scale.copy(savedScale);
+      ballGroup.rotation.copy(savedRot);
+      ballGroup.updateMatrixWorld(true);
+
+      requestRender();
+    }
+
+    // V5 — Remplace les matériaux du glTF tee par vert néon emissive.
+    // L'emissive 0x39ff88 + intensity 1.4 est capté par le bloom existant
+    // (threshold 0.94) → glow naturel sans pass additionnel.
+    function greenifyTee(tee: any) {
+      const teeMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0x0a1a0a,
+        emissive: 0x39ff88,
+        emissiveIntensity: 1.4,
+        metalness: 0.6,
+        roughness: 0.35,
+        clearcoat: 0.8,
+        clearcoatRoughness: 0.2,
+        envMapIntensity: 0.7,
+      });
+      tee.traverse((child: any) => {
+        if (child.isMesh) {
+          child.material = teeMaterial;
+        }
+      });
+    }
+
+    // === Load GLB ===================================================
+    const loader = new GLTFLoader();
+    loader.load(
+      '/models/golf_ball.glb',
+      (gltf) => {
+        const ball = gltf.scene;
+
+        const box = new THREE.Box3().setFromObject(ball);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const targetDiameter = 1.0;
+        const baseScale = targetDiameter / maxDim;
+
+        ball.scale.setScalar(baseScale);
+        ball.position.set(-center.x * baseScale, -center.y * baseScale, -center.z * baseScale);
+
+        ballGroup.add(ball);
+        chromifyBall(ball);
+        addSLogoDecals(ball);
+        applyBallState();
+        canvas.dataset.ready = 'true';
+        if (shadow) shadow.dataset.ready = 'true';
+        requestRender();
+
+        // V5 — tick minimal : pas de rotation auto, pas de bobbing.
+        // Tout est scroll-tied → la scène est immobile quand on ne scrolle pas.
+        // Le tick ne sert qu'à gérer le trail particles (decay + visibility),
+        // qui doit continuer même quand le scroll est arrêté pour que les
+        // particules émises pendant le swing finissent leur fade-out.
+        if (!prefersReduced) {
+          let lastTime = performance.now();
+          function tick(time: number) {
+            const deltaMs = time - lastTime;
+            const dt = deltaMs / 1000;
+            lastTime = time;
+
+            // V5 — fire dust burst (one-shot par swing, debounced)
+            maybeFireSwingImpact();
+
+            // Émission trail si on est dans une fenêtre swing
+            const inSwing1 = scrollProgress >= 0.0 && scrollProgress <= 0.10;
+            const inSwing2 = scrollProgress >= 0.92 && scrollProgress <= 1.0;
+            if (inSwing1 || inSwing2) {
+              emitTrailParticle();
+            }
+
+            // Update trail particles (decay vers noir = invisible additif)
+            let trailAlive = false;
+            const trailPosAttr = trailGeometry.getAttribute('position');
+            const trailColAttr = trailGeometry.getAttribute('color');
+            for (let i = 0; i < TRAIL_COUNT; i++) {
+              if (trailLifetimes[i] > 0) {
+                trailLifetimes[i] -= deltaMs;
+                if (trailLifetimes[i] < 0) trailLifetimes[i] = 0;
+                const k = trailLifetimes[i] / TRAIL_LIFETIME_MS;
+                trailColors[i * 3 + 0] = TRAIL_R * k;
+                trailColors[i * 3 + 1] = TRAIL_G * k;
+                trailColors[i * 3 + 2] = TRAIL_B * k;
+                trailAlive = true;
+              } else {
+                trailColors[i * 3 + 0] = 0;
+                trailColors[i * 3 + 1] = 0;
+                trailColors[i * 3 + 2] = 0;
+              }
+            }
+            trailPosAttr.needsUpdate = true;
+            trailColAttr.needsUpdate = true;
+            trailPoints.visible = trailAlive;
+
+            // Update dust particles : intégration vélocité + gravité + drag + fade
+            let dustAlive = false;
+            const dustPosAttr = dustGeometry.getAttribute('position');
+            const dustColAttr = dustGeometry.getAttribute('color');
+            for (let i = 0; i < DUST_COUNT; i++) {
+              if (dustLifetimes[i] > 0) {
+                dustLifetimes[i] -= deltaMs;
+                if (dustLifetimes[i] < 0) dustLifetimes[i] = 0;
+                // Intégration position
+                dustPositions[i * 3 + 0] += dustVelocities[i * 3 + 0] * dt;
+                dustPositions[i * 3 + 1] += dustVelocities[i * 3 + 1] * dt;
+                dustPositions[i * 3 + 2] += dustVelocities[i * 3 + 2] * dt;
+                // Gravité Y
+                dustVelocities[i * 3 + 1] -= 1.8 * dt;
+                // Drag (air resistance)
+                dustVelocities[i * 3 + 0] *= 0.95;
+                dustVelocities[i * 3 + 1] *= 0.97;
+                dustVelocities[i * 3 + 2] *= 0.95;
+                // Fade couleur
+                const k = dustLifetimes[i] / DUST_LIFETIME_MS;
+                dustColors[i * 3 + 0] = DUST_R * k;
+                dustColors[i * 3 + 1] = DUST_G * k;
+                dustColors[i * 3 + 2] = DUST_B * k;
+                dustAlive = true;
+              } else {
+                dustColors[i * 3 + 0] = 0;
+                dustColors[i * 3 + 1] = 0;
+                dustColors[i * 3 + 2] = 0;
+              }
+            }
+            dustPosAttr.needsUpdate = true;
+            dustColAttr.needsUpdate = true;
+            dustPoints.visible = dustAlive;
+
+            // V5 — vortex pendant ProblemNarrative (scroll 0.08-0.20)
+            const inVortex = scrollProgress >= 0.08 && scrollProgress <= 0.20;
+            if (inVortex) {
+              // Fade in/out aux extrémités de la fenêtre
+              let vortexFade = 1.0;
+              if (scrollProgress < 0.10) vortexFade = (scrollProgress - 0.08) / 0.02;
+              else if (scrollProgress > 0.18) vortexFade = (0.20 - scrollProgress) / 0.02;
+              vortexFade = Math.max(0, Math.min(1, vortexFade));
+
+              const vortexPosAttr = vortexGeometry.getAttribute('position');
+              const vortexColAttr = vortexGeometry.getAttribute('color');
+              for (let i = 0; i < VORTEX_COUNT; i++) {
+                vortexAngles[i] += vortexAngularVel[i] * dt;
+                const r = vortexRadii[i];
+                const a = vortexAngles[i];
+                vortexPositions[i * 3 + 0] = ballState.x + Math.cos(a) * r;
+                vortexPositions[i * 3 + 1] = ballState.y + vortexHeights[i];
+                // Z varie selon sin(angle) → particules passent devant et derrière
+                // mais depthTest:false → toujours rendues devant
+                vortexPositions[i * 3 + 2] = Math.sin(a) * r * 0.5 + 0.3;
+                vortexColors[i * 3 + 0] = TRAIL_R * vortexFade;
+                vortexColors[i * 3 + 1] = TRAIL_G * vortexFade;
+                vortexColors[i * 3 + 2] = TRAIL_B * vortexFade;
+              }
+              vortexPosAttr.needsUpdate = true;
+              vortexColAttr.needsUpdate = true;
+              vortexPoints.visible = true;
+            } else {
+              vortexPoints.visible = false;
+            }
+
+            // Flash bloom au croisement K5/T3 (debounced)
+            maybeTriggerCrossingFlash();
+
+            // Track previous ball position pour vélocité trail
+            prevBallX = ballState.x;
+            prevBallY = ballState.y;
+
+            // On ne rend que si particules actives (sinon rendu scroll
+            // déjà déclenché par requestRender() depuis ScrollTrigger onUpdate)
+            if (trailAlive || dustAlive || vortexPoints.visible) {
+              composer.render();
+            }
+            requestAnimationFrame(tick);
+          }
+          requestAnimationFrame(tick);
+        }
+      },
+      undefined,
+      (err) => {
+        console.error('[ScrollGolfBall] Failed to load golf_ball.glb', err);
+      }
+    );
+
+    // === Load tee GLB (V5) ==========================================
+    loader.load(
+      '/models/golf_tee.glb',
+      (gltf) => {
+        const tee = gltf.scene;
+
+        // Auto-orientation : détecte l'axe le plus long du modèle et
+        // applique une rotation pour aligner cet axe avec Y (vertical
+        // monde). Évite de hardcoder une rotation propre à ce GLB.
+        const initialBox = new THREE.Box3().setFromObject(tee);
+        const initialSize = new THREE.Vector3();
+        initialBox.getSize(initialSize);
+        if (initialSize.z > initialSize.y && initialSize.z > initialSize.x) {
+          // Long axis = Z → rotate +90° X pour Z devenir -Y (pointe vers le bas)
+          tee.rotation.x = Math.PI / 2;
+        } else if (initialSize.x > initialSize.y) {
+          // Long axis = X → rotate -90° Z pour X devenir -Y
+          tee.rotation.z = -Math.PI / 2;
+        } else {
+          // Long axis = Y déjà, mais on suppose tip vers le haut par défaut,
+          // donc flip pour le mettre vers le bas (tee planté = pointe vers le bas)
+          tee.rotation.x = Math.PI;
+        }
+
+        // Léger tilt constant Z (~5°) pour casser la rigidité parfaitement
+        // verticale — ajoute du caractère statique au tee planté.
+        tee.rotation.z += 0.09;
+
+        tee.updateMatrixWorld(true);
+
+        // Recompute bbox APRÈS rotation pour centrer correctement
+        const box = new THREE.Box3().setFromObject(tee);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const teeTarget = 0.7;
+        const baseScale = teeTarget / maxDim;
+
+        tee.scale.setScalar(baseScale);
+        // Centre le tee sur l'origine du teeGroup
+        tee.position.set(
+          -center.x * baseScale,
+          -center.y * baseScale,
+          -center.z * baseScale,
+        );
+
+        teeGroup.add(tee);
+        teeInner = tee;
+        greenifyTee(tee);
+        applyTeeState();
+        requestRender();
+      },
+      undefined,
+      (err) => {
+        console.error('[ScrollGolfBall] Failed to load golf_tee.glb', err);
+      }
+    );
+
+    if (!prefersReduced) {
+      // Sync ScrollTrigger avec Lenis si présent
+      const lenis = (window as unknown as { __lenis?: { on: (ev: string, cb: () => void) => void } }).__lenis;
+      if (lenis && typeof lenis.on === 'function') {
+        lenis.on('scroll', ScrollTrigger.update);
+      }
+
+      // Position initiale V5 : balle POSÉE SUR LE TEE au Hero
+      // tee_y=-0.9, tee_top = -0.9 + 0.35 = -0.55
+      // ball_y = tee_top + ball_radius = -0.55 + 0.4 = -0.15
+      ballState.x = 0;
+      ballState.y = -0.15;
+      ballState.scale = 0.8;
+      teeState.x = 0;
+      teeState.y = -0.9;
+      teeState.rotZ = 0;
+      teeState.scale = 1.0;
+      applyBallState();
+      applyTeeState();
+
+      // Master timeline qui couvre 0% → 100% du scroll document.
+      // V5 : 2 timelines parallèles (balle + tee) sync sur la même ScrollTrigger
+      // via la position scroll progress. onUpdate met à jour les deux + scrollProgress.
+      const tlBall = gsap.timeline({
+        defaults: { ease: 'power2.inOut' },
+        scrollTrigger: {
+          trigger: document.documentElement,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.6,
+          invalidateOnRefresh: true,
+          onUpdate: (self) => {
+            scrollProgress = self.progress;
+            applyBallState();
+            applyTeeState();
+            requestRender();
+          },
+        },
+      });
+
+      // === BALLE (10 keyframes V5) ====================================
+      // K0 (0%) → K1 (8%) : SWING #1 — balle décolle du tee vers le haut
+      tlBall.to(ballState, { duration: 0.08, x: 0, y: 1.5, scale: 0.7 });
+      // K1 → K2 (8% → 18%) : Problem traverse vertical haut → bas
+      tlBall.to(ballState, { duration: 0.10, x: 0, y: -1.4, scale: 0.55 });
+      // K2 → K3 (18% → 28%) : ThreeSteps droite
+      tlBall.to(ballState, { duration: 0.10, x: 2.1, y: 0, scale: 0.55 });
+      // K3 → K4 (28% → 38%) : PhoneShowcase haut-droite en retrait (visible)
+      tlBall.to(ballState, { duration: 0.10, x: 1.4, y: 1.2, scale: 0.45 });
+      // K4 → K5 (38% → 48%) : Croisement tee mid-scroll
+      // Décalé en BAS-GAUCHE pour éviter eyebrow + titre + phone mockup
+      // de PhoneShowcase. Stacking : tee T3 à y=-0.85 ; tee_top = -0.85 +
+      // (0.35 * 0.85) = -0.553. Ball y = -0.553 + 0.3 (radius scale 0.6) ≈ -0.25
+      tlBall.to(ballState, { duration: 0.10, x: -2.6, y: -0.25, scale: 0.6 });
+      // K5 → K6 (48% → 58%) : ClubsShowcase haut-gauche
+      tlBall.to(ballState, { duration: 0.10, x: -2.0, y: 1.4, scale: 0.5 });
+      // K6 → K7 (58% → 70%) : HowItWorks/Pricing transition droite
+      tlBall.to(ballState, { duration: 0.12, x: 2.2, y: 0.6, scale: 0.45 });
+      // K7 → K8 (70% → 82%) : FAQ gauche-bas
+      tlBall.to(ballState, { duration: 0.12, x: -1.6, y: -0.8, scale: 0.5 });
+      // K8 → K9 (82% → 92%) : Retour POSÉE SUR TEE (CTA plant)
+      // Même config que K0 : ball_y = -0.15 pour reposer sur tee_y=-0.9
+      tlBall.to(ballState, { duration: 0.10, x: 0, y: -0.15, scale: 0.8 });
+      // K9 → K10 (92% → 100%) : SWING #2 finale vers CTA card
+      tlBall.to(ballState, { duration: 0.08, x: 0, y: 0.7, scale: 1.2 });
+
+      // === TEE (7 keyframes V5) =======================================
+      // Timeline jumelle sur même ScrollTrigger (durations totalisent 1.0 aussi)
+      const tlTee = gsap.timeline({
+        defaults: { ease: 'power2.inOut' },
+        scrollTrigger: {
+          trigger: document.documentElement,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.6,
+          invalidateOnRefresh: true,
+        },
+      });
+      // T0 (0%) → T1 (8%) : Recoil swing #1 (tilt -8° à l'impact)
+      tlTee.to(teeState, { duration: 0.08, x: 0, y: -0.9, rotZ: -0.14, scale: 1.0 });
+      // T1 → T1a (8% → 12%) : FADE OUT FAST — disparait pour pas croiser
+      // la balle qui descend avec le vortex pendant ProblemNarrative
+      tlTee.to(teeState, { duration: 0.04, x: 0, y: -0.9, rotZ: -0.14, scale: 0 });
+      // T1a → T1b (12% → 30%) : caché, drift vers position gauche
+      tlTee.to(teeState, { duration: 0.18, x: -2.6, y: -0.4, rotZ: 0, scale: 0 });
+      // T1b → T2 (30% → 35%) : RÉAPPARAÎT en bas-gauche
+      tlTee.to(teeState, { duration: 0.05, x: -2.6, y: -0.4, rotZ: 0, scale: 0.85 });
+      // T2 → T3 (35% → 50%) : Croisement avec balle en bas-gauche
+      // (tilt +15°, sous la ball K5 à y=-0.25 pour stacking propre)
+      tlTee.to(teeState, { duration: 0.15, x: -2.6, y: -0.85, rotZ: 0.26, scale: 0.85 });
+      // T3 → T4 (50% → 75%) : Drift droite
+      tlTee.to(teeState, { duration: 0.25, x: 2.0, y: -0.6, rotZ: 0, scale: 0.85 });
+      // T4 → T5 (75% → 92%) : Retour CTA plant vertical
+      tlTee.to(teeState, { duration: 0.17, x: 0, y: -0.9, rotZ: 0, scale: 1.0 });
+      // T5 → T6 (92% → 100%) : Recoil swing #2 (tilt -12°)
+      tlTee.to(teeState, { duration: 0.08, x: 0, y: -0.9, rotZ: -0.21, scale: 1.0 });
+    }
+
+    // === Resize handler =============================================
+    window.addEventListener('resize', () => {
+      if (window.innerWidth <= 640) return;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h, false);
+      composer.setSize(w, h);
+      bloomPass.resolution.set(w, h);
+      requestRender();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initScrollGolfBall);
+  } else {
+    initScrollGolfBall();
+  }
+</script>

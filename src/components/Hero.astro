@@ -18,31 +18,8 @@ const t = useT(locale);
 
   <div class="container hero-content">
     <div class="hero-text">
-      <h1 class="hero-logo"><span class="hero-logo-text" data-anim="hero-logo">Scluba</span><span class="hero-ball" data-hero-ball aria-hidden="true">
-        <svg viewBox="0 0 32 32">
-          <defs>
-            <radialGradient id="ballBody" cx="32%" cy="28%" r="78%">
-              <stop offset="0%" stop-color="#FFFFFF"/>
-              <stop offset="55%" stop-color="#F2F0E8"/>
-              <stop offset="100%" stop-color="#A8A296"/>
-            </radialGradient>
-            <clipPath id="ballClip">
-              <circle cx="16" cy="16" r="13.6"/>
-            </clipPath>
-          </defs>
-          <circle cx="16" cy="16" r="13.8" fill="url(#ballBody)"/>
-          <g clip-path="url(#ballClip)" fill="#000" opacity="0.13">
-            <circle cx="10" cy="9" r="0.7"/><circle cx="13.2" cy="9" r="0.7"/><circle cx="16.4" cy="9" r="0.7"/><circle cx="19.6" cy="9" r="0.7"/><circle cx="22.8" cy="9" r="0.7"/>
-            <circle cx="8.4" cy="11.8" r="0.7"/><circle cx="11.6" cy="11.8" r="0.7"/><circle cx="14.8" cy="11.8" r="0.7"/><circle cx="18" cy="11.8" r="0.7"/><circle cx="21.2" cy="11.8" r="0.7"/><circle cx="24.4" cy="11.8" r="0.7"/>
-            <circle cx="10" cy="14.6" r="0.7"/><circle cx="13.2" cy="14.6" r="0.7"/><circle cx="16.4" cy="14.6" r="0.7"/><circle cx="19.6" cy="14.6" r="0.7"/><circle cx="22.8" cy="14.6" r="0.7"/>
-            <circle cx="8.4" cy="17.4" r="0.7"/><circle cx="11.6" cy="17.4" r="0.7"/><circle cx="14.8" cy="17.4" r="0.7"/><circle cx="18" cy="17.4" r="0.7"/><circle cx="21.2" cy="17.4" r="0.7"/><circle cx="24.4" cy="17.4" r="0.7"/>
-            <circle cx="10" cy="20.2" r="0.7"/><circle cx="13.2" cy="20.2" r="0.7"/><circle cx="16.4" cy="20.2" r="0.7"/><circle cx="19.6" cy="20.2" r="0.7"/><circle cx="22.8" cy="20.2" r="0.7"/>
-            <circle cx="11.6" cy="23" r="0.7"/><circle cx="14.8" cy="23" r="0.7"/><circle cx="18" cy="23" r="0.7"/><circle cx="21.2" cy="23" r="0.7"/>
-          </g>
-          <ellipse cx="11.5" cy="9" rx="3.8" ry="2.4" fill="#FFFFFF" opacity="0.6"/>
-          <circle cx="16" cy="16" r="13.8" fill="none" stroke="#7A7468" stroke-width="0.5" opacity="0.45"/>
-        </svg>
-      </span></h1>
+      <span class="hero-eyebrow eyebrow-mono" data-anim="hero-eyebrow">{t.hero.eyebrow}</span>
+      <h1 class="hero-logo text-mega"><span class="hero-logo-text" data-anim="hero-logo">Scluba</span></h1>
       <p class="hero-tagline" data-anim="hero-tagline">{t.hero.tagline}</p>
       <p class="hero-sub" data-anim="hero-sub">{t.hero.subtagline}</p>
       <a href="#cta" class="btn btn-accent hero-cta" data-anim="hero-cta">
@@ -54,8 +31,9 @@ const t = useT(locale);
       </a>
     </div>
 
-    <div class="hero-visual" data-anim="hero-phone" aria-hidden="true">
+    <div class="hero-visual glow-accent" data-anim="hero-phone" aria-hidden="true">
       <div class="hero-phone-stage">
+        <span class="hero-phone-neon" aria-hidden="true"></span>
         <div class="hero-phone">
           <!-- Boutons latéraux -->
           <span class="hero-phone-btn hero-phone-btn-action"></span>
@@ -69,168 +47,69 @@ const t = useT(locale);
               <span class="hero-phone-camera"></span>
             </div>
 
-            <!-- Carte récap brandée (statique, version condensée du magic moment) -->
-            <div class="hero-card">
-              <!-- Photo -->
+            <!-- V4.4 : Hero phone = écran "Démarrer une partie" (entry point
+                 du flow joueur, mirror Scluba webapp réelle). Photo Golf du
+                 Soleil + logo + identité + stats + form solo/multi. -->
+            <div class="hero-card hero-card-start">
+              <!-- Photo banner top -->
               <div class="hero-card-photo">
-                <img src="/photos/golf-du-soleil.jpg" alt="" width="280" height="110" loading="eager" decoding="async" fetchpriority="high" />
-                <div class="hero-card-photo-fade"></div>
+                <img src="/photos/golf-du-soleil.jpg" alt="" width="280" height="180" loading="eager" decoding="async" fetchpriority="high" />
               </div>
 
-              <!-- Logo + nom -->
-              <div class="hero-card-brand">
-                <img src="/logos/golf-du-soleil.svg" alt="" class="hero-card-logo" width="50" height="50" loading="eager" decoding="async" />
-                <div class="hero-card-meta">
-                  <small>Carte récap</small>
-                  <strong>Golf du Soleil</strong>
+              <!-- Logo circle overlapping -->
+              <div class="hero-card-logo-wrap">
+                <img src="/logos/golf-du-soleil.svg" alt="" class="hero-card-logo" width="60" height="60" loading="eager" decoding="async" />
+              </div>
+
+              <!-- Club identity -->
+              <div class="hero-card-identity">
+                <span class="hero-card-city">HAUTS-DE-FRANCE</span>
+                <h3 class="hero-card-name">GOLF DU SOLEIL</h3>
+                <span class="hero-card-rule" aria-hidden="true"></span>
+              </div>
+
+              <!-- Stats strip -->
+              <div class="hero-card-stats">
+                <div class="hero-card-stat">
+                  <span class="hero-card-stat-label">TROUS</span>
+                  <span class="hero-card-stat-value">18</span>
+                </div>
+                <div class="hero-card-stat">
+                  <span class="hero-card-stat-label">PAR</span>
+                  <span class="hero-card-stat-value">72</span>
+                </div>
+                <div class="hero-card-stat">
+                  <span class="hero-card-stat-label">DÉPART</span>
+                  <span class="hero-card-stat-value">Libre</span>
                 </div>
               </div>
 
-              <!-- Body -->
-              <div class="hero-card-body">
-                <div class="hero-card-divider">
-                  <span></span><em>SCORE · 18 TROUS</em><span></span>
-                </div>
-                <div class="hero-card-score">87</div>
-                <div class="hero-card-score-meta">+15 · Par 72</div>
+              <!-- Action section -->
+              <div class="hero-card-action">
+                <span class="hero-card-eyebrow">SCORECARD DIGITALE</span>
+                <h4 class="hero-card-title">Démarrer une partie</h4>
 
-                <div class="hero-card-grid">
-                  {Array.from({ length: 18 }, (_, i) => (
-                    <span class={`hero-card-cell ${i % 5 === 0 ? 'is-birdie' : i % 3 === 0 ? 'is-bogey' : ''}`}>{(i % 4) + 3}</span>
-                  ))}
+                <div class="hero-card-tabs" aria-hidden="true">
+                  <span class="hero-card-tab is-active">En solo</span>
+                  <span class="hero-card-tab">À plusieurs</span>
                 </div>
 
-                <button class="hero-share-cta" type="button" data-share-open aria-label={t.share.ctaButton}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                    <polyline points="16 6 12 2 8 6"/>
-                    <line x1="12" y1="2" x2="12" y2="15"/>
+                <div class="hero-card-field">
+                  <label>TON PRÉNOM</label>
+                  <div class="hero-card-input">
+                    <span class="hero-card-input-placeholder">Antoine</span>
+                    <span class="hero-card-input-caret"></span>
+                  </div>
+                </div>
+
+                <button class="hero-card-cta" type="button" tabindex="-1" aria-hidden="true">
+                  Créer la partie
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14"/>
+                    <path d="m12 5 7 7-7 7"/>
                   </svg>
-                  <span>{t.share.ctaButton}</span>
                 </button>
-
-                <div class="hero-card-footer">
-                  <span>FAIT À</span><strong>Scluba<em>.</em></strong>
-                </div>
               </div>
-
-              <!-- iOS Share Sheet -->
-              <div class="ios-sheet-backdrop" data-share-backdrop aria-hidden="true"></div>
-
-              <aside class="ios-sheet" data-share-sheet aria-hidden="true">
-                <div class="ios-sheet-handle"></div>
-
-                <div class="ios-sheet-preview">
-                  <div class="ios-preview-icon">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/>
-                      <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                  </div>
-                  <div class="ios-preview-meta">
-                    <strong>{t.share.previewName}</strong>
-                    <span>{t.share.previewLabel}</span>
-                  </div>
-                </div>
-
-                <div class="ios-sheet-row ios-row-contacts">
-                  {t.share.contacts.map((c) => (
-                    <button class="ios-contact" type="button" data-share-action={c.name} style={`--ava-bg: ${c.color}`}>
-                      <span class="ios-avatar">
-                        <span class="ios-avatar-initials">{c.initials}</span>
-                        <span class="ios-avatar-badge">
-                          <svg viewBox="0 0 24 24" width="6" height="6" fill="white" aria-hidden="true">
-                            <path d="M19.7 4.3c-.4-.4-1-.4-1.4 0L9 13.6 5.7 10.3c-.4-.4-1-.4-1.4 0s-.4 1 0 1.4L9 16.4l9.7-9.7c.4-.4.4-1 0-1.4z"/>
-                          </svg>
-                        </span>
-                      </span>
-                      <span class="ios-contact-name">{c.name}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div class="ios-sheet-row ios-row-apps">
-                  {t.share.apps.map((app) => (
-                    <button class={`ios-app ios-app-${app.toLowerCase()}`} type="button" data-share-action={app} aria-label={app}>
-                      <span class="ios-app-icon">
-                        {app === 'Instagram' && (
-                          <svg viewBox="0 0 24 24" width="20" height="20" fill="white" aria-hidden="true">
-                            <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="white" stroke-width="2"/>
-                            <circle cx="12" cy="12" r="4" fill="none" stroke="white" stroke-width="2"/>
-                            <circle cx="17.5" cy="6.5" r="1.2" fill="white"/>
-                          </svg>
-                        )}
-                        {app === 'WhatsApp' && (
-                          <svg viewBox="0 0 24 24" width="20" height="20" fill="white" aria-hidden="true">
-                            <path d="M17.5 14.4c-.3-.1-1.7-.8-2-1-.3-.1-.5-.1-.7.2-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5l.3-.4c.1-.2 0-.3 0-.5l-.9-2c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2 0 1.3.9 2.6 1.1 2.8.1.2 1.9 2.9 4.6 4 .6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.7.4 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/>
-                          </svg>
-                        )}
-                        {app === 'Snapchat' && (
-                          <svg viewBox="0 0 24 24" width="22" height="22" fill="#000" aria-hidden="true">
-                            <path d="M12 2.5c2.7 0 5 2.2 5 5 0 1.5-.1 2.7-.2 3.4.4.2.8.4 1.3.6.5.2 1 .4 1.5.4.3 0 .5.2.5.5 0 .4-.4.7-1 1-.7.3-1.5.5-1.6.7-.1.2 0 .5.4 1.2.4.6.9 1.1 1.7 1.4.5.2.7.3.7.6 0 .5-1.5.9-2.4 1-.3 0-.4.1-.5.4 0 .2-.1.4-.2.6-.1.3-.4.4-.7.4-.3 0-.6-.1-.9-.2-.6-.2-1.2-.3-2-.3-.4 0-.8.1-1.2.3-.7.4-1.4.9-2.4.9-.9 0-1.6-.5-2.3-.9-.4-.2-.8-.3-1.2-.3-.8 0-1.4.1-2 .3-.3.1-.6.2-.9.2-.4 0-.7-.2-.8-.5-.1-.2-.1-.4-.1-.6-.1-.2-.2-.3-.5-.3-.9-.1-2.4-.5-2.4-1 0-.3.2-.4.7-.6.8-.3 1.4-.8 1.7-1.4.4-.7.4-1 .3-1.2-.1-.2-.9-.4-1.6-.7-.6-.3-1-.6-1-1 0-.3.2-.5.5-.5.5 0 1-.2 1.5-.4.5-.2.9-.4 1.3-.6-.1-.7-.2-1.9-.2-3.4 0-2.7 2.3-5 5-5z"/>
-                          </svg>
-                        )}
-                        {app === 'X' && (
-                          <svg viewBox="0 0 24 24" width="18" height="18" fill="white" aria-hidden="true">
-                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                          </svg>
-                        )}
-                        {app === 'Facebook' && (
-                          <svg viewBox="0 0 24 24" width="22" height="22" fill="white" aria-hidden="true">
-                            <path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.43H7.08v-3.5h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.69.24 2.69.24v2.97h-1.52c-1.49 0-1.95.93-1.95 1.89v2.26h3.33l-.53 3.5h-2.8V24C19.61 23.1 24 18.1 24 12.07z"/>
-                          </svg>
-                        )}
-                        {app === 'Mail' && (
-                          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="2" y="4" width="20" height="16" rx="2"/>
-                            <path d="m22 7-10 5L2 7"/>
-                          </svg>
-                        )}
-                      </span>
-                      <span class="ios-app-name">{app}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <ul class="ios-sheet-actions">
-                  {t.share.actions.map((action, i) => (
-                    <li>
-                      <button class="ios-action" type="button" data-share-action={action}>
-                        <span>{action}</span>
-                        <span class="ios-action-icon">
-                          {i === 0 && (
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                            </svg>
-                          )}
-                          {i === 1 && (
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <circle cx="12" cy="12" r="10"/>
-                              <path d="M2 12h20"/>
-                              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                            </svg>
-                          )}
-                          {i === 2 && (
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                              <polyline points="7 10 12 15 17 10"/>
-                              <line x1="12" y1="15" x2="12" y2="3"/>
-                            </svg>
-                          )}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-
-                <button class="ios-sheet-cancel" type="button" data-share-close>
-                  {locale === 'fr' ? 'Annuler' : 'Cancel'}
-                </button>
-
-                <div class="ios-sheet-toast" data-share-toast>{t.share.linkCopied}</div>
-              </aside>
             </div>
           </div>
         </div>
@@ -304,13 +183,29 @@ const t = useT(locale);
     }
   }
 
+  /* Eyebrow mono au-dessus du logo — pattern jeskojets/drinksom */
+  .hero-eyebrow {
+    display: block;
+    margin-bottom: var(--space-4);
+    color: var(--accent);
+  }
+
+  /* Hero logo SCLUBA caps Big Shoulders Display — cohérent avec le wordmark
+     Nav/Footer (Modern Mono direction validée 2026-05-19 PR #95). La balle
+     SVG inline historique est supprimée — la balle 3D Three.js (fixed
+     inset:0) joue ce rôle visuel maintenant à plus grande échelle. */
   .hero-logo {
-    font-family: var(--font-serif);
-    font-size: var(--text-hero);
-    line-height: 0.95;
+    line-height: 0.82;
     margin-bottom: var(--space-5);
     color: var(--primary);
     overflow: hidden;
+  }
+  .hero-logo .hero-logo-text {
+    font-family: var(--font-display);
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    color: var(--cream, var(--primary));
+    display: inline-block;
   }
 
   .hero-logo :global(.char) {
@@ -319,13 +214,14 @@ const t = useT(locale);
   }
 
   .hero-tagline {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
+    font-weight: 700;
     font-size: clamp(1.5rem, 3vw, 2.25rem);
-    line-height: 1.2;
-    color: var(--ink);
+    line-height: 1.15;
+    color: var(--cream, var(--ink));
     margin-bottom: var(--space-4);
-    max-width: 18ch;
-    letter-spacing: -0.01em;
+    max-width: 22ch;
+    letter-spacing: -0.025em;
   }
 
   .hero-sub {
@@ -349,6 +245,70 @@ const t = useT(locale);
   }
   .hero-phone-stage {
     position: relative;
+    display: inline-block;
+    line-height: 0;
+  }
+
+  /* V5 — Néon vert conic sweep autour du Hero phone (même pattern que
+     PhoneShowcase). Span absolu positionné aux mêmes dimensions que
+     .hero-phone, masqué en anneau (mask xor) avec drop-shadow glow. */
+  @property --hero-neon-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  .hero-phone-neon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    height: min(75vh, 680px);
+    aspect-ratio: 9 / 19.5;
+    width: auto;
+    border-radius: 60px;
+    padding: 4px;
+    background: conic-gradient(
+      from var(--hero-neon-angle),
+      transparent 0deg,
+      transparent 265deg,
+      rgba(0, 220, 130, 0.35) 295deg,
+      rgba(0, 220, 130, 0.85) 340deg,
+      #00FF9A 357deg,
+      rgba(0, 220, 130, 0.85) 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+            mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    z-index: 0;
+    filter:
+      drop-shadow(0 0 6px rgba(0, 220, 130, 0.85))
+      drop-shadow(0 0 18px rgba(0, 220, 130, 0.55));
+    animation: heroNeonSweep 4s linear infinite;
+  }
+  @keyframes heroNeonSweep {
+    to { --hero-neon-angle: 360deg; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-phone-neon {
+      animation: none;
+      background: rgba(0, 220, 130, 0.55);
+    }
+  }
+  @supports not (background: paint(angle-painter)) {
+    .hero-phone-neon {
+      background: rgba(0, 220, 130, 0.55);
+      animation: heroNeonPulse 3s ease-in-out infinite;
+    }
+    @keyframes heroNeonPulse {
+      0%, 100% { opacity: 0.45; }
+      50%      { opacity: 0.90; }
+    }
   }
 
   /* === Progressive enhancement : scroll-driven CSS natif ===
@@ -394,67 +354,144 @@ const t = useT(locale);
     display: block;
   }
 
+  /* V4.2 — iPhone 17 Pro titanium frame plus large + couches CSS détaillées.
+     Height 75vh (était 64vh, +17% présence). Bevel intérieur + gloss
+     reflection + speaker grille top pour pousser le réalisme. */
   .hero-phone {
     position: relative;
-    height: min(64vh, 580px);
+    height: min(75vh, 680px);
     aspect-ratio: 9 / 19.5;
     width: auto;
-    background: linear-gradient(135deg, #5a5a5d 0%, #2a2a2c 18%, #1a1a1c 40%, #2a2a2c 60%, #4a4a4d 78%, #2a2a2c 100%);
-    border-radius: 46px;
-    padding: 10px;
-    /* Ombre verticale propre (phone face-on, virage.one style) */
+    background:
+      linear-gradient(135deg,
+        #6E6E72 0%,
+        #48484A 22%,
+        #2C2C2E 50%,
+        #48484A 78%,
+        #6E6E72 100%);
+    border-radius: 56px;
+    padding: 12px;
     box-shadow:
-      0 32px 64px rgba(27, 67, 50, 0.28),
-      0 12px 24px rgba(0, 0, 0, 0.18),
-      inset 0 1px 0 rgba(255, 255, 255, 0.18),
-      0 0 0 1.2px rgba(0, 0, 0, 0.6);
+      0 24px 48px rgba(0, 0, 0, 0.40),
+      0 48px 96px rgba(0, 0, 0, 0.30),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 0 0 1.5px rgba(0, 0, 0, 0.70);
     will-change: transform;
     z-index: 1;
   }
+  /* Bevel intérieur — micro-trait clair à la jonction frame/screen */
+  .hero-phone::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border-radius: 50px;
+    pointer-events: none;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    z-index: 2;
+  }
+  /* Reflet diagonal gloss subtil sur le verre */
+  .hero-phone::after {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border-radius: 44px;
+    pointer-events: none;
+    background: linear-gradient(
+      138deg,
+      rgba(255, 255, 255, 0.10) 0%,
+      rgba(255, 255, 255, 0) 35%,
+      rgba(255, 255, 255, 0) 75%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+    z-index: 4;
+    mix-blend-mode: screen;
+  }
 
+  /* Boutons latéraux titanium (gradient cohérent avec le frame) */
   .hero-phone-btn {
     position: absolute;
-    background: linear-gradient(180deg, #3a3a3c, #1a1a1c, #3a3a3c);
+    background: linear-gradient(180deg, #5C5C5E 0%, #2C2C2E 50%, #5C5C5E 100%);
     border-radius: 1.5px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
   }
-  .hero-phone-btn-action { left: -2px; top: 70px; width: 4px; height: 24px; }
-  .hero-phone-btn-volup { left: -2px; top: 104px; width: 4px; height: 42px; }
-  .hero-phone-btn-voldown { left: -2px; top: 152px; width: 4px; height: 42px; }
-  .hero-phone-btn-side { right: -2px; top: 104px; width: 4px; height: 66px; }
+  /* Action button gold/champagne — signature iPhone Pro */
+  .hero-phone-btn-action {
+    left: -2px; top: 84px; width: 4px; height: 26px;
+    background: linear-gradient(180deg, #C9A96A 0%, #8B7344 50%, #C9A96A 100%);
+  }
+  .hero-phone-btn-volup { left: -2px; top: 122px; width: 4px; height: 48px; }
+  .hero-phone-btn-voldown { left: -2px; top: 180px; width: 4px; height: 48px; }
+  .hero-phone-btn-side { right: -2px; top: 122px; width: 4px; height: 76px; }
 
   .hero-phone-screen {
+    /* V4.3 — Sub-context palette : le phone screen redevient un "carnet
+       de partie" éditorial avec text dark sur paper dim. Isolé du body
+       Tech Bold (qui a --ink/--primary en cream). */
+    --primary: #1F1F1F;
+    --primary-soft: #3A3A3A;
+    --primary-deep: #0A0A0A;
+    --primary-bg: rgba(0, 220, 130, 0.08);
+    --accent: #00DC82;
+    --accent-soft: rgba(0, 220, 130, 0.12);
+    --accent-bright: #1AE89A;
+    --ink: #1F1F1F;
+    --ink-soft: #3A3A3A;
+    --bg: #E8E1D0;
+    --muted: #7A7A7A;
+    --line: rgba(31, 31, 31, 0.12);
+
     position: relative;
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, #FAF7EE 0%, #F4F8F5 100%);
-    border-radius: 40px;
+    background: linear-gradient(180deg, #E8E1D0 0%, #DDD5C0 100%);
+    border-radius: 44px;
     overflow: hidden;
   }
-  .hero-phone-island {
+  /* Speaker grille top — barre fine subtile (au-dessus du Dynamic Island) */
+  .hero-phone-screen::before {
+    content: "";
     position: absolute;
-    top: 9px;
+    top: 6px;
     left: 50%;
     transform: translateX(-50%);
-    width: 30%;
-    max-width: 92px;
-    min-width: 68px;
-    height: 24px;
+    width: 12%;
+    max-width: 50px;
+    height: 2px;
+    border-radius: 1px;
+    background: rgba(0, 0, 0, 0.18);
+    z-index: 4;
+  }
+  .hero-phone-island {
+    /* Dynamic Island iPhone 17 Pro — légèrement plus large + plus bas */
+    position: absolute;
+    top: 11px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32%;
+    max-width: 124px;
+    min-width: 96px;
+    height: 30px;
     background: #000;
-    border-radius: 14px;
+    border-radius: 18px;
     z-index: 5;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    padding-right: 6px;
+    padding-right: 8px;
   }
   .hero-phone-camera {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background: radial-gradient(circle at 30% 30%, #2a3a40, #050a0c);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
   }
 
-  /* Hero card — version condensée carte récap */
+  /* V4.4 — Hero card "Démarrer une partie" (Grégoire spec image 1).
+     Mirror Scluba webapp entry point : photo + logo + identité + stats
+     + form solo/multi avec CTA dark navy. */
   .hero-card {
     width: 100%;
     height: 100%;
@@ -463,7 +500,7 @@ const t = useT(locale);
   }
   .hero-card-photo {
     position: relative;
-    height: 110px;
+    height: 130px;
     overflow: hidden;
     flex-shrink: 0;
   }
@@ -471,410 +508,197 @@ const t = useT(locale);
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center 60%;
-  }
-  .hero-card-photo-fade {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 36px;
-    background: linear-gradient(180deg, transparent, #FAF7EE);
+    object-position: center 50%;
   }
 
-  .hero-card-brand {
-    margin-top: -38px;
-    text-align: center;
+  .hero-card-logo-wrap {
+    width: 64px;
+    height: 64px;
+    margin: -32px auto 0;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+    padding: 4px;
+    position: relative;
     z-index: 2;
-    padding: 0 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
   .hero-card-logo {
-    width: 50px;
-    height: 50px;
-    margin: 0 auto;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
     display: block;
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
-  }
-  .hero-card-meta { margin-top: 4px; }
-  .hero-card-meta small {
-    display: block;
-    font-size: 6.5px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    font-weight: 600;
-  }
-  .hero-card-meta strong {
-    display: block;
-    font-family: var(--font-serif);
-    font-size: 12px;
-    color: var(--primary);
-    font-weight: 700;
-    margin-top: 1px;
   }
 
-  .hero-card-body {
-    padding: 8px 12px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
+  .hero-card-identity {
+    text-align: center;
+    padding: 6px 16px 0;
   }
-  .hero-card-divider {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 4px;
+  .hero-card-city {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 4px;
   }
-  .hero-card-divider span {
-    flex: 1;
+  .hero-card-name {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: -0.015em;
+    color: var(--primary);
+    margin: 0 0 4px;
+    text-transform: uppercase;
+    line-height: 1.1;
+  }
+  .hero-card-rule {
+    display: block;
+    width: 36px;
     height: 1px;
     background: var(--accent);
+    margin: 0 auto;
     opacity: 0.5;
   }
-  .hero-card-divider em {
-    font-style: normal;
-    font-size: 6.5px;
-    color: var(--accent);
-    letter-spacing: 0.16em;
-    font-weight: 600;
+
+  .hero-card-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    padding: 8px 10px;
+    margin: 10px 12px 0;
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 6px;
   }
-  .hero-card-score {
+  .hero-card-stat {
     text-align: center;
-    font-family: var(--font-serif);
-    font-size: 44px;
+  }
+  .hero-card-stat-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+  .hero-card-stat-value {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.02em;
+  }
+
+  .hero-card-action {
+    padding: 10px 16px 14px;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .hero-card-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: var(--accent);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .hero-card-title {
+    font-family: var(--font-display);
+    font-size: 16px;
     font-weight: 800;
     color: var(--primary);
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-  }
-  .hero-card-score-meta {
-    text-align: center;
-    font-size: 8px;
-    color: var(--muted);
-    letter-spacing: 0.04em;
-  }
-  .hero-card-grid {
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    gap: 2px;
-    margin-top: 2px;
-  }
-  .hero-card-cell {
-    aspect-ratio: 1;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 2px;
-    text-align: center;
-    font-size: 7.5px;
-    font-weight: 700;
-    color: var(--ink);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-variant-numeric: tabular-nums;
-  }
-  .hero-card-cell.is-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
-  .hero-card-cell.is-bogey { color: var(--muted); }
-  .hero-card-footer {
-    text-align: center;
-    font-size: 6.5px;
-    color: var(--muted);
-    letter-spacing: 0.16em;
-    margin-top: auto;
-    padding-top: 4px;
-  }
-  .hero-card-footer strong {
-    font-family: var(--font-serif);
-    color: var(--primary);
-    font-size: 8px;
-    margin-left: 3px;
-  }
-  .hero-card-footer em {
-    font-style: normal;
-    color: var(--accent);
+    margin: 0 0 10px;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
   }
 
-  /* CTA Partager dans la carte */
-  .hero-share-cta {
-    margin-top: 4px;
+  .hero-card-tabs {
+    display: inline-flex;
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 16px;
+    padding: 3px;
+    margin: 0 auto 12px;
+    border: 1px solid var(--line);
+  }
+  .hero-card-tab {
+    padding: 4px 12px;
+    border-radius: 14px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .hero-card-tab.is-active {
+    background: var(--bg);
+    color: var(--primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .hero-card-field {
+    text-align: left;
+    margin-bottom: 12px;
+  }
+  .hero-card-field label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .hero-card-input {
+    background: rgba(255, 255, 255, 0.45);
+    border: 1.5px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .hero-card-input-placeholder {
+    color: var(--muted);
+    flex: 1;
+  }
+  .hero-card-input-caret {
+    display: inline-block;
+    width: 1.5px;
+    height: 14px;
+    background: var(--accent);
+    animation: heroCaretBlink 1s infinite;
+  }
+  @keyframes heroCaretBlink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  .hero-card-cta {
+    margin-top: auto;
     width: 100%;
+    padding: 11px;
     background: var(--primary);
     color: var(--bg);
-    border-radius: 6px;
-    padding: 6px;
-    font-size: 8.5px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.2s;
-  }
-  .hero-share-cta:hover {
-    background: var(--primary-soft);
-    transform: scale(1.02);
-  }
-  .hero-share-cta:active { transform: scale(0.98); }
-
-  /* === iOS Share Sheet === */
-  .ios-sheet-backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-    opacity: 0;
-    pointer-events: none;
-    z-index: 8;
-    border-radius: 40px;
-    overflow: hidden;
-  }
-
-  .ios-sheet {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(245, 245, 247, 0.94);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-radius: 18px 18px 0 0;
-    padding: 8px 10px 12px;
-    z-index: 9;
-    max-height: 88%;
-    overflow: hidden;
-    pointer-events: none;
-    will-change: transform;
-  }
-  .ios-sheet.is-interactive {
-    pointer-events: auto;
-  }
-  .ios-sheet-backdrop.is-interactive {
-    pointer-events: auto;
-  }
-
-  .ios-sheet-handle {
-    width: 32px;
-    height: 4px;
-    border-radius: 2px;
-    background: rgba(60, 60, 67, 0.3);
-    margin: 0 auto 8px;
-  }
-
-  .ios-sheet-preview {
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 10px;
-    padding: 8px 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-  .ios-preview-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    background: linear-gradient(135deg, var(--primary), var(--primary-soft));
-    color: var(--accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .ios-preview-meta {
-    flex: 1;
-    min-width: 0;
-  }
-  .ios-preview-meta strong {
-    display: block;
-    font-size: 9.5px;
-    font-weight: 600;
-    color: #000;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .ios-preview-meta span {
-    display: block;
-    font-size: 7.5px;
-    color: rgba(60, 60, 67, 0.6);
-    margin-top: 1px;
-  }
-
-  .ios-sheet-row {
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 10px;
-    padding: 10px 6px;
-    margin-bottom: 8px;
-  }
-
-  /* Contacts */
-  .ios-row-contacts {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .ios-row-contacts::-webkit-scrollbar { display: none; }
-  .ios-contact {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 2px;
-    width: calc(25% - 5px);
-    min-width: 50px;
-    cursor: pointer;
-    transition: transform 0.15s;
-  }
-  .ios-contact:active { transform: scale(0.92); }
-  .ios-avatar {
-    position: relative;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background: var(--ava-bg, var(--primary));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-  .ios-avatar-initials {
-    color: white;
-    font-family: var(--font-serif);
-    font-size: 13px;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 12px;
     font-weight: 700;
-  }
-  .ios-avatar-badge {
-    position: absolute;
-    bottom: -2px;
-    right: -2px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #25D366;
-    border: 2px solid rgba(245, 245, 247, 0.94);
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
+    cursor: default;
+    letter-spacing: -0.01em;
   }
-  .ios-contact-name {
-    font-size: 7.5px;
-    color: #000;
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    width: 100%;
-  }
-
-  /* Apps */
-  .ios-row-apps {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 4px;
-  }
-  .ios-app {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 2px;
-    cursor: pointer;
-    transition: transform 0.15s;
-  }
-  .ios-app:active { transform: scale(0.88); }
-  .ios-app-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-  }
-  .ios-app-instagram .ios-app-icon { background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
-  .ios-app-whatsapp .ios-app-icon { background: #25D366; }
-  .ios-app-snapchat .ios-app-icon { background: #FFFC00; }
-  .ios-app-x .ios-app-icon { background: #000000; }
-  .ios-app-facebook .ios-app-icon { background: #1877F2; }
-  .ios-app-mail .ios-app-icon { background: linear-gradient(160deg, #41a0ff, #2875e2); }
-  .ios-app-name {
-    font-size: 7px;
-    color: #000;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
-    text-align: center;
-  }
-
-  /* Actions list */
-  .ios-sheet-actions {
-    list-style: none;
-    margin: 0 0 8px;
-    padding: 0;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .ios-sheet-actions li:not(:last-child) {
-    border-bottom: 0.5px solid rgba(60, 60, 67, 0.15);
-  }
-  .ios-action {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 12px;
-    font-size: 10px;
-    color: #000;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .ios-action:hover { background: rgba(0, 0, 0, 0.04); }
-  .ios-action:active { background: rgba(0, 0, 0, 0.08); }
-  .ios-action-icon { color: rgba(60, 60, 67, 0.6); }
-
-  /* Cancel button */
-  .ios-sheet-cancel {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.94);
-    border-radius: 10px;
-    padding: 11px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #007AFF;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .ios-sheet-cancel:hover { background: white; }
-  .ios-sheet-cancel:active { background: rgba(0, 0, 0, 0.05); }
-
-  /* Toast */
-  .ios-sheet-toast {
-    position: absolute;
-    top: 14px;
-    left: 50%;
-    transform: translate(-50%, -16px);
-    background: rgba(0, 0, 0, 0.85);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 14px;
-    font-size: 9px;
-    font-weight: 600;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s, transform 0.3s var(--ease-out);
-    z-index: 11;
-    backdrop-filter: blur(10px);
-  }
-  .ios-sheet-toast.is-visible {
-    opacity: 1;
-    transform: translate(-50%, 0);
+  .hero-card-cta svg {
+    display: inline-block;
   }
 
   .hero-scroll {
@@ -900,102 +724,5 @@ const t = useT(locale);
   }
 </style>
 
-<script>
-  import { gsap } from 'gsap';
-  import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-  gsap.registerPlugin(ScrollTrigger);
-
-  function initShareSheet() {
-    const opener = document.querySelector<HTMLButtonElement>('[data-share-open]');
-    const closers = document.querySelectorAll<HTMLElement>('[data-share-close], [data-share-backdrop]');
-    const sheet = document.querySelector<HTMLElement>('[data-share-sheet]');
-    const backdrop = document.querySelector<HTMLElement>('[data-share-backdrop]');
-    const toast = document.querySelector<HTMLElement>('[data-share-toast]');
-    const actions = document.querySelectorAll<HTMLElement>('[data-share-action]');
-    const heroPhone = document.querySelector<HTMLElement>('.hero-phone');
-    if (!opener || !sheet || !backdrop || !heroPhone) return;
-
-    const children = Array.from(sheet.children).filter((el) => !el.matches('[data-share-toast]')) as HTMLElement[];
-
-    // États initiaux
-    gsap.set(sheet, { yPercent: 100 });
-    gsap.set(backdrop, { autoAlpha: 0 });
-    gsap.set(children, { autoAlpha: 0, y: 12 });
-
-    const enableInteract = () => {
-      sheet.classList.add('is-interactive');
-      backdrop.classList.add('is-interactive');
-      sheet.setAttribute('aria-hidden', 'false');
-      backdrop.setAttribute('aria-hidden', 'false');
-    };
-    const disableInteract = () => {
-      sheet.classList.remove('is-interactive');
-      backdrop.classList.remove('is-interactive');
-      sheet.setAttribute('aria-hidden', 'true');
-      backdrop.setAttribute('aria-hidden', 'true');
-    };
-
-    // === Animation scroll-driven : la sheet monte progressivement avec le scroll ===
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: heroPhone,
-        start: 'top 70%',     // commence quand le top du téléphone est à 70 % du viewport (très tôt, juste après le 1er scroll)
-        end: 'bottom 60%',    // finit quand le bas du téléphone est à 60 % du viewport (la sheet est pleine bien avant qu'on quitte le hero)
-        scrub: 1.2,           // smooth lag derrière le scroll
-        onUpdate: (self) => {
-          if (self.progress > 0.6) enableInteract();
-          else disableInteract();
-        },
-      },
-    });
-
-    tl.to(sheet, { yPercent: 0, ease: 'none' }, 0);
-    tl.to(backdrop, { autoAlpha: 1, ease: 'none' }, 0);
-    tl.to(children, { autoAlpha: 1, y: 0, stagger: 0.04, ease: 'power2.out' }, 0.35);
-
-    // === Bouton manuel "Partager" : force open immédiat ===
-    const forceOpen = () => {
-      gsap.to(sheet, { yPercent: 0, duration: 0.55, ease: 'power3.out', overwrite: true });
-      gsap.to(backdrop, { autoAlpha: 1, duration: 0.4, overwrite: true });
-      gsap.to(children, { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.04, overwrite: true });
-      enableInteract();
-    };
-
-    const forceClose = () => {
-      gsap.to(sheet, { yPercent: 100, duration: 0.45, ease: 'power3.in', overwrite: true });
-      gsap.to(backdrop, { autoAlpha: 0, duration: 0.3, overwrite: true });
-      gsap.to(children, { autoAlpha: 0, y: 12, duration: 0.2, overwrite: true });
-      disableInteract();
-    };
-
-    opener.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (sheet.classList.contains('is-interactive')) forceClose();
-      else forceOpen();
-    });
-    closers.forEach((el) => el.addEventListener('click', forceClose));
-
-    // Click action : toast + close
-    actions.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (toast) {
-          toast.classList.add('is-visible');
-          setTimeout(() => toast.classList.remove('is-visible'), 1400);
-        }
-        setTimeout(forceClose, 300);
-      });
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && sheet.classList.contains('is-interactive')) forceClose();
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initShareSheet);
-  } else {
-    initShareSheet();
-  }
-</script>
+{/* V4.1 : inline script iOS Share Sheet supprimé — Grégoire a demandé
+    explicitement la refonte du Hero phone (drop iOS Share Sheet magic moment). */}

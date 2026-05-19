@@ -44,24 +44,32 @@ const t = useT(locale);
 
   .faq-list {
     max-width: 760px;
-    margin: 0 auto;
+    /* Décalage à droite pour laisser gauche à la balle (K8 keyframe x=-2.0) */
+    margin: 0 0 0 auto;
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+  }
+  @media (max-width: 900px) {
+    .faq-list {
+      /* Reviens au centre en mobile pour ne pas créer de gros vide */
+      margin: 0 auto;
+    }
   }
 
   .faq-item {
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
-    background: var(--bg);
-    transition: border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+    background: var(--paper, var(--bg));
+    transition: border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out), background 0.3s var(--ease-out);
     overflow: hidden;
   }
   .faq-item:hover {
     border-color: var(--accent);
   }
   .faq-item[open] {
-    border-color: var(--primary-soft);
+    border-color: var(--accent);
+    background: var(--paper-deep, var(--bg));
     box-shadow: var(--shadow-md);
   }
 

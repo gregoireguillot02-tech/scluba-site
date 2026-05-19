@@ -3,6 +3,7 @@ import '../styles/global.css';
 import LaunchBanner from '../components/LaunchBanner.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
+import ScrollGolfBall from '../components/ScrollGolfBall.astro';
 import { useT, type Locale } from '../i18n';
 
 interface Props {
@@ -11,6 +12,12 @@ interface Props {
 
 const { locale } = Astro.props;
 const t = useT(locale);
+
+// La balle de golf scroll-tied (oryzo.ai-inspired) apparaît uniquement
+// sur la home (FR + EN). Pas sur les pages utilitaires servies par Base
+// (legal, /demo, etc.) où elle distrayerait du contenu.
+const pathname = Astro.url.pathname;
+const isHomeRoute = pathname === '/' || pathname === '/en' || pathname === '/en/';
 ---
 
 <!doctype html>
@@ -27,22 +34,21 @@ const t = useT(locale);
   <meta name="theme-color" content="#1B4332" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-  <!-- Fonts landing :
-       - Fraunces 900 italic : titres + display tokens dans la majorité
-         des composants landing (Hero, Chapters, CTA, etc.).
-       - Big Shoulders Display 800 : wordmark SCLUBA (Nav + Footer),
-         direction Modern Mono validée 2026-05-19 (PR #95).
-       display=swap : fallback Georgia/Impact visible jusqu'au load. -->
+  <!-- Fonts landing V4 "Tech Bold Chrome" (2026-05-19) :
+       Geist Sans + Geist Mono (Vercel font, open source). Remplace
+       Fraunces + Big Shoulders Display (drop direction V2 Wood & Grass).
+       display=swap : fallback system-ui visible jusqu'au load. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,900&family=Big+Shoulders+Display:wght@800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600&display=swap"
   />
 </head>
-<body>
+<body data-landing-mode={isHomeRoute ? 'dark' : undefined}>
   <LaunchBanner locale={locale} />
   <Nav locale={locale} />
+  {isHomeRoute && <ScrollGolfBall />}
   <main>
     <slot />
   </main>

@@ -1,13 +1,12 @@
 ---
-// Démo scroll-pinned : iPhone qui traverse 3 phases du flow Scluba.
-// Mirror le vrai produit (cf docs/specs/2026-05-11-carte-perso-photo-design.md
-// + src/pages/r/[shortCode]/recap.astro) — pas un mockup générique.
-//
-// Phase 1 — Rejoindre la partie (code + multi-joueurs sur 1 QR)
-// Phase 2 — Vraie carte de score brandée (Aller/Retour + cells colorées)
-// Phase 3 — Photo perso + image PNG prête à partager (sheet natif)
+// V4.4 — Refonte PhoneShowcase (Grégoire spec images 2 + 3) :
+// drop l'ancienne 3-screens morph (join / card / share).
+// Replace par 2 screens qui matchent la vraie webapp Scluba :
+//   Screen 1 — Trou 1/9 scoring (image 2)
+//   Screen 2 — Partager ta carte avec iOS native share menu (image 3)
 //
 // Anim cablée dans src/scripts/animations.ts initPhoneShowcase().
+// Frame iPhone 17 Pro titanium + néon sweep conic-gradient préservés.
 
 import { useT, type Locale } from '../i18n';
 
@@ -17,30 +16,6 @@ interface Props {
 
 const { locale } = Astro.props;
 const t = useT(locale);
-
-// Front 9 / Back 9 du mockup recap — couleurs cells reflètent le vrai produit
-const front9 = [
-  { n: 1, score: 5, type: 'bogey' },
-  { n: 2, score: 5, type: 'par' },
-  { n: 3, score: 2, type: 'birdie' },
-  { n: 4, score: 4, type: 'par' },
-  { n: 5, score: 5, type: 'bogey' },
-  { n: 6, score: 6, type: 'bogey' },
-  { n: 7, score: 3, type: 'par' },
-  { n: 8, score: 5, type: 'bogey' },
-  { n: 9, score: 5, type: 'bogey' },
-];
-const back9 = [
-  { n: 10, score: 4, type: 'par' },
-  { n: 11, score: 3, type: 'par' },
-  { n: 12, score: 6, type: 'bogey' },
-  { n: 13, score: 5, type: 'bogey' },
-  { n: 14, score: 4, type: 'par' },
-  { n: 15, score: 4, type: 'par' },
-  { n: 16, score: 6, type: 'bogey' },
-  { n: 17, score: 4, type: 'par' },
-  { n: 18, score: 5, type: 'bogey' },
-];
 ---
 
 <section class="showcase-section" data-anim="showcase-wrap">
@@ -53,34 +28,28 @@ const back9 = [
 
         <div class="narrative-stack">
           <article class="narrative-block" data-flow-phase="1">
-            <span class="phase-chip phase-chip-1">{t.flow.phase1Tag}</span>
-            <h2 class="section-title">{t.flow.phase1Title}</h2>
-            <p class="section-lead">{t.flow.phase1Lead}</p>
-          </article>
-          <article class="narrative-block" data-flow-phase="2">
-            <span class="phase-chip phase-chip-2">{t.flow.phase2Tag}</span>
+            <span class="phase-chip phase-chip-1">{t.flow.phase2Tag}</span>
             <h2 class="section-title">{t.flow.phase2Title}</h2>
             <p class="section-lead">{t.flow.phase2Lead}</p>
           </article>
-          <article class="narrative-block" data-flow-phase="3">
-            <span class="phase-chip phase-chip-3">{t.flow.phase3Tag}</span>
+          <article class="narrative-block" data-flow-phase="2">
+            <span class="phase-chip phase-chip-2">{t.flow.phase3Tag}</span>
             <h2 class="section-title">{t.flow.phase3Title}</h2>
             <p class="section-lead">{t.flow.phase3Lead}</p>
           </article>
         </div>
 
-        <!-- Progress dots -->
+        <!-- Progress 2 dots -->
         <div class="phase-progress" aria-hidden="true">
           <span class="phase-dot" data-progress-dot="1"></span>
           <span class="phase-bar"><span class="phase-bar-fill" data-progress-bar></span></span>
           <span class="phase-dot" data-progress-dot="2"></span>
-          <span class="phase-bar"><span class="phase-bar-fill" data-progress-bar></span></span>
-          <span class="phase-dot" data-progress-dot="3"></span>
         </div>
       </div>
 
       <!-- Phone droite -->
       <div class="showcase-stage" aria-hidden="true">
+        <!-- V4.2 Néon sweep conic-gradient continu — .showcase-phone::before -->
         <div class="showcase-phone" data-flow-phone>
           <div class="phone-frame">
             <span class="phone-btn phone-btn-side-l-1"></span>
@@ -105,214 +74,89 @@ const back9 = [
                 </div>
               </div>
 
-              <!-- ====== ÉCRAN 1 — JOIN MULTI-JOUEURS ====== -->
-              <div class="screen screen-join" data-flow-screen="1">
-                <div class="join-header">
-                  <div class="join-club">
-                    <img src="/logos/golf-du-soleil.svg" alt="" width="28" height="28" loading="lazy" />
-                    <div>
-                      <strong>Golf du Soleil</strong>
-                      <small>{t.flow.joinClubMeta}</small>
-                    </div>
+              <!-- ====== SCREEN 1 — TROU 1/9 SCORING (image 2) ====== -->
+              <div class="screen screen-score" data-flow-screen="1">
+                <div class="score-player-bar">
+                  <span class="score-player-ava">G</span>
+                  <div class="score-player-meta">
+                    <strong>greg <em>(vous)</em></strong>
+                    <small>EN ATTENTE</small>
+                  </div>
+                  <span class="score-hole-pill">TROU <strong>1/9</strong></span>
+                </div>
+
+                <div class="score-par-block">
+                  <span class="score-par-lbl">PAR</span>
+                  <div class="score-par-num">3</div>
+                </div>
+
+                <div class="score-hint">← tap un trou ou swipe →</div>
+
+                <div class="score-pills">
+                  {Array.from({ length: 9 }, (_, i) => (
+                    <span class={`pill ${i === 0 ? 'pill-active' : ''}`}>{i + 1}</span>
+                  ))}
+                </div>
+
+                <div class="score-cards">
+                  <span class="s-card"><em>ACE</em><strong>1</strong></span>
+                  <span class="s-card"><em>BIRDIE</em><strong>2</strong></span>
+                  <span class="s-card is-active"><em>PAR</em><strong>3</strong></span>
+                  <span class="s-card"><em>BOGEY</em><strong>4</strong></span>
+                  <span class="s-card"><em>DOUBLE</em><strong>5</strong></span>
+                </div>
+
+                <div class="score-carte">
+                  <span class="carte-lbl">CARTE</span>
+                  <div class="carte-row">
+                    <span class="carte-boucle">BOUCLE 1</span>
+                    {Array.from({ length: 9 }, () => <span class="carte-cell">—</span>)}
                   </div>
                 </div>
 
-                <div class="join-eyebrow">{t.flow.joinEyebrow}</div>
-                <div class="join-code">BIRDIE-A7</div>
-                <div class="join-helper">{t.flow.joinHelper}</div>
-
-                <div class="join-players">
-                  <div class="join-players-label">{t.flow.joinAlreadyIn}</div>
-                  <div class="join-chips">
-                    <span class="join-chip"><em class="join-avatar" style="--ava:#1B4332">A</em>Antoine ✓</span>
-                    <span class="join-chip"><em class="join-avatar" style="--ava:#D4A574">S</em>Sophie ✓</span>
-                    <span class="join-chip"><em class="join-avatar" style="--ava:#3B6B8E">P</em>Paul ✓</span>
-                    <span class="join-chip join-chip-empty" data-join-self><em class="join-avatar" style="--ava:#C46444">L</em>{t.flow.joinSelfPlaceholder}</span>
-                  </div>
-                </div>
-
-                <div class="join-input">
-                  <label>{t.flow.joinInputLabel}</label>
-                  <div class="join-input-field" data-join-input>Léa<span class="join-caret"></span></div>
-                </div>
-
-                <button class="join-cta">{t.flow.joinCta}</button>
+                <button class="score-cta" tabindex="-1">Terminer maintenant</button>
               </div>
 
-              <!-- ====== ÉCRAN 2 — VRAIE CARTE DE SCORE ====== -->
-              <div class="screen screen-card" data-flow-screen="2">
-                <!-- Photo placeholder (club fallback) -->
-                <div class="card-photo" data-card-photo>
-                  <img src="/photos/golf-du-soleil.jpg" alt="" width="280" height="170" loading="lazy" decoding="async" />
-                  <span class="card-photo-fade"></span>
+              <!-- ====== SCREEN 2 — PARTAGER TA CARTE (image 3) ====== -->
+              <div class="screen screen-share" data-flow-screen="2">
+                <div class="share-modal-header">
+                  <span class="share-modal-title">Partager ta carte</span>
+                  <span class="share-modal-close" aria-hidden="true">×</span>
                 </div>
 
-                <!-- Logo frame -->
-                <div class="card-logo-frame">
-                  <img src="/logos/golf-du-soleil.svg" alt="" width="56" height="56" loading="lazy" />
-                </div>
-
-                <p class="card-eyebrow">{t.flow.cardEyebrow}</p>
-                <div class="card-rail" aria-hidden="true"></div>
-                <h3 class="card-title">Golf du Soleil</h3>
-                <div class="card-rail" aria-hidden="true"></div>
-
-                <!-- Meta strip -->
-                <ul class="card-meta">
-                  <li><span class="meta-l">{t.flow.metaDate}</span><span class="meta-v">Sam. 11 mai</span></li>
-                  <li><span class="meta-l">{t.flow.metaTee}</span><span class="meta-v">14:30</span></li>
-                  <li><span class="meta-l">{t.flow.metaRef}</span><span class="meta-v">BIRDIE-A7</span></li>
-                </ul>
-
-                <!-- Score block -->
-                <div class="card-score-block">
-                  <p class="card-score-eyebrow">{t.flow.scoreEyebrow}</p>
-                  <div class="card-score-value" data-flow-score>87</div>
-                  <p class="card-score-meta"><span class="score-diff over">+15</span> · Par 72</p>
-                </div>
-
-                <!-- Grid Aller/Retour -->
-                <div class="card-grid">
-                  <div class="card-grid-row">
-                    <span class="card-grid-label">{t.flow.gridFront}</span>
-                    {front9.map((h, i) => (
-                      <span class={`card-grid-cell card-cell-${h.type}`} data-flow-cell={i}>{h.score}</span>
-                    ))}
+                <div class="share-photo">
+                  <img src="/photos/golf-du-soleil.jpg" alt="" width="280" height="100" loading="lazy" decoding="async" />
+                  <div class="share-photo-logo">
+                    <img src="/logos/golf-du-soleil.svg" alt="" width="32" height="32" loading="lazy" />
                   </div>
-                  <div class="card-grid-row">
-                    <span class="card-grid-label">{t.flow.gridBack}</span>
-                    {back9.map((h, i) => (
-                      <span class={`card-grid-cell card-cell-${h.type}`} data-flow-cell={i + 9}>{h.score}</span>
-                    ))}
+                </div>
+
+                <!-- iOS native share menu mocked compact -->
+                <div class="ios-menu">
+                  <div class="ios-file">
+                    <span class="ios-file-icon">PNG</span>
+                    <div class="ios-file-meta">
+                      <strong>carte-golf-du-soleil</strong>
+                      <small>Image PNG · 858 ko</small>
+                    </div>
                   </div>
 
-                  <!-- Légende cellules — fidèle au vrai recap.astro -->
-                  <ul class="card-legend">
-                    <li><span class="legend-sw legend-sw-birdie"></span>{t.flow.legendBirdie}</li>
-                    <li><span class="legend-sw legend-sw-par"></span>{t.flow.legendPar}</li>
-                    <li><span class="legend-sw legend-sw-bogey"></span>{t.flow.legendBogey}</li>
+                  <div class="ios-contacts">
+                    <span class="ios-contact"><em class="ios-ava" style="--ava:#1B4332">A</em>Antoine</span>
+                    <span class="ios-contact"><em class="ios-ava" style="--ava:#D4A574">S</em>Sophie</span>
+                    <span class="ios-contact"><em class="ios-ava" style="--ava:#3B6B8E">P</em>Paul</span>
+                    <span class="ios-contact"><em class="ios-ava" style="--ava:#C46444">L</em>Léa</span>
+                  </div>
+
+                  <ul class="ios-apps">
+                    <li>AirDrop</li>
+                    <li>Mail</li>
+                    <li>Messages</li>
+                    <li>Notes</li>
                   </ul>
                 </div>
 
-                <!-- Player row + Partager (mimic recap.astro) -->
-                <div class="card-player-row">
-                  <div class="card-player">
-                    <span class="meta-l">{t.flow.cardPlayer}</span>
-                    <span class="player-name">{t.flow.sharePlayerName}</span>
-                  </div>
-                  <button type="button" class="card-share-cta" tabindex="-1">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                      <polyline points="16 6 12 2 8 6"/>
-                      <line x1="12" y1="2" x2="12" y2="15"/>
-                    </svg>
-                    <span>{t.flow.cardShareCta}</span>
-                  </button>
-                </div>
-
-              </div>
-
-              <!-- ====== ÉCRAN 3 — PARTAGE NATIF (overlay sur écran 2) ====== -->
-              <div class="screen screen-share" data-flow-screen="3">
-                <!-- Vignette 4:5 fidèle au vrai PNG composeShareImage() -->
-                <div class="share-png-mini">
-                  <!-- Photo top 60% : selfie joueur -->
-                  <div class="png-photo">
-                    <img src="/photos/demo-player.jpg" alt="" width="280" height="170" loading="lazy" decoding="async" />
-                    <div class="png-club-badge">
-                      <img src="/logos/golf-du-soleil.svg" alt="" width="22" height="22" loading="lazy" />
-                    </div>
-                  </div>
-
-                  <!-- Body : club + meta + score + grid + powered by -->
-                  <div class="png-body">
-                    <div class="png-title">Golf du Soleil</div>
-                    <div class="png-meta">{t.flow.sharePlayerName} · {t.flow.shareDateShort} · 18 trous</div>
-
-                    <div class="png-score-wrap">
-                      <div class="png-score">87</div>
-                      <div class="png-score-meta"><span class="score-diff over">+15</span> · Par 72</div>
-                    </div>
-
-                    <div class="png-grid">
-                      <div class="png-grid-row">
-                        <span class="png-grid-label">{t.flow.gridFront}</span>
-                        {front9.map((h) => (
-                          <span class={`png-grid-cell png-cell-${h.type}`}>{h.score}</span>
-                        ))}
-                      </div>
-                      <div class="png-grid-row">
-                        <span class="png-grid-label">{t.flow.gridBack}</span>
-                        {back9.map((h) => (
-                          <span class={`png-grid-cell png-cell-${h.type}`}>{h.score}</span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div class="png-powered">{t.flow.poweredBy}</div>
-                  </div>
-                </div>
-
-                <!-- iOS share sheet -->
-                <div class="share-sheet" data-share-sheet>
-                  <div class="share-sheet-handle"></div>
-                  <div class="share-sheet-preview">
-                    <div class="share-preview-thumb">
-                      <span class="thumb-fmt">PNG · 1080×1350</span>
-                    </div>
-                    <div class="share-preview-meta">
-                      <strong>{t.flow.sharePreviewTitle}</strong>
-                      <small>scluba.com/r/BIRDIE-A7</small>
-                    </div>
-                  </div>
-
-                  <div class="share-apps">
-                    <button class="share-app app-ig" type="button" data-share-app="0" tabindex="-1">
-                      <span class="share-app-icon">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                          <rect x="3" y="3" width="18" height="18" rx="5" ry="5"/>
-                          <circle cx="12" cy="12" r="4"/>
-                          <circle cx="17.5" cy="6.5" r="0.6" fill="#fff" stroke="none"/>
-                        </svg>
-                      </span>
-                      <span class="share-app-label">Instagram</span>
-                    </button>
-                    <button class="share-app app-wa" type="button" data-share-app="1" tabindex="-1">
-                      <span class="share-app-icon">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff" aria-hidden="true">
-                          <path d="M17.6 14.3c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.9-.7-1.4-1.7-1.6-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.2-.5.1-.2 0-.4 0-.5 0-.1-.7-1.7-.9-2.3-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1.1 1.1-1.1 2.6 1.1 3 1.3 3.2c.2.2 2.2 3.4 5.4 4.7.8.3 1.4.5 1.8.7.8.2 1.4.2 2 .1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.1-1.3c1.4.8 3.1 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2z"/>
-                        </svg>
-                      </span>
-                      <span class="share-app-label">WhatsApp</span>
-                    </button>
-                    <button class="share-app app-st" type="button" data-share-app="2" tabindex="-1">
-                      <span class="share-app-icon">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                          <circle cx="12" cy="12" r="8.5"/>
-                          <path d="M12 5v3"/>
-                        </svg>
-                      </span>
-                      <span class="share-app-label">Stories</span>
-                    </button>
-                    <button class="share-app app-ma" type="button" data-share-app="3" tabindex="-1">
-                      <span class="share-app-icon">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                          <rect x="3" y="5" width="18" height="14" rx="2"/>
-                          <path d="M3 7l9 7 9-7"/>
-                        </svg>
-                      </span>
-                      <span class="share-app-label">Mail</span>
-                    </button>
-                  </div>
-
-                  <div class="share-actions">
-                    <button class="share-action" type="button"><span>{t.flow.shareCopyLink}</span></button>
-                    <button class="share-action" type="button"><span>{t.flow.shareSavePhoto}</span></button>
-                  </div>
-                </div>
-
-                <!-- Toast confirmation -->
-                <div class="share-toast" data-share-toast>{t.flow.shareToast}</div>
+                <button class="share-cta" tabindex="-1">Partager maintenant</button>
               </div>
 
             </div>
@@ -328,10 +172,7 @@ const back9 = [
   /* ===== Section + grid ===== */
   .showcase-section {
     position: relative;
-    background:
-      radial-gradient(ellipse 60% 35% at 18% 8%, rgba(212, 165, 116, 0.06), transparent 55%),
-      radial-gradient(ellipse 60% 35% at 82% 90%, rgba(45, 106, 79, 0.06), transparent 55%),
-      var(--bg);
+    background: var(--bg);
   }
   .showcase-pin {
     min-height: 100vh;
@@ -357,18 +198,17 @@ const back9 = [
   .narrative-stack {
     position: relative;
     margin: var(--space-3) 0 var(--space-6);
-    min-height: 340px;
+    min-height: 320px;
   }
   @media (min-width: 1024px) {
-    .narrative-stack { min-height: 300px; }
+    .narrative-stack { min-height: 280px; }
   }
   .narrative-block {
     position: absolute;
     top: 0; left: 0; right: 0;
     will-change: opacity, transform;
   }
-  .narrative-block[data-flow-phase="2"],
-  .narrative-block[data-flow-phase="3"] {
+  .narrative-block[data-flow-phase="2"] {
     opacity: 0;
     transform: translateY(20px);
   }
@@ -378,17 +218,17 @@ const back9 = [
     display: inline-block;
     padding: 4px 12px;
     border-radius: var(--radius-full);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.10em;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     margin-bottom: var(--space-3);
   }
-  .phase-chip-1 { background: var(--primary); color: var(--bg); }
-  .phase-chip-2 { background: var(--accent); color: var(--primary-deep); }
-  .phase-chip-3 { background: var(--primary-deep); color: var(--accent); }
+  .phase-chip-1 { background: var(--accent); color: var(--ink); }
+  .phase-chip-2 { background: var(--accent-soft); color: var(--accent); }
 
-  /* Progress 3 dots */
+  /* Progress 2 dots */
   .phase-progress {
     display: flex;
     align-items: center;
@@ -400,7 +240,7 @@ const back9 = [
     background: var(--line);
     transition: background 0.3s var(--ease-out);
   }
-  .phase-dot[data-progress-dot="1"] { background: var(--primary); }
+  .phase-dot[data-progress-dot="1"] { background: var(--accent); }
   .phase-bar {
     flex: 1;
     height: 2px;
@@ -413,7 +253,7 @@ const back9 = [
     display: block;
     height: 100%;
     width: 0;
-    background: linear-gradient(90deg, var(--primary), var(--accent));
+    background: var(--accent);
     transform-origin: left;
   }
 
@@ -427,72 +267,188 @@ const back9 = [
   }
   .showcase-phone {
     position: relative;
-    height: min(72vh, 640px);
+    height: min(82vh, 740px);
     aspect-ratio: 9 / 19.5;
     will-change: transform;
   }
+
+  /* V4.2 Néon conic-gradient sweep continu */
+  @property --neon-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  .showcase-phone::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: 60px;
+    padding: 4px;
+    background: conic-gradient(
+      from var(--neon-angle),
+      transparent 0deg,
+      transparent 265deg,
+      rgba(0, 220, 130, 0.35) 295deg,
+      rgba(0, 220, 130, 0.85) 340deg,
+      #00FF9A 357deg,
+      rgba(0, 220, 130, 0.85) 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+            mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+    filter:
+      drop-shadow(0 0 6px var(--accent))
+      drop-shadow(0 0 18px rgba(0, 220, 130, 0.55));
+    animation: neonSweep 4s linear infinite;
+  }
+  @keyframes neonSweep {
+    to { --neon-angle: 360deg; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .showcase-phone::before {
+      animation: none;
+      background: var(--accent);
+      opacity: 0.55;
+    }
+  }
+  @supports not (background: paint(angle-painter)) {
+    .showcase-phone::before {
+      background: var(--accent);
+      animation: neonPulse 3s ease-in-out infinite;
+    }
+    @keyframes neonPulse {
+      0%, 100% { opacity: 0.45; }
+      50% { opacity: 0.90; }
+    }
+  }
+
+  /* iPhone 17 Pro titanium frame (cohérent avec Hero) */
   .phone-frame {
     position: relative;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #5a5a5d 0%, #2a2a2c 18%, #1a1a1c 40%, #2a2a2c 60%, #4a4a4d 78%, #2a2a2c 100%);
-    border-radius: 52px;
+    background:
+      linear-gradient(135deg, #6E6E72 0%, #48484A 22%, #2C2C2E 50%, #48484A 78%, #6E6E72 100%);
+    border-radius: 56px;
     padding: 12px;
     box-shadow:
-      0 16px 32px rgba(27, 67, 50, 0.18),
-      0 32px 64px rgba(27, 67, 50, 0.22),
-      0 8px 16px rgba(0, 0, 0, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.16),
-      0 0 0 1.5px rgba(0, 0, 0, 0.55);
+      0 24px 48px rgba(0, 0, 0, 0.40),
+      0 48px 96px rgba(0, 0, 0, 0.30),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 0 0 1.5px rgba(0, 0, 0, 0.70);
+  }
+  .phone-frame::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border-radius: 50px;
+    pointer-events: none;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    z-index: 2;
+  }
+  .phone-frame::after {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border-radius: 44px;
+    pointer-events: none;
+    background: linear-gradient(
+      138deg,
+      rgba(255, 255, 255, 0.10) 0%,
+      rgba(255, 255, 255, 0) 35%,
+      rgba(255, 255, 255, 0) 75%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+    z-index: 4;
+    mix-blend-mode: screen;
   }
   .phone-rim {
     position: absolute; inset: 4px;
-    border-radius: 48px;
+    border-radius: 52px;
     pointer-events: none;
-    background: linear-gradient(135deg, rgba(255,255,255,0.14) 0%, transparent 30%, transparent 70%, rgba(255,255,255,0.05) 100%);
+    background: linear-gradient(135deg, rgba(255,255,255,0.16) 0%, transparent 30%, transparent 70%, rgba(255,255,255,0.06) 100%);
   }
   .phone-btn {
     position: absolute;
-    background: linear-gradient(180deg, #3a3a3c 0%, #1a1a1c 50%, #3a3a3c 100%);
+    background: linear-gradient(180deg, #5C5C5E 0%, #2C2C2E 50%, #5C5C5E 100%);
     border-radius: 1.5px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
   }
-  .phone-btn-side-l-1 { left: -2px; top: 90px; width: 4px; height: 28px; }
+  .phone-btn-side-l-1 {
+    left: -2px; top: 90px; width: 4px; height: 28px;
+    background: linear-gradient(180deg, #C9A96A 0%, #8B7344 50%, #C9A96A 100%);
+  }
   .phone-btn-side-l-2 { left: -2px; top: 130px; width: 4px; height: 50px; }
   .phone-btn-side-l-3 { left: -2px; top: 188px; width: 4px; height: 50px; }
   .phone-btn-side-r { right: -2px; top: 130px; width: 4px; height: 80px; }
 
   .phone-screen {
+    /* V4.3 sub-context palette */
+    --primary: #1F1F1F;
+    --primary-soft: #3A3A3A;
+    --primary-deep: #0A0A0A;
+    --primary-bg: rgba(0, 220, 130, 0.08);
+    --accent: #00DC82;
+    --accent-soft: rgba(0, 220, 130, 0.12);
+    --accent-bright: #1AE89A;
+    --ink: #1F1F1F;
+    --ink-soft: #3A3A3A;
+    --bg: #E8E1D0;
+    --muted: #7A7A7A;
+    --line: rgba(31, 31, 31, 0.12);
+
     position: relative;
     width: 100%; height: 100%;
-    background: #FAF7EE;
-    border-radius: 40px;
+    background: linear-gradient(180deg, #E8E1D0 0%, #DDD5C0 100%);
+    border-radius: 44px;
     overflow: hidden;
+  }
+  .phone-screen::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12%;
+    max-width: 50px;
+    height: 2px;
+    border-radius: 1px;
+    background: rgba(0, 0, 0, 0.18);
+    z-index: 4;
   }
 
   /* Dynamic Island */
   .phone-island {
     position: absolute;
-    top: 10px;
+    top: 11px;
     left: 50%;
     transform: translateX(-50%);
-    width: 30%;
-    max-width: 100px;
-    min-width: 76px;
-    height: 26px;
+    width: 32%;
+    max-width: 124px;
+    min-width: 96px;
+    height: 30px;
     background: #000;
     border-radius: 18px;
     z-index: 10;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    padding-right: 7px;
+    padding-right: 8px;
   }
   .phone-island-cam {
     width: 7px; height: 7px;
     border-radius: 50%;
     background: radial-gradient(circle at 30% 30%, #2a3a40, #050a0c);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
   }
 
   /* Status bar */
@@ -504,7 +460,7 @@ const back9 = [
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: #1A1A1A;
+    color: var(--ink);
     font-size: 11px;
     font-weight: 600;
     pointer-events: none;
@@ -546,642 +502,408 @@ const back9 = [
     border-radius: 0 2px 2px 0;
   }
 
-  /* ===== Screens (3 layers stacked) ===== */
+  /* ===== Screens (2 layers stacked) ===== */
   .screen {
     position: absolute;
     inset: 0;
-    padding: 50px 18px 18px;
+    padding: 50px 14px 14px;
     display: flex;
     flex-direction: column;
     will-change: opacity, transform;
     overflow: hidden;
   }
-  .screen-card { padding: 50px 16px 14px; opacity: 0; transform: scale(1.02); }
-  .screen-share { padding: 0; opacity: 0; transform: scale(1.02); }
+  .screen-share { opacity: 0; transform: scale(1.02); }
 
-  /* ====== SCREEN 1 — JOIN ====== */
-  .join-header { display: flex; align-items: center; }
-  .join-club {
-    display: flex; align-items: center; gap: 8px;
-    padding: 4px 0;
-  }
-  .join-club img {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: var(--primary-bg);
-    padding: 2px;
+  /* ====== SCREEN 1 — TROU 1/9 SCORING ====== */
+  .score-player-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(0, 220, 130, 0.10);
     border: 1px solid var(--accent);
-  }
-  .join-club strong {
-    font-family: var(--font-serif);
-    font-size: 13px;
-    color: var(--primary);
-    display: block;
-    line-height: 1.1;
-  }
-  .join-club small {
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .join-eyebrow {
-    margin-top: 18px;
-    font-size: 9px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    font-weight: 700;
-    text-align: center;
-  }
-  .join-code {
-    font-family: var(--font-serif);
-    font-size: 32px;
-    font-weight: 800;
-    color: var(--primary);
-    text-align: center;
-    letter-spacing: 0.05em;
-    margin: 6px 0 2px;
-    font-variant-numeric: tabular-nums;
-  }
-  .join-helper {
-    font-size: 9px;
-    color: var(--muted);
-    text-align: center;
-    margin-bottom: 16px;
-  }
-
-  .join-players {
-    background: var(--primary-bg);
-    border-radius: 10px;
-    padding: 10px;
+    border-radius: 12px;
     margin-bottom: 14px;
   }
-  .join-players-label {
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 6px;
-  }
-  .join-chips { display: flex; flex-direction: column; gap: 5px; }
-  .join-chip {
-    display: flex; align-items: center; gap: 6px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-full);
-    padding: 4px 10px 4px 4px;
-    font-size: 10.5px;
-    color: var(--ink);
-    font-weight: 600;
-  }
-  .join-chip-empty {
-    border: 1px dashed var(--accent);
-    background: rgba(212, 165, 116, 0.08);
-    color: var(--accent);
-  }
-  .join-avatar {
-    width: 18px; height: 18px;
+  .score-player-ava {
+    width: 30px; height: 30px;
     border-radius: 50%;
-    background: var(--ava);
+    background: #7C3AED;
     color: #fff;
-    font-style: normal;
-    font-size: 9px;
+    font-family: var(--font-display);
     font-weight: 700;
+    font-size: 13px;
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-
-  .join-input { margin-bottom: 14px; }
-  .join-input label {
-    display: block;
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 4px;
-  }
-  .join-input-field {
-    background: var(--bg);
-    border: 1.5px solid var(--primary);
-    border-radius: 8px;
-    padding: 9px 12px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink);
-    display: flex;
-    align-items: center;
-  }
-  .join-caret {
-    display: inline-block;
-    width: 1.5px;
-    height: 14px;
-    margin-left: 2px;
-    background: var(--primary);
-    animation: joinBlink 1s infinite;
-  }
-  @keyframes joinBlink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
-
-  .join-cta {
-    margin-top: auto;
-    width: 100%;
-    padding: 11px;
-    background: var(--primary);
-    color: var(--bg);
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 700;
-    border: none;
-  }
-
-  /* ====== SCREEN 2 — CARD (compressé pour tenir dans 70vh phone) ====== */
-  .card-photo {
-    position: relative;
-    height: 92px;
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: 6px;
     flex-shrink: 0;
   }
-  .card-photo img {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    object-position: center 55%;
+  .score-player-meta {
+    flex: 1;
+    min-width: 0;
+  }
+  .score-player-meta strong {
     display: block;
-  }
-  .card-photo-fade {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 36px;
-    background: linear-gradient(180deg, transparent, #FAF7EE);
-  }
-
-  .card-logo-frame {
-    position: relative;
-    width: 42px; height: 42px;
-    margin: -28px auto 2px;
-    background: var(--bg);
-    border-radius: 50%;
-    padding: 3px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-    z-index: 2;
-  }
-  .card-logo-frame img { width: 100%; height: 100%; }
-
-  .card-eyebrow {
-    font-size: 6.5px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    font-weight: 700;
-    text-align: center;
-    margin: 0 0 2px;
-  }
-  .card-rail {
-    width: 26px;
-    height: 1px;
-    background: var(--accent);
-    opacity: 0.5;
-    margin: 0 auto 2px;
-  }
-  .card-title {
-    font-family: var(--font-serif);
-    font-size: 12px;
-    font-weight: 800;
+    font-family: var(--font-display);
+    font-size: 11px;
     color: var(--primary);
-    text-align: center;
-    margin: 1px 0 2px;
+    font-weight: 700;
     line-height: 1.1;
   }
-
-  .card-meta {
-    display: flex;
-    justify-content: space-around;
-    list-style: none;
-    padding: 3px 0;
-    margin: 3px 0 4px;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-  }
-  .card-meta li { text-align: center; }
-  .card-meta .meta-l {
-    display: block;
-    font-size: 6px;
+  .score-player-meta strong em {
+    font-style: normal;
     color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    font-weight: 500;
   }
-  .card-meta .meta-v {
+  .score-player-meta small {
     display: block;
+    font-family: var(--font-mono);
     font-size: 7.5px;
-    font-weight: 700;
-    color: var(--ink);
-    font-family: var(--font-serif);
+    color: var(--muted);
+    letter-spacing: 0.18em;
     margin-top: 1px;
   }
-
-  .card-score-block { text-align: center; margin: 3px 0 4px; }
-  .card-score-eyebrow {
-    font-size: 6.5px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    margin: 0;
+  .score-hole-pill {
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    color: var(--accent);
+    letter-spacing: 0.18em;
+    font-weight: 500;
+    flex-shrink: 0;
   }
-  .card-score-value {
-    font-family: var(--font-serif);
-    font-size: 30px;
-    font-weight: 800;
-    color: var(--primary);
-    line-height: 1;
-    margin: 2px 0;
-    font-variant-numeric: tabular-nums;
-  }
-  .card-score-meta {
-    font-size: 8px;
-    color: var(--muted);
-    margin: 0;
-  }
-  .score-diff.over { color: #C0392B; font-weight: 700; }
-
-  .card-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin-bottom: 3px;
-  }
-  .card-grid-row {
-    display: grid;
-    grid-template-columns: 12px repeat(9, 1fr);
-    gap: 1.5px;
-  }
-  .card-grid-label {
-    background: var(--primary);
-    color: #fff;
-    font-size: 6px;
+  .score-hole-pill strong {
+    font-family: var(--font-display);
+    font-size: 13px;
     font-weight: 700;
-    border-radius: 2.5px;
+    color: var(--accent);
+    margin-left: 4px;
+  }
+
+  .score-par-block {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .score-par-lbl {
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .score-par-num {
+    font-family: var(--font-display);
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+  }
+
+  .score-hint {
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 7px;
+    color: var(--muted);
+    letter-spacing: 0.10em;
+    margin: 4px 0 10px;
+  }
+
+  .score-pills {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+  .pill {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: 9px;
+    font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
-  .card-grid-cell {
+  .pill-active {
+    background: var(--primary);
+    color: var(--bg);
+    border-color: var(--primary);
+  }
+
+  .score-cards {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 3px;
+    margin-bottom: 10px;
+  }
+  .s-card {
     background: var(--bg);
     border: 1px solid var(--line);
-    border-radius: 2.5px;
+    border-radius: 5px;
+    padding: 4px 2px;
     text-align: center;
-    padding: 2px 0;
-    font-size: 7.5px;
-    font-weight: 700;
-    color: var(--ink);
-    font-variant-numeric: tabular-nums;
-    will-change: opacity, transform;
-  }
-  .card-cell-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
-  .card-cell-par { color: var(--primary); }
-  .card-cell-bogey { color: var(--muted); }
-
-  /* Légende cellules — fidèle au recap.astro réel */
-  .card-legend {
-    list-style: none;
-    padding: 0;
-    margin: 3px 0 0;
     display: flex;
-    justify-content: center;
-    gap: 6px;
-    font-size: 6px;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+  }
+  .s-card em {
+    font-family: var(--font-mono);
+    font-style: normal;
+    font-size: 6.5px;
+    letter-spacing: 0.10em;
     color: var(--muted);
-    letter-spacing: 0.04em;
+    font-weight: 500;
   }
-  .card-legend li { display: flex; align-items: center; gap: 3px; }
-  .legend-sw {
-    display: inline-block;
-    width: 8px;
-    height: 6px;
-    border-radius: 2px;
-    border: 1px solid var(--line);
+  .s-card strong {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary);
   }
-  .legend-sw-birdie { background: var(--accent-soft); border-color: var(--accent); }
-  .legend-sw-par { background: var(--bg); }
-  .legend-sw-bogey { background: var(--bg); border-color: var(--muted); }
+  .s-card.is-active {
+    background: rgba(201, 169, 106, 0.18);
+    border-color: var(--accent);
+  }
+  .s-card.is-active em { color: var(--accent); }
+  .s-card.is-active strong { color: var(--accent); }
 
-  /* Player row + bouton Partager */
-  .card-player-row {
+  .score-carte {
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 6px;
+    padding: 6px 6px 6px 8px;
+    margin-bottom: 8px;
+  }
+  .carte-lbl {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 7px;
+    letter-spacing: 0.20em;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 3px;
+  }
+  .carte-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .carte-boucle {
+    flex-shrink: 0;
+    padding: 3px 5px;
+    background: var(--primary);
+    color: var(--bg);
+    font-family: var(--font-mono);
+    font-size: 7px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    border-radius: 3px;
+  }
+  .carte-cell {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    text-align: center;
+    padding: 3px 0;
+    font-size: 8px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .score-cta {
+    margin-top: auto;
+    width: 100%;
+    padding: 10px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: default;
+    letter-spacing: -0.005em;
+  }
+
+  /* ====== SCREEN 2 — PARTAGER TA CARTE ====== */
+  .share-modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 3px;
-    padding-top: 3px;
-    border-top: 1px solid var(--line);
+    padding: 4px 4px 10px;
+    margin-bottom: 4px;
   }
-  .card-player { display: flex; flex-direction: column; }
-  .card-player .meta-l {
-    font-size: 5.5px;
+  .share-modal-title {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .share-modal-close {
+    font-size: 16px;
     color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-  }
-  .card-player .player-name {
-    font-family: var(--font-serif);
-    font-size: 8.5px;
-    font-weight: 700;
-    color: var(--ink);
-    margin-top: 1px;
-  }
-  .card-share-cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    background: var(--primary);
-    color: var(--bg);
-    border: none;
-    border-radius: var(--radius-full);
-    padding: 4px 8px;
-    font-size: 7.5px;
-    font-weight: 700;
-    cursor: default;
-  }
-  .card-share-cta svg { display: block; width: 10px; height: 10px; }
-
-  .card-footer {
-    margin-top: auto;
-    text-align: center;
-    padding-top: 6px;
-  }
-  .card-footer-l {
-    font-family: var(--font-serif);
-    font-size: 9px;
-    letter-spacing: 0.4em;
-    color: var(--primary);
-    font-weight: 700;
+    line-height: 1;
   }
 
-  /* ====== SCREEN 3 — PARTAGE ======
-     Vignette 4:5 fidèle au vrai PNG composeShareImage() output :
-     photo 60% top + body avec club/score/grid/powered-by. */
-  .share-png-mini {
-    position: absolute;
-    top: 50px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 178px;          /* ratio 4:5 → height 222px */
-    height: 222px;
-    background: #FAF7EE;
-    border-radius: 8px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-  .png-photo {
+  .share-photo {
     position: relative;
-    flex: 0 0 60%;
+    height: 96px;
+    border-radius: 6px;
     overflow: hidden;
+    margin-bottom: 8px;
+    flex-shrink: 0;
   }
-  .png-photo img {
+  .share-photo img {
     width: 100%; height: 100%;
     object-fit: cover;
-    object-position: center 35%;
+    object-position: center 50%;
     display: block;
   }
-  .png-club-badge {
+  .share-photo-logo {
     position: absolute;
-    top: 6px; right: 6px;
-    width: 22px; height: 22px;
+    top: 6px;
+    right: 6px;
+    width: 32px;
+    height: 32px;
     background: var(--bg);
     border-radius: 50%;
-    padding: 2px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+    padding: 3px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
   }
-  .png-club-badge img { width: 100%; height: 100%; }
+  .share-photo-logo img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
 
-  .png-body {
+  /* iOS native share menu — sober dark variant cohérent Tech Bold */
+  .ios-menu {
+    background: rgba(45, 45, 45, 0.96);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+            backdrop-filter: saturate(180%) blur(12px);
+    border-radius: 10px;
+    padding: 6px;
+    margin-bottom: 8px;
     flex: 1;
-    padding: 6px 8px 4px;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
+    gap: 6px;
+  }
+  .ios-file {
+    display: flex;
     align-items: center;
-    text-align: center;
+    gap: 6px;
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
   }
-  .png-title {
-    font-family: var(--font-serif);
-    font-size: 10px;
-    font-weight: 800;
-    color: var(--primary);
-    line-height: 1.1;
-    margin-bottom: 1px;
-  }
-  .png-meta {
-    font-size: 6.5px;
-    color: var(--muted);
-    letter-spacing: 0.02em;
-  }
-  .png-score-wrap {
-    margin: 3px 0 4px;
-  }
-  .png-score {
-    font-family: var(--font-serif);
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--primary);
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-  }
-  .png-score-meta {
-    font-size: 7px;
-    color: var(--muted);
-    margin-top: 1px;
-  }
-  .png-grid {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5px;
-    margin-bottom: 3px;
-  }
-  .png-grid-row {
-    display: grid;
-    grid-template-columns: 10px repeat(9, 1fr);
-    gap: 1px;
-  }
-  .png-grid-label {
-    background: var(--primary);
+  .ios-file-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, #555, #333);
     color: #fff;
-    font-size: 5px;
-    font-weight: 700;
-    border-radius: 1.5px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 7px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-  .png-grid-cell {
-    background: var(--bg);
-    border: 0.5px solid var(--line);
-    border-radius: 1.5px;
-    text-align: center;
-    padding: 1px 0;
-    font-size: 6px;
-    font-weight: 700;
-    color: var(--ink);
-    font-variant-numeric: tabular-nums;
-  }
-  .png-cell-birdie { color: #C0392B; background: var(--accent-soft); border-color: var(--accent); }
-  .png-cell-par { color: var(--primary); }
-  .png-cell-bogey { color: var(--muted); }
-
-  .png-powered {
-    margin-top: auto;
-    font-size: 5.5px;
-    color: var(--muted);
-    letter-spacing: 0.25em;
-    font-weight: 600;
-  }
-
-  /* Share sheet */
-  .share-sheet {
-    position: absolute;
-    left: 8px; right: 8px;
-    bottom: 8px;
-    background: rgba(255, 255, 255, 0.92);
-    -webkit-backdrop-filter: saturate(180%) blur(12px);
-            backdrop-filter: saturate(180%) blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    border-radius: 16px;
-    padding: 8px 12px 12px;
-    will-change: transform;
-  }
-  .share-sheet-handle {
-    width: 32px; height: 4px;
-    background: rgba(0,0,0,0.18);
-    border-radius: 2px;
-    margin: 0 auto 8px;
-  }
-  .share-sheet-preview {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 8px;
-    background: rgba(0,0,0,0.04);
-    border-radius: 10px;
-    margin-bottom: 10px;
-  }
-  .share-preview-thumb {
-    width: 36px; height: 45px;
-    background: linear-gradient(160deg, #1B4332 0%, #87B894 100%);
-    border-radius: 4px;
-    position: relative;
     flex-shrink: 0;
   }
-  .thumb-fmt {
-    position: absolute;
-    bottom: 2px; left: 50%;
-    transform: translateX(-50%);
-    font-size: 5.5px;
-    color: rgba(255,255,255,0.9);
-    background: rgba(0,0,0,0.3);
-    padding: 1px 3px;
-    border-radius: 2px;
-    white-space: nowrap;
-    font-weight: 600;
-    letter-spacing: 0.04em;
+  .ios-file-meta {
+    flex: 1;
+    min-width: 0;
   }
-  .share-preview-meta { flex: 1; min-width: 0; }
-  .share-preview-meta strong {
+  .ios-file-meta strong {
     display: block;
-    font-size: 11px;
-    color: var(--ink);
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: 9.5px;
+    font-weight: 600;
+    color: #fff;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  .share-preview-meta small {
-    font-size: 9px;
-    color: var(--muted);
+  .ios-file-meta small {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 7px;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 1px;
   }
 
-  .share-apps {
+  .ios-contacts {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-    margin-bottom: 8px;
-  }
-  .share-app {
-    background: transparent;
-    border: none;
+    gap: 4px;
     padding: 4px 2px;
+  }
+  .ios-contact {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    cursor: pointer;
-    will-change: opacity, transform;
+    gap: 3px;
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.85);
+    font-family: var(--font-display);
+    font-weight: 500;
   }
-  .share-app-icon {
-    width: 38px; height: 38px;
-    border-radius: 11px;
-    flex-shrink: 0;
-    background: var(--line);
+  .ios-ava {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--ava, #444);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    font-style: normal;
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-  .share-app-icon svg { display: block; }
-  .app-ig .share-app-icon {
-    background: linear-gradient(135deg, #FCAF45 0%, #F77737 25%, #E1306C 60%, #833AB4 100%);
-  }
-  .app-wa .share-app-icon { background: #25D366; }
-  .app-st .share-app-icon {
-    background:
-      radial-gradient(circle at 50% 50%, transparent 35%, rgba(0,0,0,0.04) 36%, transparent 38%),
-      linear-gradient(135deg, #FCAF45 0%, #F77737 25%, #E1306C 60%, #833AB4 100%);
-  }
-  .app-ma .share-app-icon { background: linear-gradient(180deg, #1E90FF 0%, #0066CC 100%); }
-  .share-app-label {
-    font-size: 8.5px;
-    color: var(--ink);
-    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   }
 
-  .share-actions {
+  .ios-apps {
+    list-style: none;
+    margin: 0;
+    padding: 4px 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
     display: flex;
     flex-direction: column;
     gap: 1px;
-    border-top: 1px solid rgba(0,0,0,0.08);
-    padding-top: 8px;
   }
-  .share-action {
-    background: transparent;
-    border: none;
-    padding: 8px 4px;
-    text-align: left;
-    font-size: 11px;
-    color: var(--ink);
+  .ios-apps li {
+    font-family: var(--font-display);
+    font-size: 9.5px;
     font-weight: 500;
-    cursor: pointer;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
+    color: rgba(255, 255, 255, 0.85);
+    padding: 4px 2px;
+    border-bottom: 0.5px solid rgba(255, 255, 255, 0.06);
   }
-  .share-action:last-child { border-bottom: none; }
+  .ios-apps li:last-child { border-bottom: none; }
 
-  /* Toast */
-  .share-toast {
-    position: absolute;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-12px);
+  .share-cta {
+    width: 100%;
+    padding: 10px;
     background: var(--primary);
     color: var(--bg);
-    padding: 6px 12px;
-    border-radius: var(--radius-full);
-    font-size: 10px;
-    font-weight: 600;
-    box-shadow: var(--shadow-md);
-    opacity: 0;
-    white-space: nowrap;
-    will-change: opacity, transform;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: default;
+    letter-spacing: -0.005em;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .join-caret { animation: none; }
+    .screen-share { opacity: 1; transform: scale(1); }
   }
 </style>

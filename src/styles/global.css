@@ -33,10 +33,18 @@ h1, h2, h3, h4 {
   font-family: var(--font-serif);
   font-weight: 700;
   line-height: 1.05;
-  letter-spacing: -0.02em;
   color: var(--primary);
   margin: 0;
+  /* font-variation-settings : pousser l'opsz Fraunces au max pour les titres
+     display + soft légèrement arrondi (cohérent avec WordmarkScluba). */
+  font-variation-settings: 'opsz' 144, 'SOFT' 50;
 }
+/* Tracking négatif progressif sur la hiérarchie (pattern jeskojets / oryzo) :
+   plus la taille augmente, plus le tracking se resserre. */
+h1 { letter-spacing: -0.05em; font-weight: 900; }
+h2 { letter-spacing: -0.04em; font-weight: 800; }
+h3 { letter-spacing: -0.03em; }
+h4 { letter-spacing: -0.02em; }
 
 p { margin: 0; }
 
@@ -160,6 +168,183 @@ section {
   }
 }
 
+/* ============================================================
+   Landing dark mode — V4 "Tech Bold Chrome" (2026-05-19)
+   Scope `body[data-landing-mode="dark"]` activé uniquement sur la home
+   FR + EN via Base.astro. Refonte radicale après revert V2 Wood & Grass :
+   pivot vers Tech Startup Bold (Linear / Vercel-like) — palette dark
+   très contrastée + accent unique Vercel green + typo Geist.
+   Les pages utilitaires (legal, demo, etc.) restent en light Greenroom.
+   ============================================================ */
+body[data-landing-mode="dark"] {
+  /* Surfaces — pure ink, palette resserrée */
+  --bg: #0A0A0A;             /* bg principal */
+  --bg-soft: #121212;        /* surfaces élevées */
+  --paper: #121212;          /* alias surfaces */
+  --paper-deep: #0A0A0A;     /* alias bg */
+  --ink-2: #121212;          /* cards */
+  --ink-3: #1F1F1F;          /* borders */
+
+  /* Lignes — cream alpha très subtil */
+  --line: #1F1F1F;
+  --line-soft: rgba(245, 245, 245, 0.05);
+  --rule: rgba(245, 245, 245, 0.08);
+  --rule-strong: rgba(245, 245, 245, 0.18);
+
+  /* Texte — cream pur sur bg dark (contraste WCAG AAA).
+     IMPORTANT : --ink est la TEXT COLOR (sémantique restaurée) — la
+     plupart des composants utilisent var(--ink) pour le texte.
+     V4 initiale avait override --ink: #0A0A0A par erreur → bug "tout invisible". */
+  --cream: #F5F5F5;
+  --text: #F5F5F5;
+  --ink: #F5F5F5;            /* TEXT cream (PAS la bg color) */
+  --ink-soft: #E5E5E5;
+  --muted: #909090;          /* secondaire */
+  --muted-soft: #5C5C5C;
+  --dim: #5C5C5C;            /* labels / footers */
+
+  /* Brand colors — primary = cream (titres), primary-deep = darker bg pour
+     footer/chips/badges qui font background:var(--primary-deep) */
+  --primary: #F5F5F5;        /* titles cream */
+  --primary-soft: #B5B5B5;
+  --primary-bg: rgba(0, 220, 130, 0.06);
+  --primary-deep: #050505;   /* darker than --bg, footer + chips bg */
+
+  /* Accent — Vercel green, unique sur toute la landing */
+  --accent: #00DC82;
+  --accent-soft: rgba(0, 220, 130, 0.12);
+  --accent-bright: #1AE89A;
+  --accent-dim: rgba(0, 220, 130, 0.12);
+
+  /* Typo — Geist Sans + Geist Mono (drop Fraunces + Big Shoulders Display).
+     L'override --font-serif fait que les h1..h4 héritent automatiquement
+     de Geist via la règle globale. */
+  --font-display: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Shadows — neutre noir, plus minimal Tech Bold */
+  --shadow-sm:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.25);
+  --shadow-md:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 4px 12px rgba(0, 0, 0, 0.30),
+    0 12px 32px rgba(0, 0, 0, 0.25);
+  --shadow-lg:
+    0 2px 4px rgba(0, 0, 0, 0.40),
+    0 8px 20px rgba(0, 0, 0, 0.35),
+    0 24px 56px rgba(0, 0, 0, 0.30);
+
+  /* Background pur ink — le bloom + vignette de la balle 3D feront le mood,
+     plus besoin de gradients atmosphériques (qui parasitaient le post-pro). */
+  background: var(--bg) !important;
+  color: var(--text);
+}
+
+/* Nav en mode Tech Bold : ink semi-transparent + blur subtil */
+body[data-landing-mode="dark"] .nav {
+  background: rgba(10, 10, 10, 0.80);
+  border-bottom-color: var(--line);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+/* Wordmark : tone-wood / tone-inverted aboutissent tous deux à cream sur ink.
+   On garde l'API pour ne pas casser Nav/Footer. */
+body[data-landing-mode="dark"] .wordmark-scluba.tone-wood .ws-text,
+body[data-landing-mode="dark"] .wordmark-scluba.tone-inverted .ws-text {
+  color: var(--cream);
+}
+
+body[data-landing-mode="dark"] .nav-links a {
+  color: var(--muted);
+}
+body[data-landing-mode="dark"] .nav-links a:hover {
+  color: var(--cream);
+}
+body[data-landing-mode="dark"] .lang-switch {
+  color: var(--muted);
+  border-color: var(--line);
+}
+body[data-landing-mode="dark"] .lang-switch:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* V4.8 — Balle 3D strictement derrière tout le contenu (canvas z:0 fixed).
+   Sections transparentes pour la révéler entre les cards opaques. */
+body[data-landing-mode="dark"] .steps,
+body[data-landing-mode="dark"] .showcase,
+body[data-landing-mode="dark"] .showcase-section,
+body[data-landing-mode="dark"] .how,
+body[data-landing-mode="dark"] .pricing,
+body[data-landing-mode="dark"] .faq,
+body[data-landing-mode="dark"] .cta,
+body[data-landing-mode="dark"] .problem {
+  background: transparent;
+}
+
+/* V4.9 — CTAForm card semi-transparent : la balle 3D (z:0 behind) traverse
+   visuellement le cadre (effet glass premium), tandis que le texte +
+   inputs + bouton à l'intérieur restent opaques par dessus. */
+body[data-landing-mode="dark"] .cta-card {
+  background:
+    linear-gradient(135deg, rgba(18, 18, 18, 0.62) 0%, rgba(10, 10, 10, 0.55) 100%);
+  -webkit-backdrop-filter: blur(8px) saturate(125%);
+          backdrop-filter: blur(8px) saturate(125%);
+  border-color: rgba(31, 31, 31, 0.5);
+}
+
+/* Footer V4.1 — override pour ne pas suivre les semantics globales
+   (avant fix sémantique --ink, footer rendait cream sur cream invisible) */
+body[data-landing-mode="dark"] .footer {
+  background: var(--primary-deep); /* #050505 darker than --bg */
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  margin-top: 0;
+}
+body[data-landing-mode="dark"] .footer a {
+  color: var(--cream);
+}
+body[data-landing-mode="dark"] .footer a:hover {
+  color: var(--accent);
+}
+body[data-landing-mode="dark"] .footer .lang-link {
+  color: var(--accent);
+}
+
+/* Boutons Tech Bold : accent green sur ink, primary cream ink → fond green.
+   On force color au bg dark (#0A0A0A) plutôt qu'à var(--ink) qui est
+   maintenant la text color (cream) suite au fix sémantique. */
+body[data-landing-mode="dark"] .btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(0, 220, 130, 0.0);
+}
+body[data-landing-mode="dark"] .btn-primary:hover {
+  background: var(--accent-bright);
+  box-shadow: 0 0 0 1px rgba(0, 220, 130, 0.25), 0 0 32px rgba(0, 220, 130, 0.18);
+}
+body[data-landing-mode="dark"] .btn-ghost {
+  color: var(--cream);
+  border-color: var(--line);
+}
+body[data-landing-mode="dark"] .btn-ghost:hover {
+  background: var(--ink-2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+body[data-landing-mode="dark"] .btn-accent {
+  background: var(--accent);
+  color: var(--bg);
+}
+body[data-landing-mode="dark"] .btn-accent:hover {
+  background: var(--accent-bright);
+  box-shadow: 0 0 32px rgba(0, 220, 130, 0.22);
+}
+
 /* Honeypot: visually & assistively hidden, but still submittable by bots. */
 .hp-field {
   position: absolute !important;
@@ -170,6 +355,59 @@ section {
   overflow: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+/* ============================================================
+   Utility classes V4 "Tech Bold Chrome" (2026-05-19)
+   Tokens Geist + accent Vercel green. Scopées à la landing mais
+   réutilisables ailleurs (référencent les tokens, pas des values).
+   ============================================================ */
+
+/* Eyebrow mono — labels techniques en Geist Mono, accent green */
+.eyebrow-mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  line-height: 1;
+}
+
+/* Numérotation XXL — Geist 900 accent green (steps, sections) */
+.number-XL {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(4rem, 12vw, 9rem);
+  line-height: 0.85;
+  letter-spacing: -0.045em;
+  color: var(--accent);
+}
+
+/* Text mega — titres signature Hero (Scluba wordmark display) */
+.text-mega {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  line-height: 0.85;
+  letter-spacing: -0.05em;
+  color: var(--cream);
+}
+
+/* Glow accent — soft halo green derrière une surface (CTA, balle, hero).
+   Utility position:relative + pseudo-element blur. */
+.glow-accent {
+  position: relative;
+  isolation: isolate;
+}
+.glow-accent::before {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(0, 220, 130, 0.18), transparent 70%);
+  filter: blur(40px);
+  z-index: -1;
+  pointer-events: none;
 }
 
 /* ============================================================
