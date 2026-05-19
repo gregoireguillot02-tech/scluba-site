@@ -55,16 +55,14 @@
     inset: 0;
     width: 100vw;
     height: 100vh;
-    /* V4.6 — z-index 0 (derrière sections transparentes) + mix-blend-mode
-       screen : les reflets brillants de la balle additionnent la lumière
-       sur le contenu (cards opaques deviennent partiellement transparentes
-       aux reflets). Effet "lumière qui passe entre les pavés", weave
-       depth plutôt que background strict. */
-    z-index: 0;
+    /* V4.7 — z-index 1 : la balle passe AU-DESSUS des cadres/cards mais
+       SOUS le texte (qui a z:2 explicite en landing dark). Effet layering
+       hybride : on voit la balle survoler la card surface, le texte reste
+       lisible par-dessus. */
+    z-index: 1;
     pointer-events: none;
     opacity: 0;
     transition: opacity 600ms ease-out;
-    mix-blend-mode: screen;
   }
   canvas[data-scroll-golfball][data-ready="true"] {
     opacity: 1;
@@ -90,11 +88,10 @@
     transform: translate(-1000px, -1000px);
     transform-origin: 50% 50%;
     will-change: transform, opacity;
-    /* V4.5 — z-index 0 (même que canvas) pour rester derrière contenu */
-    z-index: 0;
+    /* V4.7 — z-index 1 (même que canvas) */
+    z-index: 1;
     opacity: 0;
     transition: opacity 400ms ease-out;
-    /* Multiply pour que l'ombre s'intègre quel que soit le bg de section */
     mix-blend-mode: multiply;
   }
   [data-ball-shadow][data-ready="true"] {
