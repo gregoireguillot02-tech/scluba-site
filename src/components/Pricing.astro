@@ -81,6 +81,7 @@ const t = useT(locale);
     display: flex;
     flex-direction: column;
     transition: transform 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out), border-color 0.4s var(--ease-out);
+    isolation: isolate;
   }
   .plan:hover {
     transform: translateY(-4px);
@@ -92,6 +93,42 @@ const t = useT(locale);
     border-color: var(--accent);
     background: var(--paper-deep, var(--bg));
     box-shadow: var(--shadow-md);
+  }
+
+  /* V6 — Aura pulsée vert néon autour de la card (signature Pricing).
+     Radial-gradient animé qui respire 4s. Désactivé en reduced-motion. */
+  .plan-featured::before {
+    content: "";
+    position: absolute;
+    inset: -24px;
+    z-index: -1;
+    border-radius: calc(var(--radius-lg) + 24px);
+    background: radial-gradient(
+      ellipse at center,
+      rgba(0, 220, 130, 0.22) 0%,
+      rgba(0, 220, 130, 0.08) 35%,
+      transparent 70%
+    );
+    filter: blur(24px);
+    opacity: 0.65;
+    pointer-events: none;
+    animation: planAuraPulse 4s ease-in-out infinite;
+  }
+  @keyframes planAuraPulse {
+    0%, 100% {
+      opacity: 0.55;
+      transform: scale(0.97);
+    }
+    50% {
+      opacity: 0.85;
+      transform: scale(1.02);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .plan-featured::before {
+      animation: none;
+      opacity: 0.45;
+    }
   }
 
   /* Badge "1er mois offert" */
