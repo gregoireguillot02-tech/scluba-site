@@ -78,37 +78,46 @@ const t = useT(locale);
                 </div>
               </div>
 
-              <!-- Multi-joueur leaderboard live (partie en cours, classement scoré) -->
+              <!-- Action section : "Démarrer une partie" — sélection prénom +
+                   parcours (9/18 trous) + CTA, mirror Scluba webapp réelle. -->
               <div class="hero-card-action">
-                <span class="hero-card-eyebrow">PARTIE EN COURS · TROU 12 / 18</span>
-                <h4 class="hero-card-title">Classement</h4>
+                <span class="hero-card-eyebrow">SCORECARD DIGITALE</span>
+                <h4 class="hero-card-title">Démarrer une partie</h4>
 
-                <ul class="hero-leaderboard" aria-hidden="true">
-                  <li class="hero-lb-row hero-lb-row--leader">
-                    <span class="hero-lb-rank">1</span>
-                    <span class="hero-lb-name">Grégoire</span>
-                    <span class="hero-lb-score">38</span>
-                    <span class="hero-lb-diff hero-lb-diff--under">−2</span>
-                  </li>
-                  <li class="hero-lb-row">
-                    <span class="hero-lb-rank">2</span>
-                    <span class="hero-lb-name">Paul</span>
-                    <span class="hero-lb-score">41</span>
-                    <span class="hero-lb-diff hero-lb-diff--over">+1</span>
-                  </li>
-                  <li class="hero-lb-row">
-                    <span class="hero-lb-rank">3</span>
-                    <span class="hero-lb-name">Antoine</span>
-                    <span class="hero-lb-score">43</span>
-                    <span class="hero-lb-diff hero-lb-diff--over">+3</span>
-                  </li>
-                  <li class="hero-lb-row">
-                    <span class="hero-lb-rank">4</span>
-                    <span class="hero-lb-name">Marc</span>
-                    <span class="hero-lb-score">45</span>
-                    <span class="hero-lb-diff hero-lb-diff--over">+5</span>
-                  </li>
-                </ul>
+                <div class="hero-card-tabs" aria-hidden="true">
+                  <span class="hero-card-tab is-active">En solo</span>
+                  <span class="hero-card-tab">À plusieurs</span>
+                </div>
+
+                <div class="hero-card-field">
+                  <label>TON PRÉNOM</label>
+                  <div class="hero-card-input">
+                    <span class="hero-card-input-placeholder">Antoine</span>
+                    <span class="hero-card-input-caret"></span>
+                  </div>
+                </div>
+
+                <div class="hero-card-field">
+                  <label>QUEL PARCOURS ?</label>
+                  <div class="hero-card-radio-group" role="group">
+                    <label class="hero-card-radio is-active">
+                      <span class="hero-card-radio-dot" aria-hidden="true"></span>
+                      <span class="hero-card-radio-label">18 trous · Les Pins</span>
+                    </label>
+                    <label class="hero-card-radio">
+                      <span class="hero-card-radio-dot" aria-hidden="true"></span>
+                      <span class="hero-card-radio-label">9 trous · L'Académie</span>
+                    </label>
+                  </div>
+                </div>
+
+                <button class="hero-card-cta" type="button" tabindex="-1" aria-hidden="true">
+                  Démarrer la partie
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14"/>
+                    <path d="m12 5 7 7-7 7"/>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
@@ -647,6 +656,51 @@ const t = useT(locale);
     51%, 100% { opacity: 0; }
   }
 
+  /* V6.4 — Section "Quel parcours ?" : 2 radios (un 9 trous + un 18 trous).
+     L'option active a un dot rempli vert néon, l'inactive un dot creux. */
+  .hero-card-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .hero-card-radio {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    background: rgba(245, 235, 216, 0.04);
+    border: 1px solid rgba(245, 235, 216, 0.08);
+    border-radius: 10px;
+    font-size: 12.5px;
+    color: var(--ink);
+    cursor: default;
+  }
+  .hero-card-radio.is-active {
+    background: rgba(0, 220, 130, 0.08);
+    border-color: rgba(0, 220, 130, 0.32);
+  }
+  .hero-card-radio-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(245, 235, 216, 0.30);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .hero-card-radio.is-active .hero-card-radio-dot {
+    border-color: var(--accent);
+  }
+  .hero-card-radio.is-active .hero-card-radio-dot::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .hero-card-radio-label {
+    flex: 1;
+  }
+
   .hero-card-cta {
     margin-top: auto;
     width: 100%;
@@ -667,84 +721,6 @@ const t = useT(locale);
   }
   .hero-card-cta svg {
     display: inline-block;
-  }
-
-  /* V6.3 — Multi-joueur leaderboard remplace l'écran "Démarrer une partie".
-     Affiche un classement live de 4 joueurs (1 leader highlight vert, 3 autres
-     neutres) avec score total + diff vs par (under/over). Aria-hidden visuel,
-     informatif pour le décideur club. */
-  .hero-leaderboard {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .hero-lb-row {
-    display: grid;
-    grid-template-columns: 22px 1fr auto auto;
-    gap: 10px;
-    align-items: center;
-    padding: 9px 12px;
-    background: rgba(245, 235, 216, 0.04);
-    border: 1px solid rgba(245, 235, 216, 0.06);
-    border-radius: 10px;
-    font-size: 13px;
-  }
-  .hero-lb-row--leader {
-    background: rgba(0, 220, 130, 0.10);
-    border-color: rgba(0, 220, 130, 0.32);
-    box-shadow: 0 0 16px rgba(0, 220, 130, 0.18);
-  }
-  .hero-lb-rank {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 11px;
-    color: var(--muted);
-    width: 22px;
-    height: 22px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-  }
-  .hero-lb-row--leader .hero-lb-rank {
-    background: var(--accent);
-    color: #0A0A0A;
-    border-radius: 50%;
-  }
-  .hero-lb-name {
-    font-weight: 600;
-    color: var(--ink);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .hero-lb-score {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 16px;
-    color: var(--ink);
-    letter-spacing: -0.02em;
-  }
-  .hero-lb-diff {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 7px;
-    border-radius: 6px;
-    min-width: 36px;
-    text-align: center;
-    letter-spacing: 0.02em;
-  }
-  .hero-lb-diff--under {
-    background: rgba(0, 220, 130, 0.20);
-    color: #1AE89A;
-  }
-  .hero-lb-diff--over {
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--muted);
   }
 
   .hero-scroll {

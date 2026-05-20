@@ -74,47 +74,45 @@ const t = useT(locale);
                 </div>
               </div>
 
-              <!-- ====== SCREEN 1 — TROU 1/9 SCORING (image 2) ====== -->
-              <div class="screen screen-score" data-flow-screen="1">
-                <div class="score-player-bar">
-                  <span class="score-player-ava">G</span>
-                  <div class="score-player-meta">
-                    <strong>greg <em>(vous)</em></strong>
-                    <small>EN ATTENTE</small>
-                  </div>
-                  <span class="score-hole-pill">TROU <strong>1/9</strong></span>
+              <!-- ====== SCREEN 1 — CLASSEMENT MULTI-JOUEUR (V6.4) ======
+                   Classement live pendant la partie : 4 joueurs, leader vert
+                   highlight + 3 autres neutres, score total + diff vs par. -->
+              <div class="screen screen-leaderboard" data-flow-screen="1">
+                <div class="lb-header">
+                  <span class="lb-header-eyebrow">PARTIE EN COURS · TROU 12 / 18</span>
+                  <h3 class="lb-header-title">Classement</h3>
                 </div>
 
-                <div class="score-par-block">
-                  <span class="score-par-lbl">PAR</span>
-                  <div class="score-par-num">3</div>
-                </div>
+                <ul class="lb-list">
+                  <li class="lb-row lb-row--leader">
+                    <span class="lb-rank">1</span>
+                    <span class="lb-name">Grégoire</span>
+                    <span class="lb-score">38</span>
+                    <span class="lb-diff lb-diff--under">−2</span>
+                  </li>
+                  <li class="lb-row">
+                    <span class="lb-rank">2</span>
+                    <span class="lb-name">Paul</span>
+                    <span class="lb-score">41</span>
+                    <span class="lb-diff lb-diff--over">+1</span>
+                  </li>
+                  <li class="lb-row">
+                    <span class="lb-rank">3</span>
+                    <span class="lb-name">Antoine</span>
+                    <span class="lb-score">43</span>
+                    <span class="lb-diff lb-diff--over">+3</span>
+                  </li>
+                  <li class="lb-row">
+                    <span class="lb-rank">4</span>
+                    <span class="lb-name">Marc</span>
+                    <span class="lb-score">45</span>
+                    <span class="lb-diff lb-diff--over">+5</span>
+                  </li>
+                </ul>
 
-                <div class="score-hint">← tap un trou ou swipe →</div>
-
-                <div class="score-pills">
-                  {Array.from({ length: 9 }, (_, i) => (
-                    <span class={`pill ${i === 0 ? 'pill-active' : ''}`}>{i + 1}</span>
-                  ))}
-                </div>
-
-                <div class="score-cards">
-                  <span class="s-card"><em>ACE</em><strong>1</strong></span>
-                  <span class="s-card"><em>BIRDIE</em><strong>2</strong></span>
-                  <span class="s-card is-active"><em>PAR</em><strong>3</strong></span>
-                  <span class="s-card"><em>BOGEY</em><strong>4</strong></span>
-                  <span class="s-card"><em>DOUBLE</em><strong>5</strong></span>
-                </div>
-
-                <div class="score-carte">
-                  <span class="carte-lbl">CARTE</span>
-                  <div class="carte-row">
-                    <span class="carte-boucle">BOUCLE 1</span>
-                    {Array.from({ length: 9 }, () => <span class="carte-cell">—</span>)}
-                  </div>
-                </div>
-
-                <button class="score-cta" tabindex="-1">Terminer maintenant</button>
+                <button class="lb-cta" tabindex="-1" aria-hidden="true">
+                  Saisir mon score · Trou 13
+                </button>
               </div>
 
               <!-- ====== SCREEN 2 — PARTAGER TA CARTE (image 3) ====== -->
@@ -514,208 +512,107 @@ const t = useT(locale);
   }
   .screen-share { opacity: 0; transform: scale(1.02); }
 
-  /* ====== SCREEN 1 — TROU 1/9 SCORING ====== */
-  .score-player-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    background: rgba(0, 220, 130, 0.10);
-    border: 1px solid var(--accent);
-    border-radius: 12px;
-    margin-bottom: 14px;
+  /* ====== SCREEN 1 — CLASSEMENT MULTI-JOUEUR (V6.4) ====== */
+  .lb-header {
+    margin-bottom: 12px;
+    text-align: center;
   }
-  .score-player-ava {
-    width: 30px; height: 30px;
-    border-radius: 50%;
-    background: #7C3AED;
-    color: #fff;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .score-player-meta {
-    flex: 1;
-    min-width: 0;
-  }
-  .score-player-meta strong {
-    display: block;
-    font-family: var(--font-display);
-    font-size: 11px;
-    color: var(--primary);
-    font-weight: 700;
-    line-height: 1.1;
-  }
-  .score-player-meta strong em {
-    font-style: normal;
-    color: var(--muted);
-    font-weight: 500;
-  }
-  .score-player-meta small {
+  .lb-header-eyebrow {
     display: block;
     font-family: var(--font-mono);
     font-size: 7.5px;
-    color: var(--muted);
     letter-spacing: 0.18em;
-    margin-top: 1px;
-  }
-  .score-hole-pill {
-    font-family: var(--font-mono);
-    font-size: 8.5px;
-    color: var(--accent);
-    letter-spacing: 0.18em;
-    font-weight: 500;
-    flex-shrink: 0;
-  }
-  .score-hole-pill strong {
-    font-family: var(--font-display);
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--accent);
-    margin-left: 4px;
-  }
-
-  .score-par-block {
-    text-align: center;
-    margin-bottom: 8px;
-  }
-  .score-par-lbl {
-    font-family: var(--font-mono);
-    font-size: 8.5px;
-    letter-spacing: 0.18em;
-    color: var(--muted);
-    font-weight: 500;
-  }
-  .score-par-num {
-    font-family: var(--font-display);
-    font-size: 42px;
-    font-weight: 900;
-    color: var(--accent);
-    line-height: 0.9;
-    letter-spacing: -0.04em;
-  }
-
-  .score-hint {
-    text-align: center;
-    font-family: var(--font-mono);
-    font-size: 7px;
-    color: var(--muted);
-    letter-spacing: 0.10em;
-    margin: 4px 0 10px;
-  }
-
-  .score-pills {
-    display: flex;
-    justify-content: center;
-    gap: 4px;
-    margin-bottom: 10px;
-  }
-  .pill {
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    color: var(--muted);
-    font-family: var(--font-display);
-    font-size: 9px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .pill-active {
-    background: var(--primary);
-    color: var(--bg);
-    border-color: var(--primary);
-  }
-
-  .score-cards {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 3px;
-    margin-bottom: 10px;
-  }
-  .s-card {
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 5px;
-    padding: 4px 2px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-  }
-  .s-card em {
-    font-family: var(--font-mono);
-    font-style: normal;
-    font-size: 6.5px;
-    letter-spacing: 0.10em;
-    color: var(--muted);
-    font-weight: 500;
-  }
-  .s-card strong {
-    font-family: var(--font-display);
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--primary);
-  }
-  .s-card.is-active {
-    background: rgba(201, 169, 106, 0.18);
-    border-color: var(--accent);
-  }
-  .s-card.is-active em { color: var(--accent); }
-  .s-card.is-active strong { color: var(--accent); }
-
-  .score-carte {
-    background: rgba(255, 255, 255, 0.45);
-    border-radius: 6px;
-    padding: 6px 6px 6px 8px;
-    margin-bottom: 8px;
-  }
-  .carte-lbl {
-    display: block;
-    font-family: var(--font-mono);
-    font-size: 7px;
-    letter-spacing: 0.20em;
     color: var(--accent);
     font-weight: 500;
     margin-bottom: 3px;
   }
-  .carte-row {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-  .carte-boucle {
-    flex-shrink: 0;
-    padding: 3px 5px;
-    background: var(--primary);
-    color: var(--bg);
-    font-family: var(--font-mono);
-    font-size: 7px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    border-radius: 3px;
-  }
-  .carte-cell {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 2px;
-    text-align: center;
-    padding: 3px 0;
-    font-size: 8px;
-    color: var(--muted);
-    font-weight: 600;
+  .lb-header-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--primary);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin: 0;
   }
 
-  .score-cta {
+  .lb-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .lb-row {
+    display: grid;
+    grid-template-columns: 18px 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 7px 9px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 11px;
+  }
+  .lb-row--leader {
+    background: rgba(0, 220, 130, 0.10);
+    border-color: rgba(0, 220, 130, 0.32);
+    box-shadow: 0 0 14px rgba(0, 220, 130, 0.20);
+  }
+  .lb-rank {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 9.5px;
+    color: var(--muted);
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .lb-row--leader .lb-rank {
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: 50%;
+  }
+  .lb-name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lb-score {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--primary);
+    letter-spacing: -0.02em;
+  }
+  .lb-diff {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 4px;
+    min-width: 28px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .lb-diff--under {
+    background: rgba(0, 220, 130, 0.22);
+    color: var(--accent);
+  }
+  .lb-diff--over {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--muted);
+  }
+
+  .lb-cta {
     margin-top: auto;
     width: 100%;
     padding: 10px;
