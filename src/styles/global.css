@@ -257,9 +257,18 @@ body[data-landing-mode="dark"] {
   --lift-card: -4px;
   --motion-depth: 260ms;
 
-  /* Background pur ink — le bloom + vignette de la balle 3D feront le mood,
-     plus besoin de gradients atmosphériques (qui parasitaient le post-pro). */
-  background: var(--bg) !important;
+  /* Background pur ink + dot grid V6.1 — texture subtile partout, derrière
+     la balle 3D (canvas z:0 par-dessus). Refactor du `background:` shorthand
+     en longhand pour faire cohabiter color + image. */
+  background-color: var(--bg) !important;
+  background-image: radial-gradient(
+    circle,
+    rgba(245, 245, 245, 0.14) 1px,
+    transparent 1.5px
+  ) !important;
+  background-size: 24px 24px !important;
+  background-repeat: repeat !important;
+  background-attachment: fixed !important;
   color: var(--text);
 }
 
@@ -436,23 +445,9 @@ body[data-landing-mode="dark"] .btn-accent:hover {
    Cohabite avec V6 depth-card / depth-glow / depth-atmosphere.
    ============================================================ */
 
-/* Dot grid global — texture subtile sur tout le viewport en mode dark.
-   Pseudo ::after positionné fixed z:-1 → derrière le canvas Three.js (z:0).
-   Cohabite avec le `background !important` du body (pas de conflit). */
-body[data-landing-mode="dark"]::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image: radial-gradient(
-    circle,
-    rgba(245, 245, 245, 0.07) 1px,
-    transparent 1.5px
-  );
-  background-size: 24px 24px;
-  opacity: 0.55;
-}
+/* Dot grid V6.1 — déplacé sur body { background-image } directement (voir
+   bloc body[data-landing-mode="dark"] plus haut). Le pseudo ::after était
+   invisible avec z:-1 (masqué par le bg color du body). */
 
 /* Spotlight souris viewport — halo vert néon doux qui suit le curseur.
    Gated par `data-mouse-active="true"` (set par JS uniquement sur pointer:fine
