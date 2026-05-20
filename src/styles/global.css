@@ -236,6 +236,27 @@ body[data-landing-mode="dark"] {
     0 8px 20px rgba(0, 0, 0, 0.35),
     0 24px 56px rgba(0, 0, 0, 0.30);
 
+  /* V6 — Depth system tokens (profondeur visuelle + hover micro-interactions).
+     Cohérents avec --accent #00DC82 (vert néon Vercel). */
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.40),
+    0 6px 16px rgba(0, 0, 0, 0.32),
+    0 16px 40px rgba(0, 0, 0, 0.28);
+  --shadow-card-hover:
+    0 2px 4px rgba(0, 0, 0, 0.45),
+    0 12px 24px rgba(0, 0, 0, 0.38),
+    0 24px 64px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(0, 220, 130, 0.08);
+  --shadow-glow-green:
+    0 0 24px rgba(0, 220, 130, 0.22),
+    0 0 56px rgba(0, 220, 130, 0.12);
+  --shadow-glow-green-strong:
+    0 0 32px rgba(0, 220, 130, 0.45),
+    0 0 80px rgba(0, 220, 130, 0.22);
+  --ease-depth: cubic-bezier(0.4, 0, 0.2, 1);
+  --lift-card: -4px;
+  --motion-depth: 260ms;
+
   /* Background pur ink — le bloom + vignette de la balle 3D feront le mood,
      plus besoin de gradients atmosphériques (qui parasitaient le post-pro). */
   background: var(--bg) !important;
@@ -408,6 +429,95 @@ body[data-landing-mode="dark"] .btn-accent:hover {
   filter: blur(40px);
   z-index: -1;
   pointer-events: none;
+}
+
+/* ============================================================
+   V6 — Depth system utility classes
+   Profondeur visuelle + hover micro-interactions cohérents partout.
+   ============================================================ */
+
+/* Card surface élevée avec hover lift + shadow upgrade.
+   À appliquer sur les cards de contenu (3Steps items, HowItWorks items,
+   Pricing plan, FAQ items, ClubsShowcase palettes, etc.). */
+.depth-card {
+  transition:
+    transform var(--motion-depth) var(--ease-depth),
+    box-shadow var(--motion-depth) var(--ease-depth),
+    border-color var(--motion-depth) var(--ease-depth);
+  box-shadow: var(--shadow-card);
+  will-change: transform;
+}
+.depth-card:hover {
+  transform: translateY(var(--lift-card));
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Variante "glow vert" — ajoute halo néon sur hover (CTAs et signature cards).
+   À combiner avec .depth-card pour avoir lift + glow. */
+.depth-glow:hover,
+.depth-card.depth-glow:hover {
+  box-shadow: var(--shadow-card-hover), var(--shadow-glow-green);
+}
+
+/* Atmospheric glow — radial-gradient discret en arrière-plan d'une section,
+   sans masquer la balle 3D fixed derrière. À appliquer via ::before sur les
+   sections qui en ont besoin. Utility = setter de variables CSS, le ::before
+   est défini sur la section directement. */
+.depth-atmosphere {
+  position: relative;
+  isolation: isolate;
+}
+.depth-atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 15% 30%, rgba(0, 220, 130, 0.06), transparent 50%),
+    radial-gradient(circle at 85% 70%, rgba(0, 100, 200, 0.04), transparent 55%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* Inset → outset shadow switch (FAQ items pattern : fermé = creux, ouvert = soulevé).
+   La règle .depth-inset par défaut est inset shadow, le toggle .is-open / [open] /
+   :hover bascule en outset shadow + lift. */
+.depth-inset {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  transition:
+    transform var(--motion-depth) var(--ease-depth),
+    box-shadow var(--motion-depth) var(--ease-depth);
+}
+.depth-inset:hover,
+.depth-inset.is-open,
+.depth-inset[open],
+details[open] > summary.depth-inset {
+  box-shadow: var(--shadow-card);
+  transform: translateY(-2px);
+}
+
+/* prefers-reduced-motion : neutralise les transforms, garde les shadows */
+@media (prefers-reduced-motion: reduce) {
+  .depth-card,
+  .depth-inset {
+    transition: none;
+  }
+  .depth-card:hover,
+  .depth-inset:hover,
+  .depth-inset.is-open {
+    transform: none;
+  }
+}
+
+/* Mobile : lift réduit (-2px au lieu de -4px) pour pas avoir l'effet hover
+   "qui colle" sur tap, et moins de movement disgracieux. */
+@media (max-width: 640px) {
+  :root,
+  body[data-landing-mode="dark"] {
+    --lift-card: -2px;
+  }
 }
 
 /* ============================================================

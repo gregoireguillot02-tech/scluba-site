@@ -172,6 +172,12 @@ const samplePalette = t.showcase.palettes[1];
     }
   }
 
+  /* V6 — Tilt mouse-follow : les palettes deviennent des cards 3D qui
+     suivent le curseur (signature ClubsShowcase). Variables --tilt-x/--tilt-y
+     mises à jour par le script en bas du composant. */
+  .showcase-split {
+    perspective: 1200px;
+  }
   .palette-card {
     background: var(--ink-2, var(--bg));
     border: 1px solid var(--line);
@@ -181,14 +187,34 @@ const samplePalette = t.showcase.palettes[1];
     position: relative;
     display: flex;
     flex-direction: column;
-    transition: transform 0.4s var(--ease-out), border-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out);
+    transform-style: preserve-3d;
+    transform:
+      rotateY(var(--tilt-x, 0deg))
+      rotateX(var(--tilt-y, 0deg))
+      translateY(var(--tilt-lift, 0px));
+    transition:
+      transform 220ms var(--ease-out),
+      border-color 0.4s var(--ease-out),
+      box-shadow 0.4s var(--ease-out);
+    will-change: transform;
   }
   .palette-card:hover {
-    transform: translateY(-4px);
+    --tilt-lift: -6px;
     box-shadow: var(--shadow-lg);
   }
+  @media (prefers-reduced-motion: reduce), (max-width: 767px) {
+    .palette-card {
+      --tilt-x: 0deg;
+      --tilt-y: 0deg;
+    }
+  }
   .palette-card-default:hover { border-color: var(--muted); }
-  .palette-card-branded:hover { border-color: var(--p-accent); }
+  .palette-card-branded:hover {
+    border-color: var(--p-accent);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 32px rgba(212, 165, 116, 0.18); /* honey glow signature */
+  }
 
   .card-tag {
     position: absolute;
@@ -349,3 +375,42 @@ const samplePalette = t.showcase.palettes[1];
     background: var(--p-accent);
   }
 </style>
+
+<script>
+  // V6 — Tilt mouse-follow sur les palette cards.
+  // Met à jour les custom props --tilt-x / --tilt-y selon la position
+  // de la souris (max 6° amplitude). rAF coalescé pour 60fps stable.
+  // Désactivé si prefers-reduced-motion ou viewport ≤767px (mobile).
+  const MAX_TILT = 6;
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isMobile = window.matchMedia('(max-width: 767px)').matches;
+  if (!prefersReduced && !isMobile) {
+    document.querySelectorAll('.palette-card').forEach((card) => {
+      const el = card as HTMLElement;
+      let raf = 0;
+      let pendingX = 0;
+      let pendingY = 0;
+      const apply = () => {
+        el.style.setProperty('--tilt-x', `${pendingX.toFixed(2)}deg`);
+        el.style.setProperty('--tilt-y', `${pendingY.toFixed(2)}deg`);
+        raf = 0;
+      };
+      el.addEventListener('mousemove', (e) => {
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = (e.clientX - cx) / (rect.width / 2);   // -1..1
+        const dy = (e.clientY - cy) / (rect.height / 2);  // -1..1
+        // rotateY suit l'axe X de la souris (positif = droite penche), rotateX inversé
+        pendingX = dx * MAX_TILT;
+        pendingY = -dy * MAX_TILT;
+        if (!raf) raf = requestAnimationFrame(apply);
+      });
+      el.addEventListener('mouseleave', () => {
+        pendingX = 0;
+        pendingY = 0;
+        if (!raf) raf = requestAnimationFrame(apply);
+      });
+    });
+  }
+</script>
