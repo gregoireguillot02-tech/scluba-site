@@ -432,6 +432,73 @@ body[data-landing-mode="dark"] .btn-accent:hover {
 }
 
 /* ============================================================
+   V6.1 — Dot grid + mouse spotlight (texture & lumière dynamique)
+   Cohabite avec V6 depth-card / depth-glow / depth-atmosphere.
+   ============================================================ */
+
+/* Dot grid global — texture subtile sur tout le viewport en mode dark.
+   Pseudo ::after positionné fixed z:-1 → derrière le canvas Three.js (z:0).
+   Cohabite avec le `background !important` du body (pas de conflit). */
+body[data-landing-mode="dark"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle,
+    rgba(245, 245, 245, 0.07) 1px,
+    transparent 1.5px
+  );
+  background-size: 24px 24px;
+  opacity: 0.55;
+}
+
+/* Spotlight souris viewport — halo vert néon doux qui suit le curseur.
+   Gated par `data-mouse-active="true"` (set par JS uniquement sur pointer:fine
+   + non-reduced-motion). Sur touch/reduced → pas d'attr → pseudo invisible. */
+body[data-landing-mode="dark"][data-mouse-active="true"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: radial-gradient(
+    circle 520px at var(--mx, 50%) var(--my, 50%),
+    rgba(0, 220, 130, 0.10),
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+  transition: background 80ms linear;
+}
+
+/* Shine interne sur cards au hover — radial-gradient local qui suit la
+   souris sur la card survolée. Cohérent visuellement avec le spotlight
+   viewport (même --accent, même blend). Désactivé hors mouse-active. */
+.depth-card {
+  position: relative;
+  isolation: isolate;
+}
+.depth-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle 350px at var(--card-mx, 50%) var(--card-my, 50%),
+    rgba(0, 220, 130, 0.12),
+    transparent 60%
+  );
+  transition: opacity var(--motion-depth) var(--ease-depth);
+}
+body[data-mouse-active="true"] .depth-card:hover::after {
+  opacity: 1;
+}
+
+/* ============================================================
    V6 — Depth system utility classes
    Profondeur visuelle + hover micro-interactions cohérents partout.
    ============================================================ */

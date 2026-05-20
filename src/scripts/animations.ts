@@ -403,6 +403,57 @@ function initCTAForm() {
 /* V4.2 — initPaletteCycler droppé. ClubsShowcase passe en split before/after
    static, plus de morph anim runtime. */
 
+/* V6.1 — Mouse spotlight (viewport + cards shine).
+   Met à jour --mx/--my sur body (halo radial qui suit le curseur partout)
+   ET --card-mx/--card-my sur la .depth-card survolée (shine interne).
+   Désactivé sur touch device (pointer: coarse) et prefers-reduced-motion.
+   Le CSS gate l'affichage via body[data-mouse-active="true"]. */
+function initMouseSpotlight(): void {
+  const supportsHover = window.matchMedia('(pointer: fine)').matches;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!supportsHover || reduced) return;
+
+  document.body.setAttribute('data-mouse-active', 'true');
+
+  let raf = 0;
+  let pendingClientX = 0;
+  let pendingClientY = 0;
+  let pendingCard: HTMLElement | null = null;
+  let pendingCardRect: DOMRect | null = null;
+
+  const apply = (): void => {
+    raf = 0;
+    // Viewport spotlight
+    const mx = (pendingClientX / window.innerWidth) * 100;
+    const my = (pendingClientY / window.innerHeight) * 100;
+    document.body.style.setProperty('--mx', `${mx.toFixed(2)}%`);
+    document.body.style.setProperty('--my', `${my.toFixed(2)}%`);
+    // Cards shine (uniquement sur la card survolée la plus proche)
+    if (pendingCard && pendingCardRect) {
+      const cx = ((pendingClientX - pendingCardRect.left) / pendingCardRect.width) * 100;
+      const cy = ((pendingClientY - pendingCardRect.top) / pendingCardRect.height) * 100;
+      pendingCard.style.setProperty('--card-mx', `${cx.toFixed(2)}%`);
+      pendingCard.style.setProperty('--card-my', `${cy.toFixed(2)}%`);
+    }
+  };
+
+  document.addEventListener('pointermove', (e: PointerEvent) => {
+    pendingClientX = e.clientX;
+    pendingClientY = e.clientY;
+    const target = e.target as Element | null;
+    const card = target?.closest('.depth-card') as HTMLElement | null;
+    if (card) {
+      pendingCard = card;
+      // Cache le rect au hit (évite un getBoundingClientRect par move)
+      pendingCardRect = card.getBoundingClientRect();
+    } else {
+      pendingCard = null;
+      pendingCardRect = null;
+    }
+    if (!raf) raf = requestAnimationFrame(apply);
+  }, { passive: true });
+}
+
 /* ---------- INIT ---------- */
 function initAll() {
   initHero();
@@ -416,6 +467,7 @@ function initAll() {
   initSectionHeaders();
   initCTAForm();
   initFooter();
+  initMouseSpotlight();
 }
 
 if (document.readyState === 'loading') {
