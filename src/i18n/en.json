@@ -34,6 +34,11 @@
     "eyebrow": "The solution",
     "title": "Scluba in 3 gestures",
     "lead": "A simple mechanic, designed for the club and the player. Zero installation, zero complexity for your team.",
+    "founders_quote": {
+      "text": "Your players already share their rounds. We built Scluba so they share your club too.",
+      "authors": "Grégoire & Paul",
+      "role": "Scluba co-founders"
+    },
     "items": [
       {
         "num": "01",
@@ -232,7 +237,7 @@
   },
   "faq": {
     "eyebrow": "Frequently asked",
-    "title": "Everything you'll ask, answered upfront.",
+    "title": "We've anticipated your questions.",
     "lead": "The questions golf club managers ask us most often. If yours isn't here, drop us a line.",
     "support_eyebrow": "NOT FOUND?",
     "support_email": "team@scluba.com",

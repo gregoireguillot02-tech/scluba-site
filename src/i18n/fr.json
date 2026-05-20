@@ -34,6 +34,11 @@
     "eyebrow": "La solution",
     "title": "Scluba en 3 gestes",
     "lead": "Une mécanique pensée pour votre club. Aucune installation, aucune charge pour vos équipes.",
+    "founders_quote": {
+      "text": "Vos joueurs partagent déjà leurs parties. On a fait Scluba pour qu'ils partagent aussi votre club.",
+      "authors": "Grégoire & Paul",
+      "role": "Co-fondateurs Scluba"
+    },
     "items": [
       {
         "num": "01",
@@ -232,7 +237,7 @@
   },
   "faq": {
     "eyebrow": "Questions fréquentes",
-    "title": "Tout ce qu'on vous demande, à l'avance.",
+    "title": "On a anticipé vos questions.",
     "lead": "Les questions que les gérants de clubs nous posent le plus souvent. Si la vôtre n'y figure pas, écrivez-nous.",
     "support_eyebrow": "PAS TROUVÉ ?",
     "support_email": "team@scluba.com",
