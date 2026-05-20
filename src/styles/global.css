@@ -29,18 +29,59 @@ body {
   overflow-x: hidden;
 }
 
-/* Quadrillage "carnet de score" — appliqué uniquement sur la landing
-   (body[data-landing]). Deux linears 1px (horizontal + vertical) en forest
-   très désaturé, espacement 32px, fixed pour effet papier en place pendant
-   le scroll. Les halos honey + forest restent par-dessus. */
+/* Quadrillage "carnet de score" + halos atmosphériques country-club —
+   appliqué uniquement sur la landing (body[data-landing]). 6 layers fixed :
+   - 2 linears 1px forest (grid 32x32)
+   - 4 radial-gradients honey/forest répartis pour densifier les "spotlights"
+     atmosphériques (haut-gauche honey, haut-droite honey, mid-gauche forest,
+     mid-droite honey, bas-gauche forest, bas-droite forest) — comble les
+     zones vides du quadrillage uniforme. */
 body[data-landing] {
   background:
     linear-gradient(rgba(27, 67, 50, 0.09) 1px, transparent 1px) 0 0 / 32px 32px,
     linear-gradient(90deg, rgba(27, 67, 50, 0.09) 1px, transparent 1px) 0 0 / 32px 32px,
-    radial-gradient(ellipse 80% 50% at 18% 8%, rgba(212, 165, 116, 0.07), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 82% 95%, rgba(45, 106, 79, 0.05), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 18% 6%, rgba(212, 165, 116, 0.10), transparent 60%),
+    radial-gradient(ellipse 55% 40% at 85% 22%, rgba(212, 165, 116, 0.08), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 8% 48%, rgba(45, 106, 79, 0.06), transparent 60%),
+    radial-gradient(ellipse 55% 40% at 92% 62%, rgba(212, 165, 116, 0.07), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 15% 88%, rgba(45, 106, 79, 0.06), transparent 60%),
+    radial-gradient(ellipse 55% 40% at 88% 96%, rgba(212, 165, 116, 0.08), transparent 60%),
     var(--bg);
-  background-attachment: fixed, fixed, fixed, fixed, scroll;
+  background-attachment: fixed, fixed, fixed, fixed, fixed, fixed, fixed, fixed, scroll;
+}
+
+/* Hairlines décoratives entre sections — chapitres d'un magazine. Un filet
+   gradient forest très subtil de 140px, centré, en bas de chaque section sauf
+   la dernière. Absolu pour cohabiter avec les sections en display: flex. */
+body[data-landing] .hero,
+body[data-landing] .problem,
+body[data-landing] .steps,
+body[data-landing] .showcase-section,
+body[data-landing] .showcase,
+body[data-landing] .how,
+body[data-landing] .pricing,
+body[data-landing] .faq,
+body[data-landing] .cta {
+  position: relative;
+}
+body[data-landing] .hero::after,
+body[data-landing] .problem::after,
+body[data-landing] .steps::after,
+body[data-landing] .showcase-section::after,
+body[data-landing] .showcase::after,
+body[data-landing] .how::after,
+body[data-landing] .pricing::after,
+body[data-landing] .faq::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(27, 67, 50, 0.35), transparent);
+  z-index: 5;
+  pointer-events: none;
 }
 
 /* Sections transparentes — pour laisser passer le quadrillage du body
@@ -61,8 +102,10 @@ body[data-landing] .cta {
 }
 
 /* Blocs textes & infos flottants — papier ivoire semi-transparent + light
-   backdrop blur. Le quadrillage du body transparaît derrière, ce qui crée
-   l'effet "cartes qui flottent" sur le papier millimétré. */
+   backdrop blur + ombre papier multicouches forest pour un vrai effet "card
+   posée 2-3 plans au-dessus du papier millimétré". Le quadrillage du body
+   transparaît derrière, l'ombre forest tinted ancre la carte sans paraître
+   tech-startup. */
 body[data-landing] .step-card,
 body[data-landing] .plan,
 body[data-landing] .faq-item,
@@ -70,6 +113,21 @@ body[data-landing] .palette-card {
   background: rgba(255, 255, 255, 0.62) !important;
   backdrop-filter: blur(8px) saturate(115%);
   -webkit-backdrop-filter: blur(8px) saturate(115%);
+  box-shadow:
+    0 1px 2px rgba(15, 42, 30, 0.05),
+    0 6px 14px rgba(15, 42, 30, 0.07),
+    0 18px 36px rgba(15, 42, 30, 0.09),
+    0 40px 80px rgba(15, 42, 30, 0.08) !important;
+}
+body[data-landing] .step-card:hover,
+body[data-landing] .plan:hover,
+body[data-landing] .faq-item:hover,
+body[data-landing] .palette-card:hover {
+  box-shadow:
+    0 2px 4px rgba(15, 42, 30, 0.06),
+    0 10px 22px rgba(15, 42, 30, 0.10),
+    0 28px 56px rgba(15, 42, 30, 0.12),
+    0 56px 112px rgba(15, 42, 30, 0.10) !important;
 }
 
 h1, h2, h3, h4 {
@@ -580,10 +638,9 @@ body[data-mouse-active="true"] .depth-card:hover::after {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(circle at 15% 30%, rgba(0, 220, 130, 0.06), transparent 50%),
-    radial-gradient(circle at 85% 70%, rgba(0, 100, 200, 0.04), transparent 55%);
+    radial-gradient(circle at 15% 30%, rgba(212, 165, 116, 0.08), transparent 55%),
+    radial-gradient(circle at 85% 70%, rgba(45, 106, 79, 0.06), transparent 55%);
   pointer-events: none;
-  mix-blend-mode: screen;
 }
 
 /* Inset → outset shadow switch (FAQ items pattern : fermé = creux, ouvert = soulevé).
