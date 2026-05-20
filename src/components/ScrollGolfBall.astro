@@ -79,6 +79,13 @@
     pointer-events: none;
     opacity: 0;
     transition: opacity 600ms ease-out;
+    /* V6 — mix-blend-mode: lighten élimine la "couture" entre Hero et
+       sections suivantes. Le composer Three.js (bloom + vignette) émet
+       des pixels semi-opaques sur tout le viewport qui assombrissent les
+       dots du body bg. `lighten` interdit au canvas d'assombrir derrière —
+       seuls les pixels brillants (ball chrome + tee emissive + bloom) sont
+       visibles, partout ailleurs le dot-grid du body passe à travers. */
+    mix-blend-mode: lighten;
   }
   canvas[data-scroll-golfball][data-ready="true"] {
     opacity: 1;

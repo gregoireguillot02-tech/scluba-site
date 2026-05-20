@@ -78,31 +78,37 @@ const t = useT(locale);
                 </div>
               </div>
 
-              <!-- Action section -->
+              <!-- Multi-joueur leaderboard live (partie en cours, classement scoré) -->
               <div class="hero-card-action">
-                <span class="hero-card-eyebrow">SCORECARD DIGITALE</span>
-                <h4 class="hero-card-title">Démarrer une partie</h4>
+                <span class="hero-card-eyebrow">PARTIE EN COURS · TROU 12 / 18</span>
+                <h4 class="hero-card-title">Classement</h4>
 
-                <div class="hero-card-tabs" aria-hidden="true">
-                  <span class="hero-card-tab is-active">En solo</span>
-                  <span class="hero-card-tab">À plusieurs</span>
-                </div>
-
-                <div class="hero-card-field">
-                  <label>TON PRÉNOM</label>
-                  <div class="hero-card-input">
-                    <span class="hero-card-input-placeholder">Antoine</span>
-                    <span class="hero-card-input-caret"></span>
-                  </div>
-                </div>
-
-                <button class="hero-card-cta" type="button" tabindex="-1" aria-hidden="true">
-                  Créer la partie
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M5 12h14"/>
-                    <path d="m12 5 7 7-7 7"/>
-                  </svg>
-                </button>
+                <ul class="hero-leaderboard" aria-hidden="true">
+                  <li class="hero-lb-row hero-lb-row--leader">
+                    <span class="hero-lb-rank">1</span>
+                    <span class="hero-lb-name">Grégoire</span>
+                    <span class="hero-lb-score">38</span>
+                    <span class="hero-lb-diff hero-lb-diff--under">−2</span>
+                  </li>
+                  <li class="hero-lb-row">
+                    <span class="hero-lb-rank">2</span>
+                    <span class="hero-lb-name">Paul</span>
+                    <span class="hero-lb-score">41</span>
+                    <span class="hero-lb-diff hero-lb-diff--over">+1</span>
+                  </li>
+                  <li class="hero-lb-row">
+                    <span class="hero-lb-rank">3</span>
+                    <span class="hero-lb-name">Antoine</span>
+                    <span class="hero-lb-score">43</span>
+                    <span class="hero-lb-diff hero-lb-diff--over">+3</span>
+                  </li>
+                  <li class="hero-lb-row">
+                    <span class="hero-lb-rank">4</span>
+                    <span class="hero-lb-name">Marc</span>
+                    <span class="hero-lb-score">45</span>
+                    <span class="hero-lb-diff hero-lb-diff--over">+5</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
@@ -661,6 +667,84 @@ const t = useT(locale);
   }
   .hero-card-cta svg {
     display: inline-block;
+  }
+
+  /* V6.3 — Multi-joueur leaderboard remplace l'écran "Démarrer une partie".
+     Affiche un classement live de 4 joueurs (1 leader highlight vert, 3 autres
+     neutres) avec score total + diff vs par (under/over). Aria-hidden visuel,
+     informatif pour le décideur club. */
+  .hero-leaderboard {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .hero-lb-row {
+    display: grid;
+    grid-template-columns: 22px 1fr auto auto;
+    gap: 10px;
+    align-items: center;
+    padding: 9px 12px;
+    background: rgba(245, 235, 216, 0.04);
+    border: 1px solid rgba(245, 235, 216, 0.06);
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .hero-lb-row--leader {
+    background: rgba(0, 220, 130, 0.10);
+    border-color: rgba(0, 220, 130, 0.32);
+    box-shadow: 0 0 16px rgba(0, 220, 130, 0.18);
+  }
+  .hero-lb-rank {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--muted);
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .hero-lb-row--leader .hero-lb-rank {
+    background: var(--accent);
+    color: #0A0A0A;
+    border-radius: 50%;
+  }
+  .hero-lb-name {
+    font-weight: 600;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .hero-lb-score {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .hero-lb-diff {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 7px;
+    border-radius: 6px;
+    min-width: 36px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .hero-lb-diff--under {
+    background: rgba(0, 220, 130, 0.20);
+    color: #1AE89A;
+  }
+  .hero-lb-diff--over {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--muted);
   }
 
   .hero-scroll {
