@@ -25,6 +25,10 @@
   --line-soft: #F3F4F6;
   --bg: #FFFFFF;
   --bg-soft: #FBFBF9;
+  /* --cream : fallback global pour les composants qui utilisaient var(--cream)
+     sans valeur de repli (introduit pour le mode dark "Tech Bold"). En light
+     country-club, on aligne sur --bg = blanc. */
+  --cream: #FFFFFF;
 
   /* Espaces */
   --space-1: 4px;

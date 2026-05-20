@@ -36,14 +36,14 @@ const samplePalette = t.showcase.palettes[1];
         <span class="card-tag">{locale === 'fr' ? 'DÉFAUT' : 'DEFAULT'}</span>
         <div class="card-photo card-photo-default">
           <svg viewBox="0 0 200 110" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-            <rect width="200" height="110" fill="#1A1A1A"/>
-            <ellipse cx="40" cy="60" rx="80" ry="14" fill="#2A2A2A" opacity="0.6"/>
-            <ellipse cx="160" cy="56" rx="90" ry="16" fill="#2A2A2A" opacity="0.5"/>
-            <path d="M 0 78 Q 50 68, 100 76 T 200 74 L 200 110 L 0 110 Z" fill="#2A2A2A" opacity="0.8"/>
-            <path d="M 0 90 Q 60 84, 120 90 T 200 88 L 200 110 L 0 110 Z" fill="#3A3A3A" opacity="0.9"/>
-            <line x1="100" y1="92" x2="100" y2="58" stroke="#4A4A4A" stroke-width="1.6"/>
-            <path d="M 100 58 L 116 62 L 100 66 Z" fill="#5A5A5A"/>
-            <circle cx="100" cy="92" r="1.6" fill="#6A6A6A"/>
+            <rect width="200" height="110" fill="#EEEAE0"/>
+            <ellipse cx="40" cy="60" rx="80" ry="14" fill="#D8D2C4" opacity="0.7"/>
+            <ellipse cx="160" cy="56" rx="90" ry="16" fill="#D8D2C4" opacity="0.6"/>
+            <path d="M 0 78 Q 50 68, 100 76 T 200 74 L 200 110 L 0 110 Z" fill="#C8C2B2" opacity="0.65"/>
+            <path d="M 0 90 Q 60 84, 120 90 T 200 88 L 200 110 L 0 110 Z" fill="#B8B2A0" opacity="0.7"/>
+            <line x1="100" y1="92" x2="100" y2="58" stroke="#9A9485" stroke-width="1.6"/>
+            <path d="M 100 58 L 116 62 L 100 66 Z" fill="#8A8475"/>
+            <circle cx="100" cy="92" r="1.6" fill="#7A7466"/>
           </svg>
         </div>
         <div class="card-bar card-bar-default">
@@ -164,7 +164,7 @@ const samplePalette = t.showcase.palettes[1];
     width: 56px;
     height: 32px;
     opacity: 0.75;
-    filter: drop-shadow(0 0 10px rgba(0, 220, 130, 0.35));
+    filter: drop-shadow(0 0 10px rgba(212, 165, 116, 0.35));
   }
   @media (max-width: 767px) {
     .showcase-arrow svg {
@@ -259,7 +259,7 @@ const samplePalette = t.showcase.palettes[1];
     flex-shrink: 0;
   }
   .card-bar-default {
-    background: #2A2A2A;
+    background: rgba(120, 116, 102, 0.10);
     color: var(--muted);
   }
   .card-bar-branded {
@@ -273,8 +273,8 @@ const samplePalette = t.showcase.palettes[1];
     position: relative;
   }
   .card-logo-spot-default {
-    background: #404040;
-    border: 1.5px solid #5A5A5A;
+    background: #E5E2DA;
+    border: 1.5px solid var(--line);
   }
   .card-logo-spot-branded {
     background: var(--cream);
@@ -310,7 +310,7 @@ const samplePalette = t.showcase.palettes[1];
   /* === Content === */
   .card-content {
     padding: var(--space-4);
-    background: var(--ink, var(--bg-soft));
+    background: transparent;
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
@@ -349,10 +349,10 @@ const samplePalette = t.showcase.palettes[1];
     aspect-ratio: 1;
     border-radius: 2px;
   }
-  /* Default = monochrome muted */
-  .mini-cell { background: #404040; opacity: 0.5; }
-  .mini-cell.is-birdie { background: #6E6E6E; opacity: 1; }
-  .mini-cell.is-bogey { background: #303030; opacity: 0.7; }
+  /* Default = monochrome stone pâle (country-club empty) */
+  .mini-cell { background: rgba(120, 116, 102, 0.22); opacity: 1; }
+  .mini-cell.is-birdie { background: rgba(120, 116, 102, 0.45); opacity: 1; }
+  .mini-cell.is-bogey { background: rgba(120, 116, 102, 0.12); opacity: 1; }
   /* Branded = accent + ground sample colors */
   .mini-cell-branded { background: var(--p-accent); opacity: 0.25; }
   .mini-cell-branded.is-birdie { background: var(--p-accent); opacity: 1; }

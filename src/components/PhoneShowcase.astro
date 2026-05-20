@@ -270,63 +270,6 @@ const t = useT(locale);
     will-change: transform;
   }
 
-  /* V4.2 Néon conic-gradient sweep continu */
-  @property --neon-angle {
-    syntax: '<angle>';
-    initial-value: 0deg;
-    inherits: false;
-  }
-  .showcase-phone::before {
-    content: "";
-    position: absolute;
-    inset: -4px;
-    border-radius: 60px;
-    padding: 4px;
-    background: conic-gradient(
-      from var(--neon-angle),
-      transparent 0deg,
-      transparent 265deg,
-      rgba(0, 220, 130, 0.35) 295deg,
-      rgba(0, 220, 130, 0.85) 340deg,
-      #00FF9A 357deg,
-      rgba(0, 220, 130, 0.85) 360deg
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-            mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-            mask-composite: exclude;
-    pointer-events: none;
-    z-index: 1;
-    filter:
-      drop-shadow(0 0 6px var(--accent))
-      drop-shadow(0 0 18px rgba(0, 220, 130, 0.55));
-    animation: neonSweep 4s linear infinite;
-  }
-  @keyframes neonSweep {
-    to { --neon-angle: 360deg; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .showcase-phone::before {
-      animation: none;
-      background: var(--accent);
-      opacity: 0.55;
-    }
-  }
-  @supports not (background: paint(angle-painter)) {
-    .showcase-phone::before {
-      background: var(--accent);
-      animation: neonPulse 3s ease-in-out infinite;
-    }
-    @keyframes neonPulse {
-      0%, 100% { opacity: 0.45; }
-      50% { opacity: 0.90; }
-    }
-  }
-
   /* iPhone 17 Pro titanium frame (cohérent avec Hero) */
   .phone-frame {
     position: relative;
@@ -390,23 +333,24 @@ const t = useT(locale);
   .phone-btn-side-r { right: -2px; top: 130px; width: 4px; height: 80px; }
 
   .phone-screen {
-    /* V4.3 sub-context palette */
-    --primary: #1F1F1F;
-    --primary-soft: #3A3A3A;
-    --primary-deep: #0A0A0A;
-    --primary-bg: rgba(0, 220, 130, 0.08);
-    --accent: #00DC82;
-    --accent-soft: rgba(0, 220, 130, 0.12);
-    --accent-bright: #1AE89A;
-    --ink: #1F1F1F;
-    --ink-soft: #3A3A3A;
-    --bg: #E8E1D0;
+    /* Sub-context palette "carnet de partie" — forest + honey, cohérent
+       avec .hero-phone-screen pour ne pas casser le ton country-club. */
+    --primary: #1B4332;
+    --primary-soft: #2D6A4F;
+    --primary-deep: #0F2A1E;
+    --primary-bg: rgba(212, 165, 116, 0.10);
+    --accent: #D4A574;
+    --accent-soft: rgba(212, 165, 116, 0.16);
+    --accent-bright: #E8C089;
+    --ink: #1B4332;
+    --ink-soft: #2D6A4F;
+    --bg: #F4EEDD;
     --muted: #7A7A7A;
-    --line: rgba(31, 31, 31, 0.12);
+    --line: rgba(27, 67, 50, 0.14);
 
     position: relative;
     width: 100%; height: 100%;
-    background: linear-gradient(180deg, #E8E1D0 0%, #DDD5C0 100%);
+    background: linear-gradient(180deg, #F4EEDD 0%, #E8DEC5 100%);
     border-radius: 44px;
     overflow: hidden;
   }
@@ -556,9 +500,9 @@ const t = useT(locale);
     font-size: 11px;
   }
   .lb-row--leader {
-    background: rgba(0, 220, 130, 0.10);
-    border-color: rgba(0, 220, 130, 0.32);
-    box-shadow: 0 0 14px rgba(0, 220, 130, 0.20);
+    background: rgba(212, 165, 116, 0.10);
+    border-color: rgba(212, 165, 116, 0.32);
+    box-shadow: 0 0 14px rgba(212, 165, 116, 0.20);
   }
   .lb-rank {
     font-family: var(--font-mono);
@@ -604,7 +548,7 @@ const t = useT(locale);
     letter-spacing: 0.02em;
   }
   .lb-diff--under {
-    background: rgba(0, 220, 130, 0.22);
+    background: rgba(212, 165, 116, 0.22);
     color: var(--accent);
   }
   .lb-diff--over {

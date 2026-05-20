@@ -17,43 +17,112 @@ const t = useT(locale);
       <p class="section-lead">{t.pricing.lead}</p>
     </div>
 
-    <div class="pricing-single">
-      {t.pricing.plans.map((plan) => (
-        <article class="plan plan-featured" data-anim="plan">
-          <div class="plan-launch-badge">
-            <span class="launch-pulse-mini" aria-hidden="true"></span>
-            {t.pricing.launchBadge}
+    <div class="pricing-grid">
+      <aside class="pricing-trust" aria-label="Garanties">
+        <div class="trust-badge">
+          <span class="trust-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 12l2 2 4-4"/>
+              <circle cx="12" cy="12" r="9"/>
+            </svg>
+          </span>
+          <div class="trust-text">
+            <strong>{t.pricing.trust.engagement_label}</strong>
+            <span>{t.pricing.trust.engagement_note}</span>
           </div>
+        </div>
 
-          <div class="plan-head">
-            <div>
-              <h3 class="plan-name">{plan.name}</h3>
-              <p class="plan-tagline">{plan.tagline}</p>
-            </div>
-            <div class="plan-price">
-              <span class="plan-price-num">{plan.price}</span>
-              <span class="plan-price-period">{plan.period}</span>
-            </div>
+        <div class="trust-badge">
+          <span class="trust-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 7v5l3 2"/>
+            </svg>
+          </span>
+          <div class="trust-text">
+            <strong>{t.pricing.trust.setup_label}</strong>
+            <span>{t.pricing.trust.setup_note}</span>
           </div>
+        </div>
 
-          <p class="plan-engagement">{plan.engagement}</p>
+        <div class="trust-badge">
+          <span class="trust-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v4"/>
+              <path d="M12 18v4"/>
+              <path d="M4.93 4.93l2.83 2.83"/>
+              <path d="M16.24 16.24l2.83 2.83"/>
+              <path d="M2 12h4"/>
+              <path d="M18 12h4"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </span>
+          <div class="trust-text">
+            <strong>{t.pricing.trust.trial_label}</strong>
+            <span>{t.pricing.trust.trial_note}</span>
+          </div>
+        </div>
 
-          <ul class="plan-features">
-            {plan.features.map((feature) => (
-              <li>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M20 6 9 17l-5-5"/>
-                </svg>
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
+        <div class="trust-badge">
+          <span class="trust-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L3 6v6c0 5 4 9 9 10 5-1 9-5 9-10V6l-9-4z"/>
+            </svg>
+          </span>
+          <div class="trust-text">
+            <strong>{t.pricing.trust.rgpd_label}</strong>
+            <span>{t.pricing.trust.rgpd_note}</span>
+          </div>
+        </div>
+      </aside>
 
-          <a href="#cta" class="btn btn-primary plan-cta">
-            {t.nav.demo}
+      <div class="pricing-single">
+        {t.pricing.plans.map((plan) => (
+          <article class="plan plan-featured" data-anim="plan">
+            <div class="plan-launch-badge">
+              <span class="launch-pulse-mini" aria-hidden="true"></span>
+              {t.pricing.launchBadge}
+            </div>
+
+            <div class="plan-head">
+              <div>
+                <h3 class="plan-name">{plan.name}</h3>
+                <p class="plan-tagline">{plan.tagline}</p>
+              </div>
+              <div class="plan-price">
+                <span class="plan-price-num">{plan.price}</span>
+                <span class="plan-price-period">{plan.period}</span>
+              </div>
+            </div>
+
+            <p class="plan-engagement">{plan.engagement}</p>
+
+            <ul class="plan-features">
+              {plan.features.map((feature) => (
+                <li>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
+
+            <a href="#cta" class="btn btn-primary plan-cta">
+              {t.nav.demo}
+            </a>
+          </article>
+        ))}
+      </div>
+
+      <aside class="pricing-contact" aria-label="Contact">
+        <div class="contact-block">
+          <span class="contact-label">{t.pricing.trust.contact_label}</span>
+          <a href={`mailto:${t.pricing.trust.contact_email}`} class="contact-email">
+            {t.pricing.trust.contact_email}
           </a>
-        </article>
-      ))}
+        </div>
+      </aside>
     </div>
   </div>
 </section>
@@ -63,12 +132,120 @@ const t = useT(locale);
     background: var(--bg);
   }
 
+  /* Layout 3-col desktop : trust badges gauche, pricing card centre, contact
+     droite. Sur mobile (≤900px), retombe en 1-col stack. */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    align-items: start;
+    padding-top: var(--space-4);
+    justify-content: center;
+  }
+  @media (min-width: 900px) {
+    .pricing-grid {
+      grid-template-columns: 220px minmax(360px, 460px) 220px;
+      gap: var(--space-6);
+    }
+  }
+
+  /* === Trust badges (sidebar gauche) === */
+  .pricing-trust {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  @media (min-width: 900px) {
+    .pricing-trust {
+      padding-top: var(--space-6);
+    }
+  }
+  .trust-badge {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .trust-icon {
+    flex-shrink: 0;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+  }
+  .trust-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .trust-text strong {
+    font-family: var(--font-serif);
+    font-size: var(--text-base);
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.2;
+  }
+  .trust-text span {
+    font-size: var(--text-xs);
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* === Contact bloc (sidebar droite, ancré en bas) === */
+  .pricing-contact {
+    display: flex;
+    align-items: flex-end;
+    height: 100%;
+  }
+  @media (max-width: 899px) {
+    .pricing-contact {
+      align-items: stretch;
+    }
+  }
+  .contact-block {
+    width: 100%;
+    padding: var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .contact-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .contact-email {
+    font-family: var(--font-serif);
+    font-size: var(--text-md);
+    font-weight: 700;
+    color: var(--primary);
+    text-decoration: none;
+    word-break: break-all;
+    transition: color 0.2s var(--ease-out);
+  }
+  .contact-email:hover {
+    color: var(--accent);
+  }
+
   .pricing-single {
     display: flex;
     justify-content: center;
-    max-width: 440px;
-    margin: 0 auto;
-    padding-top: var(--space-4);
+    width: 100%;
   }
   .pricing-single .plan { width: 100%; }
 
@@ -105,8 +282,8 @@ const t = useT(locale);
     border-radius: calc(var(--radius-lg) + 24px);
     background: radial-gradient(
       ellipse at center,
-      rgba(0, 220, 130, 0.22) 0%,
-      rgba(0, 220, 130, 0.08) 35%,
+      rgba(212, 165, 116, 0.22) 0%,
+      rgba(212, 165, 116, 0.08) 35%,
       transparent 70%
     );
     filter: blur(24px);

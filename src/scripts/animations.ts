@@ -22,10 +22,13 @@ function splitChars(el: HTMLElement): HTMLSpanElement[] {
   return spans;
 }
 
-/* ---------- HERO ---------- */
+/* ---------- HERO ----------
+   Reveal éditorial sobre : stagger doux sur les chars du wordmark (sans
+   rotation overshoot), fade-up sur tagline/sub/CTA, slide-in latéral du
+   phone. Pas de bounce/back.out — power2.out partout pour rester
+   country-club premium plutôt que startup tech. */
 function initHero() {
   const logoEl = document.querySelector<HTMLElement>('[data-anim="hero-logo"]');
-  const ballEl = document.querySelector<HTMLElement>('[data-hero-ball]');
   const taglineEl = document.querySelector<HTMLElement>('[data-anim="hero-tagline"]');
   const subEl = document.querySelector<HTMLElement>('[data-anim="hero-sub"]');
   const ctaEl = document.querySelector<HTMLElement>('[data-anim="hero-cta"]');
@@ -34,31 +37,19 @@ function initHero() {
   if (!logoEl) return;
 
   const chars = splitChars(logoEl);
-  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+  const tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
 
   tl.from(chars, {
-    yPercent: 110,
-    rotation: 8,
+    yPercent: 60,
     opacity: 0,
-    duration: 0.9,
-    stagger: 0.06,
+    duration: 0.8,
+    stagger: 0.05,
   });
 
-  // Balle de golf — tombe du haut, rebondit, se cale en place du point
-  if (ballEl) {
-    tl.from(ballEl, {
-      y: -240,
-      rotation: -180,
-      opacity: 0,
-      duration: 1.1,
-      ease: 'bounce.out',
-    }, '-=0.55');
-  }
-
-  if (taglineEl) tl.from(taglineEl, { y: 24, opacity: 0, duration: 0.7 }, '-=0.5');
+  if (taglineEl) tl.from(taglineEl, { y: 24, opacity: 0, duration: 0.7 }, '-=0.4');
   if (subEl) tl.from(subEl, { y: 20, opacity: 0, duration: 0.6 }, '-=0.4');
-  if (ctaEl) tl.from(ctaEl, { y: 16, opacity: 0, scale: 0.94, duration: 0.6 }, '-=0.3');
-  if (phoneEl) tl.from(phoneEl, { y: 60, opacity: 0, rotation: -6, duration: 1.2 }, '-=0.9');
+  if (ctaEl) tl.from(ctaEl, { y: 16, opacity: 0, duration: 0.6 }, '-=0.3');
+  if (phoneEl) tl.from(phoneEl, { y: 40, opacity: 0, duration: 1.0 }, '-=0.8');
 }
 
 /* ---------- PROBLÈME (lignes successives, pinned) ---------- */
@@ -145,39 +136,38 @@ function initPhoneShowcase() {
   if (screen2) tl.to(screen2, { opacity: 1, scale: 1, duration: 0.10 }, 0.55);
   if (phase2) tl.to(phase2, { opacity: 1, y: 0, duration: 0.10 }, 0.55);
   if (progressBars[0]) tl.to(progressBars[0], { width: '100%', duration: 0.08, ease: 'none' }, 0.50);
-  if (progressDots[1]) tl.to(progressDots[1], { backgroundColor: '#00DC82', duration: 0.05 }, 0.55);
+  if (progressDots[1]) tl.to(progressDots[1], { backgroundColor: '#1B4332', duration: 0.05 }, 0.55);
 
   // === PHASE 2 (0.60 → 1.0) : screen 2 (share) reste visible ===
 }
 
 
-/* ---------- SHOWCASE — drop golf-themed ----------
-   Les 4 cartes tombent une par une avec un rebond physique
-   (bounce.out natif GSAP, pas de plugin payant). */
+/* ---------- SHOWCASE ----------
+   Cartes en fade-up doux + mini-cells qui apparaissent en cascade sans
+   overshoot — power3.out, cohérent avec le ton country-club sobre. */
 function initShowcase() {
   const cards = document.querySelectorAll<HTMLElement>('[data-anim="showcase-card"]');
   if (!cards.length) return;
 
   gsap.from(cards, {
     scrollTrigger: { trigger: cards[0], start: 'top 85%' },
-    y: -28,
+    y: 30,
     opacity: 0,
-    duration: 0.95,
+    duration: 0.8,
     stagger: 0.10,
-    ease: 'bounce.out',
+    ease: 'power3.out',
   });
 
-  // Mini-cells s'allument en cascade dans chaque carte (signal scorecard)
   cards.forEach((card) => {
     const cells = card.querySelectorAll<HTMLElement>('.mini-cell');
     if (!cells.length) return;
     gsap.from(cells, {
       scrollTrigger: { trigger: card, start: 'top 75%' },
       opacity: 0,
-      scale: 0.4,
-      duration: 0.4,
+      scale: 0.7,
+      duration: 0.45,
       stagger: 0.022,
-      ease: 'back.out(1.5)',
+      ease: 'power2.out',
     });
   });
 }
@@ -218,10 +208,9 @@ function initPricing() {
     scrollTrigger: { trigger: cards[0], start: 'top 85%' },
     y: 40,
     opacity: 0,
-    scale: 0.96,
-    duration: 0.9,
-    stagger: 0.18,
-    ease: 'back.out(1.2)',
+    duration: 0.8,
+    stagger: 0.15,
+    ease: 'power3.out',
   });
 }
 
@@ -403,57 +392,6 @@ function initCTAForm() {
 /* V4.2 — initPaletteCycler droppé. ClubsShowcase passe en split before/after
    static, plus de morph anim runtime. */
 
-/* V6.1 — Mouse spotlight (viewport + cards shine).
-   Met à jour --mx/--my sur body (halo radial qui suit le curseur partout)
-   ET --card-mx/--card-my sur la .depth-card survolée (shine interne).
-   Désactivé sur touch device (pointer: coarse) et prefers-reduced-motion.
-   Le CSS gate l'affichage via body[data-mouse-active="true"]. */
-function initMouseSpotlight(): void {
-  const supportsHover = window.matchMedia('(pointer: fine)').matches;
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!supportsHover || reduced) return;
-
-  document.body.setAttribute('data-mouse-active', 'true');
-
-  let raf = 0;
-  let pendingClientX = 0;
-  let pendingClientY = 0;
-  let pendingCard: HTMLElement | null = null;
-  let pendingCardRect: DOMRect | null = null;
-
-  const apply = (): void => {
-    raf = 0;
-    // Viewport spotlight
-    const mx = (pendingClientX / window.innerWidth) * 100;
-    const my = (pendingClientY / window.innerHeight) * 100;
-    document.body.style.setProperty('--mx', `${mx.toFixed(2)}%`);
-    document.body.style.setProperty('--my', `${my.toFixed(2)}%`);
-    // Cards shine (uniquement sur la card survolée la plus proche)
-    if (pendingCard && pendingCardRect) {
-      const cx = ((pendingClientX - pendingCardRect.left) / pendingCardRect.width) * 100;
-      const cy = ((pendingClientY - pendingCardRect.top) / pendingCardRect.height) * 100;
-      pendingCard.style.setProperty('--card-mx', `${cx.toFixed(2)}%`);
-      pendingCard.style.setProperty('--card-my', `${cy.toFixed(2)}%`);
-    }
-  };
-
-  document.addEventListener('pointermove', (e: PointerEvent) => {
-    pendingClientX = e.clientX;
-    pendingClientY = e.clientY;
-    const target = e.target as Element | null;
-    const card = target?.closest('.depth-card') as HTMLElement | null;
-    if (card) {
-      pendingCard = card;
-      // Cache le rect au hit (évite un getBoundingClientRect par move)
-      pendingCardRect = card.getBoundingClientRect();
-    } else {
-      pendingCard = null;
-      pendingCardRect = null;
-    }
-    if (!raf) raf = requestAnimationFrame(apply);
-  }, { passive: true });
-}
-
 /* ---------- INIT ---------- */
 function initAll() {
   initHero();
@@ -467,7 +405,6 @@ function initAll() {
   initSectionHeaders();
   initCTAForm();
   initFooter();
-  initMouseSpotlight();
 }
 
 if (document.readyState === 'loading') {

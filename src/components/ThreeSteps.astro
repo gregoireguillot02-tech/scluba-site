@@ -17,48 +17,61 @@ const t = useT(locale);
       <p class="section-lead">{t.steps.lead}</p>
     </div>
 
-    <div class="step-grid">
-      {t.steps.items.map((item) => (
-        <article class="step-card depth-card" data-anim="step-card">
-          <span class="step-num">{item.num}</span>
-          <h3 class="step-title">{item.title}</h3>
-          <p class="step-body">{item.body}</p>
-          <div class="step-icon" aria-hidden="true">
-            {item.num === '01' && (
-              <svg viewBox="0 0 80 80" fill="none">
-                <rect x="20" y="14" width="40" height="44" rx="4" stroke="currentColor" stroke-width="1.5" />
-                <rect x="28" y="22" width="24" height="24" fill="currentColor" opacity="0.2" />
-                <rect x="32" y="26" width="6" height="6" fill="currentColor" />
-                <rect x="42" y="26" width="6" height="6" fill="currentColor" />
-                <rect x="32" y="36" width="6" height="6" fill="currentColor" />
-                <rect x="42" y="36" width="2" height="6" fill="currentColor" />
-                <rect x="46" y="36" width="2" height="6" fill="currentColor" />
-                <line x1="14" y1="62" x2="66" y2="62" stroke="currentColor" stroke-width="1.5" />
-              </svg>
-            )}
-            {item.num === '02' && (
-              <svg viewBox="0 0 80 80" fill="none">
-                <rect x="26" y="10" width="28" height="56" rx="4" stroke="currentColor" stroke-width="1.5" />
-                <rect x="29" y="14" width="22" height="44" fill="currentColor" opacity="0.08" />
-                <circle cx="40" cy="62" r="2" fill="currentColor" />
-                <path d="M34 32 L40 38 L48 28" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-              </svg>
-            )}
-            {item.num === '03' && (
-              <svg viewBox="0 0 80 80" fill="none">
-                <rect x="14" y="20" width="36" height="48" rx="3" fill="currentColor" opacity="0.08" stroke="currentColor" stroke-width="1.5" />
-                <rect x="14" y="20" width="36" height="14" fill="currentColor" opacity="0.5" />
-                <circle cx="55" cy="14" r="6" stroke="currentColor" stroke-width="1.5" fill="none" />
-                <circle cx="68" cy="40" r="6" stroke="currentColor" stroke-width="1.5" fill="none" />
-                <circle cx="55" cy="64" r="6" stroke="currentColor" stroke-width="1.5" fill="none" />
-                <line x1="50" y1="20" x2="50" y2="14" stroke="currentColor" stroke-width="1.2" />
-                <line x1="50" y1="40" x2="62" y2="40" stroke="currentColor" stroke-width="1.2" />
-                <line x1="50" y1="60" x2="50" y2="64" stroke="currentColor" stroke-width="1.2" />
-              </svg>
-            )}
-          </div>
-        </article>
-      ))}
+    <div class="step-layout">
+      <div class="step-grid">
+        {t.steps.items.map((item) => (
+          <article class="step-card depth-card" data-anim="step-card">
+            <span class="step-num">{item.num}</span>
+            <h3 class="step-title">{item.title}</h3>
+            <p class="step-body">{item.body}</p>
+            <div class="step-icon" aria-hidden="true">
+              {item.num === '01' && (
+                <svg viewBox="0 0 80 80" fill="none">
+                  <rect x="20" y="14" width="40" height="44" rx="4" stroke="currentColor" stroke-width="1.5" />
+                  <rect x="28" y="22" width="24" height="24" fill="currentColor" opacity="0.2" />
+                  <rect x="32" y="26" width="6" height="6" fill="currentColor" />
+                  <rect x="42" y="26" width="6" height="6" fill="currentColor" />
+                  <rect x="32" y="36" width="6" height="6" fill="currentColor" />
+                  <rect x="42" y="36" width="2" height="6" fill="currentColor" />
+                  <rect x="46" y="36" width="2" height="6" fill="currentColor" />
+                  <line x1="14" y1="62" x2="66" y2="62" stroke="currentColor" stroke-width="1.5" />
+                </svg>
+              )}
+              {item.num === '02' && (
+                <svg viewBox="0 0 80 80" fill="none">
+                  <rect x="26" y="10" width="28" height="56" rx="4" stroke="currentColor" stroke-width="1.5" />
+                  <rect x="29" y="14" width="22" height="44" fill="currentColor" opacity="0.08" />
+                  <circle cx="40" cy="62" r="2" fill="currentColor" />
+                  <path d="M34 32 L40 38 L48 28" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                </svg>
+              )}
+              {item.num === '03' && (
+                <svg viewBox="0 0 80 80" fill="none">
+                  <rect x="14" y="20" width="36" height="48" rx="3" fill="currentColor" opacity="0.08" stroke="currentColor" stroke-width="1.5" />
+                  <rect x="14" y="20" width="36" height="14" fill="currentColor" opacity="0.5" />
+                  <circle cx="55" cy="14" r="6" stroke="currentColor" stroke-width="1.5" fill="none" />
+                  <circle cx="68" cy="40" r="6" stroke="currentColor" stroke-width="1.5" fill="none" />
+                  <circle cx="55" cy="64" r="6" stroke="currentColor" stroke-width="1.5" fill="none" />
+                  <line x1="50" y1="20" x2="50" y2="14" stroke="currentColor" stroke-width="1.2" />
+                  <line x1="50" y1="40" x2="62" y2="40" stroke="currentColor" stroke-width="1.2" />
+                  <line x1="50" y1="60" x2="50" y2="64" stroke="currentColor" stroke-width="1.2" />
+                </svg>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <aside class="founders-quote" aria-label="Mot des fondateurs">
+        <svg class="founders-mark" width="32" height="24" viewBox="0 0 32 24" fill="none" aria-hidden="true">
+          <path d="M0 24V14C0 6.27 4.85 0.85 12 0V4C7.6 4.62 4.85 7.27 4.85 12H12V24H0ZM20 24V14C20 6.27 24.85 0.85 32 0V4C27.6 4.62 24.85 7.27 24.85 12H32V24H20Z" fill="currentColor"/>
+        </svg>
+        <blockquote class="founders-quote-text">{t.steps.founders_quote.text}</blockquote>
+        <footer class="founders-quote-attrib">
+          <strong>{t.steps.founders_quote.authors}</strong>
+          <span>{t.steps.founders_quote.role}</span>
+        </footer>
+      </aside>
     </div>
   </div>
 </section>
@@ -82,6 +95,21 @@ const t = useT(locale);
     margin-top: var(--space-3);
   }
 
+  /* Layout : 3 cartes à gauche, citation des fondateurs en colonne droite
+     sur desktop. Sur mobile (≤1023px), le bloc citation passe sous la grille. */
+  .step-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    align-items: center;
+  }
+  @media (min-width: 1024px) {
+    .step-layout {
+      grid-template-columns: minmax(0, 1fr) 260px;
+      gap: var(--space-7);
+    }
+  }
+
   .step-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -92,11 +120,62 @@ const t = useT(locale);
     .step-grid {
       grid-template-columns: repeat(3, 1fr);
       gap: var(--space-5);
-      /* Décalage à gauche pour laisser ~25% droite à la balle qui voyage là (K3 keyframe x=+2.6) */
-      max-width: 78%;
-      margin-right: auto;
-      margin-left: 0;
     }
+  }
+
+  /* Bloc citation des fondateurs — papier flottant, italic Fraunces,
+     guillemets décoratifs en mark honey. */
+  .founders-quote {
+    padding: var(--space-5);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(8px) saturate(115%);
+    -webkit-backdrop-filter: blur(8px) saturate(115%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  @media (min-width: 1024px) {
+    .founders-quote {
+      max-width: none;
+      margin: 0;
+    }
+  }
+  .founders-mark {
+    color: var(--accent);
+    opacity: 0.85;
+  }
+  .founders-quote-text {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: var(--text-md);
+    line-height: 1.4;
+    color: var(--primary);
+    letter-spacing: -0.01em;
+  }
+  .founders-quote-attrib {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: var(--space-3);
+    border-top: 1px dashed var(--line);
+  }
+  .founders-quote-attrib strong {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: var(--text-sm);
+    color: var(--primary);
+  }
+  .founders-quote-attrib span {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
 
   .step-card {
