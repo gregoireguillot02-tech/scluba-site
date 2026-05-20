@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "Scluba — La carte de score digitale brandée pour votre club de golf",
-    "description": "Vos joueurs jouent. Votre club rayonne. Scluba transforme chaque partie en visibilité sociale pour votre golf — sans app à installer."
+    "title": "Scluba — Chaque partie devient un post. La scorecard digitale brandée pour clubs de golf.",
+    "description": "Une carte de score à vos couleurs. Scannée au tee 1, partagée à la 18e. Votre golf apparaît dans chaque feed de joueur — sans app à installer."
   },
   "launch": {
     "tag": "Offre de lancement",
@@ -15,8 +15,8 @@
   },
   "hero": {
     "eyebrow": "Scorecard digitale · clubs de golf",
-    "tagline": "La carte de score digitale brandée pour votre club.",
-    "subtagline": "Vos joueurs jouent. Votre club rayonne.",
+    "tagline": "Chaque partie devient un post.",
+    "subtagline": "Une carte de score à vos couleurs. Scannée au tee 1, partagée à la 18e. Votre golf apparaît dans chaque feed.",
     "cta": "Voir une démo de 10 min",
     "scroll": "Découvrez le concept"
   },
@@ -28,27 +28,27 @@
       "Et photographient leur carte de score papier.",
       "Sans aucune mention de votre club."
     ],
-    "punchline": "Chaque partie est une opportunité de visibilité perdue."
+    "punchline": "Chaque partie est une opportunité de visibilité — perdue."
   },
   "steps": {
     "eyebrow": "La solution",
     "title": "Scluba en 3 gestes",
-    "lead": "Une mécanique simple, pensée pour le club et le joueur. Aucune installation, aucune complexité côté équipe.",
+    "lead": "Une mécanique pensée pour votre club. Aucune installation, aucune charge équipe.",
     "items": [
       {
         "num": "01",
         "title": "QR au desk",
-        "body": "Nous vous envoyons un cadre élégant à poser sur le comptoir d'accueil."
+        "body": "Un cadre élégant à vos couleurs, posé sur le comptoir d'accueil. Livré clé en main."
       },
       {
         "num": "02",
-        "title": "Le joueur scanne et joue",
-        "body": "Une seule web app, sans installation. Plusieurs joueurs peuvent saisir leurs scores trou par trou via un seul QR."
+        "title": "Le joueur scanne",
+        "body": "Une web app sans installation. Saisie multi-joueurs trou par trou, via un seul QR."
       },
       {
         "num": "03",
-        "title": "Carte partagée partout",
-        "body": "Image prête à poster aux couleurs de votre club, photo souvenir incluse. Partage natif iOS, Android, desktop."
+        "title": "Votre club, partagé",
+        "body": "Carte aux couleurs du club, photo souvenir, image prête à poster. Chaque partie devient une publication."
       }
     ]
   },
