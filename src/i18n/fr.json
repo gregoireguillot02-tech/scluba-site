@@ -203,17 +203,17 @@
     "plans": [
       {
         "name": "Scluba",
-        "tagline": "Une carte de score brandée, partagée par chaque joueur.",
+        "tagline": "Votre identité sur chaque carte. Votre golf sur chaque feed.",
         "price": "49€",
         "period": "/mois",
         "engagement": "ou 39€/mois avec engagement 3 ans (−20%)",
         "features": [
-          "Carte de score aux couleurs de votre club",
-          "Photo souvenir de fin de partie",
-          "Image PNG prête à poster (Stories, WhatsApp, Mail)",
-          "Saisie multi-joueurs sur un seul QR",
-          "Cadre QR élégant fourni au desk",
-          "Reporting mensuel de visibilité club"
+          "Identité brandée sur chaque carte de score",
+          "Visibilité organique à chaque partage joueur",
+          "Cadre QR élégant livré au desk d'accueil",
+          "Photo souvenir incluse à chaque partie",
+          "Saisie multi-joueurs, sans installation",
+          "Reporting mensuel : scans, parties, partages"
         ]
       }
     ]
@@ -224,41 +224,41 @@
     "items": [
       {
         "q": "Le joueur doit-il installer une application ?",
-        "a": "Non. Un scan du QR ouvre la web app dans son navigateur. Pas d'install, pas de compte à créer. Le partage natif fonctionne ensuite sur tous les téléphones."
+        "a": "Non. Une simple web app, accessible par QR. Aucune install, aucun compte."
       },
       {
-        "q": "Faut-il vous fournir notre logo et notre charte graphique ?",
-        "a": "Non. Nous partons de votre site web pour extraire automatiquement logo, couleurs et photos. Maquette livrée sous 24h, ajustée jusqu'à votre validation."
+        "q": "Faut-il fournir notre logo et notre charte ?",
+        "a": "Non. On extrait tout depuis votre site et on génère la maquette. Vous validez."
       },
       {
-        "q": "Comment suivons-nous l'usage de Scluba au club ?",
-        "a": "Chaque mois, vous recevez par email un reporting clair : nombre de scans, parties jouées, cartes partagées sur les réseaux. Aucune interface à apprendre, aucun outil à installer côté club."
+        "q": "Comment suivre l'usage de Scluba ?",
+        "a": "Un récap mensuel par email : scans, parties jouées, partages réseaux. Votre visibilité, lisible en 30 secondes."
       },
       {
         "q": "Y a-t-il un engagement ?",
-        "a": "Aucun par défaut, résiliable au mois. L'engagement 3 ans donne −20% de remise (39€/mois)."
+        "a": "Aucun. Résiliable au mois. Engagement 3 ans uniquement pour bénéficier de la remise (−20%)."
       },
       {
-        "q": "Faut-il du matériel particulier au club ?",
-        "a": "Non. Le cadre QR fourni est la seule chose à poser. Il fonctionne sans alimentation, sans wifi club, sans intervention de votre équipe."
+        "q": "Faut-il du matériel particulier ?",
+        "a": "Non. On vous livre un cadre QR élégant pour le desk. Aucune infra côté club."
       },
       {
         "q": "Est-ce un outil HCP officiel FFGolf ?",
-        "a": "Non. Scluba est un outil de partie loisir et de partage social. Il complète vos outils officiels sans les remplacer."
+        "a": "Non, Scluba est un complément expérience et visibilité — pas un substitut au handicap officiel."
       }
     ]
   },
   "cta": {
     "eyebrow": "Démo de 10 minutes",
-    "title": "Voyez à quoi ressemblerait votre carte avant toute décision.",
-    "lead": "Donnez-nous l'URL de votre golf, on génère la maquette en 24h. Aucune carte de crédit demandée.",
+    "title": "Voyez à quoi ressemblerait votre carte.",
+    "lead": "Donnez-nous l'URL de votre golf. On génère la maquette en 24h. Sans engagement, sans carte de crédit.",
     "form": {
       "name": "Votre nom",
       "club": "Nom du club",
       "email": "Email professionnel",
-      "submit": "Demander la démo",
+      "submit": "Demander ma démo",
       "loading": "Envoi en cours…",
-      "success": "Merci, on vous rappelle sous 24h.",
+      "success": "Merci. On vous rappelle sous 24h.",
       "error": "Oups, une erreur. Réessayez ou écrivez-nous directement."
     },
     "qrLabel": "Scannez : voir un exemple de carte"
