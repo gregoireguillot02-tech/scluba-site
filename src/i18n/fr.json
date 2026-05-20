@@ -210,7 +210,7 @@
       "rgpd_label": "Données RGPD",
       "rgpd_note": "Hébergement EU",
       "contact_label": "Une question ?",
-      "contact_email": "hello@scluba.com"
+      "contact_email": "team@scluba.com"
     },
     "plans": [
       {
@@ -235,7 +235,7 @@
     "title": "Tout ce qu'on vous demande, à l'avance.",
     "lead": "Les questions que les gérants de clubs nous posent le plus souvent. Si la vôtre n'y figure pas, écrivez-nous.",
     "support_eyebrow": "PAS TROUVÉ ?",
-    "support_email": "hello@scluba.com",
+    "support_email": "team@scluba.com",
     "support_note": "Réponse sous 24 h ouvrées.",
     "items": [
       {
