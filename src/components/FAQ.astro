@@ -11,28 +11,39 @@ const t = useT(locale);
 
 <section class="faq">
   <div class="container">
-    <div class="section-header" data-anim="section-header">
-      <span class="section-eyebrow">{t.faq.eyebrow}</span>
-      <h2 class="section-title">{t.faq.title}</h2>
-    </div>
+    <div class="faq-grid">
+      <aside class="faq-side" data-anim="section-header">
+        <span class="section-eyebrow">{t.faq.eyebrow}</span>
+        <h2 class="section-title">{t.faq.title}</h2>
+        {t.faq.lead && <p class="section-lead faq-side-lead">{t.faq.lead}</p>}
 
-    <div class="faq-list">
-      {t.faq.items.map((item) => (
-        <details class="faq-item depth-inset" data-anim="faq-item">
-          <summary>
-            <span class="faq-q">{item.q}</span>
-            <span class="faq-icon" aria-hidden="true">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                <path d="M12 5v14"/>
-                <path d="M5 12h14"/>
-              </svg>
-            </span>
-          </summary>
-          <div class="faq-answer">
-            <p>{item.a}</p>
-          </div>
-        </details>
-      ))}
+        <div class="faq-support">
+          <span class="faq-support-eyebrow eyebrow-mono">{t.faq.support_eyebrow}</span>
+          <a class="faq-support-email" href={`mailto:${t.faq.support_email}`}>
+            {t.faq.support_email}
+          </a>
+          <span class="faq-support-note">{t.faq.support_note}</span>
+        </div>
+      </aside>
+
+      <div class="faq-list">
+        {t.faq.items.map((item) => (
+          <details class="faq-item depth-inset" data-anim="faq-item">
+            <summary>
+              <span class="faq-q">{item.q}</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <path d="M12 5v14"/>
+                  <path d="M5 12h14"/>
+                </svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <p>{item.a}</p>
+            </div>
+          </details>
+        ))}
+      </div>
     </div>
   </div>
 </section>
@@ -42,19 +53,77 @@ const t = useT(locale);
     background: var(--bg);
   }
 
+  /* Layout 2-col desktop : sidebar gauche (header + contact) + items à droite.
+     Sur mobile (≤900px), 1-col (sidebar dessus, items dessous). */
+  .faq-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-7);
+    align-items: start;
+  }
+  @media (min-width: 900px) {
+    .faq-grid {
+      grid-template-columns: 320px 1fr;
+      gap: var(--space-8);
+    }
+  }
+
+  .faq-side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  @media (min-width: 900px) {
+    .faq-side {
+      position: sticky;
+      top: 96px;
+    }
+  }
+  .faq-side .section-title {
+    margin: 0;
+  }
+  .faq-side-lead {
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* Mini-bloc contact direct en bas de la sidebar. */
+  .faq-support {
+    margin-top: var(--space-4);
+    padding: var(--space-5);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .faq-support-eyebrow {
+    color: var(--accent);
+  }
+  .faq-support-email {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: var(--text-md);
+    color: var(--primary);
+    text-decoration: none;
+    transition: color 0.2s var(--ease-out);
+  }
+  .faq-support-email:hover {
+    color: var(--accent);
+  }
+  .faq-support-note {
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+
   .faq-list {
-    max-width: 760px;
-    /* Décalage à droite pour laisser gauche à la balle (K8 keyframe x=-2.0) */
-    margin: 0 0 0 auto;
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-  }
-  @media (max-width: 900px) {
-    .faq-list {
-      /* Reviens au centre en mobile pour ne pas créer de gros vide */
-      margin: 0 auto;
-    }
+    max-width: 760px;
   }
 
   .faq-item {

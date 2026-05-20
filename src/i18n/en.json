@@ -200,6 +200,18 @@
     "title": "One offer. One promise.",
     "lead": "Everything you need to turn every round into club visibility. No commitment, cancel any month.",
     "launchBadge": "1ST MONTH FREE",
+    "trust": {
+      "engagement_label": "No commitment",
+      "engagement_note": "Cancel any month",
+      "setup_label": "30-min setup",
+      "setup_note": "No install on the player side",
+      "trial_label": "1st month free",
+      "trial_note": "Try risk-free",
+      "rgpd_label": "GDPR compliant",
+      "rgpd_note": "EU hosting",
+      "contact_label": "Any question?",
+      "contact_email": "hello@scluba.com"
+    },
     "plans": [
       {
         "name": "Scluba",
@@ -221,6 +233,10 @@
   "faq": {
     "eyebrow": "Frequently asked",
     "title": "Everything you'll ask, answered upfront.",
+    "lead": "The questions golf club managers ask us most often. If yours isn't here, drop us a line.",
+    "support_eyebrow": "NOT FOUND?",
+    "support_email": "hello@scluba.com",
+    "support_note": "Reply within 24 business hours.",
     "items": [
       {
         "q": "Does the player need to install an app?",

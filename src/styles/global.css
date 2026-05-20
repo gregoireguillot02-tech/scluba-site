@@ -101,6 +101,18 @@ body[data-landing] .cta {
   background: transparent !important;
 }
 
+/* Rythme vertical resserré sur la landing — passe de space-9/10 (96/128px)
+   à space-7/8 (48/64px). NE PAS toucher au min-height des sections pinned
+   (hero / problem / showcase-section) qui dépendent de ScrollTrigger. */
+body[data-landing] section {
+  padding: var(--space-7) 0;
+}
+@media (min-width: 768px) {
+  body[data-landing] section {
+    padding: var(--space-8) 0;
+  }
+}
+
 /* Blocs textes & infos flottants — papier ivoire semi-transparent + light
    backdrop blur + ombre papier multicouches forest pour un vrai effet "card
    posée 2-3 plans au-dessus du papier millimétré". Le quadrillage du body
