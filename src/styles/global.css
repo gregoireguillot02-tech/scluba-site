@@ -304,6 +304,7 @@ body[data-landing-mode="dark"] .lang-switch:hover {
 
 /* V4.8 — Balle 3D strictement derrière tout le contenu (canvas z:0 fixed).
    Sections transparentes pour la révéler entre les cards opaques. */
+body[data-landing-mode="dark"] .hero,
 body[data-landing-mode="dark"] .steps,
 body[data-landing-mode="dark"] .showcase,
 body[data-landing-mode="dark"] .showcase-section,
