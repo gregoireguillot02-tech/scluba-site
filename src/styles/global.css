@@ -43,6 +43,35 @@ body[data-landing] {
   background-attachment: fixed, fixed, fixed, fixed, scroll;
 }
 
+/* Sections transparentes — pour laisser passer le quadrillage du body
+   partout sur la landing. Les cards/blocs gardent leur surface papier
+   semi-transparente (ci-dessous) pour rester lisibles tout en laissant
+   le grid transparaître subtilement. */
+body[data-landing] .hero,
+body[data-landing] .problem,
+body[data-landing] .steps,
+body[data-landing] .showcase-section,
+body[data-landing] .showcase-pin,
+body[data-landing] .showcase,
+body[data-landing] .how,
+body[data-landing] .pricing,
+body[data-landing] .faq,
+body[data-landing] .cta {
+  background: transparent !important;
+}
+
+/* Blocs textes & infos flottants — papier ivoire semi-transparent + light
+   backdrop blur. Le quadrillage du body transparaît derrière, ce qui crée
+   l'effet "cartes qui flottent" sur le papier millimétré. */
+body[data-landing] .step-card,
+body[data-landing] .plan,
+body[data-landing] .faq-item,
+body[data-landing] .palette-card {
+  background: rgba(255, 255, 255, 0.62) !important;
+  backdrop-filter: blur(8px) saturate(115%);
+  -webkit-backdrop-filter: blur(8px) saturate(115%);
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-serif);
   font-weight: 700;
