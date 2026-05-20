@@ -10,12 +10,6 @@ const t = useT(locale);
 ---
 
 <section class="hero">
-  <div class="hero-bg" aria-hidden="true">
-    <div class="bg-gradient"></div>
-    <div class="bg-glow bg-glow-1"></div>
-    <div class="bg-glow bg-glow-2"></div>
-  </div>
-
   <div class="container hero-content">
     <div class="hero-text">
       <span class="hero-eyebrow eyebrow-mono" data-anim="hero-eyebrow">{t.hero.eyebrow}</span>
@@ -133,38 +127,6 @@ const t = useT(locale);
     align-items: center;
     overflow: hidden;
     padding: 160px 0 80px;
-  }
-
-  .hero-bg {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-  }
-  .bg-gradient {
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(ellipse at 80% 20%, rgba(212, 165, 116, 0.18), transparent 60%),
-      radial-gradient(ellipse at 20% 80%, rgba(45, 106, 79, 0.10), transparent 55%),
-      linear-gradient(180deg, var(--primary-bg) 0%, var(--bg) 100%);
-  }
-  .bg-glow {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(100px);
-    opacity: 0.45;
-  }
-  .bg-glow-1 {
-    width: 500px; height: 500px;
-    background: var(--accent);
-    top: -10%; right: -10%;
-  }
-  .bg-glow-2 {
-    width: 400px; height: 400px;
-    background: var(--primary-soft);
-    bottom: -20%; left: -10%;
-    opacity: 0.25;
   }
 
   .hero-content {
