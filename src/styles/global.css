@@ -29,6 +29,20 @@ body {
   overflow-x: hidden;
 }
 
+/* Quadrillage "carnet de score" — appliqué uniquement sur la landing
+   (body[data-landing]). Deux linears 1px (horizontal + vertical) en forest
+   très désaturé, espacement 32px, fixed pour effet papier en place pendant
+   le scroll. Les halos honey + forest restent par-dessus. */
+body[data-landing] {
+  background:
+    linear-gradient(rgba(27, 67, 50, 0.045) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, rgba(27, 67, 50, 0.045) 1px, transparent 1px) 0 0 / 32px 32px,
+    radial-gradient(ellipse 80% 50% at 18% 8%, rgba(212, 165, 116, 0.07), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 82% 95%, rgba(45, 106, 79, 0.05), transparent 55%),
+    var(--bg);
+  background-attachment: fixed, fixed, fixed, fixed, scroll;
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-serif);
   font-weight: 700;

@@ -11,6 +11,12 @@ interface Props {
 
 const { locale } = Astro.props;
 const t = useT(locale);
+
+// Quadrillage "carnet de score" appliqué uniquement sur la landing
+// (home FR + EN). Les pages utilitaires (legal, demo, etc.) restent
+// sans motif pour la lisibilité.
+const pathname = Astro.url.pathname;
+const isHomeRoute = pathname === '/' || pathname === '/en' || pathname === '/en/';
 ---
 
 <!doctype html>
@@ -38,7 +44,7 @@ const t = useT(locale);
     href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400..900,0..100&family=JetBrains+Mono:wght@400;500;600&display=swap"
   />
 </head>
-<body>
+<body data-landing={isHomeRoute ? '' : undefined}>
   <LaunchBanner locale={locale} />
   <Nav locale={locale} />
   <main>
