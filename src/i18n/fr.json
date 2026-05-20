@@ -57,12 +57,12 @@
     "phase1Tag": "01 · Rejoindre",
     "phase1Title": "Un seul QR. Toute la partie inscrite en 30 secondes.",
     "phase1Lead": "Le joueur 1 crée la partie en scannant le QR du desk. Les autres rejoignent avec le même code — pas d'app, pas de compte, pas de magic-link.",
-    "phase2Tag": "02 · Scorecard",
-    "phase2Title": "Une vraie carte de score brandée. Pas un screenshot.",
-    "phase2Lead": "Identité du club, lignes Aller / Retour, cellules birdie/par/bogey, signature SCLUBA. Saisie trou par trou pour tous les joueurs.",
-    "phase3Tag": "03 · Partage",
-    "phase3Title": "Image PNG prête à poster, partage natif partout.",
-    "phase3Lead": "Photo perso, image PNG 1080×1350, sheet natif iOS / Android / desktop. Le club apparaît dans chaque feed.",
+    "phase2Tag": "01 · La carte",
+    "phase2Title": "Aux couleurs de votre club. Pas un template.",
+    "phase2Lead": "Identité, palette, signature. Saisie trou par trou pour tous vos joueurs. Premium par défaut.",
+    "phase3Tag": "02 · Le partage",
+    "phase3Title": "Une image prête à poster. À chaque partie.",
+    "phase3Lead": "Photo souvenir incluse. Format vertical pensé pour Stories, WhatsApp, Instagram. Votre golf apparaît dans le feed de chaque joueur.",
     "joinClubMeta": "Sam. 11 mai · 14:30",
     "joinEyebrow": "Code de la partie",
     "joinHelper": "Tape ce code ou scanne le QR du desk",
@@ -135,9 +135,9 @@
     "linkCopied": "Lien copié !"
   },
   "showcase": {
-    "eyebrow": "Sur-mesure",
-    "title": "Une carte par identité de club.",
-    "lead": "Maritime, forestier, classique, terre battue : votre carte adopte les codes graphiques de votre golf. Aucun template générique. Aucune marque parasite.",
+    "eyebrow": "Identité",
+    "title": "Votre golf a un style. Votre carte aussi.",
+    "lead": "Maritime, forestier, classique, links : votre carte adopte les codes de votre parcours. Aucun template générique. Aucune marque parasite. Que la vôtre.",
     "palettes": [
       {
         "name": "Maritime",
@@ -175,23 +175,23 @@
     "items": [
       {
         "num": "1",
-        "title": "5 min au téléphone",
+        "title": "5 minutes au téléphone",
         "body": "Donnez-nous l'URL de votre site. On en extrait logo, couleurs et photos pour générer une maquette."
       },
       {
         "num": "2",
         "title": "Maquette en 24h",
-        "body": "Vous recevez la page brandée à valider. Ajustements illimités jusqu'à votre OK."
+        "body": "Page brandée à valider. Ajustements illimités jusqu'à votre OK."
       },
       {
         "num": "3",
         "title": "Cadre QR livré",
-        "body": "Nous vous envoyons un cadre QR élégant, prêt à poser sur le desk d'accueil."
+        "body": "Un cadre élégant, prêt à poser sur le desk d'accueil. Aucune infra côté club."
       },
       {
         "num": "4",
         "title": "Reporting mensuel",
-        "body": "Chaque mois, un récap par email : scans, parties jouées, partages réseaux."
+        "body": "Un récap par email chaque mois : scans, parties, partages. Votre visibilité, mesurée."
       }
     ]
   },
