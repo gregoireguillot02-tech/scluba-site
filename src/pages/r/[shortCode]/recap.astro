@@ -209,6 +209,7 @@ const clubColor = r.club.primary_color ?? '#1B4332';
   title={`Carte du ${fmtDate(r.started_at ?? r.created_at)} — ${r.club.name} · Scluba`}
   themeColor="#FFFFFF"
   clubColor={clubColor}
+  gridBackdrop={true}
 >
   <main class="card">
     <Masthead
@@ -421,6 +422,10 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
 
+    /* === Container card ===
+       Transparent pour laisser passer le quadrillage du body[data-play-grid].
+       Les modules (meta-strip, score, comment) flottent en cartes glass au-
+       dessus. Masthead + scorecard + colophon restent dans le flow naturel. */
     .card {
       max-width: 480px;
       margin: 0 auto;
@@ -428,12 +433,16 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       display: flex;
       flex-direction: column;
       padding: 0 var(--space-4);
+      background: transparent;
       touch-action: manipulation;
     }
 
     /* Masthead styles → src/components/player/Masthead.astro (size="large") */
 
-    /* === Meta strip === */
+    /* === Meta strip ===
+       Carte glass blanche translucide, posée sur le quadrillage. Accent
+       honey gardé sur les borders top/bottom pour préserver le rythme
+       éditorial (rails subtils). */
     .meta-strip {
       list-style: none;
       margin: 0 0 var(--space-6);
@@ -441,9 +450,17 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: var(--space-3);
-      background: var(--accent-soft);
-      border-top: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-      border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-top: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+      border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+      border-radius: 14px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .meta-strip { background: rgba(255, 255, 255, 0.92); }
     }
     .meta-strip li {
       display: flex; flex-direction: column; gap: 4px; text-align: center;
@@ -476,10 +493,23 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       line-height: 1;
     }
 
-    /* === Score block === */
+    /* === Score block ===
+       Le verdict — grand chiffre clubColor sur carte glass blanche. Le
+       count-up + motion-blur animation continue de fonctionner (transform/
+       opacity only, indépendant du fond). */
     .score-block {
       text-align: center;
-      padding: var(--space-7) 0 var(--space-5);
+      padding: var(--space-7) var(--space-5) var(--space-6);
+      margin-bottom: var(--space-5);
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 18px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .score-block { background: rgba(255, 255, 255, 0.92); }
     }
     .score-eyebrow {
       margin: 0 0 var(--space-4);
@@ -520,13 +550,27 @@ const clubColor = r.club.primary_color ?? '#1B4332';
     }
 
     /* === Grid block ===
-       Le grid (cells + sections) est dans Scorecard.astro. Ici on ne
-       garde que le wrapper du bloc + la légende sous le grid. */
+       Le grid (cells + sections) est dans Scorecard.astro. Wrapper en
+       carte glass blanche pour cohérence avec /play (.leaderboard glass).
+       Les cells gardent leurs backgrounds opaques (cell-birdie/par/etc.),
+       seul le container devient glass. */
     .grid-block {
-      padding: var(--space-5) 0 var(--space-4);
+      padding: var(--space-5) var(--space-4) var(--space-4);
       display: flex;
       flex-direction: column;
       gap: var(--space-3);
+      margin-bottom: var(--space-5);
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-top: 1px solid rgba(212, 165, 116, 0.4);
+      border-bottom: 1px solid rgba(212, 165, 116, 0.4);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .grid-block { background: rgba(255, 255, 255, 0.92); }
     }
     .grid-legend {
       list-style: none;
@@ -576,12 +620,24 @@ const clubColor = r.club.primary_color ?? '#1B4332';
        et .meta-weather-emoji). Le bandeau dédié .weather-strip a été
        retiré pour éviter le doublon avec la meta-strip. */
 
-    /* === Comment block === */
+    /* === Comment block ===
+       Carte glass blanche. Le textarea garde son fond blanc opaque pour
+       lisibilité optimale au focus. */
     .comment-block {
-      padding: var(--space-4) 0;
+      padding: var(--space-5) var(--space-4);
+      margin-bottom: var(--space-4);
       display: flex;
       flex-direction: column;
       gap: var(--space-3);
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .comment-block { background: rgba(255, 255, 255, 0.92); }
     }
     .comment-eyebrow {
       margin: 0;
