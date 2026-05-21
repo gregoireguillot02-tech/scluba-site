@@ -100,7 +100,9 @@ const t = useT(locale);
   .step-layout {
     display: grid;
     grid-template-columns: 1fr;
-    gap: var(--space-6);
+    /* gap mobile > 48px : l'ombre lourde de .step-card (0 40px 80px ...)
+       bleed sur ~120px et venait colorer la citation ivory en dessous */
+    gap: var(--space-8);
     align-items: center;
   }
   @media (min-width: 1024px) {
@@ -129,7 +131,9 @@ const t = useT(locale);
     padding: var(--space-5);
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
-    background: rgba(255, 255, 255, 0.55);
+    /* bg plus opaque (0.92 vs 0.55) : empêche l'ombre lourde de la card
+       précédente de bleed visuellement à travers la citation en mobile stack */
+    background: rgba(255, 255, 255, 0.92);
     backdrop-filter: blur(8px) saturate(115%);
     -webkit-backdrop-filter: blur(8px) saturate(115%);
     display: flex;

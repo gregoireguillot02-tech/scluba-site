@@ -137,7 +137,9 @@ const t = useT(locale);
   .pricing-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: var(--space-6);
+    /* gap mobile > 48px pour que l'aura honey de .plan-featured::before
+       (inset -24px + blur 24px) ne déborde pas sur la contact card en dessous */
+    gap: var(--space-8);
     align-items: start;
     padding-top: var(--space-4);
     justify-content: center;
@@ -214,7 +216,9 @@ const t = useT(locale);
     padding: var(--space-4);
     border: 1px solid var(--line);
     border-radius: var(--radius-md);
-    background: rgba(255, 255, 255, 0.55);
+    /* bg plus opaque (0.92 vs 0.55) : empêche l'aura honey du plan-featured
+       de bleed visuellement à travers le contact card en mobile stack */
+    background: rgba(255, 255, 255, 0.92);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     display: flex;
