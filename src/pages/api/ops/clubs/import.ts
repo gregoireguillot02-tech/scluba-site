@@ -1,8 +1,16 @@
 import type { APIRoute } from 'astro';
 import { isAllowedEmail } from '../../../../lib/supabase';
 import { runImportPreview } from '../../../../lib/club-importer/pipeline';
+import { LlmTimeoutError } from '../../../../lib/club-importer/llm';
+import { SafeFetchError } from '../../../../lib/safe-fetch';
 
 export const prerender = false;
+
+const NO_STORE_HEADERS: Record<string, string> = {
+  'content-type': 'application/json',
+  'cache-control': 'no-store, private',
+  'vary': 'Cookie',
+};
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
@@ -12,9 +20,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const apiKey = import.meta.env.ANTHROPIC_API_KEY as string | undefined;
   if (!apiKey) {
-    return new Response(JSON.stringify({ ok: false, error: 'ANTHROPIC_API_KEY non configurée' }), {
+    return new Response(JSON.stringify({ ok: false, error: 'Configuration manquante' }), {
       status: 500,
-      headers: { 'content-type': 'application/json' },
+      headers: NO_STORE_HEADERS,
     });
   }
 
@@ -24,7 +32,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch {
     return new Response(JSON.stringify({ ok: false, error: 'Body JSON requis' }), {
       status: 400,
-      headers: { 'content-type': 'application/json' },
+      headers: NO_STORE_HEADERS,
     });
   }
 
@@ -32,7 +40,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!url) {
     return new Response(JSON.stringify({ ok: false, error: 'url requise' }), {
       status: 400,
-      headers: { 'content-type': 'application/json' },
+      headers: NO_STORE_HEADERS,
     });
   }
 
@@ -40,14 +48,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const data = await runImportPreview({ url, apiKey });
     return new Response(JSON.stringify({ ok: true, data }), {
       status: 200,
-      headers: { 'content-type': 'application/json' },
+      headers: NO_STORE_HEADERS,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Import failed';
+    // Always log full error server-side; never propagate raw error strings.
+    // Anthropic SDK errors and fetch errors may carry request metadata.
     console.error('[api/ops/clubs/import] failed', err);
-    return new Response(JSON.stringify({ ok: false, error: message }), {
+
+    if (err instanceof SafeFetchError) {
+      return new Response(JSON.stringify({ ok: false, error: 'URL refusée' }), {
+        status: 400,
+        headers: NO_STORE_HEADERS,
+      });
+    }
+    if (err instanceof LlmTimeoutError) {
+      return new Response(JSON.stringify({ ok: false, error: "L'analyse IA a expiré, réessaie." }), {
+        status: 504,
+        headers: NO_STORE_HEADERS,
+      });
+    }
+    return new Response(JSON.stringify({ ok: false, error: 'Import failed — voir les logs ops' }), {
       status: 502,
-      headers: { 'content-type': 'application/json' },
+      headers: NO_STORE_HEADERS,
     });
   }
 };

@@ -1,3 +1,4 @@
+import { assertSafeUrl, SafeFetchError } from '../safe-fetch';
 import { buildCourseData } from './defaults';
 import { extractClubData } from './llm';
 import { downloadFirstValid, scrapeClubSite } from './scrape';
@@ -17,6 +18,10 @@ function normalizeHex(value: string | null | undefined): string {
  * best logo and photo, ask the LLM to structure the data, and build a
  * {@link ImportResult} that the admin UI can render and edit.
  *
+ * The entry URL is validated through {@link assertSafeUrl} — scheme allowlist,
+ * IP-literal rejection, internal-hostname rejection — before any outbound
+ * fetch. Each downstream candidate URL is re-validated by the scraper too.
+ *
  * Image URLs returned here point at the source site (external). Persisting
  * to Supabase Storage happens later in `from-import.ts`.
  */
@@ -28,12 +33,10 @@ export async function runImportPreview(args: {
 
   let parsed: URL;
   try {
-    parsed = new URL(url);
-  } catch {
-    throw new Error('URL invalide');
-  }
-  if (!/^https?:$/.test(parsed.protocol)) {
-    throw new Error('URL doit être http(s)');
+    parsed = assertSafeUrl(url);
+  } catch (err) {
+    if (err instanceof SafeFetchError) throw err;
+    throw new SafeFetchError('invalid_url', 'URL invalide');
   }
 
   const scraped = await scrapeClubSite(parsed.toString());

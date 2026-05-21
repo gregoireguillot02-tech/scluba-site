@@ -1,12 +1,14 @@
 import { parse, type HTMLElement } from 'node-html-parser';
+import { safeFetchBoundedBytes, safeFetchBoundedText, SafeFetchError } from '../safe-fetch';
 import type { DownloadedImage, ScrapedAssets } from './types';
 
 const USER_AGENT =
   'Mozilla/5.0 (compatible; SclubaImporter/1.0; +https://scluba.com)';
 
-const FETCH_TIMEOUT_MS = 15_000;
-const MAX_HTML_BYTES = 1_000_000;
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const HTML_TIMEOUT_MS = 8_000;
+const IMAGE_TIMEOUT_MS = 6_000;
+const MAX_HTML_BYTES = 2 * 1024 * 1024; // 2 MB hard cap for HTML
+const MAX_IMAGE_BYTES = 1 * 1024 * 1024; // 1 MB hard cap for images
 const MAX_LLM_TEXT_CHARS = 40_000;
 
 const ALLOWED_IMAGE_MIMES = new Set(['image/png', 'image/jpeg', 'image/webp']);
@@ -15,45 +17,10 @@ const SUB_PAGE_HINTS = ['/parcours', '/le-parcours', '/le-club', '/club', '/abou
 
 const STRIP_TAGS = new Set(['script', 'style', 'noscript', 'svg', 'iframe', 'header', 'footer', 'nav', 'form']);
 
-async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    return await fetch(url, {
-      ...init,
-      signal: controller.signal,
-      headers: {
-        'User-Agent': USER_AGENT,
-        'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.7',
-        ...(init?.headers ?? {}),
-      },
-      redirect: 'follow',
-    });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function readBoundedText(res: Response, maxBytes: number): Promise<string> {
-  const reader = res.body?.getReader();
-  if (!reader) return await res.text();
-  const decoder = new TextDecoder('utf-8');
-  let received = 0;
-  let out = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    received += value.byteLength;
-    if (received > maxBytes) {
-      out += decoder.decode(value.subarray(0, Math.max(0, maxBytes - (received - value.byteLength))));
-      try { reader.cancel(); } catch { /* noop */ }
-      break;
-    }
-    out += decoder.decode(value, { stream: true });
-  }
-  out += decoder.decode();
-  return out;
-}
+const COMMON_HEADERS: Record<string, string> = {
+  'User-Agent': USER_AGENT,
+  'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.7',
+};
 
 function absoluteUrl(maybeUrl: string, base: string): string | null {
   if (!maybeUrl) return null;
@@ -152,17 +119,30 @@ function pickSubPages(root: HTMLElement, base: string): string[] {
   return [...out].slice(0, 3);
 }
 
+async function fetchHtml(url: string): Promise<string> {
+  const { text, res } = await safeFetchBoundedText(url, MAX_HTML_BYTES, {
+    timeoutMs: HTML_TIMEOUT_MS,
+    init: { method: 'GET', headers: COMMON_HEADERS },
+  });
+  if (!res.ok) {
+    throw new SafeFetchError('http_error', `Site responded ${res.status} ${res.statusText}`);
+  }
+  return text;
+}
+
 /**
  * Fetches the home page plus up to two relevant sub-pages (`/parcours`,
  * `/le-club`) and aggregates the result into a single {@link ScrapedAssets}
  * payload. Sub-pages are best-effort — failures are silent.
+ *
+ * Every outbound fetch flows through {@link safeFetchBoundedText} so the
+ * URL (and any redirect target) is SSRF-validated and the body is capped
+ * at {@link MAX_HTML_BYTES} bytes regardless of `Content-Length`.
  */
 export async function scrapeClubSite(homepageUrl: string): Promise<ScrapedAssets> {
   const baseUrl = new URL(homepageUrl).origin;
 
-  const homeRes = await fetchWithTimeout(homepageUrl);
-  if (!homeRes.ok) throw new Error(`Site responded ${homeRes.status} ${homeRes.statusText}`);
-  const homeHtml = await readBoundedText(homeRes, MAX_HTML_BYTES);
+  const homeHtml = await fetchHtml(homepageUrl);
   const homeRoot = parse(homeHtml);
 
   const ogImage = absoluteUrl(findMeta(homeRoot, 'og:image') ?? '', homepageUrl);
@@ -174,13 +154,11 @@ export async function scrapeClubSite(homepageUrl: string): Promise<ScrapedAssets
   const photoCandidates = findPhotoCandidates(homeRoot, homepageUrl);
   if (ogImage) photoCandidates.unshift(ogImage);
 
-  let textParts = [extractText(homeRoot)];
+  const textParts = [extractText(homeRoot)];
 
   for (const subUrl of pickSubPages(homeRoot, homepageUrl)) {
     try {
-      const r = await fetchWithTimeout(subUrl);
-      if (!r.ok) continue;
-      const html = await readBoundedText(r, MAX_HTML_BYTES);
+      const html = await fetchHtml(subUrl);
       const root = parse(html);
       textParts.push(`\n\n--- Page ${subUrl} ---\n${extractText(root)}`);
       for (const c of findPhotoCandidates(root, subUrl)) photoCandidates.push(c);
@@ -205,20 +183,25 @@ export async function scrapeClubSite(homepageUrl: string): Promise<ScrapedAssets
  * Downloads an image and returns its bytes if it's a supported raster format
  * within size limits. Returns null otherwise so the caller can try the next
  * candidate.
+ *
+ * The URL is validated through the SSRF guard before each hop. Bytes are
+ * stream-bounded at {@link MAX_IMAGE_BYTES} — `Content-Length` is never trusted.
  */
 export async function downloadImage(url: string): Promise<DownloadedImage | null> {
   try {
-    const res = await fetchWithTimeout(url);
+    const { bytes, res } = await safeFetchBoundedBytes(url, MAX_IMAGE_BYTES, {
+      timeoutMs: IMAGE_TIMEOUT_MS,
+      init: { method: 'GET', headers: COMMON_HEADERS },
+    });
     if (!res.ok) return null;
 
     const mime = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
     if (!ALLOWED_IMAGE_MIMES.has(mime)) return null;
 
-    const buf = await res.arrayBuffer();
-    if (buf.byteLength === 0 || buf.byteLength > MAX_IMAGE_BYTES) return null;
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_IMAGE_BYTES) return null;
 
     return {
-      bytes: new Uint8Array(buf),
+      bytes,
       mimeType: mime as DownloadedImage['mimeType'],
       sourceUrl: url,
     };
