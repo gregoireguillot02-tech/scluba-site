@@ -41,9 +41,12 @@ Out of scope:
 
 - The marketing CTA form POSTs directly to the Supabase REST endpoint with
   the public anon key. Defense in depth lives at the DB level (RLS +
-  `CHECK` constraints in migration `0002_leads_hardening.sql`). Moving the
-  submission behind an Astro API route with server-side rate limiting is
-  tracked as a follow-up.
+  `CHECK` constraints in migration `0016_security_hardening.sql`, which
+  codifies the `public.leads` table, enables RLS, allows anon `INSERT`
+  only, and enforces length/email-format CHECKs + a per-hour email-dedup
+  unique index). Moving the submission behind an Astro API route with
+  server-side rate limiting and a Turnstile widget is tracked as a
+  follow-up (`fix/sec-public-api-hardening`).
 - Supabase Storage `club-assets` bucket is currently served from the same
   origin as the site. SVG logo uploads have therefore been removed from the
   allowlist (PNG/JPEG/WEBP only) until the bucket is moved to a separate

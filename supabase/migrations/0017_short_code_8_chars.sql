@@ -1,0 +1,50 @@
+-- 0017 — short_code length bump 6 → 8 (LOW finding in C-supabase-rls-db.md)
+--
+-- ============================================================================
+-- DEFERRED — DO NOT RUN AS-IS.
+-- ============================================================================
+-- This migration is a *plan*, not an executable migration. The CHECK regex
+-- on public.rounds.short_code already accepts 4..8 chars (set in 0016), so
+-- the schema side requires no change today.
+--
+-- The actual length bump must coordinate with two app-side changes that
+-- cannot be safely co-deployed in this SQL-only PR:
+--
+--   1. src/lib/slug.ts:18 — bump generateRoundShortCode() to 8 chars:
+--        return randomString(SHORT_CODE_ALPHABET, 8);
+--
+--   2. src/lib/validation/schemas.ts — confirm shortCodeSchema regex already
+--      tolerates 4..8 (per audit it does). Otherwise widen the regex.
+--
+-- Why deferred:
+--   - Backfilling existing 6-char short_codes would invalidate any printed
+--     QR codes / sent links. Existing rounds finish their lifecycle on the
+--     old code (no rotation in place); only NEW rounds get the 8-char code.
+--   - This requires a feature-flag rollout: deploy app change first, monitor
+--     for collisions in the wild, then optionally extend regex floor from
+--     6 to 8 once all in-flight rounds are finished.
+--   - Pilot is mid-June 2026 with one club. The 29-bit entropy is sufficient
+--     while CRIT #2 (anon SELECT wildcard on rounds) remains open and codes
+--     are listable anyway. Once Realtime is moved to broadcast channels
+--     (companion branch fix/sec-realtime-broadcast-migration), bump entropy.
+--
+-- Backfill plan (when ready):
+--   * Step 1: deploy app-side change to emit 8-char codes for new rounds.
+--   * Step 2: wait until all rounds with old 6-char codes are status='finished'
+--     (typically < 6h after creation).
+--   * Step 3: run this migration to tighten the regex floor:
+--
+--       alter table public.rounds drop constraint rounds_short_code_fmt;
+--       alter table public.rounds
+--         add constraint rounds_short_code_fmt check (
+--           short_code ~ '^[A-Z0-9]{8}$'
+--         );
+--
+--   * Step 4: optionally rotate any still-live 6-char codes by issuing new
+--     codes for any round with status in ('lobby','playing') older than 24h.
+--
+-- No-op section below so this file lints clean if accidentally applied.
+
+begin;
+-- Intentionally empty. See header for backfill plan.
+commit;
