@@ -122,8 +122,18 @@ export const scoreSchema = z
     { message: 'strokes ou picked_up requis (pas les deux)' },
   );
 
-export const magicLinkSchema = z.object({
+export const otpRequestSchema = z.object({
   email: emailSchema,
+  next: z.string().max(500).optional(),
+  hp_email: honeypotSchema,
+});
+
+export const otpVerifySchema = z.object({
+  email: emailSchema,
+  token: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'code à 6 chiffres requis'),
   next: z.string().max(500).optional(),
   hp_email: honeypotSchema,
 });
@@ -134,7 +144,8 @@ export type ClaimSlotInput = z.infer<typeof claimSlotSchema>;
 export type AddPlayerInput = z.infer<typeof addPlayerSchema>;
 export type FindRoundInput = z.infer<typeof findRoundSchema>;
 export type ScoreInput = z.infer<typeof scoreSchema>;
-export type MagicLinkInput = z.infer<typeof magicLinkSchema>;
+export type OtpRequestInput = z.infer<typeof otpRequestSchema>;
+export type OtpVerifyInput = z.infer<typeof otpVerifySchema>;
 
 export function formatZodError(err: z.ZodError): string {
   return err.issues.map((i) => i.message).join(' · ');

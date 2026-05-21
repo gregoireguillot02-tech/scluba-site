@@ -1,6 +1,14 @@
 import type { APIRoute } from 'astro';
 import { safeNextPath } from '../../lib/safe-redirect';
 
+// Avec le flow OTP code (depuis 2026-05-21), ce callback n'est plus appelé
+// par notre login joueur — verifyOtp se fait directement dans le POST handler
+// de /auth/login. On le garde pour :
+//   1. Rétrocompat des magic links déjà envoyés à des testeurs avant la bascule
+//   2. Permettre un futur retour à un flow OAuth/PKCE côté joueur sans nouveau code
+// Si on bascule à un autre flow ou qu'on est certain qu'aucun magic link n'est
+// plus en circulation, ce fichier peut être supprimé.
+
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url, locals, redirect }) => {
