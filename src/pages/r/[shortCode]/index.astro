@@ -68,8 +68,9 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 
 <PlayerLayout
   title={`Lobby — ${r.club.name} · Scluba`}
-  themeColor="#FAF7EE"
+  themeColor="#FFFFFF"
   clubColor={clubColor}
+  gridBackdrop={true}
 >
   <main
     class="lobby"
@@ -512,6 +513,10 @@ const clubColor = r.club.primary_color ?? '#1B4332';
   </script>
 
   <style>
+    /* === Container lobby ===
+       Transparent pour laisser passer le quadrillage du body[data-play-grid].
+       Les modules (code-block, players-block, start-form) flottent en
+       cartes glass au-dessus. Masthead + Colophon dans le flow naturel. */
     .lobby {
       max-width: 480px;
       margin: 0 auto;
@@ -519,16 +524,25 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       display: flex;
       flex-direction: column;
       padding: 0 var(--space-4);
+      background: transparent;
     }
 
-    /* Code block */
+    /* === Code block === Carte glass blanche, rails honey conservés. */
     .code-block {
       text-align: center;
       padding: var(--space-5) var(--space-4);
-      background: rgba(212, 165, 116, 0.10);
-      border-top: 1px solid rgba(212, 165, 116, 0.4);
-      border-bottom: 1px solid rgba(212, 165, 116, 0.4);
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-top: 1px solid rgba(212, 165, 116, 0.45);
+      border-bottom: 1px solid rgba(212, 165, 116, 0.45);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
       margin-bottom: var(--space-5);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .code-block { background: rgba(255, 255, 255, 0.92); }
     }
     .code-eyebrow {
       margin: 0 0 var(--space-2);
@@ -647,8 +661,22 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       .qr-bonus-dot { animation: none; }
     }
 
-    /* Players block */
-    .players-block { padding: 0 var(--space-1) var(--space-5); }
+    /* === Players block === Carte glass enveloppant la liste joueurs.
+       Les .player-item enfants gardent leur fond blanc opaque pour
+       lisibilité (cellule 2nd niveau). */
+    .players-block {
+      padding: var(--space-4);
+      margin-bottom: var(--space-5);
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .players-block { background: rgba(255, 255, 255, 0.92); }
+    }
     .players-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-3); }
     .players-title { font-family: var(--font-serif); font-size: var(--text-md); font-weight: 700; color: var(--ink); margin: 0; letter-spacing: 0.02em; }
     .players-count {

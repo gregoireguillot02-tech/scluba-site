@@ -1,0 +1,275 @@
+---
+/**
+ * /preview-lobby — preview du redesign /lobby avec données mock (sans DB).
+ *
+ * Affichage statique read-only : pas de realtime, pas d'API. Permet
+ * de valider visuellement la DA quadrillage + cartes glass sur le
+ * lobby sans avoir à scanner un QR ou créer une vraie partie.
+ *
+ * URL publique : https://scluba.com/preview-lobby
+ * noindex pour ne pas polluer le SEO.
+ */
+export const prerender = false;
+
+import PlayerLayout from '../layouts/PlayerLayout.astro';
+import Masthead from '../components/player/Masthead.astro';
+import Colophon from '../components/player/Colophon.astro';
+
+// Mock — round en attente fictif Caen-la-Mer, 3 joueurs déjà connectés
+const club = {
+  name: 'Golf de Caen-La-Mer',
+  primary_color: '#1A4490',
+  logo_url: null as string | null,
+  photo_url: null as string | null,
+};
+const shortCode = 'PREVIEW';
+const players = [
+  { id: 'p1', display_name: 'Grégoire', is_creator: true,  is_me: true,  is_claimed: true,  hue: 200 },
+  { id: 'p2', display_name: 'Martin',   is_creator: false, is_me: false, is_claimed: true,  hue:  60 },
+  { id: 'p3', display_name: 'Jean',     is_creator: false, is_me: false, is_claimed: false, hue: 300 },
+];
+const claimedCount = players.filter((p) => p.is_claimed).length;
+
+const clubColor = club.primary_color;
+---
+
+<PlayerLayout
+  title={`${club.name} — Preview /lobby · Scluba`}
+  themeColor="#FFFFFF"
+  clubColor={clubColor}
+  gridBackdrop={true}
+>
+  <main class="lobby">
+    <p class="demo-banner">PREVIEW · données fictives · redesign /lobby quadrillage + cartes glass</p>
+
+    <Masthead
+      photoUrl={club.photo_url}
+      logoUrl={club.logo_url}
+      eyebrow="Lobby"
+      title={club.name}
+      size="standard"
+    />
+
+    <section class="code-block" aria-labelledby="code-title">
+      <p id="code-title" class="code-eyebrow">Code de la partie</p>
+      <p class="code-value" aria-label={`Code ${shortCode}`}>{shortCode}</p>
+      <p class="code-hint">Partage ce code ou montre le QR à tes copains.</p>
+
+      <div class="invite-actions">
+        <button type="button" class="btn-secondary" disabled>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span>Copier le lien</span>
+        </button>
+        <button type="button" class="btn-secondary" disabled>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 18h3"/>
+          </svg>
+          <span>Afficher le QR</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="players-block">
+      <header class="players-head">
+        <h2 class="players-title">Joueurs</h2>
+        <span class="players-count">
+          <span>{claimedCount}</span><span class="players-count-sep">/</span><span>{players.length}</span>
+        </span>
+      </header>
+      <ul class="players-list">
+        {players.map((p) => (
+          <li class={['player-item', !p.is_claimed && 'is-pending', p.is_me && 'is-me'].filter(Boolean).join(' ')}>
+            <span class="player-avatar" aria-hidden="true" style={`background: hsl(${p.hue}, 55%, 55%)`}>{p.display_name[0]}</span>
+            <span class="player-name">{p.display_name}</span>
+            {p.is_me && <span class="player-tag">vous</span>}
+            {!p.is_me && p.is_creator && <span class="player-tag muted">créateur</span>}
+            {!p.is_claimed && <span class="player-tag pending">en attente</span>}
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <form class="start-form" onsubmit="event.preventDefault()">
+      <button type="submit" class="start-btn">
+        <span>C'est parti</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+        </svg>
+      </button>
+    </form>
+
+    <Colophon />
+
+    <p class="proto-note">PREVIEW PUBLIC · scluba.com/preview-lobby</p>
+  </main>
+
+  <style>
+    .lobby {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 0 var(--space-4);
+      background: transparent;
+    }
+
+    .demo-banner {
+      margin: var(--space-3) 0;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.62);
+      -webkit-backdrop-filter: blur(8px) saturate(115%);
+              backdrop-filter: blur(8px) saturate(115%);
+      color: var(--accent, #10D277);
+      font-size: 10.5px;
+      letter-spacing: 0.1em;
+      text-align: center;
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 12px;
+      box-shadow: var(--play-card-shadow);
+    }
+
+    /* === Code block glass === */
+    .code-block {
+      text-align: center;
+      padding: var(--space-5) var(--space-4);
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-top: 1px solid rgba(212, 165, 116, 0.45);
+      border-bottom: 1px solid rgba(212, 165, 116, 0.45);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
+      margin-bottom: var(--space-5);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .code-block { background: rgba(255, 255, 255, 0.92); }
+    }
+    .code-eyebrow { margin: 0 0 var(--space-2); font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); }
+    .code-value { margin: 0; font-family: var(--font-display, var(--font-serif)); font-size: clamp(2.5rem, 11vw, 4rem); font-weight: 900; letter-spacing: 0.18em; color: var(--clubColor); font-variant-numeric: tabular-nums lining-nums; line-height: 1; }
+    .code-hint { margin: var(--space-3) 0 var(--space-4); font-size: 13px; color: var(--muted); }
+    .invite-actions { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      min-height: 40px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    /* === Players block glass === */
+    .players-block {
+      padding: var(--space-4);
+      margin-bottom: var(--space-5);
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .players-block { background: rgba(255, 255, 255, 0.92); }
+    }
+    .players-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-3); }
+    .players-title { font-family: var(--font-serif); font-size: var(--text-md); font-weight: 700; color: var(--ink); margin: 0; letter-spacing: 0.02em; }
+    .players-count {
+      display: inline-flex; align-items: baseline; gap: 2px;
+      font-family: var(--font-serif); font-size: var(--text-sm); font-weight: 700; color: var(--clubColor);
+      background: rgba(212, 165, 116, 0.15);
+      border: 1px solid var(--accent);
+      padding: 2px 12px;
+      border-radius: 999px;
+      font-variant-numeric: tabular-nums;
+    }
+    .players-count-sep { opacity: 0.5; }
+    .players-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+    .player-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .player-item.is-me { border-color: var(--accent); background: rgba(212, 165, 116, 0.06); }
+    .player-item.is-pending {
+      background: rgba(15, 42, 30, 0.02);
+      border-style: dashed;
+    }
+    .player-item.is-pending .player-name { color: var(--muted); font-style: italic; }
+    .player-item.is-pending .player-avatar {
+      background: transparent !important;
+      border: 1.5px dashed var(--muted-soft);
+      color: var(--muted-soft);
+    }
+    .player-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: #fff;
+      font-family: var(--font-display, var(--font-serif));
+      font-weight: 800;
+      font-size: 14px;
+      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+      box-sizing: border-box;
+    }
+    .player-name { flex: 1; font-size: 15px; font-weight: 500; color: var(--ink); }
+    .player-tag {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(212, 165, 116, 0.10);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .player-tag.muted { color: var(--muted); background: var(--line-soft); }
+    .player-tag.pending { color: #92400E; background: #FEF3C7; }
+
+    /* === Start CTA — anim conservées === */
+    .start-form { padding: 0 var(--space-2); }
+    .start-btn {
+      width: 100%;
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      min-height: 56px;
+      padding: 14px 24px;
+      border-radius: 12px; border: none;
+      background: var(--clubColor); color: #FAF7EE;
+      font-size: 16px; font-weight: 600; letter-spacing: 0.01em;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 20px rgba(27, 67, 50, 0.18);
+    }
+    @keyframes cta-pulse {
+      0%, 100% { box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 20px rgba(27, 67, 50, 0.18); }
+      50%      { box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 30px rgba(212, 165, 116, 0.55), 0 0 0 4px rgba(212, 165, 116, 0.16); }
+    }
+    @keyframes cta-breathe {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.012); }
+    }
+    .start-btn { animation: cta-pulse 2.4s ease-in-out infinite, cta-breathe 3.6s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) {
+      .start-btn { animation: none; }
+    }
+
+    .proto-note {
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      opacity: 0.4;
+      margin: 40px 0 20px;
+    }
+  </style>
+</PlayerLayout>
