@@ -6,7 +6,39 @@ export const prerender = false;
 
 const PLAYER_COOKIE_PREFIX = 'scluba_player_';
 
-export const POST: APIRoute = async ({ params, redirect, cookies }) => {
+// Duplicated in every API handler in this branch. Lives in middleware-land
+// once fix/sec-headers-middleware-csp lands; for now keep inline to stay in
+// scope of this PR. (audit HIGH: CSRF on state-changing routes.)
+function assertSameOriginPost(request: Request): Response | null {
+  const origin = request.headers.get('origin');
+  const referer = request.headers.get('referer');
+  const host = request.headers.get('host');
+  if (!host) return new Response('Origine invalide', { status: 403 });
+  if (origin) {
+    try {
+      const o = new URL(origin);
+      if (o.host !== host) return new Response('Origine invalide', { status: 403 });
+      return null;
+    } catch {
+      return new Response('Origine invalide', { status: 403 });
+    }
+  }
+  if (referer) {
+    try {
+      const r = new URL(referer);
+      if (r.host !== host) return new Response('Origine invalide', { status: 403 });
+      return null;
+    } catch {
+      return new Response('Origine invalide', { status: 403 });
+    }
+  }
+  return new Response('Origine invalide', { status: 403 });
+}
+
+export const POST: APIRoute = async ({ request, params, redirect, cookies }) => {
+  const csrf = assertSameOriginPost(request);
+  if (csrf) return csrf;
+
   const codeParsed = shortCodeSchema.safeParse(params.shortCode ?? '');
   if (!codeParsed.success) return new Response('code de partie invalide', { status: 400 });
   const shortCode = codeParsed.data;
@@ -25,13 +57,19 @@ export const POST: APIRoute = async ({ params, redirect, cookies }) => {
     .maybeSingle();
   if (!round) return new Response('Round not found', { status: 404 });
 
+  // Only the creator can finish the round. Any other player (including
+  // spectators in scoring_mode='host') sees the recap once the creator
+  // flips status. (audit HIGH: anyone-in-round can grief the foursome.)
   const { data: player } = await sb
     .from('round_players')
-    .select('id')
+    .select('id, is_creator')
     .eq('id', playerId)
     .eq('round_id', round.id)
     .maybeSingle();
   if (!player) return new Response('Player not in this round', { status: 403 });
+  if (!player.is_creator) {
+    return new Response('Seul l\'organisateur peut terminer la partie.', { status: 403 });
+  }
 
   if (round.status !== 'finished') {
     await sb

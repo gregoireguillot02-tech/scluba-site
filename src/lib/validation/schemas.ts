@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { resolveRoundHoles, type Round, type Club } from '../clubs-types';
 
 export const slugSchema = z
   .string()
@@ -137,4 +138,22 @@ export type MagicLinkInput = z.infer<typeof magicLinkSchema>;
 
 export function formatZodError(err: z.ZodError): string {
   return err.issues.map((i) => i.message).join(' · ');
+}
+
+// Resolves the round's actual hole list (handles 9-hole formats, multi-loop
+// composites) and asserts `hole` falls inside it. Returns null on success,
+// or a French error string. Used by /scores to prevent stale-hole writes on
+// 9-hole rounds (audit LOW → bundled into the HIGH scoring fix).
+export function validateHoleForRound(
+  hole: number,
+  round: Pick<Round, 'format_id'>,
+  club: Pick<Club, 'course_data'>,
+): string | null {
+  const holes = resolveRoundHoles(round as Round, club as Club);
+  if (holes.length === 0) return 'parcours indisponible';
+  const max = holes.length;
+  if (!Number.isInteger(hole) || hole < 1 || hole > max) {
+    return `trou hors parcours (1..${max})`;
+  }
+  return null;
 }
