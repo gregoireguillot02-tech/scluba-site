@@ -747,4 +747,41 @@ const t = useT(locale);
   @media (prefers-reduced-motion: reduce) {
     .screen-share { opacity: 1; transform: scale(1); }
   }
+
+  /* ===== MOBILE (<1024px) — anim GSAP désactivée, layout vertical statique =====
+     Le morph 2-phases (narrative-block superposés + screen 1↔2 morph) ne marche
+     qu'avec le grid desktop 2-cols + ScrollTrigger pin. En mobile on bascule sur :
+     - narrative-blocks empilés en flow normal, tous deux lisibles
+     - un seul téléphone à taille raisonnable montrant le classement (screen 1)
+     - progress dots cachés (pas d'animation à indiquer) */
+  @media (max-width: 1023px) {
+    .showcase-pin {
+      min-height: 0;
+      padding: var(--space-6) 0;
+    }
+    .narrative-stack {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+    .narrative-block,
+    .narrative-block[data-flow-phase="2"] {
+      position: static;
+      opacity: 1;
+      transform: none;
+    }
+    .phase-progress { display: none; }
+
+    .showcase-stage { padding: var(--space-4) 0 0; }
+    .showcase-phone {
+      height: auto;
+      width: min(78vw, 320px);
+      aspect-ratio: 9 / 19.5;
+      margin: 0 auto;
+    }
+    /* screen 2 (partage) caché en mobile — la narrative phase 2 explique
+       le partage en texte ; on évite de cloner le téléphone pour rester sobre */
+    .screen-share { display: none; }
+  }
 </style>
