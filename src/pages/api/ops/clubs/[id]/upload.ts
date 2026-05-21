@@ -23,6 +23,25 @@ function extFor(mime: string): string {
   }
 }
 
+// Browser-declared Content-Type is attacker-controlled. Sniff the leading bytes
+// so a polyglot/.html renamed `.png` is rejected before it lands in storage.
+function detectImageMime(bytes: Uint8Array): 'image/png' | 'image/jpeg' | 'image/webp' | null {
+  if (bytes.length >= 8 &&
+      bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47 &&
+      bytes[4] === 0x0D && bytes[5] === 0x0A && bytes[6] === 0x1A && bytes[7] === 0x0A) {
+    return 'image/png';
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+    return 'image/jpeg';
+  }
+  if (bytes.length >= 12 &&
+      bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+    return 'image/webp';
+  }
+  return null;
+}
+
 export const POST: APIRoute = async ({ request, params, locals, redirect, url }) => {
   const user = locals.user;
   if (!user || !isAllowedEmail(user.email)) {
@@ -49,16 +68,25 @@ export const POST: APIRoute = async ({ request, params, locals, redirect, url })
     return new Response(`File too big (${Math.round(file.size / 1024)} KB, max ${Math.round(maxBytes / 1024)} KB)`, { status: 413 });
   }
 
-  const sb = serviceClient();
-  const ext = extFor(file.type);
-  const path = `${id}/${kind}-${Date.now()}.${ext}`;
-
   const arrayBuffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+
+  const sniffed = detectImageMime(bytes);
+  if (!sniffed || !allowedTypes.has(sniffed)) {
+    return new Response('File contents do not match an allowed image format', { status: 415 });
+  }
+  if (sniffed !== file.type) {
+    return new Response('Declared type does not match file contents', { status: 415 });
+  }
+
+  const sb = serviceClient();
+  const ext = extFor(sniffed);
+  const path = `${id}/${kind}-${Date.now()}.${ext}`;
 
   const { error: upErr } = await sb.storage
     .from('club-assets')
-    .upload(path, new Uint8Array(arrayBuffer), {
-      contentType: file.type,
+    .upload(path, bytes, {
+      contentType: sniffed,
       cacheControl: '31536000',
       upsert: false,
     });

@@ -61,15 +61,22 @@ export function serviceClient(): SupabaseClient {
   return _serviceClient;
 }
 
+// NFKC normalisation collapses Unicode confusables (e.g. Cyrillic `і` U+0456 vs
+// Latin `i`) to a canonical form, so a homograph email can't bypass the
+// allowlist by mimicking an admin address.
+function normalizeEmail(raw: string): string {
+  return raw.normalize('NFKC').trim().toLowerCase();
+}
+
 const ALLOWED_EMAILS = (import.meta.env.OPS_ALLOWED_EMAILS as string | undefined)
   ?.split(',')
-  .map((e) => e.trim().toLowerCase())
+  .map((e) => normalizeEmail(e))
   .filter(Boolean) ?? [];
 
 export function isAllowedEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   if (ALLOWED_EMAILS.length === 0) return false;
-  return ALLOWED_EMAILS.includes(email.toLowerCase());
+  return ALLOWED_EMAILS.includes(normalizeEmail(email));
 }
 
 export function getAllowedEmails(): string[] {
