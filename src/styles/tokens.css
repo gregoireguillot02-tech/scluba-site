@@ -188,6 +188,21 @@ body[data-player-flow] {
     0 1px 3px rgba(15, 23, 42, 0.07),
     0 8px 20px rgba(15, 23, 42, 0.10),
     0 24px 56px rgba(15, 23, 42, 0.10);
+
+  /* === Play grid backdrop + cartes flottantes ===
+     Tokens consommés par le pattern body[data-play-grid] (global.css) et
+     les surfaces glass du /play (header, hole-card, leaderboard). Densité
+     du grid légèrement supérieure à la landing (28px vs 32px) pour
+     compenser la perte de croisements visibles dûe aux cards opaques. */
+  --play-grid-cell: 28px;
+  --play-grid-line: rgba(27, 67, 50, 0.10);
+  --play-card-bg: rgba(255, 255, 255, 0.62);
+  --play-card-blur: blur(8px) saturate(115%);
+  --play-card-shadow:
+    0 1px 2px rgba(15, 42, 30, 0.05),
+    0 6px 14px rgba(15, 42, 30, 0.07),
+    0 18px 36px rgba(15, 42, 30, 0.09),
+    0 40px 80px rgba(15, 42, 30, 0.08);
 }
 
 /* === Glass Forest — Liquid Glass adapté à l'identité éditoriale ===

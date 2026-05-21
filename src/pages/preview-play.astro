@@ -42,16 +42,17 @@ const myScores: Record<number, number> = { 1: 4, 2: 4, 3: 5, 4: 5, 5: 5 };
   themeColor="#FFFFFF"
   clubColor={club.primary_color}
   lockOverscroll={true}
+  gridBackdrop={true}
 >
   <main class="play">
-    <p class="demo-banner">PREVIEW · données fictives · Athletic Pro Dark Variant B</p>
+    <p class="demo-banner">PREVIEW · données fictives · redesign quadrillage + cartes glass</p>
 
-    <header class="play-header" style={`background: ${club.primary_color}`}>
+    <header class="play-header">
       <div class="play-header-inner">
-        <div class="play-header-text">
+        <div class="play-header-pill" style={`background: ${club.primary_color}`}>
           <p class="play-club">{club.name}</p>
-          <p class="play-player">{me.name}</p>
         </div>
+        <p class="play-player">{me.name}</p>
       </div>
     </header>
 
@@ -136,22 +137,73 @@ const myScores: Record<number, number> = { 1: 4, 2: 4, 3: 5, 4: 5, 5: 5 };
 </PlayerLayout>
 
 <style>
-  .play { max-width: 480px; margin: 0 auto; padding: 0 0 80px; min-height: 100dvh; }
+  .play {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: var(--space-3) 0 80px;
+    min-height: 100dvh;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
   .demo-banner {
-    margin: 0;
+    margin: 0 var(--space-4);
     padding: 8px 16px;
-    background: var(--accent-soft, rgba(16, 210, 119, 0.14));
+    background: rgba(255, 255, 255, 0.62);
+    -webkit-backdrop-filter: blur(8px) saturate(115%);
+            backdrop-filter: blur(8px) saturate(115%);
     color: var(--accent, #10D277);
     font-size: 10.5px;
     letter-spacing: 0.1em;
     text-align: center;
-    border-bottom: 1px solid rgba(16, 210, 119, 0.25);
+    border: 1px solid rgba(15, 42, 30, 0.06);
+    border-radius: 12px;
+    box-shadow: var(--play-card-shadow);
   }
-  .play-header { color: #FFFFFF; padding: 18px 20px; }
-  .play-header-inner { display: flex; align-items: center; gap: 12px; }
-  .play-club { margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: #FFFFFF; }
-  .play-player { margin: 2px 0 0; font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255, 255, 255, 0.8); }
-  .live-board { padding: 12px 16px; background: var(--paper-deep); border-bottom: 1px solid var(--rule); }
+  /* Header glass + pill clubColor (mirror /play) */
+  .play-header {
+    margin: 0 var(--space-4);
+    padding: 12px 14px;
+    background: var(--play-card-bg);
+    -webkit-backdrop-filter: var(--play-card-blur);
+            backdrop-filter: var(--play-card-blur);
+    border: 1px solid rgba(15, 42, 30, 0.06);
+    border-radius: 16px;
+    box-shadow: var(--play-card-shadow);
+  }
+  @supports not (backdrop-filter: blur(1px)) {
+    .play-header { background: rgba(255, 255, 255, 0.92); }
+  }
+  .play-header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .play-header-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 14px;
+    border-radius: var(--radius-full, 9999px);
+    min-width: 0;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+      0 1px 3px rgba(15, 42, 30, 0.10);
+  }
+  .play-club { margin: 0; font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: -0.005em; color: #FFFFFF; white-space: nowrap; }
+  .play-player { margin: 0; font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-soft); flex-shrink: 0; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Live-board glass (sans backdrop-filter parent pour cohérence /play) */
+  .live-board {
+    margin: 0 var(--space-4);
+    padding: 12px 16px;
+    background: var(--play-card-bg);
+    border: 1px solid rgba(15, 42, 30, 0.06);
+    border-radius: 16px;
+    box-shadow: var(--play-card-shadow);
+  }
   .live-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
   .live-card { display: grid; grid-template-columns: 40px 1fr auto auto; align-items: center; gap: 12px; padding: 12px 14px; background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; }
   .live-card.is-leader { background: linear-gradient(135deg, rgba(16, 210, 119, 0.18) 0%, rgba(16, 210, 119, 0.06) 100%); border-color: rgba(16, 210, 119, 0.45); }
@@ -167,12 +219,42 @@ const myScores: Record<number, number> = { 1: 4, 2: 4, 3: 5, 4: 5, 5: 5 };
   .live-diff { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--muted); min-width: 28px; text-align: right; }
   .live-diff.over { color: #FB7185; }
   .live-diff.under { color: #5EEAD4; }
-  .current-player-banner { display: flex; align-items: center; gap: 12px; margin: 12px 16px 0; padding: 14px 16px; background: linear-gradient(135deg, var(--accent) 0%, #0A9D5C 100%); border-radius: 14px; box-shadow: 0 12px 32px -12px rgba(16, 210, 119, 0.48); }
-  .cpb-avatar { width: 42px; height: 42px; border-radius: 50%; background: rgba(0, 0, 0, 0.25); display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 18px; font-weight: 800; color: #fff; }
+  /* Current player banner (host) — gradient honey + glass, mirror /play */
+  .current-player-banner {
+    display: flex; align-items: center; gap: 12px;
+    margin: 0 var(--space-4);
+    padding: 10px 14px;
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--accent) 18%, rgba(255, 255, 255, 0.55)),
+      color-mix(in srgb, var(--accent) 8%, rgba(255, 255, 255, 0.55)));
+    -webkit-backdrop-filter: blur(6px) saturate(115%);
+            backdrop-filter: blur(6px) saturate(115%);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 14px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      0 4px 14px -4px color-mix(in srgb, var(--accent) 22%, transparent),
+      0 1px 3px rgba(15, 42, 30, 0.06);
+  }
+  .cpb-avatar { width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 16px; font-weight: 700; color: #fff; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.18); }
   .cpb-text { display: flex; flex-direction: column; gap: 2px; }
-  .cpb-eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; }
-  .cpb-name { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
-  .hole-card { padding: 20px; margin: 12px 16px 0; background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 14px; position: relative; }
+  .cpb-eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase; }
+  .cpb-name { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--accent); letter-spacing: 0.005em; }
+  /* Hole card glass */
+  .hole-card {
+    padding: var(--space-6) 20px;
+    margin: 0 var(--space-4);
+    background: var(--play-card-bg);
+    -webkit-backdrop-filter: var(--play-card-blur);
+            backdrop-filter: var(--play-card-blur);
+    border: 1px solid rgba(15, 42, 30, 0.06);
+    border-radius: 18px;
+    box-shadow: var(--play-card-shadow);
+    position: relative;
+  }
+  @supports not (backdrop-filter: blur(1px)) {
+    .hole-card { background: rgba(255, 255, 255, 0.92); }
+  }
   .hole-meta { display: flex; gap: 6px; align-items: baseline; justify-content: flex-end; color: var(--accent); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; font-family: var(--font-mono); }
   .hole-meta-label { font-weight: 600; }
   .hole-meta-count { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
@@ -189,7 +271,22 @@ const myScores: Record<number, number> = { 1: 4, 2: 4, 3: 5, 4: 5, 5: 5 };
   .pill-row { display: flex; gap: 6px; }
   .pill { flex: 1; padding: 12px 16px; background: transparent; border: 1px solid var(--rule-strong); border-radius: 999px; color: var(--muted); font-family: var(--font-sans); font-size: 13px; font-weight: 600; cursor: not-allowed; opacity: 0.5; }
   .pill-warn { border-color: rgba(251, 113, 133, 0.4); color: #FB7185; }
-  .card-grid-wrap { margin: 20px 16px 0; padding: 16px; background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 14px; }
+  /* Scorecard glass — mirror .leaderboard de /play */
+  .card-grid-wrap {
+    margin: 0 var(--space-4);
+    padding: 16px;
+    background: var(--play-card-bg);
+    -webkit-backdrop-filter: var(--play-card-blur);
+            backdrop-filter: var(--play-card-blur);
+    border: 1px solid rgba(15, 42, 30, 0.06);
+    border-top: 1px solid rgba(212, 165, 116, 0.4);
+    border-bottom: 1px solid rgba(212, 165, 116, 0.4);
+    border-radius: 16px;
+    box-shadow: var(--play-card-shadow);
+  }
+  @supports not (backdrop-filter: blur(1px)) {
+    .card-grid-wrap { background: rgba(255, 255, 255, 0.92); }
+  }
   .card-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--ink); }
   .card-total strong { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--accent); }
   .card-total { font-size: 11px; color: var(--muted); }
@@ -204,6 +301,6 @@ const myScores: Record<number, number> = { 1: 4, 2: 4, 3: 5, 4: 5, 5: 5 };
   .cell-bogey .cell-strokes { color: var(--muted); }
   .cell-over .cell-strokes { color: #FB7185; }
   .cell-current { box-shadow: 0 0 0 2px var(--accent); }
-  .finish-btn { width: calc(100% - 32px); margin: 20px 16px 0; padding: 18px; background: linear-gradient(135deg, var(--accent) 0%, #0A9D5C 100%); border: none; border-radius: 14px; color: #fff; font-family: var(--font-display); font-size: 16px; font-weight: 700; cursor: not-allowed; opacity: 0.7; box-shadow: 0 12px 32px -8px rgba(16, 210, 119, 0.55); }
+  .finish-btn { width: calc(100% - var(--space-4) * 2); margin: 0 var(--space-4); padding: 18px; background: linear-gradient(135deg, var(--accent) 0%, #0A9D5C 100%); border: none; border-radius: 14px; color: #fff; font-family: var(--font-display); font-size: 16px; font-weight: 700; cursor: not-allowed; opacity: 0.7; box-shadow: 0 12px 32px -8px rgba(16, 210, 119, 0.55); }
   .proto-note { text-align: center; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.3em; color: var(--muted); opacity: 0.4; margin: 40px 0 0; }
 </style>

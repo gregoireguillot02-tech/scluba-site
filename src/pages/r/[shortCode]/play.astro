@@ -118,20 +118,21 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
   themeColor={clubColor}
   clubColor={clubColor}
   lockOverscroll={true}
+  gridBackdrop={true}
 >
   <main class="play">
-    {/* play-header : bandeau plein clubColor (Strava Light Green direction).
-         En light theme, l'aplat couleur club est légitime — c'est l'identité
-         du club. Texte blanc sur fond coloré, cohérent et lisible. */}
-    <header class="play-header" style={`background: ${clubColor}`}>
+    {/* play-header : carte glass posée sur le quadrillage. Le clubColor
+         est isolé sur la pill (logo + nom club) — badge identitaire du
+         club. Le nom du joueur reste en eyebrow micro-caps hors pill. */}
+    <header class="play-header">
       <div class="play-header-inner">
-        {r.club.logo_url && (
-          <img class="play-header-logo" src={r.club.logo_url} alt="" transition:name="player-club-logo" />
-        )}
-        <div class="play-header-text">
+        <div class="play-header-pill" style={`background: ${clubColor}`}>
+          {r.club.logo_url && (
+            <img class="play-header-logo" src={r.club.logo_url} alt="" transition:name="player-club-logo" />
+          )}
           <p class="play-club" transition:name="player-club-name">{r.club.name}</p>
-          <p class="play-player">{me.display_name}</p>
         </div>
+        <p class="play-player">{me.display_name}</p>
       </div>
     </header>
 
@@ -1130,28 +1131,37 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
   </script>
 
   <style>
+    /* === Container play ===
+       Transparent pour laisser passer le quadrillage du body[data-play-grid].
+       L'effet "feuille flottante" vient maintenant des cartes glass enfants,
+       chacune avec son blur + shadow. La drop-shadow externe globale est
+       retirée — chaque module porte sa propre profondeur. */
     .play {
       max-width: 480px;
       margin: 0 auto;
       min-height: 100dvh;
-      background: linear-gradient(180deg, #FAF7EE 0%, #F4F8F5 100%);
-      box-shadow: 0 32px 80px rgba(27, 67, 50, 0.18);
+      background: transparent;
       display: flex;
       flex-direction: column;
+      gap: var(--space-3);
+      padding: var(--space-3) 0 var(--space-4);
     }
 
     /* === Live leaderboard (cards) ===
-       Refonte PR#68 : container paper-deep + noise subtil, cards off-cream
-       éditoriales, card leader en material honey tinted (gradient + inner
-       light + multi-shadow — pas de backdrop-filter car surface inline,
-       cf. règle d'or tokens.css), médailles SVG, typo Fraunces/Mono.
-       Breathe persistant sur la card leader pour signaler la tête en
-       continu sans agresser (3.2s, paused au hover, off en reduced-motion). */
+       Container glass blanc translucide posé sur le quadrillage. Pas de
+       backdrop-filter sur ce container parent : le Flip plugin reorder les
+       rows en absolute → recalcul du blur frame par frame = coût GPU
+       prohibitif sur mobile. La profondeur vient des shadows + des cards
+       enfants opaques. Noise SVG conservé mais réduit (0.18 → 0.10) pour
+       ne pas s'empiler avec le quadrillage. */
     .live-board {
       position: relative;
+      margin: 0 var(--space-4);
       padding: var(--space-3) var(--space-4);
-      background: var(--paper-deep);
-      border-bottom: 1px solid var(--rule);
+      background: var(--play-card-bg);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
     }
     .live-board::before {
       content: '';
@@ -1159,9 +1169,10 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       inset: 0;
       background-image: var(--noise-svg);
       background-size: 120px 120px;
-      opacity: 0.18;
+      opacity: 0.10;
       pointer-events: none;
       mix-blend-mode: multiply;
+      border-radius: inherit;
     }
     /* Rail honey décoratif en bas (au lieu d'un trait brut). */
     .live-board::after {
@@ -1354,23 +1365,28 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
        Remplace les anciens player-tabs. Le live-board (haut) est désormais
        l'unique surface de sélection joueur. Ce banner agit comme un
        feedback explicite "tu es en train de saisir pour X". Layout :
-       avatar à gauche, eyebrow micro-caps + nom Fraunces XL à droite. */
+       avatar à gauche, eyebrow micro-caps + nom Fraunces XL à droite.
+       Gradient honey + backdrop-blur léger pour s'intégrer au système glass
+       sans devenir invisible sur le quadrillage. */
     .current-player-banner {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin: var(--space-3) var(--space-4) 0;
+      margin: 0 var(--space-4);
       padding: 10px 14px;
       background: linear-gradient(
         135deg,
-        color-mix(in srgb, var(--accent) 12%, transparent),
-        color-mix(in srgb, var(--accent) 4%, transparent)
+        color-mix(in srgb, var(--accent) 18%, rgba(255, 255, 255, 0.55)),
+        color-mix(in srgb, var(--accent) 8%, rgba(255, 255, 255, 0.55))
       );
-      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-      border-radius: 12px;
+      -webkit-backdrop-filter: blur(6px) saturate(115%);
+              backdrop-filter: blur(6px) saturate(115%);
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+      border-radius: 14px;
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.5),
-        0 2px 6px -2px color-mix(in srgb, var(--accent) 18%, transparent);
+        0 4px 14px -4px color-mix(in srgb, var(--accent) 22%, transparent),
+        0 1px 3px rgba(15, 42, 30, 0.06);
     }
     .cpb-avatar {
       width: 38px; height: 38px;
@@ -1435,40 +1451,57 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         0 6px 18px -8px color-mix(in srgb, var(--accent) 38%, transparent);
     }
 
-    /* Header bandeau plein clubColor + texte blanc — Strava Light Green.
-       L'identité du club s'affirme via sa couleur, le texte ressort en
-       blanc sur fond coloré (cohérent et identitaire pour chaque club). */
+    /* === Header glass + pill clubColor ===
+       Le bandeau n'est plus un aplat couleur club mais une carte glass
+       blanche translucide. Le clubColor migre exclusivement sur la pill
+       qui englobe (logo + nom du club) — badge identitaire isolé. Le
+       nom du joueur reste en eyebrow micro-caps hors pill, dark sur clair. */
     .play-header {
-      color: #FFFFFF;
-      padding: 18px 20px;
+      margin: 0 var(--space-4);
+      padding: 12px 14px;
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .play-header { background: rgba(255, 255, 255, 0.92); }
     }
     .play-header-inner {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 12px;
     }
-    .play-header-logo {
-      width: 36px;
-      height: 36px;
-      object-fit: contain;
-      background: rgba(255, 255, 255, 0.92);
-      border-radius: 50%;
-      padding: 4px;
-      flex-shrink: 0;
-    }
-    .play-header-text {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
+    .play-header-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 14px 4px 4px;
+      border-radius: var(--radius-full);
       min-width: 0;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+        0 1px 3px rgba(15, 42, 30, 0.10);
+    }
+    .play-header-logo {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 50%;
+      padding: 3px;
+      flex-shrink: 0;
     }
     .play-club {
       margin: 0;
       font-family: var(--font-display);
-      font-size: 18px;
+      font-size: 14px;
       font-weight: 700;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.005em;
       color: #FFFFFF;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1478,16 +1511,34 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       margin: 0;
       font-family: var(--font-mono);
       font-size: 10px;
-      font-weight: 500;
+      font-weight: 600;
       letter-spacing: 0.2em;
       text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.8);
+      color: var(--ink-soft);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex-shrink: 0;
+      max-width: 50%;
     }
 
+    /* === Hole card (PAR géant + ScoreInput) ===
+       Carte glass complète. Le grand chiffre PAR ressort sur fond glass
+       blanc translucide, le quadrillage transparaît subtilement derrière. */
     .hole-card {
       position: relative;
+      margin: 0 var(--space-4);
       padding: var(--space-7) var(--space-5) var(--space-6);
       text-align: center;
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 18px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .hole-card { background: rgba(255, 255, 255, 0.92); }
     }
     /* Mode spectateur (scoring_mode='host', non-créateur) : le hole-card
        (PAR + ScoreInput) est masqué. Visible si le joueur clique sur
@@ -1496,16 +1547,31 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       display: none;
     }
 
+    /* Spectator banner : honey gradient renforcé pour rester lisible
+       au-dessus du quadrillage forest (sinon effet muddy). Border honey
+       0.4 → 0.5, fond paper opaque sous le gradient honey. */
     .spectator-banner {
       position: relative;
-      margin: var(--space-3) var(--space-4) 0;
+      margin: 0 var(--space-4);
       padding: 14px 16px;
       border-radius: 14px;
-      background: linear-gradient(180deg, rgba(212, 165, 116, 0.16), rgba(212, 165, 116, 0.05));
-      border: 1px solid rgba(212, 165, 116, 0.4);
+      background:
+        linear-gradient(180deg, rgba(212, 165, 116, 0.20), rgba(212, 165, 116, 0.06)),
+        rgba(255, 255, 255, 0.62);
+      -webkit-backdrop-filter: blur(6px) saturate(115%);
+              backdrop-filter: blur(6px) saturate(115%);
+      border: 1px solid rgba(212, 165, 116, 0.5);
+      box-shadow: var(--play-card-shadow);
       display: flex;
       flex-direction: column;
       gap: 10px;
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .spectator-banner {
+        background:
+          linear-gradient(180deg, rgba(212, 165, 116, 0.20), rgba(212, 165, 116, 0.06)),
+          rgba(255, 255, 255, 0.92);
+      }
     }
     /* Badge "EN DIRECT" anchored top-right — signal visuel que le
        spectateur regarde en temps réel. Dot honey qui pulse pour
@@ -1629,12 +1695,24 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
        → src/components/player/ScoreInput.astro. La saisie + le pickup
        + la navigation entre trous sont concentrés dans ce composant. */
 
+    /* === Scorecard "Carte" ===
+       Carte glass blanche. La teinte honey 0.08 d'origine ne suffisait pas
+       à se détacher du quadrillage, on passe en glass complet avec accent
+       honey préservé sur les borders top/bottom. */
     .leaderboard {
-      margin: 0 var(--space-5) var(--space-5);
+      margin: 0 var(--space-4);
       padding: var(--space-4);
-      background: rgba(212, 165, 116, 0.08);
-      border-top: 1px solid rgba(212, 165, 116, 0.3);
-      border-bottom: 1px solid rgba(212, 165, 116, 0.3);
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-top: 1px solid rgba(212, 165, 116, 0.4);
+      border-bottom: 1px solid rgba(212, 165, 116, 0.4);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .leaderboard { background: rgba(255, 255, 255, 0.92); }
     }
     .leaderboard-head {
       display: flex;
@@ -1662,7 +1740,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
        scoped dans Scorecard.astro matchent les cells qu'il a rendues). */
 
     .finish-form {
-      padding: 0 var(--space-5);
+      padding: 0 var(--space-4);
     }
     .finish-btn {
       width: 100%;

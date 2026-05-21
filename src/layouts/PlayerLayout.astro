@@ -27,6 +27,10 @@ interface Props {
   bodyClass?: string;
   /** Verrouille le scroll overscroll-behavior-y (utile pour /play). */
   lockOverscroll?: boolean;
+  /** Active le quadrillage fin fixe (data-play-grid sur body). Cohérence
+   *  visuelle avec la landing. Le background body bascule sur le pattern
+   *  défini dans global.css (linear-gradient 28×28). */
+  gridBackdrop?: boolean;
 }
 
 const {
@@ -35,14 +39,17 @@ const {
   clubColor = '#0EA968',
   bodyClass = '',
   lockOverscroll = false,
+  gridBackdrop = false,
 } = Astro.props;
 
 // Strava Light Green — flow joueur sur fond white avec accent vert vibrant.
 // Le data-attribute `player-flow` permet aux tokens.css de scoper les
 // overrides à /r/* + /[slug] (pas la landing, pas /ops).
+// Quand gridBackdrop=true, on n'écrase pas le background — le pattern
+// quadrillage de global.css body[data-play-grid] prend le relais.
 const bodyStyle = [
   `--clubColor: ${clubColor}`,
-  'background: #FFFFFF',
+  gridBackdrop ? null : 'background: #FFFFFF',
   'color: #0A0A0A',
   'min-height: 100dvh',
   'margin: 0',
@@ -93,7 +100,7 @@ const bodyStyle = [
        défaut, comportement gracieusement dégradé. -->
   <ClientRouter />
 </head>
-<body style={bodyStyle} class={bodyClass} data-player-flow>
+<body style={bodyStyle} class={bodyClass} data-player-flow data-play-grid={gridBackdrop ? '' : undefined}>
   <slot />
 </body>
 </html>

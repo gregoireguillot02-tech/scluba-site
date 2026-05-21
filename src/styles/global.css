@@ -142,6 +142,21 @@ body[data-landing] .palette-card:hover {
     0 56px 112px rgba(15, 42, 30, 0.10) !important;
 }
 
+/* ============================================================
+   Quadrillage fin fixe — pattern partagé avec la landing, appliqué sur
+   /play quand PlayerLayout reçoit gridBackdrop=true. Densité 28×28px
+   (vs 32×32 landing) pour compenser la couverture ~80% par les cards
+   glass. Pas de radial-gradients honey ici : l'écran de scoring doit
+   rester focus sur la partie, pas atmosphérique.
+   ============================================================ */
+body[data-play-grid] {
+  background:
+    linear-gradient(var(--play-grid-line) 1px, transparent 1px) 0 0 / var(--play-grid-cell) var(--play-grid-cell),
+    linear-gradient(90deg, var(--play-grid-line) 1px, transparent 1px) 0 0 / var(--play-grid-cell) var(--play-grid-cell),
+    var(--bg) !important;
+  background-attachment: fixed, fixed, scroll !important;
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-serif);
   font-weight: 700;
