@@ -1,0 +1,232 @@
+---
+/**
+ * /preview-join — preview du redesign /join avec données mock (sans DB).
+ *
+ * Affichage statique read-only : pas de claim, pas de realtime. Permet
+ * de valider visuellement la DA quadrillage + cartes glass sur le
+ * /join sans avoir à scanner un QR.
+ *
+ * URL publique : https://scluba.com/preview-join
+ * noindex pour ne pas polluer le SEO.
+ */
+export const prerender = false;
+
+import PlayerLayout from '../layouts/PlayerLayout.astro';
+import Masthead from '../components/player/Masthead.astro';
+import Colophon from '../components/player/Colophon.astro';
+
+const club = {
+  name: 'Golf de Caen-La-Mer',
+  primary_color: '#1A4490',
+  logo_url: null as string | null,
+  photo_url: null as string | null,
+};
+const creator = { display_name: 'Grégoire' };
+const placeholders = [
+  { id: 'p1', display_name: 'Martin' },
+  { id: 'p2', display_name: 'Jean' },
+];
+
+const clubColor = club.primary_color;
+---
+
+<PlayerLayout
+  title={`${club.name} — Preview /join · Scluba`}
+  themeColor="#FFFFFF"
+  clubColor={clubColor}
+  gridBackdrop={true}
+>
+  <main class="join-page">
+    <p class="demo-banner">PREVIEW · données fictives · redesign /join quadrillage + cartes glass</p>
+
+    <Masthead
+      photoUrl={club.photo_url}
+      logoUrl={club.logo_url}
+      eyebrow="Rejoindre"
+      title={club.name}
+      size="compact"
+    />
+
+    <p class="join-context">
+      Partie lancée par <strong>{creator.display_name}</strong>
+    </p>
+
+    <section class="claim-block">
+      <h2 class="claim-title">C'est qui toi&nbsp;?</h2>
+      <p class="claim-hint">Choisis ton prénom dans la liste.</p>
+      <ul class="claim-list">
+        {placeholders.map((p) => (
+          <li>
+            <button type="button" class="claim-btn" disabled>
+              <span class="claim-name">{p.display_name}</span>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+              </svg>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <details class="selfadd-block">
+      <summary class="selfadd-summary">
+        <span>Mon prénom n'est pas dans la liste</span>
+        <svg class="selfadd-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </summary>
+      <form class="selfadd-form" onsubmit="event.preventDefault()">
+        <label class="selfadd-label">
+          <span>Ton prénom</span>
+          <input class="selfadd-input" type="text" placeholder="Antoine" maxlength="40" />
+        </label>
+        <button type="submit" class="selfadd-btn">Rejoindre la partie</button>
+      </form>
+    </details>
+
+    <Colophon />
+
+    <p class="proto-note">PREVIEW PUBLIC · scluba.com/preview-join</p>
+  </main>
+
+  <style>
+    .join-page {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 0 var(--space-4);
+      background: transparent;
+    }
+
+    .demo-banner {
+      margin: var(--space-3) 0;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.62);
+      -webkit-backdrop-filter: blur(8px) saturate(115%);
+              backdrop-filter: blur(8px) saturate(115%);
+      color: var(--accent, #10D277);
+      font-size: 10.5px;
+      letter-spacing: 0.1em;
+      text-align: center;
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 12px;
+      box-shadow: var(--play-card-shadow);
+    }
+
+    .join-context {
+      margin: var(--space-3) 0 var(--space-4);
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .join-context strong { color: var(--clubColor); font-weight: 600; }
+
+    /* Claim glass */
+    .claim-block {
+      padding: var(--space-5) var(--space-4);
+      margin-bottom: var(--space-4);
+      text-align: center;
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .claim-block { background: rgba(255, 255, 255, 0.92); }
+    }
+    .claim-title {
+      margin: 0 0 var(--space-2);
+      font-family: var(--font-serif);
+      font-size: clamp(1.4rem, 5vw, 1.7rem);
+      color: var(--clubColor);
+    }
+    .claim-hint { margin: 0 0 var(--space-4); font-size: 13px; color: var(--muted); }
+    .claim-list { list-style: none; padding: 0; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-3); max-width: 360px; }
+    .claim-btn {
+      width: 100%;
+      display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font-size: 17px; font-weight: 500;
+      cursor: not-allowed;
+      opacity: 0.85;
+    }
+    .claim-name { font-family: var(--font-sans); text-align: left; flex: 1; }
+    .claim-btn svg { color: var(--clubColor); flex-shrink: 0; }
+
+    /* Self-add glass */
+    .selfadd-block {
+      max-width: 420px;
+      margin: 0 auto var(--space-4);
+      padding: var(--space-3) var(--space-4) var(--space-4);
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .selfadd-block { background: rgba(255, 255, 255, 0.92); }
+    }
+    .selfadd-summary {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: transparent;
+      cursor: pointer;
+      list-style: none;
+      font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
+      color: var(--clubColor);
+    }
+    .selfadd-summary::-webkit-details-marker { display: none; }
+    .selfadd-block[open] .selfadd-chevron { transform: rotate(180deg); }
+    .selfadd-chevron { transition: transform 0.2s ease-out; }
+    .selfadd-form { margin-top: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
+    .selfadd-label { display: block; text-align: left; }
+    .selfadd-label > span {
+      display: block;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .selfadd-input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 16px;
+      font-family: var(--font-sans);
+      color: var(--ink);
+    }
+    .selfadd-btn {
+      min-height: 48px;
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 1px solid var(--clubColor);
+      background: transparent;
+      color: var(--clubColor);
+      font-size: 15px; font-weight: 600;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    .proto-note {
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      opacity: 0.4;
+      margin: 40px 0 20px;
+    }
+  </style>
+</PlayerLayout>
