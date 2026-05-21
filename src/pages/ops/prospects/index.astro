@@ -3,6 +3,7 @@ export const prerender = false;
 
 import OpsLayout from '../../../layouts/OpsLayout.astro';
 import { serviceClient } from '../../../lib/supabase';
+import { escapeLikePattern } from '../../../lib/safe-redirect';
 import {
   PROSPECT_STATUSES,
   STATUS_LABELS,
@@ -23,7 +24,13 @@ const search = (url.searchParams.get('q') ?? '').trim();
 let q = sb.from('prospects').select('*').order('updated_at', { ascending: false });
 if (filterStatus && PROSPECT_STATUSES.includes(filterStatus)) q = q.eq('status', filterStatus);
 if (filterOwner && OWNERS.includes(filterOwner as any)) q = q.eq('owner', filterOwner);
-if (search) q = q.or(`club_name.ilike.%${search}%,contact_name.ilike.%${search}%,city.ilike.%${search}%,email.ilike.%${search}%`);
+if (search) {
+  // PostgREST .or() parses `,` as a clause separator, so user-supplied commas
+  // would inject extra filters. escapeLikePattern() neutralises % / _ / \.
+  // Strip commas and parentheses too so the expression can't be broken open.
+  const escaped = escapeLikePattern(search).replace(/[,()]/g, ' ');
+  q = q.or(`club_name.ilike.%${escaped}%,contact_name.ilike.%${escaped}%,city.ilike.%${escaped}%,email.ilike.%${escaped}%`);
+}
 
 const { data } = await q;
 const prospects: Prospect[] = (data ?? []) as Prospect[];

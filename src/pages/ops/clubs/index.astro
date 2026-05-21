@@ -3,15 +3,37 @@ export const prerender = false;
 
 import OpsLayout from '../../../layouts/OpsLayout.astro';
 import { serviceClient } from '../../../lib/supabase';
+import { escapeLikePattern } from '../../../lib/safe-redirect';
 import type { Club } from '../../../lib/clubs-types';
 
 const sb = serviceClient();
 const url = new URL(Astro.request.url);
 const q = (url.searchParams.get('q') ?? '').trim();
 
+// Only accept Supabase Storage public URLs in the background-image slot so a
+// poisoned photo_url can't smuggle CSS expressions (`)` / `;` / quotes).
+function safePhotoUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'https:') return null;
+    if (!/\.supabase\.co$/i.test(u.hostname)) return null;
+    if (/["'()\\\s]/.test(raw)) return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+function safeHexAccent(raw: string | null | undefined, fallback: string): string {
+  if (!raw) return fallback;
+  return /^#[0-9A-Fa-f]{6}$/.test(raw) ? raw : fallback;
+}
+
 let query = sb.from('clubs').select('*, prospect:prospects(id, club_name)').order('created_at', { ascending: false });
 if (q) {
-  query = query.or(`name.ilike.%${q}%,city.ilike.%${q}%,slug.ilike.%${q}%`);
+  const escaped = escapeLikePattern(q).replace(/[,()]/g, ' ');
+  query = query.or(`name.ilike.%${escaped}%,city.ilike.%${escaped}%,slug.ilike.%${escaped}%`);
 }
 const { data: clubs } = await query;
 
@@ -68,14 +90,21 @@ function fmtDate(iso: string): string {
     <ul class="club-grid">
       {allClubs.map((c) => {
         const counts = roundCounts[c.id] ?? { total: 0, active: 0, finished: 0 };
-        const accent = c.primary_color ?? '#1B4332';
+        const accent = safeHexAccent(c.primary_color, '#1B4332');
+        const photo = safePhotoUrl(c.photo_url);
+        const logo = safePhotoUrl(c.logo_url);
         return (
           <li class="club-tile">
-            <div class="club-tile-photo" style={c.photo_url ? `background-image: url(${c.photo_url}); background-size: cover; background-position: center 55%;` : `background: ${accent};`}>
-              {c.logo_url && <img class="club-tile-logo" src={c.logo_url} alt="" />}
+            <div
+              class:list={["club-tile-photo", { "has-photo": !!photo }]}
+              style={photo
+                ? { "--club-photo": `url("${photo}")` }
+                : { background: accent }}
+            >
+              {logo && <img class="club-tile-logo" src={logo} alt="" />}
             </div>
             <div class="club-tile-body">
-              <h2 class="club-tile-name" style={`color: ${accent}`}>{c.name}</h2>
+              <h2 class="club-tile-name" style={{ color: accent }}>{c.name}</h2>
               <p class="club-tile-meta">
                 {c.city && <span>{c.city}</span>}
                 {c.city && <span class="dot" aria-hidden="true">·</span>}
@@ -153,6 +182,11 @@ function fmtDate(iso: string): string {
     display: flex;
     align-items: flex-end;
     padding: 12px;
+  }
+  .club-tile-photo.has-photo {
+    background-image: var(--club-photo);
+    background-size: cover;
+    background-position: center 55%;
   }
   .club-tile-logo {
     width: 44px;
