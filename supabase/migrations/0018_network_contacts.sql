@@ -44,3 +44,37 @@ create trigger network_contacts_updated_at
 
 alter table public.network_contacts enable row level security;
 -- Aucune policy publique : seul le service_role accède (utilisé par /ops via serviceClient()).
+
+-- ============================================================================
+-- Seed : 21 contacts FFGolf (4 chaînes + 13 ligues métropole + 4 asso pros)
+-- Source : "CONTACTS V11072024.pdf" (FFGolf, données 2021).
+-- DOM-TOM volontairement exclus (hors marché Scluba).
+-- ============================================================================
+
+insert into public.network_contacts (name, role, org, org_type, region, email, phone, website) values
+  -- Chaînes (4)
+  ('Pierre-André Uhlen', 'Référent', 'UGolf / Blue Green', 'chaine', null, 'contact@ugolf.eu', '01 41 18 65 50', 'https://www.ugolf.eu'),
+  ('Alexis Davet', 'Référent', 'Resonnance / Open Golf Club', 'chaine', null, 'adavet@opengolfclub.com', '01 42 89 18 72', 'https://www.opengolfclub.com'),
+  ('Thierry Flipo', 'Référent', 'Gaia Concept', 'chaine', null, 'flipo.thierry@orange.fr', '09 63 26 17 71', 'https://www.gaiaconcept.fr'),
+  ('Matthieu Briol', 'Référent', 'UCPA', 'chaine', null, 'mbriol@ucpa.asso.fr', '01 45 87 46 80', 'https://www.ucpa.com'),
+
+  -- Ligues métropole (13)
+  ('Thierry Peysson', 'Président', 'Ligue Auvergne Rhône Alpes', 'ligue', 'Auvergne Rhône Alpes', 'contact@liguegolfaura.com', '04 78 24 76 61', 'https://www.liguegolfaura.com'),
+  ('Claude Schatz', 'Président', 'Ligue Bourgogne Franche Comté', 'ligue', 'Bourgogne Franche Comté', 'contact@liguegolfbfc.fr', '03 80 25 09 72', 'https://www.liguegolfbfc.fr'),
+  ('Jean-Luc Poulain', 'Président', 'Ligue Bretagne', 'ligue', 'Bretagne', 'ligue.bretagne.golf@wanadoo.fr', '02 99 31 68 80', 'https://www.liguebretagnegolf.org'),
+  ('Christophe Dorise', 'Président', 'Ligue Centre Val de Loire', 'ligue', 'Centre Val de Loire', 'contact@golf-centre.fr', '06 66 08 47 79', 'https://www.golf-centre.fr'),
+  ('Richard Bertolucci', 'Président', 'Ligue Corse', 'ligue', 'Corse', 'contact@liguecorsedegolf.org', '04 95 32 54 53', 'https://www.liguecorsedegolf.org'),
+  ('Philippe Pinceloup', 'Président', 'Ligue Grand Est', 'ligue', 'Grand Est', 'contact@ligue-golfgrandest.org', '03 83 18 95 34', 'http://ligue-golfgrandest.org'),
+  ('Jean-Louis Lignier', 'Président', 'Ligue Hauts de France', 'ligue', 'Hauts de France', 'golfhautsdefrance@gmail.com', '03 20 98 96 58', 'https://www.golfhautsdefrance.com'),
+  ('Pierre Lordereau', 'Président', 'Ligue Normandie', 'ligue', 'Normandie', 'contact@liguegolfnormandie.fr', '02 32 65 26 39', 'http://liguegolfnormandie.fr'),
+  ('Anne Ridoux', 'Président', 'Ligue Nouvelle Aquitaine', 'ligue', 'Nouvelle Aquitaine', 'contact@ligolfna.com', '05 56 57 61 83', 'https://www.ligue-golfna.org'),
+  ('Véronique Branover', 'Président', 'Ligue Occitanie', 'ligue', 'Occitanie', 'contact@liguegolfoccitanie.fr', '05 31 61 91 05', 'https://www.liguegolfoccitanie.fr'),
+  ('Bertrand Mayer', 'Président', 'Ligue Paris-Île de France', 'ligue', 'Paris-Île de France', 'contact@lgpidf.com', '01 30 43 30 32', 'https://www.lgpidf.com'),
+  ('Alain Vallet', 'Président', 'Ligue Pays de Loire', 'ligue', 'Pays de Loire', 'golfpdl@wanadoo.fr', '02 40 08 05 06', 'https://www.ligue-golf-paysdelaloire.asso.fr'),
+  ('Jean-Yves Ortega', 'Président', 'Ligue Provence Alpes Côte d''Azur', 'ligue', 'Provence Alpes Côte d''Azur', 'contact@liguegolfpaca.org', '04 42 76 35 22', 'https://www.liguegolfpaca.com'),
+
+  -- Associations professionnelles (4)
+  ('Jean-Franck Burou', 'Président', 'ADGF (Asso Directeurs de Golf de France)', 'asso', null, 'adgfmail@gmail.com', null, 'https://www.adgf.org'),
+  ('Remi Dorbeau', 'Président', 'AGREF (Entretien Terrains de Golf)', 'asso', null, 'agref.golf@wanadoo.fr', '05 59 52 86 52', 'https://www.agref.org'),
+  ('Eric Douenelle', 'Président', 'PGA France', 'asso', null, 'contact@pgafrance.org', '01 34 52 08 46', 'https://www.pgafrance.org'),
+  ('Yves Rochereau', 'Président', 'GFGA (Groupement Français des Golfs Associatifs)', 'asso', null, 'gfga@ffgolf.org', '01 41 49 80 10', 'https://www.gfga.fr');
