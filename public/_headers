@@ -1,3 +1,9 @@
+# Production security headers are set programmatically in src/middleware.ts so
+# they apply under @astrojs/cloudflare Workers (which does NOT natively honor
+# this Netlify/Pages-style file). This file remains as a fallback for any
+# static / non-Worker deployment and for documentation parity with the
+# production middleware.
+
 /*
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
