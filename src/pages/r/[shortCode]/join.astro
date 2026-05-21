@@ -64,8 +64,9 @@ const clubColor = r.club.primary_color ?? '#1B4332';
 
 <PlayerLayout
   title={`Rejoindre — ${r.club.name} · Scluba`}
-  themeColor="#FAF7EE"
+  themeColor="#FFFFFF"
   clubColor={clubColor}
+  gridBackdrop={true}
 >
   <main class="join-page" data-join-page data-short-code={shortCode} data-round-id={r.id} data-status={r.status}>
     <Masthead
@@ -224,6 +225,9 @@ const clubColor = r.club.primary_color ?? '#1B4332';
   </script>
 
   <style>
+    /* === Container join ===
+       Transparent pour laisser passer le quadrillage du body[data-play-grid].
+       Les modules (claim-block, selfadd-block) flottent en cartes glass. */
     .join-page {
       max-width: 480px;
       margin: 0 auto;
@@ -231,20 +235,31 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       display: flex;
       flex-direction: column;
       padding: 0 var(--space-4);
+      background: transparent;
     }
 
     .join-context {
-      margin: var(--space-2) 0 0;
+      margin: var(--space-3) 0 var(--space-4);
       font-size: 13px;
       color: var(--muted);
       text-align: center;
     }
     .join-context strong { color: var(--clubColor); font-weight: 600; }
 
-    /* Claim list */
+    /* === Claim block === Carte glass blanche autour du titre + liste. */
     .claim-block {
-      padding: var(--space-5) 0 var(--space-3);
+      padding: var(--space-5) var(--space-4);
+      margin-bottom: var(--space-4);
       text-align: center;
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .claim-block { background: rgba(255, 255, 255, 0.92); }
     }
     .claim-title {
       margin: 0 0 var(--space-2);
@@ -304,10 +319,20 @@ const clubColor = r.club.primary_color ?? '#1B4332';
       flex-shrink: 0;
     }
 
-    /* Self-add (collapsible) */
+    /* === Self-add (collapsible) === Carte glass blanche. */
     .selfadd-block {
-      max-width: 360px;
-      margin: var(--space-4) auto 0;
+      max-width: 420px;
+      margin: 0 auto var(--space-4);
+      padding: var(--space-3) var(--space-4) var(--space-4);
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .selfadd-block { background: rgba(255, 255, 255, 0.92); }
     }
     .selfadd-summary {
       display: flex;
