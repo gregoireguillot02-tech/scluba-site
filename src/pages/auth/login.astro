@@ -4,51 +4,96 @@ export const prerender = false;
 import '../../styles/tokens.css';
 import '../../styles/global.css';
 import Honeypot from '../../components/Honeypot.astro';
-import { magicLinkSchema, formatZodError } from '../../lib/validation/schemas';
+import {
+  otpRequestSchema,
+  otpVerifySchema,
+  formatZodError,
+} from '../../lib/validation/schemas';
 import { safeNextPath } from '../../lib/safe-redirect';
 
 const url = Astro.url;
 const next = safeNextPath(url.searchParams.get('next'), '/');
-const sent = url.searchParams.get('sent') === '1';
+const stepParam = url.searchParams.get('step');
+const emailParam = url.searchParams.get('email') ?? '';
 const errMsg = url.searchParams.get('err');
 
 const ERR_MESSAGES: Record<string, string> = {
-  missing_code: 'Lien invalide ou expiré. Redemande un nouveau lien.',
-  auth_failed: 'Échec de la connexion. Redemande un nouveau lien.',
+  invalid_otp: 'Code invalide. Vérifie et réessaie.',
+  otp_expired: 'Code expiré. Demande un nouveau code.',
+  send_failed: "Impossible d'envoyer le code. Réessaie dans un instant.",
+  auth_failed: 'Échec de la connexion. Redemande un code.',
 };
 const safeErr = errMsg && Object.hasOwn(ERR_MESSAGES, errMsg)
   ? ERR_MESSAGES[errMsg]
   : (errMsg ? ERR_MESSAGES.auth_failed : null);
 
 let formError: string | null = null;
-const formSent = sent;
+let step: 'request' | 'verify' = stepParam === 'verify' ? 'verify' : 'request';
+let pendingEmail = emailParam;
 
 if (Astro.request.method === 'POST') {
   try {
     const formData = await Astro.request.formData();
-    const parsed = magicLinkSchema.safeParse({
-      email: formData.get('email') ?? '',
-      next: formData.get('next') ?? '/',
-      hp_email: formData.get('hp_email') ?? undefined,
-    });
+    const action = formData.get('action');
 
-    if (!parsed.success) {
-      formError = formatZodError(parsed.error);
-    } else {
-      const { email, next: nextField = '/' } = parsed.data;
-      const safeNext = safeNextPath(nextField, '/');
-      const supabase = Astro.locals.supabase;
-      const origin = url.origin;
-      const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: redirectTo },
+    if (action === 'verify') {
+      const parsed = otpVerifySchema.safeParse({
+        email: formData.get('email') ?? '',
+        token: formData.get('token') ?? '',
+        next: formData.get('next') ?? '/',
+        hp_email: formData.get('hp_email') ?? undefined,
       });
-      if (error) {
-        console.error('[auth/login] signInWithOtp failed', error);
-        formError = "Erreur lors de l'envoi du lien magique. Réessaie dans un instant.";
+      if (!parsed.success) {
+        formError = formatZodError(parsed.error);
+        step = 'verify';
+        pendingEmail = String(formData.get('email') ?? '');
       } else {
-        return Astro.redirect(`/auth/login?sent=1&next=${encodeURIComponent(safeNext)}`, 302);
+        const { email, token, next: nextField = '/' } = parsed.data;
+        const safeNext = safeNextPath(nextField, '/');
+        const supabase = Astro.locals.supabase;
+        const { error } = await supabase.auth.verifyOtp({
+          email,
+          token,
+          type: 'email',
+        });
+        if (error) {
+          console.error('[auth/login] verifyOtp failed', error);
+          const code = /expired/i.test(error.message) ? 'otp_expired' : 'invalid_otp';
+          formError = ERR_MESSAGES[code];
+          step = 'verify';
+          pendingEmail = email;
+        } else {
+          return Astro.redirect(safeNext, 302);
+        }
+      }
+    } else {
+      // action === 'request' (default)
+      const parsed = otpRequestSchema.safeParse({
+        email: formData.get('email') ?? '',
+        next: formData.get('next') ?? '/',
+        hp_email: formData.get('hp_email') ?? undefined,
+      });
+      if (!parsed.success) {
+        formError = formatZodError(parsed.error);
+        step = 'request';
+      } else {
+        const { email, next: nextField = '/' } = parsed.data;
+        const safeNext = safeNextPath(nextField, '/');
+        const supabase = Astro.locals.supabase;
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: { shouldCreateUser: true },
+        });
+        if (error) {
+          console.error('[auth/login] signInWithOtp failed', error);
+          formError = ERR_MESSAGES.send_failed;
+          step = 'request';
+        } else {
+          return Astro.redirect(
+            `/auth/login?step=verify&email=${encodeURIComponent(email)}&next=${encodeURIComponent(safeNext)}`,
+            302,
+          );
+        }
       }
     }
   } catch (e) {
@@ -82,36 +127,66 @@ if (Astro.request.method === 'POST') {
       <h1 class="auth-title">Se connecter</h1>
       <div class="title-rail" aria-hidden="true"></div>
       <p class="auth-lead">
-        Entre ton email pour recevoir un lien de connexion. Optionnel — il sert juste à retrouver tes parties plus tard.
+        {step === 'request'
+          ? "Entre ton email pour recevoir un code à 6 chiffres. Optionnel — il sert juste à retrouver tes parties plus tard."
+          : `Entre le code à 6 chiffres envoyé à ${pendingEmail}.`}
       </p>
     </header>
 
-    {formSent && !formError && (
-      <div class="auth-flash ok">
-        ✓ Lien envoyé. Ouvre ton email et clique pour te connecter.
-      </div>
-    )}
     {formError && <div class="auth-flash err">{formError}</div>}
     {safeErr && <div class="auth-flash err">{safeErr}</div>}
 
-    <form method="POST" class="auth-form">
-      <input type="hidden" name="next" value={next} />
-      <Honeypot />
-      <label class="auth-label">
-        <span>Email</span>
-        <input
-          type="email"
-          name="email"
-          required
-          autofocus
-          autocomplete="email"
-          inputmode="email"
-          placeholder="toi@email.com"
-          class="auth-input"
-        />
-      </label>
-      <button type="submit" class="auth-btn">Recevoir le lien</button>
-    </form>
+    {step === 'request' ? (
+      <form method="POST" class="auth-form">
+        <input type="hidden" name="action" value="request" />
+        <input type="hidden" name="next" value={next} />
+        <Honeypot />
+        <label class="auth-label">
+          <span>Email</span>
+          <input
+            type="email"
+            name="email"
+            required
+            autofocus
+            autocomplete="email"
+            inputmode="email"
+            placeholder="toi@email.com"
+            class="auth-input"
+            value={pendingEmail}
+          />
+        </label>
+        <button type="submit" class="auth-btn">Recevoir un code</button>
+      </form>
+    ) : (
+      <form method="POST" class="auth-form">
+        <input type="hidden" name="action" value="verify" />
+        <input type="hidden" name="email" value={pendingEmail} />
+        <input type="hidden" name="next" value={next} />
+        <Honeypot />
+        <label class="auth-label">
+          <span>Code à 6 chiffres</span>
+          <input
+            type="text"
+            name="token"
+            required
+            autofocus
+            autocomplete="one-time-code"
+            inputmode="numeric"
+            pattern="[0-9]{6}"
+            maxlength="6"
+            placeholder="123456"
+            class="auth-input auth-input--otp"
+          />
+        </label>
+        <button type="submit" class="auth-btn">Se connecter</button>
+        <a
+          href={`/auth/login?next=${encodeURIComponent(next)}`}
+          class="auth-link"
+        >
+          ← Utiliser un autre email
+        </a>
+      </form>
+    )}
 
     <a href={next} class="auth-skip">Continuer sans compte →</a>
 
@@ -185,7 +260,6 @@ if (Astro.request.method === 'POST') {
       font-size: 14px;
       margin-bottom: var(--space-4);
     }
-    .auth-flash.ok { background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; }
     .auth-flash.err { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
 
     .auth-form { display: flex; flex-direction: column; gap: var(--space-4); margin-bottom: var(--space-4); }
@@ -208,6 +282,12 @@ if (Astro.request.method === 'POST') {
       font-family: var(--font-sans);
       color: var(--ink);
     }
+    .auth-input--otp {
+      font-feature-settings: 'tnum';
+      letter-spacing: 0.4em;
+      text-align: center;
+      font-size: 20px;
+    }
     .auth-input:focus {
       outline: none;
       border-color: var(--primary-soft);
@@ -227,6 +307,17 @@ if (Astro.request.method === 'POST') {
     }
     .auth-btn:hover { filter: brightness(0.92); }
     .auth-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    .auth-link {
+      display: block;
+      text-align: center;
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .auth-link:hover { color: var(--primary); }
 
     .auth-skip {
       display: block;
