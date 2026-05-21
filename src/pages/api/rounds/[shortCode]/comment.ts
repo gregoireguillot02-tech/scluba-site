@@ -17,12 +17,43 @@ const commentSchema = z.object({
   comment: z.string().trim().max(200, 'commentaire trop long (200 max)'),
 });
 
+// Duplicated in every API handler in this branch. Lives in middleware-land
+// once fix/sec-headers-middleware-csp lands; for now keep inline to stay in
+// scope of this PR. (audit HIGH: CSRF on state-changing routes.)
+function assertSameOriginPost(request: Request): Response | null {
+  const origin = request.headers.get('origin');
+  const referer = request.headers.get('referer');
+  const host = request.headers.get('host');
+  if (!host) return new Response('Origine invalide', { status: 403 });
+  if (origin) {
+    try {
+      const o = new URL(origin);
+      if (o.host !== host) return new Response('Origine invalide', { status: 403 });
+      return null;
+    } catch {
+      return new Response('Origine invalide', { status: 403 });
+    }
+  }
+  if (referer) {
+    try {
+      const r = new URL(referer);
+      if (r.host !== host) return new Response('Origine invalide', { status: 403 });
+      return null;
+    } catch {
+      return new Response('Origine invalide', { status: 403 });
+    }
+  }
+  return new Response('Origine invalide', { status: 403 });
+}
+
 export const POST: APIRoute = async ({ request, params, cookies }) => {
+  const csrf = assertSameOriginPost(request);
+  if (csrf) return csrf;
+
   const codeParsed = shortCodeSchema.safeParse(params.shortCode ?? '');
   if (!codeParsed.success) return new Response('code de partie invalide', { status: 400 });
   const shortCode = codeParsed.data;
 
-  // Seul un joueur de la partie peut commenter (auth par cookie).
   const playerCookie = cookies.get(`${PLAYER_COOKIE_PREFIX}${shortCode}`)?.value ?? '';
   const playerParsed = uuidSchema.safeParse(playerCookie);
   if (!playerParsed.success) return new Response('Not a player in this round', { status: 403 });
@@ -36,7 +67,6 @@ export const POST: APIRoute = async ({ request, params, cookies }) => {
 
   const sb = serviceClient();
 
-  // Vérifie que le joueur est bien dans cette partie.
   const { data: round } = await sb
     .from('rounds')
     .select('id')
@@ -44,17 +74,22 @@ export const POST: APIRoute = async ({ request, params, cookies }) => {
     .maybeSingle();
   if (!round) return new Response('Round not found', { status: 404 });
 
+  // Only the round creator can edit the round-wide comment. A future column
+  // on round_players will allow per-viewer comments; for now restricting to
+  // the creator prevents teammates from overwriting each other's text.
+  // (audit HIGH: anyone-in-round can replace the recap comment + brand
+  // text on the share-card PNG.)
   const { data: player } = await sb
     .from('round_players')
-    .select('id')
+    .select('id, is_creator')
     .eq('id', playerId)
     .eq('round_id', round.id)
     .maybeSingle();
   if (!player) return new Response('Player not in this round', { status: 403 });
+  if (!player.is_creator) {
+    return new Response('Seul l\'organisateur peut modifier le commentaire.', { status: 403 });
+  }
 
-  // Un commentaire par round (pas par joueur) pour simplifier. Si l'app
-  // souhaite plus tard un commentaire par joueur, prévoir une colonne dédiée
-  // sur `round_players` ou une table jointe.
   const { error } = await sb
     .from('rounds')
     .update({ comment: commentText })

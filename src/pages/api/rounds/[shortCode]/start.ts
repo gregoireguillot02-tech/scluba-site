@@ -6,7 +6,39 @@ export const prerender = false;
 
 const PLAYER_COOKIE_PREFIX = 'scluba_player_';
 
-export const POST: APIRoute = async ({ params, redirect, cookies }) => {
+// Duplicated in every API handler in this branch. Lives in middleware-land
+// once fix/sec-headers-middleware-csp lands; for now keep inline to stay in
+// scope of this PR. (audit HIGH: CSRF on state-changing routes.)
+function assertSameOriginPost(request: Request): Response | null {
+  const origin = request.headers.get('origin');
+  const referer = request.headers.get('referer');
+  const host = request.headers.get('host');
+  if (!host) return new Response('Origine invalide', { status: 403 });
+  if (origin) {
+    try {
+      const o = new URL(origin);
+      if (o.host !== host) return new Response('Origine invalide', { status: 403 });
+      return null;
+    } catch {
+      return new Response('Origine invalide', { status: 403 });
+    }
+  }
+  if (referer) {
+    try {
+      const r = new URL(referer);
+      if (r.host !== host) return new Response('Origine invalide', { status: 403 });
+      return null;
+    } catch {
+      return new Response('Origine invalide', { status: 403 });
+    }
+  }
+  return new Response('Origine invalide', { status: 403 });
+}
+
+export const POST: APIRoute = async ({ request, params, redirect, cookies }) => {
+  const csrf = assertSameOriginPost(request);
+  if (csrf) return csrf;
+
   const codeParsed = shortCodeSchema.safeParse(params.shortCode ?? '');
   if (!codeParsed.success) return new Response('code de partie invalide', { status: 400 });
   const shortCode = codeParsed.data;
@@ -64,10 +96,15 @@ export const POST: APIRoute = async ({ params, redirect, cookies }) => {
       }
     }
 
+    // Atomic transition: the WHERE-status='lobby' clause closes the race
+    // window with /players DELETE (audit MEDIUM: orga can evict a claimed
+    // player between the time they read status='lobby' and the time the
+    // server flips it).
     await sb
       .from('rounds')
       .update({ status: 'playing', started_at: new Date().toISOString() })
-      .eq('id', round.id);
+      .eq('id', round.id)
+      .eq('status', 'lobby');
   }
 
   return redirect(`/r/${shortCode}/play`, 302);

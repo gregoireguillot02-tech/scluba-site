@@ -29,17 +29,38 @@ export interface RoundSubscriptionCallbacks {
   onScoresChange?: (event: 'INSERT' | 'UPDATE' | 'DELETE', row: Record<string, unknown>) => void;
 }
 
-export function subscribeToRound(
-  roundId: string,
-  cb: RoundSubscriptionCallbacks,
+export interface SubscribeOptions {
   // Optional suffix to distinguish multiple independent subscriptions
   // to the same round from the same page (e.g. live-board + score-entry
   // both want their own onScoresChange handler — Supabase channels need
   // unique names to avoid handler collisions).
-  channelSuffix?: string,
+  channelSuffix?: string;
+  // The round's round_players.id list. When provided, the `scores`
+  // subscription filters server-side on `round_player_id=in.(...)` so a
+  // subscriber NEVER receives score events from other rounds.
+  // (audit HIGH: scores has no `round_id` column, so without this hint the
+  // anon REST policy + the all-rows realtime publication leaked every
+  // score on the platform.) The full server-side fix (add scores.round_id
+  // + tighten policies) ships in branch fix/sec-supabase-db-rls.
+  roundPlayerIds?: string[];
+}
+
+export function subscribeToRound(
+  roundId: string,
+  cb: RoundSubscriptionCallbacks,
+  optsOrSuffix?: SubscribeOptions | string,
 ): RealtimeChannel {
+  // Accept either the new options object or the legacy positional string so
+  // existing call sites keep working without a coordinated edit.
+  const opts: SubscribeOptions =
+    typeof optsOrSuffix === 'string'
+      ? { channelSuffix: optsOrSuffix }
+      : (optsOrSuffix ?? {});
+
   const sb = browserClient();
-  const channelName = channelSuffix ? `round:${roundId}:${channelSuffix}` : `round:${roundId}`;
+  const channelName = opts.channelSuffix
+    ? `round:${roundId}:${opts.channelSuffix}`
+    : `round:${roundId}`;
   const channel = sb.channel(channelName);
 
   if (cb.onRoundUpdate) {
@@ -62,10 +83,20 @@ export function subscribeToRound(
   }
 
   if (cb.onScoresChange) {
-    // scores doesn't have a round_id column; we filter client-side via the player_id list.
+    const ids = opts.roundPlayerIds?.filter((s) => typeof s === 'string' && s.length > 0) ?? [];
+    // Supabase realtime filter accepts in.(...) on UUID columns. We only set
+    // it when the caller passes the player-id list; otherwise we fall back to
+    // the legacy unfiltered subscription (which historically leaked every
+    // score on the platform — see audit HIGH on scores.round_id).
+    const scoresFilter = ids.length > 0 ? `round_player_id=in.(${ids.join(',')})` : undefined;
+    if (!scoresFilter && typeof console !== 'undefined') {
+      console.warn('[realtime] scores subscription without roundPlayerIds — falling back to client-side filtering (platform-wide events)');
+    }
     channel.on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'scores' },
+      scoresFilter
+        ? { event: '*', schema: 'public', table: 'scores', filter: scoresFilter }
+        : { event: '*', schema: 'public', table: 'scores' },
       (payload) => {
         const row = (payload.new ?? payload.old) as Record<string, unknown>;
         cb.onScoresChange!(payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE', row);
