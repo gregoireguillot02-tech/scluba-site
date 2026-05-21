@@ -82,6 +82,19 @@ create table if not exists public.leads (
   created_at timestamptz not null default now()
 );
 
+-- The table likely pre-existed in production (auto-created by Supabase REST
+-- inserts before this migration was written). CREATE TABLE IF NOT EXISTS is
+-- then a no-op and any column added later in the schema is absent. Idempotent
+-- ADD COLUMN IF NOT EXISTS on every column to converge whatever prod state
+-- exists with the schema declared above.
+alter table public.leads add column if not exists name text;
+alter table public.leads add column if not exists club text;
+alter table public.leads add column if not exists email text;
+alter table public.leads add column if not exists locale text;
+alter table public.leads add column if not exists user_agent text;
+alter table public.leads add column if not exists ip_hash text;
+alter table public.leads add column if not exists created_at timestamptz not null default now();
+
 -- Idempotent CHECKs (drop-then-add pattern).
 alter table public.leads drop constraint if exists leads_name_len;
 alter table public.leads
@@ -116,8 +129,11 @@ alter table public.leads
 
 -- Per-hour email dedup (partial unique index). Keeps a malicious bot from
 -- spamming the same email > 1×/hour without burning a constraint slot.
+--
+-- date_trunc on timestamptz is STABLE (depends on TZ), so it can't be used in
+-- an index expression. Cast to UTC first to get an IMMUTABLE expression.
 create unique index if not exists leads_email_hour_uniq
-  on public.leads (lower(email), date_trunc('hour', created_at));
+  on public.leads (lower(email), date_trunc('hour', (created_at at time zone 'UTC')));
 
 create index if not exists leads_created_at_idx
   on public.leads (created_at desc);
