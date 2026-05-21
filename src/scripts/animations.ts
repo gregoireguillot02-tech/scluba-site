@@ -108,37 +108,39 @@ function initPhoneShowcase() {
   const wrap = document.querySelector<HTMLElement>('[data-anim="showcase-wrap"]');
   if (!wrap) return;
 
-  const screen1 = wrap.querySelector<HTMLElement>('[data-flow-screen="1"]');
-  const screen2 = wrap.querySelector<HTMLElement>('[data-flow-screen="2"]');
-  const phase1 = wrap.querySelector<HTMLElement>('[data-flow-phase="1"]');
-  const phase2 = wrap.querySelector<HTMLElement>('[data-flow-phase="2"]');
-  const progressBars = wrap.querySelectorAll<HTMLElement>('[data-progress-bar]');
-  const progressDots = wrap.querySelectorAll<HTMLElement>('[data-progress-dot]');
+  // Desktop only : le pin + morph entre 2 narrative-blocks superposés
+  // ne fonctionne qu'avec le grid 2-cols ≥1024px. En mobile, le CSS
+  // bascule sur un layout vertical statique (les 2 phases + screen 1).
+  const mm = gsap.matchMedia();
+  mm.add('(min-width: 1024px)', () => {
+    const screen1 = wrap.querySelector<HTMLElement>('[data-flow-screen="1"]');
+    const screen2 = wrap.querySelector<HTMLElement>('[data-flow-screen="2"]');
+    const phase1 = wrap.querySelector<HTMLElement>('[data-flow-phase="1"]');
+    const phase2 = wrap.querySelector<HTMLElement>('[data-flow-phase="2"]');
+    const progressBars = wrap.querySelectorAll<HTMLElement>('[data-progress-bar]');
+    const progressDots = wrap.querySelectorAll<HTMLElement>('[data-progress-dot]');
 
-  const tl = gsap.timeline({
-    scrollTrigger: {
-      trigger: wrap,
-      start: 'top top',
-      end: '+=200%',
-      pin: true,
-      scrub: 0.8,
-      anticipatePin: 1,
-      invalidateOnRefresh: true,
-    },
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: wrap,
+        start: 'top top',
+        end: '+=200%',
+        pin: true,
+        scrub: 0.8,
+        anticipatePin: 1,
+        invalidateOnRefresh: true,
+      },
+    });
+
+    if (screen1) tl.to(screen1, { opacity: 0, scale: 0.96, duration: 0.10 }, 0.50);
+    if (phase1) tl.to(phase1, { opacity: 0, y: -20, duration: 0.10 }, 0.50);
+    if (screen2) tl.to(screen2, { opacity: 1, scale: 1, duration: 0.10 }, 0.55);
+    if (phase2) tl.to(phase2, { opacity: 1, y: 0, duration: 0.10 }, 0.55);
+    if (progressBars[0]) tl.to(progressBars[0], { width: '100%', duration: 0.08, ease: 'none' }, 0.50);
+    if (progressDots[1]) tl.to(progressDots[1], { backgroundColor: '#1B4332', duration: 0.05 }, 0.55);
+
+    return () => tl.kill();
   });
-
-  // === PHASE 1 (0 → 0.50) : screen 1 (scoring) visible, anim CSS pure ===
-  // (rien à faire, screen 1 est déjà opacity 1 par défaut)
-
-  // === TRANSITION 1→2 (0.50 → 0.60) ===
-  if (screen1) tl.to(screen1, { opacity: 0, scale: 0.96, duration: 0.10 }, 0.50);
-  if (phase1) tl.to(phase1, { opacity: 0, y: -20, duration: 0.10 }, 0.50);
-  if (screen2) tl.to(screen2, { opacity: 1, scale: 1, duration: 0.10 }, 0.55);
-  if (phase2) tl.to(phase2, { opacity: 1, y: 0, duration: 0.10 }, 0.55);
-  if (progressBars[0]) tl.to(progressBars[0], { width: '100%', duration: 0.08, ease: 'none' }, 0.50);
-  if (progressDots[1]) tl.to(progressDots[1], { backgroundColor: '#1B4332', duration: 0.05 }, 0.55);
-
-  // === PHASE 2 (0.60 → 1.0) : screen 2 (share) reste visible ===
 }
 
 
