@@ -15,6 +15,10 @@ interface ImportMetaEnv {
   readonly SUPABASE_SERVICE_ROLE_KEY: string;
   readonly OPS_ALLOWED_EMAILS: string;
   readonly PUBLIC_DEMO_URL?: string;
+  readonly ANTHROPIC_API_KEY?: string;
+  readonly SENTRY_DSN?: string;
+  readonly PUBLIC_SENTRY_DSN?: string;
+  readonly SENTRY_ENVIRONMENT?: string;
 }
 
 interface ImportMeta {

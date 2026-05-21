@@ -22,17 +22,23 @@ In scope:
 
 Out of scope:
 - Supabase-hosted infrastructure (report to Supabase directly)
-- Netlify-hosted infrastructure (report to Netlify directly)
+- Cloudflare Workers infrastructure (report to Cloudflare directly)
 - Social engineering of the team
 
 ## Hardening overview
 
 - HTTP security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy,
-  Permissions-Policy, COOP) — see `public/_headers`
+  Permissions-Policy, COOP) — set programmatically in `src/middleware.ts`
+  so they apply on every Worker response. `public/_headers` is kept as a
+  fallback / documentation but is NOT honored by `@astrojs/cloudflare`.
+- CSRF defense-in-depth: same-origin check via `Origin` + `Sec-Fetch-Site`
+  on state-changing requests to `/api/ops/*`, `/api/rounds/*`, `/api/clubs/*`
+  in `src/middleware.ts`.
 - Row Level Security enabled on every Supabase table
 - Internal `/ops` dashboard restricted by email allowlist via middleware
 - Magic-link auth via Supabase OTP (no passwords)
-- Rate limiting at the Netlify edge — see `netlify/edge-functions/rate-limit.ts`
+- Rate limiting via Astro middleware — see `src/lib/rate-limit.ts`,
+  wired in `src/middleware.ts`.
 - Error tracking via Sentry (PII disabled, source maps not uploaded)
 - Honeypot + length caps on every public form
 - Player cookies are `httpOnly` + `SameSite=lax` + `Secure` in production
@@ -48,3 +54,12 @@ Out of scope:
   origin as the site. SVG logo uploads have therefore been removed from the
   allowlist (PNG/JPEG/WEBP only) until the bucket is moved to a separate
   origin or a sanitizer is added.
+- CSP `script-src` and `style-src` still include `'unsafe-inline'` —
+  required by existing inline scripts (Lenis bootstrap, animations) and
+  inline `onclick` handlers in `/ops` pages. Tightening is tracked as
+  a follow-up (move inline scripts to external files, switch handlers to
+  `addEventListener`, then drop `'unsafe-inline'`).
+- Dev-only transitive dependencies (`ws`, `yaml` via wrangler/miniflare/
+  `@astrojs/check`) have moderate CVEs that cannot be auto-fixed without
+  downgrading `@astrojs/cloudflare` to v12 (a breaking change). Not
+  deployed to production — monitor upstream for patched releases.

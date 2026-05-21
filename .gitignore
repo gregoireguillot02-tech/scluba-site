@@ -34,3 +34,7 @@ supabase/.temp/
 
 # Cloudflare Workers local dev state
 .wrangler/
+
+# Cloudflare Workers local secrets (equivalent to .env, never commit)
+.dev.vars
+.dev.vars.*
