@@ -150,7 +150,7 @@ const qrSvg = await QRCode.toString(demoUrl, {
     border-radius: var(--radius-md);
     border: 1px solid var(--line, rgba(255, 255, 255, 0.18));
     background: rgba(245, 235, 216, 0.04);
-    color: var(--ink, var(--bg));
+    color: #F5F5F5;
     font-size: var(--text-base);
     transition:
       background 0.25s var(--ease-out),
@@ -159,7 +159,15 @@ const qrSvg = await QRCode.toString(demoUrl, {
       box-shadow 0.25s var(--ease-out);
   }
   .form-field input::placeholder {
-    color: rgba(245, 245, 245, 0.55);
+    color: rgba(245, 245, 245, 0.7);
+  }
+  .form-field input:-webkit-autofill,
+  .form-field input:-webkit-autofill:hover,
+  .form-field input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #F5F5F5;
+    caret-color: #F5F5F5;
+    -webkit-box-shadow: 0 0 0 1000px rgba(245, 235, 216, 0.04) inset;
+    transition: background-color 9999s ease-in-out 0s;
   }
   .form-field input:focus {
     outline: none;
@@ -197,7 +205,7 @@ const qrSvg = await QRCode.toString(demoUrl, {
   .form-success {
     background: rgba(212, 165, 116, 0.18);
     border: 1px solid var(--accent);
-    color: var(--cream);
+    color: #F5F5F5;
   }
   .form-error {
     background: rgba(192, 57, 43, 0.18);
