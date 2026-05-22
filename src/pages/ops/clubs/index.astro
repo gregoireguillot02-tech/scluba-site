@@ -127,6 +127,19 @@ function fmtDate(iso: string): string {
                 <a href={`/ops/clubs/${c.id}/qr`} class="ops-btn">QR</a>
                 <a href={`/${c.slug}`} target="_blank" rel="noopener" class="ops-btn ops-btn-ghost">Page</a>
               </div>
+              <form
+                method="POST"
+                action={`/api/ops/clubs/${c.id}`}
+                class="club-tile-delete"
+              >
+                <input type="hidden" name="action" value="delete" />
+                <button
+                  type="submit"
+                  class="ops-btn ops-btn-danger-link"
+                  onclick={`return confirm(${JSON.stringify(`Supprimer "${c.name}" et TOUTES ses parties ?\n\nCette action est irréversible.`)})`}
+                  aria-label={`Supprimer ${c.name}`}
+                >Supprimer</button>
+              </form>
             </div>
           </li>
         );
@@ -274,5 +287,30 @@ function fmtDate(iso: string): string {
     padding: 7px 12px;
     font-size: 13px;
     min-width: 60px;
+  }
+
+  .club-tile-delete {
+    margin-top: 8px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .club-tile-delete .ops-btn-danger-link {
+    background: transparent;
+    border: none;
+    padding: 4px 6px;
+    font-size: 11px;
+    color: var(--muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: var(--line);
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .club-tile-delete .ops-btn-danger-link:hover,
+  .club-tile-delete .ops-btn-danger-link:focus-visible {
+    color: #991B1B;
+    text-decoration-color: #991B1B;
+    background: #FEF2F2;
+    outline: none;
   }
 </style>
