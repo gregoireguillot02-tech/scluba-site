@@ -190,7 +190,10 @@ function renderPreview(r: ImportResult) {
   $<HTMLInputElement>('name').value = r.name;
   $<HTMLInputElement>('city').value = r.city ?? '';
   $<HTMLInputElement>('primary_color').value = r.primary_color;
-  $<HTMLInputElement>('primary_color_picker').value = r.primary_color;
+  // Safari throws "The string did not match the expected pattern" when
+  // <input type="color">.value is set to a hex with uppercase letters,
+  // even though the HTML spec says to sanitize silently. Force lowercase.
+  $<HTMLInputElement>('primary_color_picker').value = r.primary_color.toLowerCase();
 
   const logoImg = $<HTMLImageElement>('logo-img');
   const logoMissing = $<HTMLElement>('logo-missing');
@@ -281,7 +284,7 @@ $<HTMLInputElement>('primary_color_picker').addEventListener('input', (e) => {
 $<HTMLInputElement>('primary_color').addEventListener('input', (e) => {
   const v = (e.target as HTMLInputElement).value;
   if (/^#[0-9A-Fa-f]{6}$/.test(v)) {
-    $<HTMLInputElement>('primary_color_picker').value = v;
+    $<HTMLInputElement>('primary_color_picker').value = v.toLowerCase();
   }
 });
 
