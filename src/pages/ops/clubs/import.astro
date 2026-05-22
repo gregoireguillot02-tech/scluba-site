@@ -153,9 +153,96 @@ function setStatus(text: string | null) {
   wrap.hidden = false;
 }
 
+function renderManualLoop(course: CourseData) {
+  // Degraded path: the scraper / LLM couldn't infer a course structure.
+  // Let the admin pick 6 / 9 / 18 holes and tweak pars (default Par 4).
+  // We mutate course.holes in place so the existing submit handler ships it.
+  // Drop loops/formats so the submit handler doesn't re-flatten an empty
+  // array and wipe our manual holes.
+  delete course.loops;
+  delete (course as { formats?: unknown }).formats;
+  const root = $<HTMLElement>('loops');
+  const card = document.createElement('section');
+  card.className = 'loop-card';
+
+  const head = document.createElement('header');
+  head.className = 'loop-head';
+  const title = document.createElement('strong');
+  title.className = 'manual-title';
+  title.textContent = 'Configurer le parcours manuellement';
+  const countLabel = document.createElement('label');
+  countLabel.className = 'manual-count-label';
+  countLabel.append('Nombre de trous : ');
+  const select = document.createElement('select');
+  select.className = 'ops-input manual-count-select';
+  for (const n of [6, 9, 18]) {
+    const opt = document.createElement('option');
+    opt.value = String(n);
+    opt.textContent = `${n} trous`;
+    if (n === 18) opt.selected = true;
+    select.appendChild(opt);
+  }
+  countLabel.appendChild(select);
+  const meta = document.createElement('span');
+  meta.className = 'loop-meta';
+  head.appendChild(title);
+  head.appendChild(countLabel);
+  head.appendChild(meta);
+  card.appendChild(head);
+
+  const grid = document.createElement('div');
+  grid.className = 'hole-grid';
+  card.appendChild(grid);
+
+  root.appendChild(card);
+
+  function updateMeta() {
+    const n = course.holes.length;
+    meta.textContent = `${n} trou${n > 1 ? 's' : ''} · par total ${course.holes.reduce((s, h) => s + h.par, 0)}`;
+  }
+
+  function build(n: number) {
+    course.holes = Array.from({ length: n }, (_, i) => ({ number: i + 1, par: 4 }));
+    grid.innerHTML = '';
+    course.holes.forEach((h, holeIdx) => {
+      const cell = document.createElement('label');
+      cell.className = 'hole-cell';
+      const num = document.createElement('span');
+      num.className = 'hole-num';
+      num.textContent = String(h.number);
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '3';
+      input.max = '6';
+      input.value = String(h.par);
+      input.className = 'hole-par';
+      input.required = true;
+      input.addEventListener('input', () => {
+        const v = Number(input.value);
+        if (Number.isFinite(v)) {
+          course.holes[holeIdx].par = v;
+          updateMeta();
+        }
+      });
+      cell.appendChild(num);
+      cell.appendChild(input);
+      grid.appendChild(cell);
+    });
+    updateMeta();
+  }
+
+  select.addEventListener('change', () => build(Number(select.value)));
+  build(18);
+}
+
 function renderLoops(course: CourseData) {
   const root = $<HTMLElement>('loops');
   root.innerHTML = '';
+  const hasLoops = Array.isArray(course.loops) && course.loops.length > 0;
+  if (!hasLoops && course.holes.length === 0) {
+    renderManualLoop(course);
+    return;
+  }
   const loops = course.loops ?? [{ id: 'main', name: 'Parcours', holes: course.holes }];
   loops.forEach((loop, loopIdx) => {
     const section = document.createElement('section');
@@ -656,6 +743,20 @@ $<HTMLFormElement>('save-form').addEventListener('submit', async (e) => {
   }
   .loop-name { flex: 1; min-width: 180px; font-weight: 600; }
   .loop-meta { font-size: 12px; color: var(--muted); }
+  .manual-title {
+    flex: 1;
+    min-width: 180px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .manual-count-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .manual-count-select { width: auto; min-width: 120px; padding: 6px 10px; }
 
   .hole-grid {
     display: grid;
