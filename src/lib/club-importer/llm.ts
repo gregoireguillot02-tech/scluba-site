@@ -78,10 +78,19 @@ const TOOL_INPUT_SCHEMA = {
 
 const ConfidenceSchema = z.enum(['high', 'medium', 'low']);
 
+// Claude sometimes omits nullable fields entirely from its tool_use output
+// instead of emitting an explicit `null`. Treat missing/undefined as null so
+// the import doesn't 502 over a field that semantically just means "no data".
+const nullableString = (max: number) =>
+  z.preprocess((v) => v ?? null, z.string().max(max).nullable());
+
 const ExtractedClubDataSchema = z.object({
   name: z.string().min(1).max(80),
-  city: z.string().max(60).nullable(),
-  primary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(),
+  city: nullableString(60),
+  primary_color: z.preprocess(
+    (v) => v ?? null,
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(),
+  ),
   is_pitch_putt: z.boolean(),
   loops: z
     .array(
@@ -91,7 +100,10 @@ const ExtractedClubDataSchema = z.object({
           .array(
             z.object({
               number: z.number().int().min(1).max(18),
-              par: z.number().int().min(3).max(6).nullable(),
+              par: z.preprocess(
+                (v) => v ?? null,
+                z.number().int().min(3).max(6).nullable(),
+              ),
             }),
           )
           .max(18),
@@ -104,7 +116,7 @@ const ExtractedClubDataSchema = z.object({
     pars: ConfidenceSchema,
     primary_color: ConfidenceSchema,
   }),
-  notes: z.string().max(500).nullable(),
+  notes: nullableString(500),
 });
 
 function toBase64(bytes: Uint8Array): string {
