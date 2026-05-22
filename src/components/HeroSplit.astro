@@ -1,0 +1,472 @@
+---
+import { useT, type Locale } from '../i18n';
+import HeroPhone from './HeroPhone.astro';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useT(locale);
+---
+
+<section class="hero hero-split depth-atmosphere">
+  <div class="container hero-content">
+    <div class="hero-text">
+      <span class="hero-eyebrow eyebrow-mono" data-anim="hero-eyebrow">{t.hero.eyebrow}</span>
+      <h1 class="hero-tagline text-mega" data-anim="hero-tagline" set:html={t.hero.tagline}></h1>
+      <p class="hero-sub" data-anim="hero-sub">{t.hero.subtagline}</p>
+      <div class="hero-ctas" data-anim="hero-cta">
+        <a href="#cta" class="btn btn-accent hero-cta">
+          {t.hero.cta}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14"/>
+            <path d="m12 5 7 7-7 7"/>
+          </svg>
+        </a>
+        <a href="#how" class="hero-cta-secondary">{t.hero.ctaSecondary}</a>
+      </div>
+    </div>
+
+    <div class="hero-visual-split" aria-hidden="true">
+      <!-- AVANT : carte papier griffonnée, partagée aujourd'hui -->
+      <figure class="hero-paper" data-anim="hero-paper">
+        <span class="hero-state-label hero-state-before">{t.hero.beforeLabel}</span>
+        <div class="hero-paper-card">
+          <div class="hero-paper-grain" aria-hidden="true"></div>
+          <header class="hero-paper-head">
+            <div class="hero-paper-title-block">
+              <span class="hero-paper-club">GOLF</span>
+              <span class="hero-paper-date">Sam. 11 mai</span>
+            </div>
+            <span class="hero-paper-meta">18 TROUS</span>
+          </header>
+          <table class="hero-paper-table">
+            <thead>
+              <tr>
+                <th>TROU</th>
+                <th>PAR</th>
+                <th>SCORE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>4</td><td class="hand">5</td></tr>
+              <tr><td>2</td><td>3</td><td class="hand">4</td></tr>
+              <tr><td>3</td><td>5</td><td class="hand strike">6</td></tr>
+              <tr><td>3</td><td>5</td><td class="hand">7</td></tr>
+              <tr><td>4</td><td>4</td><td class="hand">5</td></tr>
+              <tr><td>5</td><td>4</td><td class="hand">4</td></tr>
+              <tr><td>6</td><td>3</td><td class="hand">3</td></tr>
+            </tbody>
+          </table>
+          <footer class="hero-paper-foot">
+            <span class="hero-paper-total-label">TOTAL</span>
+            <span class="hero-paper-total-value hand">87</span>
+          </footer>
+          <span class="hero-paper-fold" aria-hidden="true"></span>
+        </div>
+        <figcaption class="hero-paper-caption">Photographiée. Partagée. Sans nom de club.</figcaption>
+      </figure>
+
+      <!-- Pivot Scluba — between before and after -->
+      <div class="hero-pivot" aria-hidden="true">
+        <span class="hero-pivot-line"></span>
+        <span class="hero-pivot-badge">Scluba</span>
+        <span class="hero-pivot-line"></span>
+      </div>
+
+      <!-- APRÈS : phone avec scorecard digitale brandée -->
+      <figure class="hero-after">
+        <span class="hero-state-label hero-state-after">{t.hero.afterLabel}</span>
+        <HeroPhone locale={locale} animate={true} />
+      </figure>
+    </div>
+  </div>
+
+  <a href="#problem" class="hero-scroll" aria-label={t.hero.scroll}>
+    <span>{t.hero.scroll}</span>
+    <svg width="14" height="20" viewBox="0 0 14 20" fill="none" aria-hidden="true">
+      <path d="M7 1v18m0 0L1 13m6 6 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+</section>
+
+<style>
+  .hero-split {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    padding: 160px 0 80px;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-7);
+    align-items: center;
+  }
+
+  @media (min-width: 1024px) {
+    .hero-content {
+      grid-template-columns: 1.05fr 1fr;
+      gap: var(--space-8);
+    }
+  }
+
+  .hero-eyebrow {
+    display: block;
+    margin-bottom: var(--space-4);
+    color: var(--accent);
+  }
+
+  .hero-tagline {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(2.2rem, 5.4vw, 4.6rem);
+    line-height: 0.98;
+    color: var(--primary);
+    margin-bottom: var(--space-5);
+    letter-spacing: -0.035em;
+    max-width: 14ch;
+  }
+
+  .hero-sub {
+    font-size: var(--text-lg);
+    color: var(--ink);
+    margin-bottom: var(--space-6);
+    max-width: 38ch;
+    line-height: 1.5;
+  }
+
+  .hero-ctas {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+  }
+  .hero-cta {
+    padding: 14px 28px;
+    font-size: var(--text-base);
+  }
+  .hero-cta-secondary {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1.5px;
+    transition: color 0.2s ease;
+  }
+  .hero-cta-secondary:hover {
+    color: var(--primary);
+  }
+
+  /* Colonne visuelle : avant / pivot / après empilés */
+  .hero-visual-split {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .hero-state-label {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-3);
+    padding: 4px 12px;
+    border-radius: 999px;
+  }
+  .hero-state-before {
+    color: #8B6F4E;
+    background: rgba(139, 111, 78, 0.10);
+    border: 1px solid rgba(139, 111, 78, 0.25);
+  }
+  .hero-state-after {
+    color: var(--accent);
+    background: rgba(212, 165, 116, 0.14);
+    border: 1px solid var(--accent);
+  }
+
+  /* === CARTE PAPIER (AVANT) === */
+  .hero-paper {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .hero-paper-card {
+    position: relative;
+    width: clamp(240px, 32vw, 320px);
+    background: #F6F0E1;
+    background-image:
+      linear-gradient(135deg, rgba(255,255,255,0.6) 0%, transparent 30%),
+      radial-gradient(circle at 30% 80%, rgba(120, 90, 50, 0.06) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(120, 90, 50, 0.05) 0%, transparent 40%);
+    border-radius: 4px;
+    padding: 18px 22px 20px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.6) inset,
+      0 2px 8px rgba(70, 50, 30, 0.18),
+      0 14px 28px rgba(70, 50, 30, 0.22),
+      0 24px 48px rgba(70, 50, 30, 0.10);
+    transform: rotate(-2.4deg);
+    transition: transform 0.4s ease;
+    border: 1px solid rgba(120, 90, 50, 0.10);
+  }
+  .hero-paper:hover .hero-paper-card {
+    transform: rotate(-1deg) translateY(-2px);
+  }
+  .hero-paper-grain {
+    position: absolute;
+    inset: 0;
+    border-radius: 4px;
+    opacity: 0.25;
+    pointer-events: none;
+    background-image:
+      repeating-linear-gradient(0deg,
+        rgba(120, 90, 50, 0.04) 0px,
+        rgba(120, 90, 50, 0.04) 1px,
+        transparent 1px,
+        transparent 3px);
+    mix-blend-mode: multiply;
+  }
+  /* Coin froissé en bas à droite — diagonal fold suggestion */
+  .hero-paper-fold {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(
+      135deg,
+      transparent 50%,
+      rgba(120, 90, 50, 0.10) 50%,
+      rgba(120, 90, 50, 0.16) 70%,
+      rgba(70, 50, 30, 0.22) 100%
+    );
+    border-bottom-right-radius: 4px;
+    pointer-events: none;
+  }
+  .hero-paper-fold::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 0 18px 18px;
+    border-color: transparent transparent #E8DEC5 transparent;
+  }
+  .hero-paper-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px dashed rgba(120, 90, 50, 0.30);
+  }
+  .hero-paper-title-block {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .hero-paper-club {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: #5C4A2E;
+    letter-spacing: 0.04em;
+  }
+  .hero-paper-date {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: rgba(92, 74, 46, 0.7);
+  }
+  .hero-paper-meta {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.20em;
+    color: rgba(92, 74, 46, 0.6);
+  }
+  .hero-paper-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #5C4A2E;
+    margin-bottom: 10px;
+  }
+  .hero-paper-table th {
+    text-align: left;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    padding: 3px 2px;
+    color: rgba(92, 74, 46, 0.55);
+    font-size: 9px;
+    border-bottom: 1px solid rgba(120, 90, 50, 0.20);
+  }
+  .hero-paper-table th + th { text-align: center; }
+  .hero-paper-table th:last-child { text-align: right; }
+  .hero-paper-table td {
+    padding: 4px 2px;
+    border-bottom: 1px dotted rgba(120, 90, 50, 0.15);
+  }
+  .hero-paper-table td + td { text-align: center; }
+  .hero-paper-table td:last-child { text-align: right; }
+  .hero-paper-table .hand {
+    font-family: 'Caveat', 'Marker Felt', 'Comic Sans MS', cursive;
+    font-size: 18px;
+    color: #2C3E50;
+    line-height: 1;
+    transform: rotate(-3deg);
+    display: inline-block;
+  }
+  .hero-paper-table .hand.strike {
+    position: relative;
+    color: rgba(44, 62, 80, 0.55);
+  }
+  .hero-paper-table .hand.strike::after {
+    content: "";
+    position: absolute;
+    left: -2px;
+    right: -2px;
+    top: 50%;
+    height: 1.5px;
+    background: #2C3E50;
+    transform: rotate(-8deg);
+  }
+  .hero-paper-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-top: 10px;
+    border-top: 1.5px solid rgba(120, 90, 50, 0.30);
+  }
+  .hero-paper-total-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.20em;
+    color: #5C4A2E;
+  }
+  .hero-paper-total-value {
+    font-family: 'Caveat', 'Marker Felt', cursive;
+    font-size: 30px;
+    color: #2C3E50;
+    line-height: 1;
+    transform: rotate(-2deg) translateY(-2px);
+    display: inline-block;
+  }
+  .hero-paper-caption {
+    margin-top: var(--space-4);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    font-style: italic;
+    max-width: 28ch;
+    line-height: 1.4;
+  }
+
+  /* === PIVOT SCLUBA === */
+  .hero-pivot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    width: 100%;
+    max-width: 280px;
+    margin: var(--space-3) 0;
+  }
+  .hero-pivot-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+  .hero-pivot-badge {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-sm);
+    letter-spacing: 0.04em;
+    color: var(--primary);
+    padding: 4px 14px;
+    border: 1.5px solid var(--accent);
+    border-radius: 999px;
+    background: var(--bg);
+    text-transform: lowercase;
+  }
+
+  /* === APRÈS (phone) === */
+  .hero-after {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  /* Animations fade out au scroll (scroll-driven CSS natif) */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .hero-tagline,
+      .hero-sub {
+        animation: heroFadeOut linear both;
+        animation-timeline: view();
+        animation-range: cover 40% cover 90%;
+      }
+      @keyframes heroFadeOut {
+        to { opacity: 0.35; transform: translateY(-24px); }
+      }
+    }
+  }
+
+  .hero-scroll {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    z-index: 1;
+    opacity: 0.65;
+    animation: scrollHint 2.4s ease-in-out infinite;
+  }
+  @keyframes scrollHint {
+    0%, 100% { transform: translate(-50%, 0); }
+    50% { transform: translate(-50%, 8px); }
+  }
+
+  /* Responsive : sur mobile, simplifier (paper plus petit, espacement) */
+  @media (max-width: 1023px) {
+    .hero-split {
+      padding: 120px 0 60px;
+      min-height: auto;
+    }
+    .hero-tagline {
+      font-size: clamp(2rem, 8vw, 3.4rem);
+    }
+    .hero-paper-card {
+      width: min(280px, 75vw);
+    }
+    .hero-paper-table .hand {
+      font-size: 16px;
+    }
+    .hero-paper-total-value {
+      font-size: 26px;
+    }
+  }
+</style>
