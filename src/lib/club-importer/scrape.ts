@@ -15,7 +15,28 @@ const ALLOWED_IMAGE_MIMES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 const SUB_PAGE_HINTS = ['/parcours', '/le-parcours', '/le-club', '/club', '/about'];
 
-const STRIP_TAGS = new Set(['script', 'style', 'noscript', 'svg', 'iframe', 'header', 'footer', 'nav', 'form']);
+const STRIP_TAGS = new Set(['script', 'style', 'noscript', 'svg', 'iframe', 'header', 'footer', 'nav', 'form', 'aside']);
+
+// Selectors to also strip from the page when present — these zones almost
+// always contain navigational / promotional / partner content that confuses
+// the LLM (cookie banners, sidebar widgets, sponsor blocks, etc.).
+const STRIP_SELECTORS = [
+  '.sidebar', '.widget', '.widgets', '.cookie', '.cookies', '.banner-cookie',
+  '.menu', '.breadcrumb', '.breadcrumbs', '.pagination',
+  '.share', '.social', '.socials',
+  '[class*="partner"]', '[class*="sponsor"]', '[class*="advert"]', '[class*="promo"]',
+  '[id*="cookie"]', '[id*="newsletter"]',
+];
+
+// Selectors that usually wrap the "real" article/club content. We try these
+// in order; the first one that yields ≥ 200 chars of text wins. Falls back to
+// scanning the whole body if nothing matches — keeps backward compatibility
+// for hand-rolled sites that don't follow any convention.
+const MAIN_CONTENT_SELECTORS = [
+  'main', 'article', '[role="main"]',
+  '.entry-content', '.post-content', '.main-content', '.page-content',
+  '#main', '#content', '#main-content',
+];
 
 const COMMON_HEADERS: Record<string, string> = {
   'User-Agent': USER_AGENT,
@@ -31,10 +52,36 @@ function absoluteUrl(maybeUrl: string, base: string): string | null {
   }
 }
 
+// Zones that often contain partner/sponsor logos, footer credits, sidebar
+// widgets, etc. An image inside any of these is excluded from logo candidates
+// even if its `src` contains "logo".
+const LOGO_EXCLUSION_SELECTORS = [
+  'aside', 'footer', '.footer',
+  '.sidebar', '.widget', '.widgets',
+  '[class*="partner"]', '[class*="sponsor"]', '[class*="advert"]', '[class*="promo"]',
+  '[id*="partner"]', '[id*="sponsor"]', '[id*="footer"]',
+];
+
+function isInExcludedZone(img: HTMLElement): boolean {
+  for (const sel of LOGO_EXCLUSION_SELECTORS) {
+    try {
+      if (img.closest(sel) !== null) return true;
+    } catch {
+      // node-html-parser may not support some selectors — skip.
+    }
+  }
+  return false;
+}
+
 function findLogoCandidates(root: HTMLElement, base: string): string[] {
   const out = new Set<string>();
   const imgs = root.querySelectorAll('img');
   for (const img of imgs) {
+    // Exclude partner/sponsor/footer/sidebar zones first — these are the
+    // single biggest source of false positives on portals and WordPress sites
+    // (e.g. jouer.golf surfaces `logo-duval.jpg` partner logos otherwise).
+    if (isInExcludedZone(img)) continue;
+
     const alt = (img.getAttribute('alt') ?? '').toLowerCase();
     const cls = (img.getAttribute('class') ?? '').toLowerCase();
     const id = (img.getAttribute('id') ?? '').toLowerCase();
@@ -102,6 +149,31 @@ function extractText(root: HTMLElement): string {
   for (const tag of STRIP_TAGS) {
     for (const node of clone.querySelectorAll(tag)) node.remove();
   }
+  for (const selector of STRIP_SELECTORS) {
+    try {
+      for (const node of clone.querySelectorAll(selector)) node.remove();
+    } catch {
+      // node-html-parser doesn't support every CSS selector — skip silently.
+    }
+  }
+
+  // Try to scope to the page's main content area first. If we find a
+  // candidate with substantial text, use only that — much less noise for the
+  // LLM than the whole document. Otherwise fall back to the stripped body.
+  //
+  // We require the selector to match exactly ONE element on the page: many
+  // CMS templates (e.g. WordPress) emit a sea of `<article>` blocks for news
+  // items / cards, where the first match is just a promo widget and the
+  // actual club info lives elsewhere. A single-match selector is a much
+  // stronger signal that it wraps the real content.
+  const MIN_MAIN_LEN = 200;
+  for (const selector of MAIN_CONTENT_SELECTORS) {
+    const els = clone.querySelectorAll(selector);
+    if (els.length !== 1) continue;
+    const text = els[0].text.replace(/\s+/g, ' ').trim();
+    if (text.length >= MIN_MAIN_LEN) return text;
+  }
+
   return clone.text.replace(/\s+/g, ' ').trim();
 }
 

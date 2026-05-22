@@ -54,6 +54,7 @@ export async function runImportPreview(args: {
   const { course_data, warnings } = buildCourseData(extracted);
 
   const allWarnings = [...warnings];
+  if (extracted.extraction_warning) allWarnings.unshift(extracted.extraction_warning);
   if (!logo) allWarnings.push("Aucun logo détecté — uploade-en un à la main après import.");
   if (!photo) allWarnings.push("Aucune photo hero détectée — uploade-en une à la main après import.");
   if (extracted.confidence.name === 'low') allWarnings.push(`Nom incertain : "${extracted.name}" — vérifie.`);

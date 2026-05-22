@@ -33,6 +33,12 @@ export interface ExtractedClubData {
     primary_color: ExtractionConfidence;
   };
   notes: string | null;
+  /**
+   * Set when the LLM's tool_use input failed strict schema validation and the
+   * pipeline fell back to a best-effort salvage. Surfaced as a top-level
+   * warning so the admin knows the preview is incomplete.
+   */
+  extraction_warning?: string | null;
 }
 
 export interface ImportResult {
