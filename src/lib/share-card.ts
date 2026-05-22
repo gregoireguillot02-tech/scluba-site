@@ -185,6 +185,57 @@ function drawRoundedRect(
   ctx.closePath();
 }
 
+// Quadrillage fin forest 10% — mirror du body[data-play-grid] dans global.css.
+// 28×28 cells, lignes 1px forest #1B4332 à 10% opacity. Dessiné en clear lines
+// (pas en pattern repeat) pour rester crisp à 1080×H même sur PNG export.
+function drawGridPattern(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number,
+) {
+  const CELL = 28;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(27, 67, 50, 0.10)';
+  ctx.lineWidth = 1;
+  // Vertical lines
+  for (let vx = x; vx <= x + w; vx += CELL) {
+    ctx.beginPath();
+    ctx.moveTo(vx + 0.5, y);
+    ctx.lineTo(vx + 0.5, y + h);
+    ctx.stroke();
+  }
+  // Horizontal lines
+  for (let vy = y; vy <= y + h; vy += CELL) {
+    ctx.beginPath();
+    ctx.moveTo(x, vy + 0.5);
+    ctx.lineTo(x + w, vy + 0.5);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// Carte glass blanche avec ombre tinted forest. Mirror du --play-card-shadow
+// utilisé dans /recap. Pas de backdrop-filter possible en canvas, donc fond
+// blanc opaque (équivalent visuel au fallback @supports not).
+function drawGlassCard(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number, r: number,
+) {
+  ctx.save();
+  // Multi-layer shadow tinted forest pour mimer le stack glass
+  ctx.shadowColor = 'rgba(15, 42, 30, 0.12)';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 8;
+  drawRoundedRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
+  ctx.restore();
+  // Border subtile (sans shadow)
+  drawRoundedRect(ctx, x, y, w, h, r);
+  ctx.strokeStyle = 'rgba(15, 42, 30, 0.06)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
 function drawCoverImage(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
@@ -546,9 +597,13 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   const club = input.club;
   const primaryColor = club.primary_color ?? '#1B4332';
 
-  // Background global
-  ctx.fillStyle = '#FAF7EE';
+  // Background global — blanc + quadrillage forest 28×28 10% (cohérence avec
+  // le redesign /play /lobby /recap /join sur le site). Le quadrillage est
+  // visible partout sauf sous la photo, sous les cartes glass et sous les
+  // cells score colorées.
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, W, H);
+  drawGridPattern(ctx, 0, 0, W, H);
 
   // Charger photo et logo en parallèle (les deux peuvent fail indépendamment)
   let photoImg: HTMLImageElement | null = null;
@@ -608,6 +663,19 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
 
   // Section 3 : Score block — eyebrow + gros total + sub (style recap.astro)
   const SCORE_Y = BAND_Y + 160; // ~835 (espace meta → eyebrow)
+  const CARD_MARGIN = 32;
+
+  // Carte glass blanche derrière le score-block (cohérence avec /recap).
+  // Dessinée AVANT le texte pour que le texte ressorte par-dessus.
+  // Hauteur ajustée pour ne pas chevaucher la carte grille en dessous.
+  drawGlassCard(
+    ctx,
+    CARD_MARGIN,
+    SCORE_Y - 30,
+    W - 2 * CARD_MARGIN,
+    220,
+    20,
+  );
 
   // Eyebrow "SCORE · 18 TROUS" en coral upper letterspaced
   ctx.fillStyle = '#D4A574'; // --accent
@@ -662,6 +730,22 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   const pickedUpSet = new Set<number>(input.pickedUpHoles ?? []);
   const ROW_GAP = 14;
   let gridY = SCORE_Y + 220; // ~1005
+
+  // Carte glass blanche derrière la grille — calculée à l'avance pour
+  // englober toutes les sections. CELL_H=72 (cf drawScoreRow), ROW_GAP=14.
+  // Padding réduit (16) pour préserver le gap de 14px avec la carte score
+  // au-dessus (qui finit à SCORE_Y + 190 ; ici on commence à SCORE_Y + 204).
+  const GRID_CARD_PAD = 16;
+  const gridCardHeight = sections.length * 72 + (sections.length - 1) * ROW_GAP + 2 * GRID_CARD_PAD;
+  drawGlassCard(
+    ctx,
+    CARD_MARGIN,
+    gridY - GRID_CARD_PAD,
+    W - 2 * CARD_MARGIN,
+    gridCardHeight,
+    20,
+  );
+
   for (const section of sections) {
     const h = drawScoreRow(ctx, section.holes, input.scoresByHole, pickedUpSet, section.label, gridY, primaryColor);
     gridY += h + ROW_GAP;
