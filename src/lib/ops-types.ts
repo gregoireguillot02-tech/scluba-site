@@ -91,12 +91,22 @@ export interface ProspectEvent {
   created_at: string;
 }
 
+export const TASK_STATUSES = ['todo', 'doing', 'done'] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  todo: 'À faire',
+  doing: 'En cours',
+  done: 'Fait',
+};
+
 export interface Task {
   id: string;
   title: string;
   description: string | null;
   assignee: Owner;
   due_date: string | null;
+  status: TaskStatus;
   done: boolean;
   done_at: string | null;
   prospect_id: string | null;
