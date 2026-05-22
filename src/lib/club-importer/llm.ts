@@ -3,7 +3,9 @@ import { z } from 'zod';
 import type { DownloadedImage, ExtractedClubData } from './types';
 
 const MODEL = 'claude-haiku-4-5-20251001';
-const MAX_TOKENS = 600;
+// 27-hole courses with all hole numbers + pars are ~700 output tokens; give
+// headroom so Haiku doesn't truncate and start emitting weird shapes.
+const MAX_TOKENS = 2000;
 const LLM_TIMEOUT_MS = 30_000;
 
 const SYSTEM = `You analyse French golf club websites and extract structured data for a SaaS onboarding flow.
@@ -84,6 +86,20 @@ const ConfidenceSchema = z.enum(['high', 'medium', 'low']);
 const nullableString = (max: number) =>
   z.preprocess((v) => v ?? null, z.string().max(max).nullable());
 
+// Observed on 27-hole sites: Haiku occasionally serialises `loops` as a JSON
+// string instead of an array, sometimes with a trailing `.toJSON()` artefact
+// (e.g. `"[ {...} ].toJSON()"`). Parse strings best-effort before validation
+// so we still get a usable preview instead of a 502.
+const parseLoopsIfString = (input: unknown): unknown => {
+  if (typeof input !== 'string') return input;
+  const cleaned = input.replace(/\.toJSON\s*\(\s*\)\s*$/i, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    return input;
+  }
+};
+
 const ExtractedClubDataSchema = z.object({
   name: z.string().min(1).max(80),
   city: nullableString(60),
@@ -92,24 +108,27 @@ const ExtractedClubDataSchema = z.object({
     z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(),
   ),
   is_pitch_putt: z.boolean(),
-  loops: z
-    .array(
-      z.object({
-        name: z.string().min(1).max(80),
-        holes: z
-          .array(
-            z.object({
-              number: z.number().int().min(1).max(18),
-              par: z.preprocess(
-                (v) => v ?? null,
-                z.number().int().min(3).max(6).nullable(),
-              ),
-            }),
-          )
-          .max(18),
-      }),
-    )
-    .max(6),
+  loops: z.preprocess(
+    parseLoopsIfString,
+    z
+      .array(
+        z.object({
+          name: z.string().min(1).max(80),
+          holes: z
+            .array(
+              z.object({
+                number: z.number().int().min(1).max(18),
+                par: z.preprocess(
+                  (v) => v ?? null,
+                  z.number().int().min(3).max(6).nullable(),
+                ),
+              }),
+            )
+            .max(18),
+        }),
+      )
+      .max(6),
+  ),
   confidence: z.object({
     name: ConfidenceSchema,
     loops: ConfidenceSchema,
