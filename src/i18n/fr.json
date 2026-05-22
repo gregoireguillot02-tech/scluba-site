@@ -15,45 +15,53 @@
   },
   "hero": {
     "eyebrow": "La carte de score digitale · clubs de golf",
-    "tagline": "Modernisez l'expérience de vos joueurs.",
-    "subtagline": "Une carte de score personnalisée à l'image de votre club. Vos joueurs vivent une expérience moderne — votre club gagne en visibilité sur les réseaux sociaux.",
-    "cta": "Voir une démo de 10 min",
+    "tagline": "Vos joueurs partagent.<br>Avec vous, cette fois.",
+    "subtagline": "La carte de score digitale à l'image de votre club. Chaque partie mentionne votre golf sur les réseaux — sans budget pub.",
+    "cta": "Voir ma maquette en 24h",
+    "ctaSecondary": "Voir une démo 10 min",
+    "beforeLabel": "Aujourd'hui",
+    "afterLabel": "Avec Scluba",
     "scroll": "Découvrez le concept"
   },
   "problem": {
-    "eyebrow": "Le constat",
+    "eyebrow": "L'origine",
     "lines": [
-      "Aujourd'hui, vos joueurs sortent du parcours.",
-      "Ils sortent leur smartphone.",
-      "Et photographient leur carte de score papier.",
-      "Sans aucune mention de votre club."
+      "Nous sommes deux golfeurs.",
+      "À chaque sortie, le même geste : photographier la carte papier.",
+      "L'envoyer aux potes. Poster une story.",
+      "Aucune trace du club où on venait de jouer."
     ],
-    "punchline": "Chaque partie est une occasion manquée — pour votre image, pour vos joueurs."
+    "punchline": "Tout est devenu digital dans nos vies. Sauf ce moment-là."
   },
-  "steps": {
-    "eyebrow": "La solution",
-    "title": "Scluba en 3 gestes",
-    "lead": "Une mécanique pensée pour votre club. Aucune installation, aucune charge pour vos équipes.",
+  "insight": {
+    "eyebrow": "L'insight",
+    "title": "Et si ce moment cassé devenait votre meilleur outil marketing ?",
+    "sub": "Une carte à l'image de votre club, c'est un post Instagram avec votre logo. Chaque partie. Sans budget pub."
+  },
+  "pillars": {
+    "eyebrow": "Le produit",
+    "title": "Tout l'équipement, en 3 piliers.",
+    "lead": "Une scorecard digitale brandée, un classement live pour vos joueurs, un cadre QR pour votre comptoir. Aucune installation, aucune charge pour vos équipes.",
     "founders_quote": {
-      "text": "On ne pensait pas faire une app. On voulait juste un cadre élégant qui transforme une partie en souvenir partagé.",
+      "text": "On ne voulait pas faire une app. On voulait un cadre élégant qui transforme une partie en souvenir partagé — et un post pour le club.",
       "authors": "Grégoire & Paul",
       "role": "Co-fondateurs Scluba"
     },
     "items": [
       {
         "num": "01",
-        "title": "Le cadre au comptoir",
-        "body": "Un cadre élégant aux couleurs de votre club, posé sur le comptoir d'accueil. Livré clé en main."
+        "title": "Scorecard digitale brandée",
+        "body": "Couleurs, logo, typographie, parcours de votre club. Une web app — aucun téléchargement, aucun compte côté joueur."
       },
       {
         "num": "02",
-        "title": "Le joueur scanne",
-        "body": "Un simple QR à scanner, aucune application à installer. Saisie multi-joueurs trou par trou."
+        "title": "Classement live + partage",
+        "body": "Leaderboard temps réel pendant la partie. Carte finale partageable, image et lien, avec votre logo en signature."
       },
       {
         "num": "03",
-        "title": "La carte personnalisée",
-        "body": "À la fin de la partie, vos joueurs reçoivent une carte de score aux couleurs de votre club, prête à être partagée par leurs soins."
+        "title": "Cadre QR au comptoir",
+        "body": "Un présentoir élégant livré clé en main, posé à l'accueil ou au proshop. Le joueur scanne, la partie démarre."
       }
     ]
   },
@@ -174,29 +182,52 @@
       }
     ]
   },
+  "benefits": {
+    "eyebrow": "Pour votre club",
+    "title": "Trois bénéfices concrets pour votre golf.",
+    "lead": "Au-delà du gadget : un levier de visibilité, un signal d'image, un coup d'avance sur les clubs voisins.",
+    "items": [
+      {
+        "num": "01",
+        "title": "Visibilité organique",
+        "body": "Chaque partie partagée mentionne votre club sur les réseaux. Pas de budget pub à débloquer, pas de campagne à piloter — vos joueurs deviennent vos meilleurs ambassadeurs."
+      },
+      {
+        "num": "02",
+        "title": "Image moderne",
+        "body": "Un signal fort pour les golfeurs de moins de 45 ans dans un sport vieillissant. Votre club montre qu'il vit avec son temps — sans renoncer à son style."
+      },
+      {
+        "num": "03",
+        "title": "Différenciation",
+        "body": "Premier club moderne de votre région. Un argument de séduction concret face aux golfs voisins, et un sujet pour vos prospects et adhérents."
+      }
+    ]
+  },
   "how": {
-    "eyebrow": "Déploiement",
-    "title": "De la signature à la première carte partagée :<br>7 jours.",
+    "eyebrow": "La preuve",
+    "title": "Voyez votre carte avant de signer.",
+    "lead": "Donnez-nous l'URL de votre golf. On extrait logo, couleurs et photos pour générer votre maquette en 24h. Sans engagement, sans carte de crédit.",
     "items": [
       {
         "num": "1",
         "title": "5 minutes au téléphone",
-        "body": "Donnez-nous l'URL de votre site. Nous en extrayons logo, couleurs et photos pour générer une maquette."
+        "body": "Vous nous donnez l'URL de votre site. On échange brièvement sur votre identité, vos parcours, vos contraintes."
       },
       {
         "num": "2",
         "title": "Maquette en 24h",
-        "body": "Une page à votre image, à valider. Ajustements illimités jusqu'à votre validation."
+        "body": "Une carte à votre image, à valider. Ajustements illimités jusqu'à votre feu vert — vous voyez exactement ce que vos joueurs verront."
       },
       {
         "num": "3",
         "title": "Cadre QR livré",
-        "body": "Un cadre élégant, prêt à poser sur le comptoir d'accueil. Aucune installation technique côté club."
+        "body": "Un cadre élégant prêt à poser sur le comptoir d'accueil. Aucune installation technique côté club, aucune charge pour vos équipes."
       },
       {
         "num": "4",
         "title": "Bilan mensuel",
-        "body": "Un récapitulatif par email chaque mois : scans, parties, partages. Vous suivez l'impact de votre carte."
+        "body": "Un récapitulatif par email chaque mois : scans, parties, partages. L'impact de votre carte, lisible en 30 secondes."
       }
     ]
   },
@@ -228,9 +259,9 @@
           "Carte de score personnalisée à l'identité de votre club",
           "Présence naturelle sur les réseaux sociaux à chaque partie",
           "Cadre QR élégant livré au comptoir d'accueil",
+          "Saisie multi-joueurs en direct, sans installation",
           "Photo souvenir incluse à chaque partie",
-          "Saisie multi-joueurs, sans installation",
-          "Bilan mensuel : scans, parties, partages"
+          "Bilan mensuel par email : scans, parties, partages"
         ]
       }
     ]
@@ -266,6 +297,10 @@
       {
         "q": "Est-ce un outil officiel FFGolf pour le handicap ?",
         "a": "Non. Scluba est un service complémentaire pour l'expérience de vos joueurs et l'image de votre club — pas un substitut au handicap officiel."
+      },
+      {
+        "q": "Combien de clubs sont déjà équipés ?",
+        "a": "Nous lançons notre offre courant été 2026 avec un pilote de clubs partenaires fondateurs. L'offre de 1er mois offert est réservée aux 10 premiers clubs — vous bénéficiez d'un accompagnement direct par les co-fondateurs."
       }
     ]
   },
