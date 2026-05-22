@@ -57,9 +57,10 @@ import OpsLayout from '../../../layouts/OpsLayout.astro';
         <div>
           <label class="ops-label" for="primary_color">Couleur primaire</label>
           <div class="color-row">
-            <input class="color-picker" type="color" id="primary_color_picker" />
+            <input class="color-picker" type="color" id="primary_color_picker" title="Clique pour ouvrir le sélecteur de couleur" aria-label="Sélecteur de couleur" />
             <input class="ops-input color-hex" type="text" id="primary_color" name="primary_color" pattern="#[0-9A-Fa-f]{6}" maxlength="7" />
           </div>
+          <p class="hint color-hint">Clique le carré pour ouvrir le sélecteur de couleur.</p>
         </div>
       </div>
 
@@ -71,6 +72,13 @@ import OpsLayout from '../../../layouts/OpsLayout.astro';
             <p id="logo-missing" class="asset-missing" hidden>Pas de logo détecté</p>
           </div>
           <p class="hint" id="logo-source"></p>
+          <p class="hint asset-status" id="logo-status" hidden></p>
+          <div class="asset-actions">
+            <input type="file" id="logo-file" accept="image/png,image/jpeg,image/webp" hidden />
+            <button type="button" class="ops-btn ops-btn-ghost asset-btn" id="logo-replace">Remplacer par un fichier</button>
+            <button type="button" class="ops-btn ops-btn-ghost asset-btn" id="logo-clear" hidden>Effacer</button>
+          </div>
+          <p class="hint asset-error" id="logo-error" hidden></p>
         </div>
         <div class="asset-card">
           <span class="ops-label">Photo</span>
@@ -79,6 +87,13 @@ import OpsLayout from '../../../layouts/OpsLayout.astro';
             <p id="photo-missing" class="asset-missing" hidden>Pas de photo détectée</p>
           </div>
           <p class="hint" id="photo-source"></p>
+          <p class="hint asset-status" id="photo-status" hidden></p>
+          <div class="asset-actions">
+            <input type="file" id="photo-file" accept="image/png,image/jpeg,image/webp" hidden />
+            <button type="button" class="ops-btn ops-btn-ghost asset-btn" id="photo-replace">Remplacer par un fichier</button>
+            <button type="button" class="ops-btn ops-btn-ghost asset-btn" id="photo-clear" hidden>Effacer</button>
+          </div>
+          <p class="hint asset-error" id="photo-error" hidden></p>
         </div>
       </div>
 
@@ -110,7 +125,19 @@ type ImportResult = {
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
+type AssetKind = 'logo' | 'photo';
+
 let current: ImportResult | null = null;
+
+const localFiles: Record<AssetKind, File | null> = { logo: null, photo: null };
+const cleared: Record<AssetKind, boolean> = { logo: false, photo: false };
+const blobUrls: Record<AssetKind, string | null> = { logo: null, photo: null };
+
+const ASSET_LIMITS: Record<AssetKind, { maxBytes: number; label: string }> = {
+  logo: { maxBytes: 500 * 1024, label: '500 Ko' },
+  photo: { maxBytes: 5 * 1024 * 1024, label: '5 Mo' },
+};
+const ALLOWED_MIME = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 function showError(msg: string) {
   const el = $<HTMLElement>('error');
@@ -185,8 +212,118 @@ function renderLoops(course: CourseData) {
   });
 }
 
+function revokeBlobUrl(kind: AssetKind) {
+  if (blobUrls[kind]) {
+    URL.revokeObjectURL(blobUrls[kind]!);
+    blobUrls[kind] = null;
+  }
+}
+
+function resetAssetState() {
+  for (const kind of ['logo', 'photo'] as const) {
+    revokeBlobUrl(kind);
+    localFiles[kind] = null;
+    cleared[kind] = false;
+    const fileInput = document.getElementById(`${kind}-file`) as HTMLInputElement | null;
+    if (fileInput) fileInput.value = '';
+    const errEl = document.getElementById(`${kind}-error`) as HTMLElement | null;
+    if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
+  }
+}
+
+function applyAssetState(kind: AssetKind) {
+  if (!current) return;
+  const img = document.getElementById(`${kind}-img`) as HTMLImageElement;
+  const missing = document.getElementById(`${kind}-missing`) as HTMLElement;
+  const sourceEl = document.getElementById(`${kind}-source`) as HTMLElement;
+  const statusEl = document.getElementById(`${kind}-status`) as HTMLElement;
+  const clearBtn = document.getElementById(`${kind}-clear`) as HTMLButtonElement;
+  const replaceBtn = document.getElementById(`${kind}-replace`) as HTMLButtonElement;
+
+  const sourceUrl = kind === 'logo' ? current.logo_url : current.photo_url;
+  const file = localFiles[kind];
+  const isCleared = cleared[kind];
+
+  if (file) {
+    revokeBlobUrl(kind);
+    const blobUrl = URL.createObjectURL(file);
+    blobUrls[kind] = blobUrl;
+    img.src = blobUrl;
+    img.hidden = false;
+    missing.hidden = true;
+    sourceEl.hidden = true;
+    sourceEl.textContent = '';
+    statusEl.textContent = `Fichier local : ${file.name} (${Math.round(file.size / 1024)} Ko)`;
+    statusEl.hidden = false;
+    clearBtn.hidden = false;
+    replaceBtn.textContent = 'Choisir un autre fichier';
+  } else if (isCleared) {
+    revokeBlobUrl(kind);
+    img.removeAttribute('src');
+    img.hidden = true;
+    missing.hidden = false;
+    sourceEl.hidden = true;
+    sourceEl.textContent = '';
+    statusEl.textContent = 'Sera vide — uploade depuis la page édition.';
+    statusEl.hidden = false;
+    clearBtn.hidden = true;
+    replaceBtn.textContent = 'Remplacer par un fichier';
+  } else if (sourceUrl) {
+    revokeBlobUrl(kind);
+    img.src = sourceUrl;
+    img.hidden = false;
+    missing.hidden = true;
+    sourceEl.textContent = `Source : ${sourceUrl}`;
+    sourceEl.hidden = false;
+    statusEl.hidden = true;
+    statusEl.textContent = '';
+    clearBtn.hidden = false;
+    replaceBtn.textContent = 'Remplacer par un fichier';
+  } else {
+    revokeBlobUrl(kind);
+    img.removeAttribute('src');
+    img.hidden = true;
+    missing.hidden = false;
+    sourceEl.hidden = true;
+    sourceEl.textContent = '';
+    statusEl.hidden = true;
+    statusEl.textContent = '';
+    clearBtn.hidden = true;
+    replaceBtn.textContent = 'Choisir un fichier';
+  }
+}
+
+function showAssetError(kind: AssetKind, msg: string) {
+  const errEl = document.getElementById(`${kind}-error`) as HTMLElement;
+  errEl.textContent = msg;
+  errEl.hidden = false;
+}
+
+function clearAssetError(kind: AssetKind) {
+  const errEl = document.getElementById(`${kind}-error`) as HTMLElement;
+  errEl.textContent = '';
+  errEl.hidden = true;
+}
+
+function handleFileChosen(kind: AssetKind, file: File) {
+  clearAssetError(kind);
+  if (!ALLOWED_MIME.has(file.type)) {
+    showAssetError(kind, `Format non supporté (${file.type || 'inconnu'}). Utilise PNG, JPEG ou WebP.`);
+    return;
+  }
+  const { maxBytes, label } = ASSET_LIMITS[kind];
+  if (file.size > maxBytes) {
+    showAssetError(kind, `Fichier trop lourd (${Math.round(file.size / 1024)} Ko). Max ${label}.`);
+    return;
+  }
+  localFiles[kind] = file;
+  cleared[kind] = false;
+  applyAssetState(kind);
+}
+
 function renderPreview(r: ImportResult) {
   current = r;
+  resetAssetState();
   $<HTMLInputElement>('name').value = r.name;
   $<HTMLInputElement>('city').value = r.city ?? '';
   $<HTMLInputElement>('primary_color').value = r.primary_color;
@@ -195,35 +332,8 @@ function renderPreview(r: ImportResult) {
   // even though the HTML spec says to sanitize silently. Force lowercase.
   $<HTMLInputElement>('primary_color_picker').value = r.primary_color.toLowerCase();
 
-  const logoImg = $<HTMLImageElement>('logo-img');
-  const logoMissing = $<HTMLElement>('logo-missing');
-  const logoSource = $<HTMLElement>('logo-source');
-  if (r.logo_url) {
-    logoImg.src = r.logo_url;
-    logoImg.hidden = false;
-    logoMissing.hidden = true;
-    logoSource.textContent = `Source : ${r.logo_url}`;
-  } else {
-    logoImg.removeAttribute('src');
-    logoImg.hidden = true;
-    logoMissing.hidden = false;
-    logoSource.textContent = '';
-  }
-
-  const photoImg = $<HTMLImageElement>('photo-img');
-  const photoMissing = $<HTMLElement>('photo-missing');
-  const photoSource = $<HTMLElement>('photo-source');
-  if (r.photo_url) {
-    photoImg.src = r.photo_url;
-    photoImg.hidden = false;
-    photoMissing.hidden = true;
-    photoSource.textContent = `Source : ${r.photo_url}`;
-  } else {
-    photoImg.removeAttribute('src');
-    photoImg.hidden = true;
-    photoMissing.hidden = false;
-    photoSource.textContent = '';
-  }
+  applyAssetState('logo');
+  applyAssetState('photo');
 
   const warnList = $<HTMLElement>('warnings');
   warnList.innerHTML = '';
@@ -288,6 +398,29 @@ $<HTMLInputElement>('primary_color').addEventListener('input', (e) => {
   }
 });
 
+for (const kind of ['logo', 'photo'] as const) {
+  const fileInput = $<HTMLInputElement>(`${kind}-file`);
+  const replaceBtn = $<HTMLButtonElement>(`${kind}-replace`);
+  const clearBtn = $<HTMLButtonElement>(`${kind}-clear`);
+
+  replaceBtn.addEventListener('click', () => {
+    fileInput.click();
+  });
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    handleFileChosen(kind, file);
+    // Reset value so picking the same file twice re-fires change.
+    fileInput.value = '';
+  });
+  clearBtn.addEventListener('click', () => {
+    localFiles[kind] = null;
+    cleared[kind] = true;
+    clearAssetError(kind);
+    applyAssetState(kind);
+  });
+}
+
 $<HTMLFormElement>('save-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!current) return;
@@ -308,12 +441,18 @@ $<HTMLFormElement>('save-form').addEventListener('submit', async (e) => {
     }
   }
 
+  // If the admin chose a local file or cleared the asset, don't send the
+  // scraped URL — we'll either upload the local file after club creation, or
+  // leave the asset empty for the edit page to fix.
+  const logoOverride = localFiles.logo !== null || cleared.logo;
+  const photoOverride = localFiles.photo !== null || cleared.photo;
+
   const payload = {
     name: $<HTMLInputElement>('name').value.trim(),
     city: $<HTMLInputElement>('city').value.trim() || null,
     primary_color: $<HTMLInputElement>('primary_color').value.toUpperCase(),
-    source_logo_url: current.logo_url,
-    source_photo_url: current.photo_url,
+    source_logo_url: logoOverride ? null : current.logo_url,
+    source_photo_url: photoOverride ? null : current.photo_url,
     course_data: courseData,
   };
 
@@ -328,7 +467,37 @@ $<HTMLFormElement>('save-form').addEventListener('submit', async (e) => {
     });
     const json = await res.json();
     if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-    window.location.href = json.redirect ?? `/ops/clubs/${json.club_id}/edit?ok=1`;
+
+    const clubId = json.club_id as string;
+    const uploadWarnings: string[] = [];
+
+    for (const kind of ['logo', 'photo'] as const) {
+      const file = localFiles[kind];
+      if (!file) continue;
+      setStatus(`Upload ${kind}…`);
+      const fd = new FormData();
+      fd.append('file', file);
+      try {
+        const r = await fetch(`/api/ops/clubs/${clubId}/upload?kind=${kind}`, {
+          method: 'POST',
+          body: fd,
+        });
+        if (!r.ok) {
+          uploadWarnings.push(`Upload ${kind} a échoué (HTTP ${r.status}) — finalise depuis la page édition.`);
+        }
+      } catch {
+        uploadWarnings.push(`Upload ${kind} a échoué (réseau) — finalise depuis la page édition.`);
+      }
+    }
+
+    const redirectUrl = json.redirect ?? `/ops/clubs/${clubId}/edit?ok=1`;
+    if (uploadWarnings.length) {
+      showError(uploadWarnings.join(' · '));
+      // Give the user a moment to read before redirecting.
+      setTimeout(() => { window.location.href = redirectUrl; }, 2500);
+    } else {
+      window.location.href = redirectUrl;
+    }
   } catch (err) {
     showError(err instanceof Error ? err.message : 'Erreur inconnue');
     btn.disabled = false;
@@ -423,14 +592,24 @@ $<HTMLFormElement>('save-form').addEventListener('submit', async (e) => {
   }
   .color-row { display: flex; gap: 8px; align-items: stretch; }
   .color-picker {
-    width: 48px;
-    height: 38px;
-    border: 1px solid var(--line, #ddd);
+    width: 64px;
+    height: 42px;
+    border: 2px solid var(--line, #ddd);
     border-radius: 6px;
     padding: 0;
     cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .color-picker:hover {
+    border-color: var(--ink, #1B4332);
+    transform: scale(1.03);
+  }
+  .color-picker:focus-visible {
+    outline: 2px solid var(--primary, #1B4332);
+    outline-offset: 2px;
   }
   .color-hex { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .color-hint { font-style: italic; }
 
   .assets-row {
     display: grid;
@@ -456,6 +635,10 @@ $<HTMLFormElement>('save-form').addEventListener('submit', async (e) => {
   .asset-frame-wide { min-height: 220px; }
   .asset-frame-wide img { max-height: 320px; }
   .asset-missing { color: var(--muted); font-size: 13px; margin: 0; }
+  .asset-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .asset-btn { font-size: 13px; padding: 6px 12px; }
+  .asset-status { color: var(--ink); font-weight: 500; }
+  .asset-error { color: #B91C1C; font-weight: 500; }
 
   .loops { display: flex; flex-direction: column; gap: 14px; }
   .loop-card {
