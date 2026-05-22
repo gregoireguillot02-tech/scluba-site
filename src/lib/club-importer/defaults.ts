@@ -31,7 +31,7 @@ export function buildCourseData(data: ExtractedClubData): {
 
   const warnings: string[] = [];
   if (data.loops.length === 0) {
-    warnings.push("Aucune boucle de parcours détectée sur le site — ajoute-la à la main avant de sauver.");
+    warnings.push("Aucune boucle de parcours détectée sur le site — choisis 6/9/18 trous ci-dessous et ajuste les pars avant de sauver.");
   }
 
   const usedLoopIds = new Set<string>();
