@@ -219,7 +219,11 @@ export async function extractClubData(args: {
 
   const parsed = ExtractedClubDataSchema.safeParse(toolUse.input);
   if (!parsed.success) {
-    throw new Error('LLM output failed schema validation');
+    const issuesSummary = parsed.error.issues
+      .map((i) => `${i.path.join('.') || '<root>'}: ${i.message}`)
+      .join(' | ');
+    console.error('[club-importer/llm] tool_use rawInput', toolUse.input);
+    throw new Error(`LLM output failed schema validation — ${issuesSummary}`);
   }
   return parsed.data;
 }
