@@ -20,6 +20,7 @@ const url = Astro.url;
 const filterStatus = url.searchParams.get('status') as ProspectStatus | null;
 const filterOwner = url.searchParams.get('owner');
 const search = (url.searchParams.get('q') ?? '').trim();
+const showLost = url.searchParams.get('show_lost') === '1';
 
 let q = sb.from('prospects').select('*').order('updated_at', { ascending: false });
 if (filterStatus && PROSPECT_STATUSES.includes(filterStatus)) q = q.eq('status', filterStatus);
@@ -39,9 +40,23 @@ const grouped = new Map<ProspectStatus, Prospect[]>();
 for (const status of PROSPECT_STATUSES) grouped.set(status, []);
 for (const p of prospects) grouped.get(p.status)?.push(p);
 
+const visibleStatuses = PROSPECT_STATUSES.filter((s) => s !== 'lost' || showLost);
+const lostCount = (grouped.get('lost') ?? []).length;
+
+// URL pour révéler la colonne "Perdu" sans casser les autres filtres.
+const showLostParams = new URLSearchParams(url.searchParams);
+showLostParams.set('show_lost', '1');
+const showLostHref = `?${showLostParams.toString()}`;
+
 function fmtDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+
+function ownerInitial(owner: string): string {
+  if (owner === 'greg') return 'G';
+  if (owner === 'paul') return 'P';
+  return 'G·P';
 }
 ---
 
@@ -49,58 +64,84 @@ function fmtDate(iso: string): string {
   <div class="ops-page-header">
     <div>
       <h1 class="ops-page-title">CRM clubs</h1>
-      <p class="ops-page-subtitle">{prospects.length} prospect{prospects.length > 1 ? 's' : ''} — pipeline en colonnes</p>
+      <p class="ops-page-subtitle">
+        {prospects.length} prospect{prospects.length > 1 ? 's' : ''} dans le pipeline
+        {lostCount > 0 && !showLost && (
+          <>
+            {' · '}
+            <a href={showLostHref} class="subtitle-link">
+              {lostCount} perdu{lostCount > 1 ? 's' : ''} masqué{lostCount > 1 ? 's' : ''}
+            </a>
+          </>
+        )}
+      </p>
     </div>
-    <button type="button" class="ops-btn ops-btn-primary" data-open-new>+ Nouveau club</button>
+    <button type="button" class="ops-btn ops-btn-primary new-btn" data-open-new>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+      Nouveau club
+    </button>
   </div>
 
-  <form class="filters-bar" method="GET">
-    <input class="ops-input filter-search" type="search" name="q" placeholder="Rechercher (club, contact, ville…)" value={search} />
-    <select class="ops-select filter-select" name="status">
+  <form class="filters-bar" method="GET" data-filters>
+    <label class="filter-search-wrap">
+      <svg class="filter-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </svg>
+      <input class="ops-input filter-search" type="search" name="q" placeholder="Rechercher un club, contact, ville…" value={search} />
+    </label>
+    <select class="ops-select filter-select" name="status" aria-label="Filtrer par statut" data-auto-submit>
       <option value="">Tous les statuts</option>
       {PROSPECT_STATUSES.map((s) => (
         <option value={s} selected={filterStatus === s}>{STATUS_LABELS[s]}</option>
       ))}
     </select>
-    <select class="ops-select filter-select" name="owner">
+    <select class="ops-select filter-select" name="owner" aria-label="Filtrer par owner" data-auto-submit>
       <option value="">Tous les owners</option>
       {OWNERS.map((o) => (
         <option value={o} selected={filterOwner === o}>{OWNER_LABELS[o]}</option>
       ))}
     </select>
-    <button type="submit" class="ops-btn">Filtrer</button>
-    {(filterStatus || filterOwner || search) && (
-      <a href="/ops/prospects" class="ops-btn ops-btn-ghost">Reset</a>
+    {showLost && <input type="hidden" name="show_lost" value="1" />}
+    {(filterStatus || filterOwner || search || showLost) && (
+      <a href="/ops/prospects" class="filter-reset">Réinitialiser</a>
     )}
   </form>
 
-  <div class="kanban">
-    {PROSPECT_STATUSES.map((status) => {
+  <div class="kanban" style={`--col-count:${visibleStatuses.length}`}>
+    {visibleStatuses.map((status) => {
       const items = grouped.get(status) ?? [];
+      const color = STATUS_COLORS[status];
       return (
-        <div class="kanban-col" data-status={status}>
-          <div class="kanban-col-header">
-            <span class="kanban-col-dot" style={`background:${STATUS_COLORS[status]}`}></span>
-            <span class="kanban-col-title">{STATUS_LABELS[status]}</span>
+        <section class="kanban-col" data-status={status} style={`--col-color:${color}`}>
+          <header class="kanban-col-header">
+            <span class="kanban-col-pip" aria-hidden="true"></span>
+            <h2 class="kanban-col-title">{STATUS_LABELS[status]}</h2>
             <span class="kanban-col-count">{items.length}</span>
-          </div>
+          </header>
           <div class="kanban-col-body">
             {items.length === 0 ? (
-              <div class="kanban-empty">—</div>
+              <div class="kanban-empty">
+                <span class="kanban-empty-line" aria-hidden="true"></span>
+              </div>
             ) : (
               items.map((p) => (
                 <a href={`/ops/prospects/${p.id}`} class="kanban-card">
                   <div class="kanban-card-title">{p.club_name}</div>
                   {p.city && <div class="kanban-card-meta">{p.city}</div>}
                   <div class="kanban-card-foot">
-                    <span class="ops-tag">{OWNER_LABELS[p.owner]}</span>
-                    <span class="kanban-card-date">{fmtDate(p.updated_at)}</span>
+                    <span class={`owner-chip owner-${p.owner}`} title={`Owner — ${OWNER_LABELS[p.owner]}`}>
+                      {ownerInitial(p.owner)}
+                    </span>
+                    <time class="kanban-card-date" datetime={p.updated_at}>{fmtDate(p.updated_at)}</time>
                   </div>
                 </a>
               ))
             )}
           </div>
-        </div>
+        </section>
       );
     })}
   </div>
@@ -164,81 +205,182 @@ function fmtDate(iso: string): string {
 </OpsLayout>
 
 <style>
+  .subtitle-link {
+    color: var(--muted);
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    transition: color 0.15s;
+  }
+  .subtitle-link:hover { color: var(--primary); }
+
+  .new-btn { gap: 6px; padding-left: 14px; padding-right: 16px; }
+  .new-btn svg { margin-left: -2px; }
+
+  /* ---- Filtres ---- */
   .filters-bar {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 8px;
+    margin-bottom: 18px;
     flex-wrap: wrap;
     align-items: center;
   }
-  .filter-search { flex: 1; min-width: 240px; }
-  .filter-select { width: 180px; }
+  .filter-search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 240px;
+    display: block;
+  }
+  .filter-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted-soft);
+    pointer-events: none;
+  }
+  .filter-search { padding-left: 36px; }
+  .filter-select {
+    width: 200px;
+    cursor: pointer;
+  }
+  .filter-reset {
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: none;
+    padding: 0 10px;
+    border-radius: 6px;
+    line-height: 38px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .filter-reset:hover {
+    color: var(--ink);
+    background: var(--line-soft);
+  }
 
+  /* ---- Kanban ---- */
   .kanban {
     display: grid;
-    grid-template-columns: repeat(8, minmax(200px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(var(--col-count, 7), minmax(170px, 1fr));
+    gap: 10px;
     overflow-x: auto;
-    padding-bottom: 8px;
+    padding-bottom: 12px;
+    /* scrollbar custom — fine et discrète */
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
   }
+  .kanban::-webkit-scrollbar { height: 6px; }
+  .kanban::-webkit-scrollbar-track { background: transparent; }
+  .kanban::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 999px;
+  }
+  .kanban:hover::-webkit-scrollbar-thumb { background: var(--muted-soft); }
+
   .kanban-col {
-    background: #F1F4F2;
-    border-radius: 10px;
-    padding: 12px;
-    min-height: 240px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 10px 12px;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    /* Liseré haut coloré selon le statut — bien plus lisible que le dot 8px */
+    box-shadow: inset 0 2px 0 var(--col-color);
   }
   .kanban-col-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-    font-size: 13px;
+    gap: 7px;
+    margin: 4px 4px 12px;
+    font-size: 12px;
   }
-  .kanban-col-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .kanban-col-title { font-weight: 500; color: var(--ink-soft); flex: 1; }
+  .kanban-col-pip {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--col-color);
+    flex-shrink: 0;
+  }
+  .kanban-col-title {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    flex: 1;
+    margin: 0;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .kanban-col-count {
     font-variant-numeric: tabular-nums;
     color: var(--muted);
-    font-size: 12px;
-    background: rgba(255,255,255,0.6);
-    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--line-soft);
+    padding: 2px 8px;
     border-radius: 999px;
-  }
-  .kanban-col-body { display: flex; flex-direction: column; gap: 8px; }
-  .kanban-empty {
+    min-width: 22px;
     text-align: center;
-    color: var(--muted-soft);
-    font-size: 12px;
-    padding: 24px 0;
   }
+  .kanban-col-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+  }
+  .kanban-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-height: 80px;
+    padding: 16px 0;
+  }
+  .kanban-empty-line {
+    width: 24px;
+    height: 2px;
+    background: var(--line);
+    border-radius: 2px;
+  }
+
+  /* ---- Card ---- */
   .kanban-card {
-    background: var(--bg);
+    background: var(--bg-soft);
     border: 1px solid var(--line);
     border-radius: 8px;
-    padding: 10px 12px;
+    padding: 10px 11px 9px;
     text-decoration: none;
     color: inherit;
     display: block;
-    transition: border-color 0.15s, transform 0.15s;
+    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
   }
-  .kanban-card:hover { border-color: var(--primary-soft); transform: translateY(-1px); }
+  .kanban-card:hover {
+    border-color: var(--col-color, var(--primary-soft));
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
   .kanban-card-title {
-    font-weight: 500;
+    font-weight: 600;
     color: var(--primary);
     font-size: 14px;
     line-height: 1.3;
+    word-break: break-word;
   }
   .kanban-card-meta {
-    margin-top: 4px;
+    margin-top: 2px;
     font-size: 12px;
     color: var(--muted);
   }
   .kanban-card-foot {
-    margin-top: 10px;
+    margin-top: 9px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
   }
   .kanban-card-date {
     font-size: 11px;
@@ -246,6 +388,34 @@ function fmtDate(iso: string): string {
     font-variant-numeric: tabular-nums;
   }
 
+  /* ---- Owner chips ---- */
+  .owner-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+  .owner-greg {
+    background: rgba(45, 106, 79, 0.12);
+    color: var(--primary);
+  }
+  .owner-paul {
+    background: rgba(212, 165, 116, 0.22);
+    color: #8B5A3C;
+  }
+  .owner-shared {
+    background: rgba(15, 42, 30, 0.08);
+    color: var(--primary-deep);
+  }
+
+  /* ---- Modal (inchangée) ---- */
   .modal {
     position: fixed; inset: 0;
     display: flex; align-items: center; justify-content: center;
@@ -292,6 +462,7 @@ function fmtDate(iso: string): string {
   }
   @media (max-width: 600px) {
     .form-grid { grid-template-columns: 1fr; }
+    .filter-select { width: 100%; }
   }
   .modal-actions {
     display: flex; justify-content: flex-end; gap: 8px;
@@ -310,4 +481,10 @@ function fmtDate(iso: string): string {
   openers.forEach((b) => b.addEventListener('click', open));
   closers.forEach((b) => b.addEventListener('click', close));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+  // Auto-submit des selects de filtre — on évite le bouton "Filtrer" en plus.
+  const form = document.querySelector<HTMLFormElement>('[data-filters]');
+  form?.querySelectorAll<HTMLSelectElement>('[data-auto-submit]').forEach((sel) => {
+    sel.addEventListener('change', () => form.submit());
+  });
 </script>
