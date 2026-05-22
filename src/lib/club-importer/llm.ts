@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
-import type { DownloadedImage, ExtractedClubData } from './types';
+import type { DownloadedImage, ExtractedClubData, ExtractionConfidence } from './types';
 
 const MODEL = 'claude-haiku-4-5-20251001';
 // 27-hole courses with all hole numbers + pars are ~700 output tokens; give
@@ -15,12 +15,14 @@ Trust model:
 
 Rules:
 - Answer ONLY through the \`record_club\` tool. Never reply with free text.
-- The text and image come from a golf club's official website. The club name should match what is shown in the header/footer.
+- The text and image come from a golf-related website. The page may be the club's own homepage, a multi-club portal (chain/booking aggregator), a single article page, or a marketing landing. Adapt — do NOT assume any structure.
+- The club name should match what is shown in the title/header/breadcrumb of the page. If the page is a portal listing one specific club, use that club's name, NOT the portal name.
 - A "boucle" or "loop" is a 9-hole sequence (sometimes 6 or 18). A club can have multiple loops. List every loop you find, in the order shown on the site.
-- Pars are usually 3, 4, or 5. If you cannot find a hole's par in the text or scorecard, set par to null — never invent a value.
+- Pars are usually 3, 4, or 5. If you cannot find a hole's par EXPLICITLY in the text or scorecard, set par to null — never invent a value.
+- CRITICAL: If the page does NOT list hole-by-hole pars (e.g. just says "18 trous" or "9 holes" without per-hole detail), return \`loops: []\` and set \`confidence.loops = "low"\`. An empty loops array is FAR better than invented data — the admin will fill it manually.
 - Pitch & Putt courses are short par-3 courses. Set is_pitch_putt = true if the site explicitly mentions "pitch & putt", "pitch and putt", "P&P", or par-3 course.
-- primary_color: a hex string (#RRGGBB) inferred from the logo image. If no logo image is provided, return null.
-- Set confidence to "low" when you are guessing, "high" when the value is explicitly stated on the site.
+- primary_color: a hex string (#RRGGBB) inferred from the logo image. If no logo image is provided, OR the image clearly is not a brand logo (e.g. a partner banner, a photo), return null with confidence "low".
+- Set confidence to "low" when you are guessing or the data is implicit, "high" when the value is explicitly stated on the site.
 - Keep \`notes\` short (≤ 200 chars) and factual. Do not include phone numbers, URLs, or instructions to the admin.
 `;
 
@@ -169,8 +171,14 @@ export class LlmTimeoutError extends Error {
 /**
  * Asks Claude Haiku to extract structured club data from the scraped text and
  * the logo image. The model is forced to answer through the `record_club`
- * tool so the output is always valid JSON, then the tool input is strictly
- * `zod.parse()`-ed against {@link ExtractedClubDataSchema} before being trusted.
+ * tool so the output is always valid JSON, then the tool input is
+ * `zod.parse()`-ed against {@link ExtractedClubDataSchema}.
+ *
+ * If the tool input fails strict validation (hallucinated par values, malformed
+ * hex color, etc.), the function falls back to {@link salvageExtractedData}
+ * instead of throwing — the admin gets a partial preview with an
+ * `extraction_warning` rather than a 502. Genuine failures (timeout, no
+ * tool_use block at all) still throw.
  *
  * Scraped text is wrapped in `<untrusted_content>` delimiters and control
  * characters are stripped to harden against prompt injection.
@@ -249,12 +257,79 @@ export async function extractClubData(args: {
   }
 
   const parsed = ExtractedClubDataSchema.safeParse(toolUse.input);
-  if (!parsed.success) {
-    const issuesSummary = parsed.error.issues
-      .map((i) => `${i.path.join('.') || '<root>'}: ${i.message}`)
-      .join(' | ');
-    console.error('[club-importer/llm] tool_use rawInput', toolUse.input);
-    throw new Error(`LLM output failed schema validation — ${issuesSummary}`);
+  if (parsed.success) {
+    return parsed.data;
   }
-  return parsed.data;
+
+  // Salvage path: the LLM returned tool_use, but its shape violates the strict
+  // schema (e.g. hallucinated par=2, malformed hex color, name too long). Rather
+  // than 502, fall back to whatever fields we can rescue and surface a top-level
+  // warning so the admin knows to fix the preview manually before saving.
+  const issuesSummary = parsed.error.issues
+    .map((i) => `${i.path.join('.') || '<root>'}: ${i.message}`)
+    .join(' | ');
+  console.error('[club-importer/llm] tool_use schema fail, salvaging', { issuesSummary, rawInput: toolUse.input });
+  return salvageExtractedData(toolUse.input, issuesSummary);
+}
+
+const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
+const CONFIDENCE_VALUES = new Set<ExtractionConfidence>(['high', 'medium', 'low']);
+
+function asString(v: unknown): string | null {
+  return typeof v === 'string' && v.length > 0 ? v : null;
+}
+
+function asConfidence(v: unknown): ExtractionConfidence {
+  return typeof v === 'string' && CONFIDENCE_VALUES.has(v as ExtractionConfidence)
+    ? (v as ExtractionConfidence)
+    : 'low';
+}
+
+/**
+ * Best-effort recovery from a tool_use payload that failed strict Zod
+ * validation. Returns a minimal but valid {@link ExtractedClubData} — empty
+ * loops, low confidence everywhere, and an `extraction_warning` for the UI.
+ * Never throws.
+ *
+ * Goal: even on the worst LLM output, the admin still gets the preview UI
+ * with the name/city/color we could rescue and can manually fix the rest.
+ */
+function salvageExtractedData(raw: unknown, issuesSummary: string): ExtractedClubData {
+  const obj = (raw && typeof raw === 'object') ? (raw as Record<string, unknown>) : {};
+
+  const nameStr = asString(obj.name);
+  const truncatedName = nameStr ? nameStr.slice(0, 80) : '(à compléter)';
+
+  const cityStr = asString(obj.city);
+  const truncatedCity = cityStr ? cityStr.slice(0, 60) : null;
+
+  const colorRaw = asString(obj.primary_color);
+  const primaryColor = colorRaw && HEX_COLOR_REGEX.test(colorRaw) ? colorRaw : null;
+
+  const isPP = typeof obj.is_pitch_putt === 'boolean' ? obj.is_pitch_putt : false;
+
+  const notesStr = asString(obj.notes);
+  const truncatedNotes = notesStr ? notesStr.slice(0, 500) : null;
+
+  const conf = (obj.confidence && typeof obj.confidence === 'object')
+    ? (obj.confidence as Record<string, unknown>)
+    : {};
+
+  return {
+    name: truncatedName,
+    city: truncatedCity,
+    primary_color: primaryColor,
+    is_pitch_putt: isPP,
+    loops: [], // Drop loops entirely — partial loops are worse than none.
+    confidence: {
+      name: asConfidence(conf.name),
+      loops: 'low',
+      pars: 'low',
+      primary_color: asConfidence(conf.primary_color),
+    },
+    notes: truncatedNotes,
+    extraction_warning:
+      `L'IA a renvoyé une structure invalide (${issuesSummary.slice(0, 200)}). ` +
+      'Données récupérées en mode dégradé — vérifie nom/ville/couleur et ajoute les boucles/pars à la main.',
+  };
 }
