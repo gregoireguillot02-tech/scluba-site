@@ -19,9 +19,18 @@ const justSaved = url.searchParams.get('ok') === '1';
 const errMsg = url.searchParams.get('err');
 
 const accent = c.primary_color ?? '#1B4332';
-const front9 = c.course_data.holes.filter((h) => h.number <= 9);
-const back9 = c.course_data.holes.filter((h) => h.number > 9);
+const ALLOWED_HOLE_COUNTS = [6, 9, 18] as const;
+const currentHoleCount = c.course_data.holes.length;
+const hasMultiLoop = Array.isArray(c.course_data.loops) && c.course_data.loops.length > 0;
+// Selector starts on the club's actual hole count when it's one of the
+// supported sizes; otherwise we default to 18 (the legacy behaviour).
+const selectorHoleCount: number = (ALLOWED_HOLE_COUNTS as readonly number[]).includes(currentHoleCount)
+  ? currentHoleCount
+  : 18;
 const totalPar = c.course_data.holes.reduce((s, h) => s + h.par, 0);
+// Serialize holes for the client script so it can re-render when the selector
+// changes without losing already-entered pars.
+const holesJson = JSON.stringify(c.course_data.holes.map((h) => ({ number: h.number, par: h.par })));
 
 // === Stats ===
 const now = new Date();
@@ -191,45 +200,65 @@ function fmtRelative(iso: string | null): string {
           </div>
 
           <h3 class="course-title">
-            Parcours · Par {totalPar}
+            Parcours · <span data-total-par>Par {totalPar}</span>
           </h3>
-          <p class="ops-hint" style="margin-bottom:8px">Pars saisis pour les 18 trous.</p>
-          <div class="course-grid">
-            <div class="course-row">
-              <span class="course-row-label">F9</span>
-              {front9.map((h) => (
-                <label class="course-cell">
-                  <span class="course-cell-num">{h.number}</span>
-                  <input
-                    class="course-cell-input"
-                    type="number"
-                    name={`par_${h.number}`}
-                    value={h.par}
-                    min="3"
-                    max="6"
-                    required
-                  />
+          {hasMultiLoop ? (
+            <>
+              <p class="ops-hint multi-loop-hint" style="margin:0 0 8px">
+                Club multi-boucles — édition des trous indisponible ici. Modifie via la base, l'édition ne touche que pars (loops/formats préservés).
+              </p>
+              <input type="hidden" name="hole_count" value={String(currentHoleCount)} />
+              <div class="course-grid" style={`--row-cells:${Math.min(currentHoleCount, 9)}`}>
+                {Array.from({ length: Math.ceil(currentHoleCount / 9) }).map((_, rowIdx) => {
+                  const from = rowIdx * 9 + 1;
+                  const to = Math.min(from + 8, currentHoleCount);
+                  return (
+                    <div class="course-row">
+                      <span class="course-row-label">{from}-{to}</span>
+                      {c.course_data.holes.slice(from - 1, to).map((h) => (
+                        <label class="course-cell">
+                          <span class="course-cell-num">{h.number}</span>
+                          <input
+                            class="course-cell-input"
+                            type="number"
+                            name={`par_${h.number}`}
+                            value={h.par}
+                            min="3"
+                            max="6"
+                            required
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <div class="course-controls">
+                <label class="course-count-label">
+                  Nombre de trous
+                  <select
+                    class="ops-input course-count-select"
+                    name="hole_count"
+                    data-hole-count-select
+                  >
+                    {ALLOWED_HOLE_COUNTS.map((n) => (
+                      <option value={n} selected={n === selectorHoleCount}>{n} trous</option>
+                    ))}
+                  </select>
                 </label>
-              ))}
-            </div>
-            <div class="course-row">
-              <span class="course-row-label">B9</span>
-              {back9.map((h) => (
-                <label class="course-cell">
-                  <span class="course-cell-num">{h.number}</span>
-                  <input
-                    class="course-cell-input"
-                    type="number"
-                    name={`par_${h.number}`}
-                    value={h.par}
-                    min="3"
-                    max="6"
-                    required
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
+              </div>
+              <p class="ops-hint" style="margin:8px 0">Pars entre 3 et 6 par trou.</p>
+              <div
+                class="course-grid"
+                data-course-grid
+                data-initial-holes={holesJson}
+                data-initial-count={String(selectorHoleCount)}
+              ></div>
+            </>
+          )}
 
           <div class="form-actions">
             <button type="submit" class="ops-btn ops-btn-primary">Enregistrer</button>
@@ -314,6 +343,112 @@ function fmtRelative(iso: string | null): string {
       if (/^#[0-9A-Fa-f]{6}$/.test(v)) picker.value = v;
     });
   }
+
+  // === Live par total: works in both modes (multi-loop SSR grid and the
+  // dynamic JS grid). Recomputes from whatever .course-cell-input is in DOM. ===
+  (function setupTotalRecompute() {
+    const totalLabel = document.querySelector('[data-total-par]');
+    if (!totalLabel) return;
+    function recompute() {
+      let total = 0;
+      document.querySelectorAll('.course-cell-input').forEach((el) => {
+        const v = Number(el.value);
+        if (Number.isFinite(v)) total += v;
+      });
+      totalLabel.textContent = 'Par ' + total;
+    }
+    document.addEventListener('input', (e) => {
+      const t = e.target;
+      if (t && t.classList && t.classList.contains('course-cell-input')) recompute();
+    });
+  })();
+
+  // === Course grid: re-renders inputs when the hole-count selector changes,
+  // preserving the pars the admin already typed. Only active for single-course
+  // clubs — multi-loop clubs render their inputs SSR (see Astro template). ===
+  (function setupCourseGrid() {
+    const grid = document.querySelector('[data-course-grid]');
+    const select = document.querySelector('[data-hole-count-select]');
+    const totalLabel = document.querySelector('[data-total-par]');
+    if (!grid || !select) return;
+
+    // Initial pars come from the server-rendered course_data.holes.
+    const initialHoles = JSON.parse(grid.dataset.initialHoles || '[]');
+    // Map from hole number -> par. We update this on every input change so
+    // switching count back and forth keeps the user's edits.
+    const parsByNumber = new Map();
+    for (const h of initialHoles) parsByNumber.set(h.number, h.par);
+
+    function recomputeTotal() {
+      let total = 0;
+      grid.querySelectorAll('.course-cell-input').forEach((el) => {
+        const v = Number(el.value);
+        if (Number.isFinite(v)) total += v;
+      });
+      if (totalLabel) totalLabel.textContent = 'Par ' + total;
+    }
+
+    function buildRow(label, fromHole, toHole) {
+      const row = document.createElement('div');
+      row.className = 'course-row';
+      const span = document.createElement('span');
+      span.className = 'course-row-label';
+      span.textContent = label;
+      row.appendChild(span);
+      for (let n = fromHole; n <= toHole; n++) {
+        const cell = document.createElement('label');
+        cell.className = 'course-cell';
+        const num = document.createElement('span');
+        num.className = 'course-cell-num';
+        num.textContent = String(n);
+        const input = document.createElement('input');
+        input.className = 'course-cell-input';
+        input.type = 'number';
+        input.name = 'par_' + n;
+        input.min = '3';
+        input.max = '6';
+        input.required = true;
+        input.value = String(parsByNumber.get(n) ?? 4);
+        input.addEventListener('input', () => {
+          const v = Number(input.value);
+          if (Number.isFinite(v)) parsByNumber.set(n, v);
+          recomputeTotal();
+        });
+        cell.appendChild(num);
+        cell.appendChild(input);
+        row.appendChild(cell);
+      }
+      return row;
+    }
+
+    function render(count) {
+      grid.innerHTML = '';
+      grid.dataset.holeCount = String(count);
+      // Layout: 6 → one row of 6 ("Parcours"). 9 → one row of 9 ("F9").
+      // 18 → two rows F9/B9. Cells per row drive the CSS column count.
+      if (count === 6) {
+        grid.style.setProperty('--row-cells', '6');
+        grid.appendChild(buildRow('1-6', 1, 6));
+      } else if (count === 9) {
+        grid.style.setProperty('--row-cells', '9');
+        grid.appendChild(buildRow('F9', 1, 9));
+      } else {
+        grid.style.setProperty('--row-cells', '9');
+        grid.appendChild(buildRow('F9', 1, 9));
+        grid.appendChild(buildRow('B9', 10, 18));
+      }
+      recomputeTotal();
+    }
+
+    const initialCount = Number(grid.dataset.initialCount) || 18;
+    render(initialCount);
+
+    select.addEventListener('change', () => {
+      const next = Number(select.value);
+      if ([6, 9, 18].indexOf(next) === -1) return;
+      render(next);
+    });
+  })();
 </script>
 
 <style>
@@ -475,12 +610,38 @@ function fmtRelative(iso: string | null): string {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    --row-cells: 9;
   }
   .course-row {
     display: grid;
-    grid-template-columns: 32px repeat(9, 1fr);
+    grid-template-columns: 40px repeat(var(--row-cells), 1fr);
     gap: 6px;
   }
+  .course-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .course-count-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .course-count-select {
+    width: auto;
+    min-width: 110px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+  }
+  .multi-loop-hint { margin: 0; font-style: italic; }
   .course-row-label {
     background: var(--primary);
     color: var(--bg);
