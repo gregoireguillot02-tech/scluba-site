@@ -1,0 +1,222 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../../lib/supabase';
+import { escapeLikePattern } from '../../../lib/safe-redirect';
+import {
+  NETWORK_STATUSES,
+  NETWORK_STATUS_LABELS,
+  NETWORK_STATUS_COLORS,
+  ORG_TYPES,
+  ORG_TYPE_LABELS,
+  ORG_TYPE_COLORS,
+  type NetworkContact,
+  type NetworkStatus,
+  type OrgType,
+} from '../../../lib/network-types';
+
+const sb = serviceClient();
+
+const url = Astro.url;
+const filterType = url.searchParams.get('type') as OrgType | null;
+const filterStatus = url.searchParams.get('status') as NetworkStatus | null;
+const filterRegion = url.searchParams.get('region');
+const search = (url.searchParams.get('q') ?? '').trim();
+
+let q = sb.from('network_contacts').select('*').order('updated_at', { ascending: false });
+if (filterType && ORG_TYPES.includes(filterType)) q = q.eq('org_type', filterType);
+if (filterStatus && NETWORK_STATUSES.includes(filterStatus)) q = q.eq('status', filterStatus);
+if (filterRegion) q = q.eq('region', filterRegion);
+if (search) {
+  const escaped = escapeLikePattern(search).replace(/[,()]/g, ' ');
+  q = q.or(`name.ilike.%${escaped}%,org.ilike.%${escaped}%,role.ilike.%${escaped}%`);
+}
+
+const { data } = await q;
+const contacts: NetworkContact[] = (data ?? []) as NetworkContact[];
+
+const { data: allData } = await sb.from('network_contacts').select('status');
+const allStatuses: NetworkStatus[] = (allData ?? []).map((r: { status: NetworkStatus }) => r.status);
+const statusCounts: Record<NetworkStatus, number> = {
+  to_contact: 0,
+  contacted: 0,
+  intro_done: 0,
+  dead: 0,
+};
+for (const s of allStatuses) statusCounts[s]++;
+
+const regions = Array.from(new Set(contacts.map((c) => c.region).filter((r): r is string => !!r))).sort();
+
+function fmtDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+---
+
+<OpsLayout title="Prospection réseau" active="reseau">
+  <div class="ops-page-header">
+    <div>
+      <h1 class="ops-page-title">Prospection réseau</h1>
+      <p class="ops-page-subtitle">
+        {contacts.length} contact{contacts.length > 1 ? 's' : ''} · annuaire FFGolf (chaînes, ligues, asso)
+      </p>
+    </div>
+  </div>
+
+  <div class="status-chips">
+    {NETWORK_STATUSES.map((s) => (
+      <a
+        href={`/ops/reseau${filterStatus === s ? '' : `?status=${s}`}`}
+        class={`status-chip${filterStatus === s ? ' active' : ''}`}
+        style={`--chip-color:${NETWORK_STATUS_COLORS[s]}`}
+      >
+        <span class="status-chip-dot"></span>
+        <span>{NETWORK_STATUS_LABELS[s]}</span>
+        <span class="status-chip-count">{statusCounts[s]}</span>
+      </a>
+    ))}
+  </div>
+
+  <form class="filters-bar" method="GET">
+    <input class="ops-input filter-search" type="search" name="q" placeholder="Rechercher (nom, organisation, rôle…)" value={search} />
+    <select class="ops-select filter-select" name="type">
+      <option value="">Tous types</option>
+      {ORG_TYPES.map((t) => (
+        <option value={t} selected={filterType === t}>{ORG_TYPE_LABELS[t]}</option>
+      ))}
+    </select>
+    <select class="ops-select filter-select" name="region">
+      <option value="">Toutes régions</option>
+      {regions.map((r) => (
+        <option value={r} selected={filterRegion === r}>{r}</option>
+      ))}
+    </select>
+    {filterStatus && <input type="hidden" name="status" value={filterStatus} />}
+    <button type="submit" class="ops-btn">Filtrer</button>
+    {(filterType || filterRegion || search || filterStatus) && (
+      <a href="/ops/reseau" class="ops-btn ops-btn-ghost">Reset</a>
+    )}
+  </form>
+
+  <div class="ops-card">
+    {contacts.length === 0 ? (
+      <p class="ops-empty">Aucun contact ne correspond aux filtres.</p>
+    ) : (
+      <table class="ops-table">
+        <thead>
+          <tr>
+            <th>Contact</th>
+            <th>Organisation</th>
+            <th>Type</th>
+            <th>Région</th>
+            <th>Statut</th>
+            <th>Intros</th>
+            <th>Maj</th>
+          </tr>
+        </thead>
+        <tbody>
+          {contacts.map((c) => (
+            <tr>
+              <td>
+                <a href={`/ops/reseau/${c.id}`} class="row-link">
+                  <strong>{c.name}</strong>
+                  {c.role && <span class="row-sub"> · {c.role}</span>}
+                </a>
+              </td>
+              <td>{c.org}</td>
+              <td>
+                <span class="ops-tag" style={`background:${ORG_TYPE_COLORS[c.org_type]}22; color:${ORG_TYPE_COLORS[c.org_type]}`}>
+                  {ORG_TYPE_LABELS[c.org_type]}
+                </span>
+              </td>
+              <td>{c.region ?? '—'}</td>
+              <td>
+                <span class="ops-tag" style={`background:${NETWORK_STATUS_COLORS[c.status]}22; color:${NETWORK_STATUS_COLORS[c.status]}`}>
+                  {NETWORK_STATUS_LABELS[c.status]}
+                </span>
+              </td>
+              <td>{c.intros_made.length > 0 ? c.intros_made.length : '—'}</td>
+              <td>{fmtDate(c.updated_at)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+</OpsLayout>
+
+<style>
+  .status-chips {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    text-decoration: none;
+    color: inherit;
+    font-size: 14px;
+    transition: border-color 0.15s;
+  }
+  .status-chip:hover { border-color: var(--chip-color); }
+  .status-chip.active {
+    border-color: var(--chip-color);
+    background: color-mix(in srgb, var(--chip-color) 12%, white);
+  }
+  .status-chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--chip-color);
+  }
+  .status-chip-count {
+    color: #6B7280;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .filters-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-search { min-width: 280px; }
+  .filter-select { min-width: 160px; }
+
+  .ops-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .ops-table th,
+  .ops-table td {
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid #F1F5F4;
+    font-size: 14px;
+  }
+  .ops-table th {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #6B7280;
+    letter-spacing: 0.04em;
+  }
+  .ops-table tbody tr:hover { background: #FAFBFA; }
+  .row-link { color: inherit; text-decoration: none; }
+  .row-link strong { color: var(--ink); }
+  .row-sub { color: #6B7280; font-weight: normal; }
+
+  .ops-empty {
+    padding: 32px;
+    text-align: center;
+    color: #6B7280;
+  }
+</style>

@@ -1,0 +1,263 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../../lib/supabase';
+import {
+  NETWORK_STATUSES,
+  NETWORK_STATUS_LABELS,
+  NETWORK_STATUS_COLORS,
+  ORG_TYPES,
+  ORG_TYPE_LABELS,
+  ORG_TYPE_COLORS,
+  type NetworkContact,
+} from '../../../lib/network-types';
+
+const { id } = Astro.params;
+const sb = serviceClient();
+
+const { data } = await sb.from('network_contacts').select('*').eq('id', id).maybeSingle();
+if (!data) {
+  return Astro.redirect('/ops/reseau', 302);
+}
+const c: NetworkContact = data as NetworkContact;
+
+function fmtDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+---
+
+<OpsLayout title={c.name} active="reseau">
+  <div class="ops-page-header">
+    <div>
+      <a href="/ops/reseau" class="back-link">← Prospection réseau</a>
+      <h1 class="ops-page-title">{c.name}</h1>
+      <p class="ops-page-subtitle">
+        {c.role ? `${c.role} · ` : ''}{c.org}
+      </p>
+    </div>
+    <div class="header-right">
+      <span class="ops-tag" style={`background:${ORG_TYPE_COLORS[c.org_type]}22; color:${ORG_TYPE_COLORS[c.org_type]}; font-size:14px; padding:6px 14px`}>
+        {ORG_TYPE_LABELS[c.org_type]}
+      </span>
+      <span class="ops-tag" style={`background:${NETWORK_STATUS_COLORS[c.status]}22; color:${NETWORK_STATUS_COLORS[c.status]}; font-size:14px; padding:6px 14px`}>
+        {NETWORK_STATUS_LABELS[c.status]}
+      </span>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <div>
+      <div class="ops-card">
+        <h2>Coordonnées</h2>
+        <ul class="contact-list">
+          {c.email && (
+            <li><span class="contact-label">Email</span> <a href={`mailto:${c.email}`}>{c.email}</a></li>
+          )}
+          {c.phone && (
+            <li><span class="contact-label">Téléphone</span> <a href={`tel:${c.phone.replace(/\s/g, '')}`}>{c.phone}</a></li>
+          )}
+          {c.website && (
+            <li><span class="contact-label">Site</span> <a href={c.website} target="_blank" rel="noopener noreferrer">{c.website}</a></li>
+          )}
+          {c.region && (
+            <li><span class="contact-label">Région</span> {c.region}</li>
+          )}
+        </ul>
+      </div>
+
+      <div class="ops-card">
+        <h2>Éditer</h2>
+        <form method="POST" action="/api/ops/network" class="detail-form">
+          <input type="hidden" name="action" value="update" />
+          <input type="hidden" name="id" value={c.id} />
+
+          <div class="form-grid">
+            <label class="ops-label">Nom *
+              <input class="ops-input" name="name" value={c.name} required />
+            </label>
+            <label class="ops-label">Rôle
+              <input class="ops-input" name="role" value={c.role ?? ''} />
+            </label>
+            <label class="ops-label">Organisation *
+              <input class="ops-input" name="org" value={c.org} required />
+            </label>
+            <label class="ops-label">Type *
+              <select class="ops-select" name="org_type">
+                {ORG_TYPES.map((t) => (
+                  <option value={t} selected={t === c.org_type}>{ORG_TYPE_LABELS[t]}</option>
+                ))}
+              </select>
+            </label>
+            <label class="ops-label">Région
+              <input class="ops-input" name="region" value={c.region ?? ''} />
+            </label>
+            <label class="ops-label">Statut
+              <select class="ops-select" name="status">
+                {NETWORK_STATUSES.map((s) => (
+                  <option value={s} selected={s === c.status}>{NETWORK_STATUS_LABELS[s]}</option>
+                ))}
+              </select>
+            </label>
+            <label class="ops-label">Email
+              <input class="ops-input" type="email" name="email" value={c.email ?? ''} />
+            </label>
+            <label class="ops-label">Téléphone
+              <input class="ops-input" name="phone" value={c.phone ?? ''} />
+            </label>
+            <label class="ops-label" style="grid-column:1/-1">Site
+              <input class="ops-input" name="website" value={c.website ?? ''} />
+            </label>
+            <label class="ops-label" style="grid-column:1/-1">Notes
+              <textarea class="ops-input" name="notes" rows="6">{c.notes ?? ''}</textarea>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="ops-btn ops-btn-primary">Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div>
+      <div class="ops-card">
+        <h2>Intros faites ({c.intros_made.length})</h2>
+
+        {c.intros_made.length === 0 ? (
+          <p class="ops-empty-inline">Aucune intro pour l'instant.</p>
+        ) : (
+          <ul class="intros-list">
+            {c.intros_made.map((club) => (
+              <li class="intro-chip">
+                <span>{club}</span>
+                <form method="POST" action="/api/ops/network" style="display:inline">
+                  <input type="hidden" name="action" value="remove_intro" />
+                  <input type="hidden" name="id" value={c.id} />
+                  <input type="hidden" name="club" value={club} />
+                  <button type="submit" class="intro-chip-x" aria-label={`Retirer ${club}`}>×</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <form method="POST" action="/api/ops/network" class="add-intro-form">
+          <input type="hidden" name="action" value="add_intro" />
+          <input type="hidden" name="id" value={c.id} />
+          <input class="ops-input" name="club" placeholder="Nom du club intro" required />
+          <button type="submit" class="ops-btn">Ajouter</button>
+        </form>
+      </div>
+
+      <div class="ops-card meta-card">
+        <p><span class="contact-label">Créé</span> {fmtDateTime(c.created_at)}</p>
+        <p><span class="contact-label">Maj</span> {fmtDateTime(c.updated_at)}</p>
+      </div>
+    </div>
+  </div>
+</OpsLayout>
+
+<style>
+  .back-link {
+    display: inline-block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #6B7280;
+    text-decoration: none;
+  }
+  .back-link:hover { color: var(--ink); }
+
+  .header-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 900px) {
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+
+  .ops-card {
+    margin-bottom: 16px;
+  }
+
+  .contact-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .contact-list li { font-size: 14px; }
+  .contact-label {
+    display: inline-block;
+    min-width: 90px;
+    color: #6B7280;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .form-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .intros-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .intro-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #ECFDF5;
+    color: #047857;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  .intro-chip-x {
+    background: none;
+    border: none;
+    color: #047857;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+  }
+  .intro-chip-x:hover { color: #DC2626; }
+
+  .add-intro-form {
+    display: flex;
+    gap: 8px;
+  }
+  .add-intro-form .ops-input { flex: 1; }
+
+  .ops-empty-inline {
+    color: #6B7280;
+    font-size: 14px;
+    margin: 0 0 16px;
+  }
+
+  .meta-card p {
+    margin: 4px 0;
+    font-size: 13px;
+  }
+</style>
