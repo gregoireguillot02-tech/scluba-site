@@ -201,10 +201,11 @@ const phases = [
       drop-shadow(0 44px 96px rgba(70, 50, 30, 0.20));
   }
 
-  /* Container = aspect ratio frame */
+  /* Container = aspect ratio frame. Phone large pour bien voir le contenu
+     app (retour Grégoire 2026-05-23 : "voir le tel en grand"). */
   .showcase-phone-img {
     position: relative;
-    width: clamp(280px, 36vw, 420px);
+    width: clamp(340px, 46vw, 560px);
     aspect-ratio: 420 / 861;
   }
 
@@ -274,7 +275,7 @@ const phases = [
 
     .showcase-stage { padding: var(--space-4) 0 0; }
     .showcase-phone-img {
-      width: min(78vw, 320px);
+      width: min(82vw, 360px);
     }
     /* En mobile on garde seulement le screen 1 (scoring) visible — les autres
        sont expliqués par les narrative blocks empilés en texte. Évite de
