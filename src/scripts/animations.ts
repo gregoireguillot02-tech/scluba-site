@@ -99,32 +99,41 @@ function initSteps() {
   });
 }
 
-/* ---------- PHONE SHOWCASE (scroll-pinned, 2 phases V4.4) ----------
-   Phone reste fixe au tilt CSS initial. 2 écrans empilés transitionnent
-   via opacity + scale ; narrative gauche se synchronise.
-   Screen 1 = Trou 1/9 scoring (image 2)
-   Screen 2 = Partager ta carte (image 3) */
+/* ---------- PHONE SHOWCASE (scroll-pinned, N phases V5 2026-05-23) ----------
+   Pattern HeroPhone : frame.png par-dessus + screens PNG empilés dans le mask.
+   Boucle dynamique sur [data-flow-phase] et [data-flow-screen] — extensible
+   sans toucher au code si on rajoute une phase 05.
+
+   Timing : pin duration = 100% par phase (pour 4 phases : +=400%).
+   Transitions équiréparties dans la timeline normalisée 0..1 :
+     - i=0 (phase 1→2) à pos = 1/N = 0.25
+     - i=1 (phase 2→3) à pos = 2/N = 0.50
+     - i=2 (phase 3→4) à pos = 3/N = 0.75 */
 function initPhoneShowcase() {
   const wrap = document.querySelector<HTMLElement>('[data-anim="showcase-wrap"]');
   if (!wrap) return;
 
-  // Desktop only : le pin + morph entre 2 narrative-blocks superposés
-  // ne fonctionne qu'avec le grid 2-cols ≥1024px. En mobile, le CSS
-  // bascule sur un layout vertical statique (les 2 phases + screen 1).
+  // Desktop only : le pin + morph N phases ne fonctionne qu'avec le grid
+  // 2-cols ≥1024px. En mobile, le CSS bascule sur un layout vertical statique.
   const mm = gsap.matchMedia();
   mm.add('(min-width: 1024px)', () => {
-    const screen1 = wrap.querySelector<HTMLElement>('[data-flow-screen="1"]');
-    const screen2 = wrap.querySelector<HTMLElement>('[data-flow-screen="2"]');
-    const phase1 = wrap.querySelector<HTMLElement>('[data-flow-phase="1"]');
-    const phase2 = wrap.querySelector<HTMLElement>('[data-flow-phase="2"]');
-    const progressBars = wrap.querySelectorAll<HTMLElement>('[data-progress-bar]');
-    const progressDots = wrap.querySelectorAll<HTMLElement>('[data-progress-dot]');
+    const screens = Array.from(wrap.querySelectorAll<HTMLElement>('[data-flow-screen]'));
+    const phases = Array.from(wrap.querySelectorAll<HTMLElement>('[data-flow-phase]'));
+    const progressBars = Array.from(wrap.querySelectorAll<HTMLElement>('[data-progress-bar]'));
+    const progressDots = Array.from(wrap.querySelectorAll<HTMLElement>('[data-progress-dot]'));
+
+    const N = Math.min(screens.length, phases.length);
+    if (N < 2) return; // rien à animer si une seule phase
+
+    const pinScrollPercent = N * 100; // 100% par phase
+    const transitions = N - 1;
+    const ACCENT_ACTIVE = '#1B4332';
 
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: wrap,
         start: 'top top',
-        end: '+=200%',
+        end: `+=${pinScrollPercent}%`,
         pin: true,
         scrub: 0.8,
         anticipatePin: 1,
@@ -132,12 +141,19 @@ function initPhoneShowcase() {
       },
     });
 
-    if (screen1) tl.to(screen1, { opacity: 0, scale: 0.96, duration: 0.10 }, 0.50);
-    if (phase1) tl.to(phase1, { opacity: 0, y: -20, duration: 0.10 }, 0.50);
-    if (screen2) tl.to(screen2, { opacity: 1, scale: 1, duration: 0.10 }, 0.55);
-    if (phase2) tl.to(phase2, { opacity: 1, y: 0, duration: 0.10 }, 0.55);
-    if (progressBars[0]) tl.to(progressBars[0], { width: '100%', duration: 0.08, ease: 'none' }, 0.50);
-    if (progressDots[1]) tl.to(progressDots[1], { backgroundColor: '#1B4332', duration: 0.05 }, 0.55);
+    // Boucle : pour chaque transition i, fade-out de la phase i, fade-in i+1
+    for (let i = 0; i < transitions; i++) {
+      const pos = (i + 1) / N; // 0.25, 0.50, 0.75 pour 4 phases
+      const tweenOut = pos - 0.02;
+      const tweenIn = pos + 0.02;
+
+      if (screens[i]) tl.to(screens[i], { opacity: 0, scale: 0.96, duration: 0.05 }, tweenOut);
+      if (phases[i]) tl.to(phases[i], { opacity: 0, y: -20, duration: 0.05 }, tweenOut);
+      if (screens[i + 1]) tl.to(screens[i + 1], { opacity: 1, scale: 1, duration: 0.05 }, tweenIn);
+      if (phases[i + 1]) tl.to(phases[i + 1], { opacity: 1, y: 0, duration: 0.05 }, tweenIn);
+      if (progressBars[i]) tl.to(progressBars[i], { width: '100%', duration: 0.04, ease: 'none' }, tweenOut);
+      if (progressDots[i + 1]) tl.to(progressDots[i + 1], { backgroundColor: ACCENT_ACTIVE, duration: 0.03 }, tweenIn);
+    }
 
     return () => tl.kill();
   });
