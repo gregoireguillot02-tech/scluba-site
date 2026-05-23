@@ -225,16 +225,13 @@ const phases = [
     background: #F4EEDD;
   }
 
-  /* Wrapper div pour chaque screen : isole le centrage (flex) de l'animation
-     GSAP (scale + opacity). Sans wrapper, GSAP scale écrasait le
-     translateX(-50%) du centrage CSS, faisant déborder le screenshot
-     hors du téléphone. */
+  /* Wrapper div pour chaque screen : isole l'animation GSAP (scale + opacity
+     sur le wrapper) du centrage CSS de l'img (translateX(-50%) propre, jamais
+     touché par GSAP). Wrap a overflow:hidden pour clipper le screen img qui
+     déborde latéralement (aspect screenshot 0.564 vs mask 0.488). */
   .showcase-phone-screen-wrap {
     position: absolute;
     inset: 0;
-    display: flex;
-    justify-content: center;
-    align-items: stretch;
     overflow: hidden;
     will-change: opacity, transform;
   }
@@ -245,14 +242,18 @@ const phases = [
     transform: scale(1.02);
   }
 
-  /* Screen img : pas de positionnement absolu, flex parent centre.
-     height 100% + width auto preserve l'aspect ratio. */
+  /* Screen img : absolute centré dans le wrap via left:50% + translateX(-50%).
+     Le transform est dédié uniquement au centrage — GSAP n'anime que le
+     parent wrap, donc cette transform n'est jamais écrasée. */
   .showcase-phone-screen-img {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
     height: 100%;
     width: auto;
     display: block;
     max-width: none; /* override global img max-width */
-    flex-shrink: 0;
   }
 
   /* Frame iPhone Pro orange par-dessus */
