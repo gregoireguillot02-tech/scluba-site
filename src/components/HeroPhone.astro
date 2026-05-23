@@ -10,88 +10,19 @@ const { animate = true } = Astro.props;
 ---
 
 <div class={`hero-phone-stage${animate ? '' : ' no-anim'}`} {...animate ? { 'data-anim': 'hero-phone' } : {}} aria-hidden="true">
-  <div class="hero-phone">
-    <span class="hero-phone-btn hero-phone-btn-action"></span>
-    <span class="hero-phone-btn hero-phone-btn-volup"></span>
-    <span class="hero-phone-btn hero-phone-btn-voldown"></span>
-    <span class="hero-phone-btn hero-phone-btn-side"></span>
-
-    <div class="hero-phone-screen">
-      <div class="hero-phone-island">
-        <span class="hero-phone-camera"></span>
-      </div>
-
-      <div class="hero-card hero-card-start">
-        <div class="hero-card-photo">
-          <img src="/photos/golf-du-soleil.jpg" alt="" width="280" height="180" loading="eager" decoding="async" fetchpriority="high" />
-        </div>
-
-        <div class="hero-card-logo-wrap">
-          <img src="/logos/golf-du-soleil.svg" alt="" class="hero-card-logo" width="60" height="60" loading="eager" decoding="async" />
-        </div>
-
-        <div class="hero-card-identity">
-          <span class="hero-card-city">HAUTS-DE-FRANCE</span>
-          <h3 class="hero-card-name">GOLF DU SOLEIL</h3>
-          <span class="hero-card-rule" aria-hidden="true"></span>
-        </div>
-
-        <div class="hero-card-stats">
-          <div class="hero-card-stat">
-            <span class="hero-card-stat-label">TROUS</span>
-            <span class="hero-card-stat-value">18</span>
-          </div>
-          <div class="hero-card-stat">
-            <span class="hero-card-stat-label">PAR</span>
-            <span class="hero-card-stat-value">72</span>
-          </div>
-          <div class="hero-card-stat">
-            <span class="hero-card-stat-label">DÉPART</span>
-            <span class="hero-card-stat-value">Libre</span>
-          </div>
-        </div>
-
-        <div class="hero-card-action">
-          <span class="hero-card-eyebrow">SCORECARD DIGITALE</span>
-          <h4 class="hero-card-title">Démarrer une partie</h4>
-
-          <div class="hero-card-tabs" aria-hidden="true">
-            <span class="hero-card-tab is-active">En solo</span>
-            <span class="hero-card-tab">À plusieurs</span>
-          </div>
-
-          <div class="hero-card-field">
-            <label>TON PRÉNOM</label>
-            <div class="hero-card-input">
-              <span class="hero-card-input-placeholder">Antoine</span>
-              <span class="hero-card-input-caret"></span>
-            </div>
-          </div>
-
-          <div class="hero-card-field">
-            <label>QUEL PARCOURS ?</label>
-            <div class="hero-card-radio-group" role="group">
-              <label class="hero-card-radio is-active">
-                <span class="hero-card-radio-dot" aria-hidden="true"></span>
-                <span class="hero-card-radio-label">18 trous · Les Pins</span>
-              </label>
-              <label class="hero-card-radio">
-                <span class="hero-card-radio-dot" aria-hidden="true"></span>
-                <span class="hero-card-radio-label">9 trous · L'Académie</span>
-              </label>
-            </div>
-          </div>
-
-          <button class="hero-card-cta" type="button" tabindex="-1" aria-hidden="true">
-            Démarrer la partie
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M5 12h14"/>
-              <path d="m12 5 7 7-7 7"/>
-            </svg>
-          </button>
-        </div>
-      </div>
+  <div class="hero-phone-img">
+    <div class="hero-phone-screen-mask">
+      <img class="hero-phone-screen-img"
+           src="/photos/phone-screen-start.png"
+           alt=""
+           width="982" height="1900"
+           loading="eager" decoding="async" fetchpriority="high" />
     </div>
+    <img class="hero-phone-frame-img"
+         src="/photos/phone-frame.png"
+         alt=""
+         width="420" height="861"
+         loading="eager" decoding="async" fetchpriority="high" />
   </div>
 </div>
 
@@ -100,8 +31,14 @@ const { animate = true } = Astro.props;
     position: relative;
     display: inline-block;
     line-height: 0;
+    /* drop shadow appliquée ici, pas dans le PNG — cohérence avec le design system */
+    filter:
+      drop-shadow(0 18px 36px rgba(70, 50, 30, 0.28))
+      drop-shadow(0 36px 80px rgba(70, 50, 30, 0.18));
+    will-change: transform;
   }
 
+  /* Animation scroll-driven d'entrée (optionnelle, désactivable via prop animate=false) */
   @media (prefers-reduced-motion: no-preference) {
     @supports (animation-timeline: view()) {
       .hero-phone-stage:not(.no-anim) {
@@ -116,384 +53,53 @@ const { animate = true } = Astro.props;
     }
   }
 
-  .hero-phone {
+  /* Container = frame image aspect ratio (420 × 861) */
+  .hero-phone-img {
     position: relative;
-    height: min(75vh, 680px);
-    aspect-ratio: 9 / 19.5;
-    width: auto;
-    background:
-      linear-gradient(135deg,
-        #6E6E72 0%,
-        #48484A 22%,
-        #2C2C2E 50%,
-        #48484A 78%,
-        #6E6E72 100%);
-    border-radius: 56px;
-    padding: 12px;
-    box-shadow:
-      0 24px 48px rgba(0, 0, 0, 0.40),
-      0 48px 96px rgba(0, 0, 0, 0.30),
-      inset 0 1px 0 rgba(255, 255, 255, 0.22),
-      0 0 0 1.5px rgba(0, 0, 0, 0.70);
-    will-change: transform;
+    width: clamp(240px, 30vw, 320px);
+    aspect-ratio: 420 / 861;
+  }
+
+  /* Screen mask : positionné légèrement en retrait du frame extérieur,
+     coins arrondis pour matcher la dalle iPhone Pro. Le screenshot vit
+     dedans et déborde latéralement (caché par overflow). */
+  .hero-phone-screen-mask {
+    position: absolute;
+    inset: 1.6% 1.4%;
+    border-radius: 11.5% / 5.6%;
+    overflow: hidden;
     z-index: 1;
-  }
-  .hero-phone::before {
-    content: "";
-    position: absolute;
-    inset: 8px;
-    border-radius: 50px;
-    pointer-events: none;
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.10);
-    z-index: 2;
-  }
-  .hero-phone::after {
-    content: "";
-    position: absolute;
-    inset: 12px;
-    border-radius: 44px;
-    pointer-events: none;
-    background: linear-gradient(
-      138deg,
-      rgba(255, 255, 255, 0.10) 0%,
-      rgba(255, 255, 255, 0) 35%,
-      rgba(255, 255, 255, 0) 75%,
-      rgba(255, 255, 255, 0.04) 100%
-    );
-    z-index: 4;
-    mix-blend-mode: screen;
+    background: #F4EEDD; /* fallback couleur app si l'image met du temps à charger */
   }
 
-  .hero-phone-btn {
+  /* Screenshot : on remplit la hauteur du masque, la largeur s'auto-déborde
+     latéralement et est masquée par overflow. La status bar iOS du top est
+     couverte par la dynamic island du frame qui passe au-dessus (z-index 2). */
+  .hero-phone-screen-img {
     position: absolute;
-    background: linear-gradient(180deg, #5C5C5E 0%, #2C2C2E 50%, #5C5C5E 100%);
-    border-radius: 1.5px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
-  }
-  .hero-phone-btn-action {
-    left: -2px; top: 84px; width: 4px; height: 26px;
-    background: linear-gradient(180deg, #C9A96A 0%, #8B7344 50%, #C9A96A 100%);
-  }
-  .hero-phone-btn-volup { left: -2px; top: 122px; width: 4px; height: 48px; }
-  .hero-phone-btn-voldown { left: -2px; top: 180px; width: 4px; height: 48px; }
-  .hero-phone-btn-side { right: -2px; top: 122px; width: 4px; height: 76px; }
-
-  .hero-phone-screen {
-    --primary: #1B4332;
-    --primary-soft: #2D6A4F;
-    --primary-deep: #0F2A1E;
-    --primary-bg: rgba(212, 165, 116, 0.10);
-    --accent: #D4A574;
-    --accent-soft: rgba(212, 165, 116, 0.16);
-    --accent-bright: #E8C089;
-    --ink: #1B4332;
-    --ink-soft: #2D6A4F;
-    --bg: #F4EEDD;
-    --muted: #7A7A7A;
-    --line: rgba(27, 67, 50, 0.14);
-
-    position: relative;
-    width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, #F4EEDD 0%, #E8DEC5 100%);
-    border-radius: 44px;
-    overflow: hidden;
-  }
-  .hero-phone-screen::before {
-    content: "";
-    position: absolute;
-    top: 6px;
+    width: auto;
+    top: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 12%;
-    max-width: 50px;
-    height: 2px;
-    border-radius: 1px;
-    background: rgba(0, 0, 0, 0.18);
-    z-index: 4;
+    display: block;
   }
-  .hero-phone-island {
+
+  /* Frame iPhone par-dessus : transparente au centre, opaque sur les
+     contours + dynamic island + boutons */
+  .hero-phone-frame-img {
     position: absolute;
-    top: 11px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 32%;
-    max-width: 124px;
-    min-width: 96px;
-    height: 30px;
-    background: #000;
-    border-radius: 18px;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-right: 8px;
-  }
-  .hero-phone-camera {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, #2a3a40, #050a0c);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
-  }
-
-  .hero-card {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-  .hero-card-photo {
-    position: relative;
-    height: 130px;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
-  .hero-card-photo img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center 50%;
-  }
-
-  .hero-card-logo-wrap {
-    width: 64px;
-    height: 64px;
-    margin: -32px auto 0;
-    border-radius: 50%;
-    background: var(--bg);
-    border: 2px solid var(--accent);
-    padding: 4px;
-    position: relative;
-    z-index: 2;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-  .hero-card-logo {
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: contain;
+    pointer-events: none;
+    z-index: 2;
     display: block;
   }
 
-  .hero-card-identity {
-    text-align: center;
-    padding: 6px 16px 0;
-  }
-  .hero-card-city {
-    display: block;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 0.22em;
-    color: var(--accent);
-    font-weight: 500;
-    margin-bottom: 4px;
-  }
-  .hero-card-name {
-    font-family: var(--font-display);
-    font-size: 15px;
-    font-weight: 900;
-    letter-spacing: -0.015em;
-    color: var(--primary);
-    margin: 0 0 4px;
-    text-transform: uppercase;
-    line-height: 1.1;
-  }
-  .hero-card-rule {
-    display: block;
-    width: 36px;
-    height: 1px;
-    background: var(--accent);
-    margin: 0 auto;
-    opacity: 0.5;
-  }
-
-  .hero-card-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 6px;
-    padding: 8px 10px;
-    margin: 10px 12px 0;
-    background: rgba(255, 255, 255, 0.45);
-    border-radius: 6px;
-  }
-  .hero-card-stat {
-    text-align: center;
-  }
-  .hero-card-stat-label {
-    display: block;
-    font-family: var(--font-mono);
-    font-size: 8px;
-    letter-spacing: 0.18em;
-    color: var(--accent);
-    margin-bottom: 2px;
-    font-weight: 500;
-  }
-  .hero-card-stat-value {
-    display: block;
-    font-family: var(--font-display);
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--primary);
-    letter-spacing: -0.02em;
-  }
-
-  .hero-card-action {
-    padding: 10px 16px 14px;
-    text-align: center;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-  .hero-card-eyebrow {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 0.22em;
-    color: var(--accent);
-    font-weight: 500;
-    display: block;
-    margin-bottom: 4px;
-  }
-  .hero-card-title {
-    font-family: var(--font-display);
-    font-size: 16px;
-    font-weight: 800;
-    color: var(--primary);
-    margin: 0 0 10px;
-    letter-spacing: -0.02em;
-    line-height: 1.15;
-  }
-
-  .hero-card-tabs {
-    display: inline-flex;
-    background: rgba(255, 255, 255, 0.45);
-    border-radius: 16px;
-    padding: 3px;
-    margin: 0 auto 12px;
-    border: 1px solid var(--line);
-  }
-  .hero-card-tab {
-    padding: 4px 12px;
-    border-radius: 14px;
-    font-size: 10.5px;
-    font-weight: 600;
-    color: var(--muted);
-  }
-  .hero-card-tab.is-active {
-    background: var(--bg);
-    color: var(--primary);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  }
-
-  .hero-card-field {
-    text-align: left;
-    margin-bottom: 12px;
-  }
-  .hero-card-field label {
-    display: block;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 0.18em;
-    color: var(--accent);
-    margin-bottom: 4px;
-    font-weight: 500;
-  }
-  .hero-card-input {
-    background: rgba(255, 255, 255, 0.45);
-    border: 1.5px solid var(--accent);
-    border-radius: 6px;
-    padding: 8px 10px;
-    font-size: 12px;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .hero-card-input-placeholder {
-    color: var(--muted);
-    flex: 1;
-  }
-  .hero-card-input-caret {
-    display: inline-block;
-    width: 1.5px;
-    height: 14px;
-    background: var(--accent);
-    animation: heroCaretBlink 1s infinite;
-  }
-  @keyframes heroCaretBlink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
-  }
-
-  .hero-card-radio-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .hero-card-radio {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
-    background: rgba(255, 255, 255, 0.35);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    font-size: 12.5px;
-    color: var(--ink);
-    cursor: default;
-  }
-  .hero-card-radio.is-active {
-    background: var(--accent-soft);
-    border-color: var(--accent);
-  }
-  .hero-card-radio-dot {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    border: 1.5px solid var(--line);
-    flex-shrink: 0;
-    position: relative;
-  }
-  .hero-card-radio.is-active .hero-card-radio-dot {
-    border-color: var(--accent);
-  }
-  .hero-card-radio.is-active .hero-card-radio-dot::after {
-    content: "";
-    position: absolute;
-    inset: 3px;
-    border-radius: 50%;
-    background: var(--accent);
-  }
-  .hero-card-radio-label {
-    flex: 1;
-  }
-
-  .hero-card-cta {
-    margin-top: auto;
-    width: 100%;
-    padding: 11px;
-    background: var(--primary);
-    color: var(--bg);
-    border: none;
-    border-radius: 8px;
-    font-family: var(--font-display);
-    font-size: 12px;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    cursor: default;
-    letter-spacing: -0.01em;
-  }
-  .hero-card-cta svg {
-    display: inline-block;
-  }
-
-  /* HeroSplit-specific size override : phone un poil plus petit pour cohabiter
-     avec la carte papier au-dessus dans la colonne visuelle. */
-  :global(.hero-split) .hero-phone {
-    height: min(58vh, 540px);
+  /* HeroSplit-specific size override : un poil plus compact dans le hero */
+  :global(.hero-split) .hero-phone-img {
+    width: clamp(220px, 28vw, 300px);
   }
 </style>
