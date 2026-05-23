@@ -61,17 +61,20 @@ const phases = [
         </div>
       </div>
 
-      <!-- Phone droite : pattern HeroPhone (mask + frame img) avec 4 screens stackés -->
+      <!-- Phone droite : pattern HeroPhone (mask + frame img) avec 4 screens stackés.
+           Chaque screen est wrappé dans un div pour isoler le centrage (flex)
+           de l'animation GSAP (scale + opacity sur le wrapper). -->
       <div class="showcase-stage" aria-hidden="true">
         <div class="showcase-phone-stage" data-flow-phone>
           <div class="showcase-phone-img">
             <div class="showcase-phone-screen-mask">
               {phases.map((p) => (
-                <img class="showcase-phone-screen-img"
-                     data-flow-screen={p.num}
-                     src={p.img}
-                     alt=""
-                     loading="eager" decoding="async" fetchpriority={p.num === 1 ? 'high' : 'auto'} />
+                <div class="showcase-phone-screen-wrap" data-flow-screen={p.num}>
+                  <img class="showcase-phone-screen-img"
+                       src={p.img}
+                       alt=""
+                       loading="eager" decoding="async" fetchpriority={p.num === 1 ? 'high' : 'auto'} />
+                </div>
               ))}
             </div>
             <img class="showcase-phone-frame-img"
@@ -202,11 +205,14 @@ const phases = [
   }
 
   /* Container = aspect ratio frame. Phone large pour bien voir le contenu
-     app (retour Grégoire 2026-05-23 : "voir le tel en grand"). */
+     app (retour Grégoire 2026-05-23 : "voir le tel en grand") mais doit
+     tenir dans la colonne grille à toutes les tailles d'écran. */
   .showcase-phone-img {
     position: relative;
-    width: clamp(340px, 46vw, 560px);
+    width: 100%;
+    max-width: clamp(320px, 40vw, 480px);
     aspect-ratio: 420 / 861;
+    margin: 0 auto;
   }
 
   /* Screen mask : pattern HeroPhone — inset 1.6%/1.4% + border-radius adaptée */
@@ -219,24 +225,34 @@ const phases = [
     background: #F4EEDD;
   }
 
-  /* 4 screens empilés à la même position. Init : screen 1 visible (opacity 1),
-     2/3/4 invisibles (opacity 0, scale 1.02). Anim GSAP les fait apparaître
-     séquentiellement au scroll. */
-  .showcase-phone-screen-img {
+  /* Wrapper div pour chaque screen : isole le centrage (flex) de l'animation
+     GSAP (scale + opacity). Sans wrapper, GSAP scale écrasait le
+     translateX(-50%) du centrage CSS, faisant déborder le screenshot
+     hors du téléphone. */
+  .showcase-phone-screen-wrap {
     position: absolute;
-    height: 100%;
-    width: auto;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    display: block;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    overflow: hidden;
     will-change: opacity, transform;
   }
-  .showcase-phone-screen-img[data-flow-screen="2"],
-  .showcase-phone-screen-img[data-flow-screen="3"],
-  .showcase-phone-screen-img[data-flow-screen="4"] {
+  .showcase-phone-screen-wrap[data-flow-screen="2"],
+  .showcase-phone-screen-wrap[data-flow-screen="3"],
+  .showcase-phone-screen-wrap[data-flow-screen="4"] {
     opacity: 0;
-    transform: translateX(-50%) scale(1.02);
+    transform: scale(1.02);
+  }
+
+  /* Screen img : pas de positionnement absolu, flex parent centre.
+     height 100% + width auto preserve l'aspect ratio. */
+  .showcase-phone-screen-img {
+    height: 100%;
+    width: auto;
+    display: block;
+    max-width: none; /* override global img max-width */
+    flex-shrink: 0;
   }
 
   /* Frame iPhone Pro orange par-dessus */
@@ -275,21 +291,21 @@ const phases = [
 
     .showcase-stage { padding: var(--space-4) 0 0; }
     .showcase-phone-img {
-      width: min(82vw, 360px);
+      max-width: min(82vw, 360px);
     }
     /* En mobile on garde seulement le screen 1 (scoring) visible — les autres
        sont expliqués par les narrative blocks empilés en texte. Évite de
        cloner 4 phones. */
-    .showcase-phone-screen-img[data-flow-screen="2"],
-    .showcase-phone-screen-img[data-flow-screen="3"],
-    .showcase-phone-screen-img[data-flow-screen="4"] {
+    .showcase-phone-screen-wrap[data-flow-screen="2"],
+    .showcase-phone-screen-wrap[data-flow-screen="3"],
+    .showcase-phone-screen-wrap[data-flow-screen="4"] {
       display: none;
     }
   }
 
   /* Reduce motion : pas d'anim, montre screen 1 + narrative 1 */
   @media (prefers-reduced-motion: reduce) {
-    .showcase-phone-screen-img,
+    .showcase-phone-screen-wrap,
     .narrative-block {
       transition: none !important;
     }
