@@ -21,6 +21,7 @@
     "ctaSecondary": "Voir une démo 10 min",
     "beforeLabel": "Aujourd'hui",
     "afterLabel": "Avec Scluba",
+    "dragHint": "Glissez pour comparer",
     "scroll": "Découvrez le concept"
   },
   "problem": {
