@@ -206,13 +206,14 @@ const phases = [
 
   /* Container = aspect ratio frame. Phone large pour bien voir le contenu
      app (retour Grégoire 2026-05-23 : "voir le tel en grand") mais doit
-     tenir dans la colonne grille à toutes les tailles d'écran. */
+     tenir dans la colonne grille à toutes les tailles d'écran.
+     Note : width direct en clamp() (pas width:100%+max-width:clamp) parce
+     que le parent .showcase-phone-stage est inline-block, ce qui crée
+     une dépendance circulaire avec width:%. */
   .showcase-phone-img {
     position: relative;
-    width: 100%;
-    max-width: clamp(320px, 40vw, 480px);
+    width: clamp(320px, 40vw, 480px);
     aspect-ratio: 420 / 861;
-    margin: 0 auto;
   }
 
   /* Screen mask : pattern HeroPhone — inset 1.6%/1.4% + border-radius adaptée */
@@ -292,7 +293,7 @@ const phases = [
 
     .showcase-stage { padding: var(--space-4) 0 0; }
     .showcase-phone-img {
-      max-width: min(82vw, 360px);
+      width: min(82vw, 360px);
     }
     /* En mobile on garde seulement le screen 1 (scoring) visible — les autres
        sont expliqués par les narrative blocks empilés en texte. Évite de
