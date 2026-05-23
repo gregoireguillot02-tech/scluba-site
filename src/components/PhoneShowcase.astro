@@ -204,15 +204,16 @@ const phases = [
       drop-shadow(0 44px 96px rgba(70, 50, 30, 0.20));
   }
 
-  /* Container = aspect ratio frame. Phone large pour bien voir le contenu
-     app (retour Grégoire 2026-05-23 : "voir le tel en grand") mais doit
-     tenir dans la colonne grille à toutes les tailles d'écran.
-     Note : width direct en clamp() (pas width:100%+max-width:clamp) parce
-     que le parent .showcase-phone-stage est inline-block, ce qui crée
-     une dépendance circulaire avec width:%. */
+  /* Container = aspect ratio frame. Sizing piloté par la HAUTEUR pour que
+     le tel rentre toujours dans le viewport (retour Grégoire 2026-05-23 :
+     "pas aussi zoomé, doit tenir sur la page entière"). aspect-ratio dérive
+     la largeur. Cap à 720px pour gros écrans, plancher à 540px pour
+     petits laptops.
+     Note : on évite width:%+max-width parce que le parent
+     .showcase-phone-stage est inline-block (dépendance circulaire). */
   .showcase-phone-img {
     position: relative;
-    width: clamp(320px, 40vw, 480px);
+    height: clamp(540px, 78vh, 720px);
     aspect-ratio: 420 / 861;
   }
 
@@ -293,7 +294,8 @@ const phases = [
 
     .showcase-stage { padding: var(--space-4) 0 0; }
     .showcase-phone-img {
-      width: min(82vw, 360px);
+      height: min(72vh, 640px);
+      width: auto;
     }
     /* En mobile on garde seulement le screen 1 (scoring) visible — les autres
        sont expliqués par les narrative blocks empilés en texte. Évite de
