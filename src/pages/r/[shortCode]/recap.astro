@@ -15,13 +15,9 @@ const { shortCode } = Astro.params;
 const sb = serviceClient();
 const isDebug = Astro.url.searchParams.get('_debug') === 'sponsor-recap-2026';
 
-// Séparé en 2 queries pour bypass un bug PostgREST où le join embed
-// `clubs(*)` retournait null silencieusement après l'ajout de nouvelles
-// colonnes (migration 0021 sponsors). Le LEFT JOIN SQL marche, l'embed
-// PostgREST échoue — peut-être schema cache miss côté relationships.
 const { data: roundRow, error: roundErr } = await sb
   .from('rounds')
-  .select('*')
+  .select('*, club:clubs(*)')
   .eq('short_code', shortCode)
   .maybeSingle();
 
@@ -119,18 +115,7 @@ if (!roundRow) {
   return new Response('Round not found', { status: 404 });
 }
 
-const { data: clubRow, error: clubErr } = await sb
-  .from('clubs')
-  .select('*')
-  .eq('id', roundRow.club_id)
-  .maybeSingle();
-
-if (clubErr || !clubRow) {
-  console.error('[recap] club lookup failed', { shortCode, clubId: roundRow.club_id, clubErr });
-  return new Response('Round not found', { status: 404 });
-}
-
-const r = { ...roundRow, club: clubRow } as Round & { club: Club };
+const r = roundRow as Round & { club: Club };
 
 const { data: roster } = await sb.from('round_players').select('id').eq('round_id', r.id);
 const playerIds = (roster ?? []).map((p) => p.id);
@@ -306,9 +291,6 @@ const sharePayload = JSON.stringify({
   playedPar: myTotal.playedPar,
   weather: r.weather,
   comment: me.comment,
-  // 4 sponsors max, déjà répartis L/R par le SSR. Le PNG les redessine
-  // dans le même ordre flanquant le score (cf. share-card.ts).
-  sponsors: allSponsors,
   leaderboard: isMultiplayer
     ? leaderboard.map((row) => ({
         display_name: row.display_name,
