@@ -141,9 +141,14 @@ export interface ComposeInput {
   // Commentaire libre saisi par le joueur (200 chars max). Affiché en
   // italique sous le classement / légende du PNG.
   comment?: string | null;
-  // 0..4 sponsors. Affichés flanquant le grand chiffre du score : moitié
-  // (arrondie sup.) à gauche, reste à droite — même répartition que le
-  // recap HTML pour cohérence visuelle.
+  // 0..4 sponsors (dérivés de input.club.sponsor_*_url côté caller).
+  // Affichés flanquant le grand chiffre du score : moitié (arrondie sup.) à
+  // gauche, reste à droite — même répartition que le recap HTML.
+  //
+  // Note : on lit `club.sponsor_*_url` directement plutôt qu'un champ
+  // `sponsors` séparé dans le payload, parce qu'avoir les URLs deux fois
+  // (dans `club` + dans `sponsors`) crashait la sérialisation HTML du
+  // data-payload sur la page recap.
   sponsors?: SponsorEntry[];
 }
 
@@ -578,7 +583,18 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   // les autres sont dessinées normalement.
   let photoImg: HTMLImageElement | null = null;
   let logoImg: HTMLImageElement | null = null;
-  const sponsorEntries = input.sponsors ?? [];
+  // Sponsors dérivés du club embed (pas un champ payload séparé — cf. note
+  // dans ComposeInput).
+  const sponsorEntries: SponsorEntry[] = input.sponsors ?? (() => {
+    const out: SponsorEntry[] = [];
+    for (const i of [1, 2, 3, 4] as const) {
+      const url = club[`sponsor_${i}_url` as const];
+      if (url) {
+        out.push({ url, link: club[`sponsor_${i}_link` as const] });
+      }
+    }
+    return out;
+  })();
   const sponsorImgs: (HTMLImageElement | null)[] = new Array(sponsorEntries.length).fill(null);
   await Promise.all([
     input.photoUrl

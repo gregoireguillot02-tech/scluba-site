@@ -359,25 +359,57 @@ const hasSponsors = allSponsors.length > 0;
       )}
     </ul>
 
-    <section class="score-block" aria-labelledby="score-title">
+    <section class="score-block" aria-labelledby="score-title" data-has-sponsors={hasSponsors ? 'true' : 'false'}>
       <p id="score-title" class="sr-only">
         Score final {myTotal.strokes}, {myTotal.diff >= 0 ? '+' : ''}{myTotal.diff} par rapport au par {myTotal.played === holesCount ? par : myTotal.playedPar}.
       </p>
-      <p class="score-eyebrow">Score · {formatLabel}</p>
-      <div class="score-value" data-card-score data-target={String(myTotal.strokes)}>{myTotal.strokes}</div>
-      <p class="score-meta">
-        <span class={`score-diff${myTotal.diff > 0 ? ' over' : myTotal.diff < 0 ? ' under' : ''}`}>
-          {myTotal.diff > 0 ? `+${myTotal.diff}` : myTotal.diff < 0 ? String(myTotal.diff) : '±0'}
-        </span>
-        <span class="score-sep" aria-hidden="true">·</span>
-        <span>Par {myTotal.played === holesCount ? par : myTotal.playedPar}</span>
-        {myTotal.played < holesCount && (
-          <>
-            <span class="score-sep" aria-hidden="true">·</span>
-            <span>{myTotal.played}/{holesCount} trous</span>
-          </>
+      <div class="score-with-sponsors">
+        {hasSponsors && (
+          <div class="sponsor-flank sponsor-flank-left" aria-label="Sponsors">
+            {leftSponsors.map((s) => (
+              <a
+                class="sponsor-tile"
+                href={s.link ?? undefined}
+                target={s.link ? '_blank' : undefined}
+                rel={s.link ? 'noopener noreferrer sponsored' : undefined}
+              >
+                <img src={s.url} alt="" loading="lazy" decoding="async" />
+              </a>
+            ))}
+          </div>
         )}
-      </p>
+        <div class="score-core">
+          <p class="score-eyebrow">Score · {formatLabel}</p>
+          <div class="score-value" data-card-score data-target={String(myTotal.strokes)}>{myTotal.strokes}</div>
+          <p class="score-meta">
+            <span class={`score-diff${myTotal.diff > 0 ? ' over' : myTotal.diff < 0 ? ' under' : ''}`}>
+              {myTotal.diff > 0 ? `+${myTotal.diff}` : myTotal.diff < 0 ? String(myTotal.diff) : '±0'}
+            </span>
+            <span class="score-sep" aria-hidden="true">·</span>
+            <span>Par {myTotal.played === holesCount ? par : myTotal.playedPar}</span>
+            {myTotal.played < holesCount && (
+              <>
+                <span class="score-sep" aria-hidden="true">·</span>
+                <span>{myTotal.played}/{holesCount} trous</span>
+              </>
+            )}
+          </p>
+        </div>
+        {hasSponsors && (
+          <div class="sponsor-flank sponsor-flank-right" aria-label="Sponsors">
+            {rightSponsors.map((s) => (
+              <a
+                class="sponsor-tile"
+                href={s.link ?? undefined}
+                target={s.link ? '_blank' : undefined}
+                rel={s.link ? 'noopener noreferrer sponsored' : undefined}
+              >
+                <img src={s.url} alt="" loading="lazy" decoding="async" />
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
       {myTotal.pickedUp > 0 && (
         <p class="score-note">
           {myTotal.pickedUp === 1 ? '1 trou abandonné' : `${myTotal.pickedUp} trous abandonnés`} : +{myTotal.pickedUp * 2} coup{myTotal.pickedUp * 2 > 1 ? 's' : ''} ajouté{myTotal.pickedUp * 2 > 1 ? 's' : ''} (Par + 2 chacun, règle Maximum Score)
