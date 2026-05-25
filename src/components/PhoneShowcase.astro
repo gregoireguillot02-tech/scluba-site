@@ -244,18 +244,19 @@ const phases = [
     transform: scale(1.02);
   }
 
-  /* Screen img : fit-par-largeur centré dans le wrap (avant : fit-par-hauteur
-     clippait les bords car aspect screenshot 0.564 > aspect mask 0.488).
-     Avec width:100% l'image entière est visible, espace cream en haut/bas
-     (~6.7% chaque côté). Transform dédié au centrage — GSAP anime le
-     parent wrap, donc cette transform n'est jamais écrasée. */
+  /* Screen img : fit-par-hauteur centré pour remplir tout le mask (sinon
+     bande cream visible en bas car aspect screenshot 0.564 > aspect mask
+     0.488 → image plus courte que mask en fit-par-largeur). Les bords
+     latéraux sont clippés (~8% chaque côté) par le wrap overflow:hidden.
+     Transform dédié au centrage — GSAP anime le parent wrap, donc cette
+     transform n'est jamais écrasée. */
   .showcase-phone-screen-img {
     position: absolute;
-    top: 50%;
+    top: 0;
     left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    height: auto;
+    transform: translateX(-50%);
+    height: 100%;
+    width: auto;
     display: block;
     max-width: none; /* override global img max-width */
   }
