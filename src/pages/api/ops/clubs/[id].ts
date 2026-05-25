@@ -35,7 +35,7 @@ function parseCourseData(form: FormData, holeCount: number): CourseHole[] | null
   const holes: CourseHole[] = [];
   for (let n = 1; n <= holeCount; n++) {
     const par = Number(form.get(`par_${n}`) ?? '');
-    if (!Number.isFinite(par) || par < 3 || par > 6) return null;
+    if (!Number.isFinite(par) || par < 2 || par > 6) return null;
     holes.push({ number: n, par });
   }
   return holes;

@@ -223,7 +223,7 @@ function fmtRelative(iso: string | null): string {
                             type="number"
                             name={`par_${h.number}`}
                             value={h.par}
-                            min="3"
+                            min="2"
                             max="6"
                             required
                           />
@@ -250,7 +250,7 @@ function fmtRelative(iso: string | null): string {
                   </select>
                 </label>
               </div>
-              <p class="ops-hint" style="margin:8px 0">Pars entre 3 et 6 par trou.</p>
+              <p class="ops-hint" style="margin:8px 0">Pars entre 2 et 6 par trou.</p>
               <div
                 class="course-grid"
                 data-course-grid
@@ -405,7 +405,7 @@ function fmtRelative(iso: string | null): string {
         input.className = 'course-cell-input';
         input.type = 'number';
         input.name = 'par_' + n;
-        input.min = '3';
+        input.min = '2';
         input.max = '6';
         input.required = true;
         input.value = String(parsByNumber.get(n) ?? 4);

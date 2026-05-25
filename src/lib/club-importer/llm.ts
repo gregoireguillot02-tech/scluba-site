@@ -52,7 +52,7 @@ const TOOL_INPUT_SCHEMA = {
               type: 'object',
               properties: {
                 number: { type: 'integer', minimum: 1, maximum: 18 },
-                par: { type: ['integer', 'null'], minimum: 3, maximum: 6 },
+                par: { type: ['integer', 'null'], minimum: 2, maximum: 6 },
               },
               required: ['number', 'par'],
             },
@@ -122,7 +122,7 @@ const ExtractedClubDataSchema = z.object({
                 number: z.number().int().min(1).max(18),
                 par: z.preprocess(
                   (v) => v ?? null,
-                  z.number().int().min(3).max(6).nullable(),
+                  z.number().int().min(2).max(6).nullable(),
                 ),
               }),
             )
