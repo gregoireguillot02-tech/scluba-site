@@ -17,7 +17,7 @@ const HEX = /^#[0-9A-Fa-f]{6}$/;
 
 const holeSchema = z.object({
   number: z.coerce.number().int().min(1).max(18),
-  par: z.coerce.number().int().min(3).max(6),
+  par: z.coerce.number().int().min(2).max(6),
 });
 
 const loopSchema = z.object({
