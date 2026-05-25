@@ -189,7 +189,7 @@ const sharePayload = JSON.stringify({
   // "−1 / Par 71" pour le parcours complet).
   playedPar: myTotal.playedPar,
   weather: r.weather,
-  comment: r.comment,
+  comment: me.comment,
   leaderboard: isMultiplayer
     ? leaderboard.map((row) => ({
         display_name: row.display_name,
@@ -297,9 +297,9 @@ const clubColor = r.club.primary_color ?? '#1B4332';
           rows="2"
           placeholder="Soleil, terrain gras, partie de fou…"
           data-comment-input
-        >{r.comment ?? ''}</textarea>
+        >{me.comment ?? ''}</textarea>
         <div class="comment-actions">
-          <span class="comment-count" data-comment-count>{r.comment?.length ?? 0}/200</span>
+          <span class="comment-count" data-comment-count>{me.comment?.length ?? 0}/200</span>
           <button type="submit" class="comment-btn" data-comment-btn>Enregistrer</button>
         </div>
         <p class="comment-status" data-comment-status></p>

@@ -99,6 +99,9 @@ export interface RoundPlayer {
   // not-null = a player device has scanned the QR and selected this name (or
   // self-added). Start gating requires every row to have claimed_at set.
   claimed_at: string | null;
+  // Commentaire libre saisi par CE joueur sur sa carte recap (200 chars max).
+  // Migré depuis rounds.comment en 0020 — chaque joueur a désormais le sien.
+  comment: string | null;
 }
 
 export interface Score {
