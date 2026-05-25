@@ -20,6 +20,23 @@ function parseHexColor(input: string | null): string | null {
   return v;
 }
 
+// Sponsor link saisi dans le dashboard club. Empty string → null (slot sans
+// lien, image affichée non-cliquable). Validation : URL absolue http(s) seulement,
+// pas de javascript: ni data: pour éviter l'XSS sur la page recap publique.
+function parseSponsorLink(value: FormDataEntryValue | null): string | null {
+  if (value == null) return null;
+  const raw = String(value).trim();
+  if (raw === '') return null;
+  if (raw.length > 500) return null;
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
 function parseHoleCount(form: FormData, fallback: number): number | null {
   const raw = form.get('hole_count');
   if (raw == null || String(raw).trim() === '') {
@@ -62,6 +79,25 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
       return new Response('Delete failed', { status: 500 });
     }
     return redirect('/ops/clubs', 302);
+  }
+
+  // Vider un slot sponsor (image + lien). Le fichier dans Supabase Storage
+  // n'est pas purgé activement — pas critique : le bucket est versionné par
+  // timestamp et l'URL n'est plus exposée nulle part une fois la colonne null.
+  if (action === 'delete-sponsor') {
+    const idx = Number(form.get('index'));
+    if (![1, 2, 3, 4].includes(idx)) {
+      return new Response('Sponsor index must be 1..4', { status: 400 });
+    }
+    const { error } = await sb.from('clubs').update({
+      [`sponsor_${idx}_url`]: null,
+      [`sponsor_${idx}_link`]: null,
+    }).eq('id', id);
+    if (error) {
+      console.error('[api/ops/clubs/[id]] delete-sponsor failed', error);
+      return new Response('Delete sponsor failed', { status: 500 });
+    }
+    return redirect(`/ops/clubs/${id}/edit?ok=1`, 302);
   }
 
   const name = String(form.get('name') ?? '').trim().slice(0, 255);
@@ -111,6 +147,10 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
     city: nullable(form.get('city'), 120),
     primary_color: primaryColor,
     course_data: courseData,
+    sponsor_1_link: parseSponsorLink(form.get('sponsor_1_link')),
+    sponsor_2_link: parseSponsorLink(form.get('sponsor_2_link')),
+    sponsor_3_link: parseSponsorLink(form.get('sponsor_3_link')),
+    sponsor_4_link: parseSponsorLink(form.get('sponsor_4_link')),
   };
 
   const { error } = await sb.from('clubs').update(updates).eq('id', id);

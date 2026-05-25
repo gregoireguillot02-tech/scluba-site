@@ -166,7 +166,7 @@ function fmtRelative(iso: string | null): string {
       <!-- Identity & color -->
       <div class="ops-card">
         <h2>Identité du club</h2>
-        <form method="POST" action={`/api/ops/clubs/${c.id}`} class="identity-form">
+        <form method="POST" action={`/api/ops/clubs/${c.id}`} class="identity-form" id="identity-form">
           <input type="hidden" name="action" value="update" />
 
           <div class="form-grid">
@@ -327,6 +327,79 @@ function fmtRelative(iso: string | null): string {
           <span class="ops-hint">JPEG ou WebP recommandé. Format paysage 16:9 idéal. Max 5 MB.</span>
           <button type="submit" class="ops-btn ops-btn-primary">Téléverser</button>
         </form>
+      </div>
+
+      <!-- Sponsors (4 slots optionnels) -->
+      <div class="ops-card" style="margin-top:16px">
+        <h2>Sponsors</h2>
+        <p class="ops-hint" style="margin: 0 0 12px">
+          Jusqu'à 4 logos partenaires affichés autour du score sur la carte recap. Les slots vides restent invisibles. Lien optionnel : si renseigné, le logo devient cliquable.
+        </p>
+        {[1, 2, 3, 4].map((n) => {
+          const urlKey = `sponsor_${n}_url` as keyof Club;
+          const linkKey = `sponsor_${n}_link` as keyof Club;
+          const imgUrl = (c[urlKey] as string | null) ?? null;
+          const linkUrl = (c[linkKey] as string | null) ?? '';
+          return (
+            <div class="sponsor-row">
+              <div class="sponsor-row-head">
+                <div class="sponsor-preview">
+                  {imgUrl ? (
+                    <img src={imgUrl} alt={`Sponsor ${n}`} />
+                  ) : (
+                    <span class="sponsor-placeholder">{n}</span>
+                  )}
+                </div>
+                <div class="sponsor-meta">
+                  <span class="sponsor-label">Sponsor {n}</span>
+                  <label class="ops-label sponsor-link-label">
+                    Lien (optionnel)
+                    <input
+                      class="ops-input"
+                      type="url"
+                      name={`sponsor_${n}_link`}
+                      form="identity-form"
+                      placeholder="https://exemple.com"
+                      value={linkUrl}
+                    />
+                  </label>
+                </div>
+              </div>
+              <div class="sponsor-actions">
+                <form
+                  method="POST"
+                  action={`/api/ops/clubs/${c.id}/upload?kind=sponsor${n}`}
+                  enctype="multipart/form-data"
+                  class="sponsor-upload-form"
+                >
+                  <input
+                    type="file"
+                    name="file"
+                    accept=".png,.jpg,.jpeg,.webp"
+                    required
+                  />
+                  <button type="submit" class="ops-btn sponsor-btn">
+                    {imgUrl ? 'Remplacer' : 'Téléverser'}
+                  </button>
+                </form>
+                {imgUrl && (
+                  <form method="POST" action={`/api/ops/clubs/${c.id}`} class="sponsor-delete-form">
+                    <input type="hidden" name="action" value="delete-sponsor" />
+                    <input type="hidden" name="index" value={String(n)} />
+                    <button
+                      type="submit"
+                      class="ops-btn sponsor-btn sponsor-delete-btn"
+                      onclick={`return confirm('Supprimer le sponsor ${n} ?')`}
+                    >Supprimer</button>
+                  </form>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        <p class="ops-hint" style="margin-top: 8px">
+          PNG/JPEG/WebP, max 500 KB. Format carré ou paysage léger conseillé.
+        </p>
       </div>
     </div>
   </div>
@@ -735,4 +808,69 @@ function fmtRelative(iso: string | null): string {
   }
   .upload-form { display: flex; flex-direction: column; gap: 8px; }
   .upload-form .ops-btn { align-self: flex-start; }
+
+  /* Sponsors — 4 slots empilés, chacun avec preview + lien + actions. */
+  .sponsor-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line-soft);
+  }
+  .sponsor-row:first-of-type { border-top: none; padding-top: 0; }
+  .sponsor-row-head {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 12px;
+    align-items: center;
+  }
+  .sponsor-preview {
+    width: 72px;
+    height: 72px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .sponsor-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .sponsor-placeholder {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--muted-soft);
+  }
+  .sponsor-meta { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .sponsor-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sponsor-link-label { font-size: 11px; }
+  .sponsor-link-label input { font-size: 13px; }
+  .sponsor-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .sponsor-upload-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+  }
+  .sponsor-upload-form input[type="file"] { font-size: 12px; flex: 1; min-width: 0; }
+  .sponsor-btn { font-size: 12px; padding: 6px 12px; }
+  .sponsor-delete-btn {
+    border-color: #FECACA;
+    color: #991B1B;
+    background: #FEF2F2;
+  }
+  .sponsor-delete-btn:hover { background: #FEE2E2; border-color: #F87171; }
+  .sponsor-delete-form { margin: 0; }
 </style>
