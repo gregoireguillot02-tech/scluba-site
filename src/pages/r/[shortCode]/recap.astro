@@ -14,17 +14,37 @@ import ShareCardModal from '../../../components/ShareCardModal.astro';
 const { shortCode } = Astro.params;
 const sb = serviceClient();
 
-const { data: round } = await sb
+// Séparé en 2 queries pour bypass un bug PostgREST où le join embed
+// `clubs(*)` retournait null silencieusement après l'ajout de nouvelles
+// colonnes (migration 0021 sponsors). Le LEFT JOIN SQL marche, l'embed
+// PostgREST échoue — peut-être schema cache miss côté relationships.
+const { data: roundRow, error: roundErr } = await sb
   .from('rounds')
-  .select('*, club:clubs(*)')
+  .select('*')
   .eq('short_code', shortCode)
   .maybeSingle();
 
-if (!round) {
+if (roundErr) {
+  console.error('[recap] round query failed', { shortCode, roundErr });
+  return new Response('Round not found', { status: 404 });
+}
+if (!roundRow) {
+  console.warn('[recap] no round for short_code', { shortCode });
   return new Response('Round not found', { status: 404 });
 }
 
-const r = round as Round & { club: Club };
+const { data: clubRow, error: clubErr } = await sb
+  .from('clubs')
+  .select('*')
+  .eq('id', roundRow.club_id)
+  .maybeSingle();
+
+if (clubErr || !clubRow) {
+  console.error('[recap] club lookup failed', { shortCode, clubId: roundRow.club_id, clubErr });
+  return new Response('Round not found', { status: 404 });
+}
+
+const r = { ...roundRow, club: clubRow } as Round & { club: Club };
 
 const { data: roster } = await sb.from('round_players').select('id').eq('round_id', r.id);
 const playerIds = (roster ?? []).map((p) => p.id);
