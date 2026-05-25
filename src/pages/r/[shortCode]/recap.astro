@@ -66,7 +66,42 @@ if (isDebug) {
     dbg.players_hasCreator = (playersDbg ?? []).some((p) => p.is_creator);
     dbg.players_first = (playersDbg ?? [])[0] ?? null;
 
-    dbg.stage = 'all_queries_ok';
+    // v3 — execute full frontmatter logic step by step
+    const rTmp = { ...roundRow, club: clubFull } as Round & { club: Club };
+    try {
+      const rh = resolveRoundHoles(rTmp, rTmp.club);
+      dbg.resolveRoundHoles_count = rh.length;
+    } catch (e) {
+      dbg.resolveRoundHoles_err = String(e);
+    }
+    try {
+      const rs = resolveRoundSections(rTmp, rTmp.club);
+      dbg.resolveRoundSections_count = rs.length;
+    } catch (e) {
+      dbg.resolveRoundSections_err = String(e);
+    }
+    try {
+      const sponsors: { i: number; url: string; link: unknown }[] = [];
+      for (const i of [1, 2, 3, 4] as const) {
+        const u = clubFull[`sponsor_${i}_url` as keyof typeof clubFull];
+        if (u) sponsors.push({ i, url: String(u), link: clubFull[`sponsor_${i}_link` as keyof typeof clubFull] });
+      }
+      dbg.sponsors = sponsors;
+    } catch (e) {
+      dbg.sponsors_err = String(e);
+    }
+    try {
+      JSON.stringify({
+        player: playersDbg?.[0] ?? null,
+        club: clubFull,
+        startedAt: roundRow.started_at ?? roundRow.created_at,
+      });
+      dbg.sharePayload_serializable = true;
+    } catch (e) {
+      dbg.sharePayload_err = String(e);
+    }
+
+    dbg.stage = 'all_steps_ok';
     return new Response(JSON.stringify(dbg, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
     dbg.exception = String(err);
