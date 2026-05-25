@@ -89,14 +89,6 @@ export interface ComposeSection {
   holes: CourseHole[];
 }
 
-// 0..4 sponsors flanquant le score sur le PNG (mirror du rendu recap.astro).
-// `link` n'est pas utilisé pour le PNG (image statique), conservé pour parité
-// du payload sérialisé.
-export interface SponsorEntry {
-  url: string;
-  link: string | null;
-}
-
 export interface WeatherInput {
   temp_c: number;
   code: number;
@@ -141,10 +133,6 @@ export interface ComposeInput {
   // Commentaire libre saisi par le joueur (200 chars max). Affiché en
   // italique sous le classement / légende du PNG.
   comment?: string | null;
-  // 0..4 sponsors. Affichés flanquant le grand chiffre du score : moitié
-  // (arrondie sup.) à gauche, reste à droite — même répartition que le
-  // recap HTML pour cohérence visuelle.
-  sponsors?: SponsorEntry[];
 }
 
 function fmtDateShort(iso: string | null): string {
@@ -231,17 +219,25 @@ function drawTrackedText(
   ctx.textAlign = prevAlign;
 }
 
-const FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+// Fonts du flow joueur (PlayerLayout) : Sora pour le display (gros chiffres,
+// titres), Inter pour le body. Fallbacks system pour le cas où les Google
+// Fonts n'ont pas eu le temps de charger — `document.fonts.ready` est awaité
+// dans composeShareImage pour éviter ça en pratique.
+const FONT_DISPLAY = '"Sora", "Inter", -apple-system, BlinkMacSystemFont, sans-serif';
+const FONT_BODY = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
-// Couleurs des cells score (alignées sur recap.astro tokens)
-const CELL_BIRDIE_BG = '#F5E6CF';   // --accent-soft
+// Couleurs des cells score. Bordures et fonds atténués alignés sur le `--line`
+// du player flow (rgba(15,23,42,0.10) ≈ #E5E7EB), au lieu du cream #E8E1D0
+// hérité du theme éditorial honey qui jurait avec le fond blanc + quadrillage
+// forest. Birdie reste sur honey accent-soft pour préserver la signature.
+const CELL_BIRDIE_BG = '#F5E6CF';   // --accent-soft (honey 100)
 const CELL_BIRDIE_TXT = '#C0392B';
-const CELL_BOGEY_BG = '#E8E5DD';
+const CELL_BOGEY_BG = '#F1F3F5';
 const CELL_BOGEY_TXT = '#6B7280';   // --muted
 const CELL_PAR_BG = '#FFFFFF';
-const CELL_PAR_BORDER = '#E8E1D0';
-const CELL_EMPTY_BG = '#F0EDE3';
-const CELL_EMPTY_TXT = '#B5AE9C';
+const CELL_PAR_BORDER = '#E5E7EB';  // --line slate
+const CELL_EMPTY_BG = '#F6F7F8';
+const CELL_EMPTY_TXT = '#A1A1AA';   // --muted-soft
 
 function drawScoreRow(
   ctx: CanvasRenderingContext2D,
@@ -262,20 +258,26 @@ function drawScoreRow(
   const CELL_W = (W - 2 * PAD_X - LABEL_W - 9 * GAP) / 9;
   const CELL_H = 72;
 
-  // Label chip — fond clubColor, font auto-fit
+  // Label chip — fond clubColor, Inter 700 + tracking 0.04em pour matcher
+  // la `.grid-label` du <Scorecard> on-screen.
   drawRoundedRect(ctx, PAD_X, startY, LABEL_W, CELL_H, 8);
   ctx.fillStyle = clubColor;
   ctx.fill();
   ctx.fillStyle = '#FFFFFF';
-  let labelFont = 24;
-  ctx.font = `800 ${labelFont}px ${FONT_STACK}`;
-  while (ctx.measureText(label).width > LABEL_W - 16 && labelFont > 12) {
+  const labelUpper = label.toUpperCase();
+  let labelFont = 22;
+  ctx.font = `700 ${labelFont}px ${FONT_BODY}`;
+  const labelTrackedW = () => {
+    const tracking = labelFont * 0.04;
+    const widths = Array.from(labelUpper).map((c) => ctx.measureText(c).width);
+    return widths.reduce((a, b) => a + b, 0) + tracking * (labelUpper.length - 1);
+  };
+  while (labelTrackedW() > LABEL_W - 16 && labelFont > 12) {
     labelFont -= 1;
-    ctx.font = `800 ${labelFont}px ${FONT_STACK}`;
+    ctx.font = `700 ${labelFont}px ${FONT_BODY}`;
   }
-  ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, PAD_X + LABEL_W / 2, startY + CELL_H / 2);
+  drawTrackedText(ctx, labelUpper, PAD_X + LABEL_W / 2, startY + CELL_H / 2, labelFont * 0.04);
 
   // 9 score cells
   for (let i = 0; i < holes.length; i++) {
@@ -326,7 +328,8 @@ function drawScoreRow(
       if (dashedBorder) ctx.setLineDash([]);
     }
     ctx.fillStyle = txtColor;
-    ctx.font = `800 32px ${FONT_STACK}`;
+    // Sora 700 — display font des gros chiffres, harmonisé avec le total.
+    ctx.font = `700 32px ${FONT_DISPLAY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(cellText, x + CELL_W / 2, startY + CELL_H / 2);
@@ -354,7 +357,7 @@ function drawLegend(
   const GAP_SWATCH_LABEL = 12;
   const GAP_ITEMS = 32;
 
-  ctx.font = `500 22px ${FONT_STACK}`;
+  ctx.font = `500 22px ${FONT_BODY}`;
   const itemWidths = items.map((it) => SWATCH + GAP_SWATCH_LABEL + ctx.measureText(it.label).width);
   const totalW = itemWidths.reduce((a, b) => a + b, 0) + GAP_ITEMS * (items.length - 1);
   let xCursor = (W - totalW) / 2;
@@ -392,16 +395,6 @@ function drawLogoOverlay(
   ctx.fill();
   ctx.restore();
 
-  // Clip ALL subsequent drawing to the circle. Sans ça, un PNG carré à fond
-  // blanc (cas majoritaire des logos importés) déborde aux 4 coins du cercle :
-  // la demi-diagonale du carré (= innerR × √2 ≈ 79) dépasse le rayon (70), et
-  // les 4 coins du carré blanc viennent former une silhouette festonnée sur
-  // le fond cream/photo de la share card.
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, circleR, 0, Math.PI * 2);
-  ctx.clip();
-
   // Logo fit "contain" centré (pas cover, sinon coupe les bords)
   const innerR = circleR - 14;
   const innerD = innerR * 2;
@@ -410,7 +403,6 @@ function drawLogoOverlay(
   if (aspect >= 1) { lw = innerD; lh = innerD / aspect; }
   else { lh = innerD; lw = innerD * aspect; }
   ctx.drawImage(logoImg, cx - lw / 2, cy - lh / 2, lw, lh);
-  ctx.restore();
 }
 
 // Helper: draw a single leaderboard row inside a given rect (x, y, w, h).
@@ -448,16 +440,16 @@ function drawLeaderboardRow(
   const scorePadR = compact ? 12 : 16;
   const scoreReserve = compact ? 140 : 220;
 
-  // Rank (left)
+  // Rank (left) — Sora 800 pour matcher la vibe display.
   ctx.fillStyle = row.finished ? primaryColor : '#A8A294';
-  ctx.font = `800 ${rankSize}px ${FONT_STACK}`;
+  ctx.font = `800 ${rankSize}px ${FONT_DISPLAY}`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText(displayRank, x + rankPadX, y + h / 2);
 
   // Name with ellipsis when it overflows the available width.
   ctx.fillStyle = row.finished ? '#1B4332' : '#6B7280';
-  ctx.font = `600 ${nameSize}px ${FONT_STACK}`;
+  ctx.font = `600 ${nameSize}px ${FONT_BODY}`;
   const nameX = x + namePadX;
   const nameMax = w - namePadX - scoreReserve;
   let name = row.display_name;
@@ -477,15 +469,15 @@ function drawLeaderboardRow(
       ? '±0'
       : row.diff > 0 ? `+${row.diff}` : `${row.diff}`;
     ctx.fillStyle = '#6B7280';
-    ctx.font = `500 ${diffSize}px ${FONT_STACK}`;
+    ctx.font = `500 ${diffSize}px ${FONT_BODY}`;
     ctx.fillText(`(${diffStr})`, scoreX, y + h / 2);
     const diffW = ctx.measureText(`(${diffStr})`).width;
     ctx.fillStyle = primaryColor;
-    ctx.font = `800 ${strokesSize}px ${FONT_STACK}`;
+    ctx.font = `800 ${strokesSize}px ${FONT_DISPLAY}`;
     ctx.fillText(String(row.strokes), scoreX - diffW - 8, y + h / 2);
   } else {
     ctx.fillStyle = '#A8A294';
-    ctx.font = `700 ${ncSize}px ${FONT_STACK}`;
+    ctx.font = `700 ${ncSize}px ${FONT_BODY}`;
     drawTrackedText(ctx, 'NC', scoreX - 14, y + h / 2, 2);
   }
 }
@@ -508,7 +500,7 @@ function drawLeaderboard(
 
   // Title "CLASSEMENT" — accent uppercase tracked, same vibe as the score eyebrow.
   ctx.fillStyle = '#D4A574';
-  ctx.font = `700 22px ${FONT_STACK}`;
+  ctx.font = `700 22px ${FONT_BODY}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   drawTrackedText(ctx, 'CLASSEMENT', W / 2, startY, 3);
@@ -566,20 +558,34 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('canvas 2d context unavailable');
 
+  // Sora + Inter sont préchargés par PlayerLayout (Google Fonts). On attend
+  // que les glyphs soient prêts avant de dessiner — sans ça le canvas
+  // tomberait sur le fallback system la 1ère fois qu'on génère la carte.
+  if (typeof document !== 'undefined' && document.fonts?.ready) {
+    try { await document.fonts.ready; } catch { /* best-effort */ }
+  }
+
   const club = input.club;
   const primaryColor = club.primary_color ?? '#1B4332';
 
-  // Background global
-  ctx.fillStyle = '#FAF7EE';
+  // Background : papier blanc + quadrillage fin 28×28, pattern aligné sur
+  // body[data-play-grid] (global.css). La couleur des lignes est légèrement
+  // moins opaque que sur écran (0.07 vs 0.10) — sur PNG aplat sans halo de
+  // shadow alentour, le contraste paraît sinon trop dense.
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, W, H);
+  const GRID_SIZE = 28;
+  ctx.fillStyle = 'rgba(27, 67, 50, 0.07)';
+  for (let gx = 0; gx <= W; gx += GRID_SIZE) {
+    ctx.fillRect(gx, 0, 1, H);
+  }
+  for (let gy = 0; gy <= H; gy += GRID_SIZE) {
+    ctx.fillRect(0, gy, W, 1);
+  }
 
-  // Charger photo et logo en parallèle (les deux peuvent fail indépendamment).
-  // Les sponsors aussi : chaque image qui échoue est skippée silencieusement,
-  // les autres sont dessinées normalement.
+  // Charger photo et logo en parallèle (les deux peuvent fail indépendamment)
   let photoImg: HTMLImageElement | null = null;
   let logoImg: HTMLImageElement | null = null;
-  const sponsorEntries = input.sponsors ?? [];
-  const sponsorImgs: (HTMLImageElement | null)[] = new Array(sponsorEntries.length).fill(null);
   await Promise.all([
     input.photoUrl
       ? loadImage(input.photoUrl).then((img) => { photoImg = img; }, (err) => {
@@ -591,11 +597,6 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
           console.error('[share-card] logo load failed, skip overlay', err);
         })
       : Promise.resolve(),
-    ...sponsorEntries.map((s, i) =>
-      loadImage(s.url).then((img) => { sponsorImgs[i] = img; }, (err) => {
-        console.error('[share-card] sponsor load failed, skip', i, err);
-      }),
-    ),
   ]);
 
   // Section 1 : Photo (0..675) ou gradient
@@ -617,16 +618,17 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
     drawLogoOverlay(ctx, logoImg, CIRCLE_CX, CIRCLE_CY, CIRCLE_R);
   }
 
-  // Section 2 : Bandeau brand (675..795, 120px)
+  // Section 2 : Bandeau brand (675..795, 120px). Titre en Sora 800 — même
+  // famille display que le gros score, vibe Masthead de la recap.
   const BAND_Y = PHOTO_H;
   ctx.fillStyle = '#1B4332';
-  ctx.font = `800 38px ${FONT_STACK}`;
+  ctx.font = `800 38px ${FONT_DISPLAY}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(club.name.toUpperCase(), W / 2, BAND_Y + 48, W - 2 * PAD_X);
 
-  ctx.fillStyle = '#666';
-  ctx.font = `400 22px ${FONT_STACK}`;
+  ctx.fillStyle = '#6B7280';
+  ctx.font = `400 22px ${FONT_BODY}`;
   const subParts = [
     input.player?.display_name ?? '—',
     fmtDateShort(input.startedAt),
@@ -641,23 +643,30 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   // Section 3 : Score block — eyebrow + gros total + sub (style recap.astro)
   const SCORE_Y = BAND_Y + 160; // ~835 (espace meta → eyebrow)
 
-  // Eyebrow "SCORE · 18 TROUS" en coral upper letterspaced
+  // Eyebrow "SCORE · 18 TROUS" en honey upper letterspaced (Inter 700, le
+  // tracking est géré par drawTrackedText).
   ctx.fillStyle = '#D4A574'; // --accent
-  ctx.font = `700 22px ${FONT_STACK}`;
+  ctx.font = `700 22px ${FONT_BODY}`;
   ctx.textBaseline = 'middle';
   const eyebrow = input.formatLabel
     ? `SCORE · ${input.formatLabel.toUpperCase()}`
     : `SCORE · ${input.holes.length} TROUS`;
   drawTrackedText(ctx, eyebrow, W / 2, SCORE_Y, 3);
 
-  // Gros total en clubColor — taille adaptée selon nombre de chiffres
+  // Gros total en clubColor — Sora 800, letter-spacing négatif comme la
+  // .score-value de recap.astro (-0.03em). ctx.letterSpacing est supporté
+  // Chrome 99+/Firefox 117+/Safari 18+. Fallback silencieux si indisponible.
   const totalStr = String(input.totalStrokes);
   const totalFontSize = totalStr.length >= 3 ? 110 : 130;
   ctx.fillStyle = primaryColor;
-  ctx.font = `800 ${totalFontSize}px ${FONT_STACK}`;
+  ctx.font = `800 ${totalFontSize}px ${FONT_DISPLAY}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  const ctxAny = ctx as CanvasRenderingContext2D & { letterSpacing?: string };
+  const prevLetterSpacing = ctxAny.letterSpacing;
+  try { ctxAny.letterSpacing = `${(-0.03 * totalFontSize).toFixed(1)}px`; } catch { /* noop */ }
   ctx.fillText(totalStr, W / 2, SCORE_Y + 90);
+  try { ctxAny.letterSpacing = prevLetterSpacing ?? '0px'; } catch { /* noop */ }
 
   // Subtitle "±0 · Par 72" — quand la carte est incomplète on affiche le
   // par des trous JOUÉS (input.playedPar) plutôt que le par total, sinon
@@ -671,60 +680,11 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
       ? `+${input.totalDiff}`
       : `${input.totalDiff}`;
   ctx.fillStyle = '#6B7280';
-  ctx.font = `500 28px ${FONT_STACK}`;
+  ctx.font = `500 28px ${FONT_BODY}`;
   const subSubText = isComplete
     ? `${diffStr} · Par ${parDisplayed}`
     : `${diffStr} · Par ${parDisplayed} · ${input.holesPlayed}/${input.holes.length} trous`;
   ctx.fillText(subSubText, W / 2, SCORE_Y + 170);
-
-  // Section 3b : Sponsors flanquant le score (0..4 logos). Disposition
-  // identique au recap HTML : Math.ceil(N/2) à gauche, reste à droite,
-  // centrés verticalement sur le grand chiffre du score.
-  const loadedSponsors = sponsorImgs.filter((img): img is HTMLImageElement => img != null);
-  if (loadedSponsors.length > 0) {
-    const TILE_W = 120;
-    const TILE_H = 80;
-    const TILE_GAP = 12;
-    const TILE_PAD = 6;
-    const TILE_R = 12;
-    const SPONSOR_CX_LEFT = 50;
-    const SPONSOR_CX_RIGHT = W - 50 - TILE_W;
-    const sponsorCenterY = SCORE_Y + 90;
-    const leftHalf = Math.ceil(loadedSponsors.length / 2);
-    const leftImgs = loadedSponsors.slice(0, leftHalf);
-    const rightImgs = loadedSponsors.slice(leftHalf);
-
-    function drawSponsorStack(imgs: HTMLImageElement[], x: number) {
-      const totalH = imgs.length * TILE_H + (imgs.length - 1) * TILE_GAP;
-      let y = sponsorCenterY - totalH / 2;
-      for (const img of imgs) {
-        // Tuile blanche arrondie + bordure subtile
-        drawRoundedRect(ctx!, x, y, TILE_W, TILE_H, TILE_R);
-        ctx!.fillStyle = '#FFFFFF';
-        ctx!.fill();
-        ctx!.strokeStyle = 'rgba(15, 42, 30, 0.10)';
-        ctx!.lineWidth = 1;
-        ctx!.stroke();
-        // Logo contain dans la tuile (avec padding)
-        const innerW = TILE_W - 2 * TILE_PAD;
-        const innerH = TILE_H - 2 * TILE_PAD;
-        const aspect = img.width / img.height;
-        let lw: number, lh: number;
-        if (aspect >= innerW / innerH) {
-          lw = innerW;
-          lh = innerW / aspect;
-        } else {
-          lh = innerH;
-          lw = innerH * aspect;
-        }
-        ctx!.drawImage(img, x + (TILE_W - lw) / 2, y + (TILE_H - lh) / 2, lw, lh);
-        y += TILE_H + TILE_GAP;
-      }
-    }
-
-    if (leftImgs.length > 0) drawSponsorStack(leftImgs, SPONSOR_CX_LEFT);
-    if (rightImgs.length > 0) drawSponsorStack(rightImgs, SPONSOR_CX_RIGHT);
-  }
 
   // Section 4 : Scorecard rows. If the caller provided named sections (loops),
   // draw one row per section with its loop name. Otherwise fall back to the
@@ -760,7 +720,7 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   // tronquées). Affiché si non vide.
   if (commentText.length > 0) {
     ctx.fillStyle = '#6B7280';
-    ctx.font = `italic 500 22px ${FONT_STACK}`;
+    ctx.font = `italic 500 22px ${FONT_BODY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const maxLineWidth = W - 2 * PAD_X;
@@ -791,7 +751,7 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
 
   // Section 6 : Footer SCLUBA — discret
   ctx.fillStyle = '#A8A294';
-  ctx.font = `500 16px ${FONT_STACK}`;
+  ctx.font = `500 16px ${FONT_BODY}`;
   ctx.textBaseline = 'alphabetic';
   drawTrackedText(ctx, 'POWERED BY SCLUBA', W / 2, H - 36, 4);
 
