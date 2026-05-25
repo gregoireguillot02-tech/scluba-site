@@ -3,11 +3,6 @@
     "title": "Scluba — The branded digital scorecard for your golf club",
     "description": "Your golfers play. Your club shines. Scluba turns every round into social visibility for your golf course — no app to install."
   },
-  "launch": {
-    "tag": "Launch offer",
-    "text": "First month free for the first 10 clubs",
-    "cta": "I'm in"
-  },
   "nav": {
     "pricing": "Pricing",
     "how": "How it works",
@@ -204,14 +199,13 @@
     "eyebrow": "Pricing",
     "title": "One offer. One promise.",
     "lead": "Everything you need to turn every round into club visibility. No commitment, cancel any month.",
-    "launchBadge": "1ST MONTH FREE",
     "trust": {
       "engagement_label": "No commitment",
       "engagement_note": "Cancel any month",
       "setup_label": "30-min setup",
       "setup_note": "No install on the player side",
-      "trial_label": "1st month free",
-      "trial_note": "Try risk-free",
+      "trial_label": "Free mockup in 24h",
+      "trial_note": "No credit card",
       "rgpd_label": "GDPR compliant",
       "rgpd_note": "EU hosting",
       "contact_label": "Any question?",

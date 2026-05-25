@@ -79,11 +79,6 @@ const t = useT(locale);
       <div class="pricing-single">
         {t.pricing.plans.map((plan) => (
           <article class="plan plan-featured" data-anim="plan">
-            <div class="plan-launch-badge">
-              <span class="launch-pulse-mini" aria-hidden="true"></span>
-              {t.pricing.launchBadge}
-            </div>
-
             <div class="plan-head">
               <div>
                 <h3 class="plan-name">{plan.name}</h3>
@@ -312,47 +307,12 @@ const t = useT(locale);
     }
   }
 
-  /* Badge "1er mois offert" */
-  .plan-launch-badge {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: var(--primary-deep);
-    color: var(--accent);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    padding: 5px 10px 5px 14px;
-    border-radius: var(--radius-full);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .launch-pulse-mini {
-    position: absolute;
-    left: 6px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 0 0 var(--accent);
-    animation: pulseMini 2s ease-in-out infinite;
-  }
-  @keyframes pulseMini {
-    0% { box-shadow: 0 0 0 0 rgba(212, 165, 116, 0.7); }
-    70% { box-shadow: 0 0 0 5px rgba(212, 165, 116, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(212, 165, 116, 0); }
-  }
-
   .plan-head {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: var(--space-3);
     margin-bottom: var(--space-3);
-    margin-top: var(--space-3);
   }
   .plan-name {
     font-size: var(--text-xl);
