@@ -217,14 +217,16 @@ const phases = [
     aspect-ratio: 420 / 861;
   }
 
-  /* Screen mask : pattern HeroPhone — inset 1.6%/1.4% + border-radius adaptée */
+  /* Screen mask : pattern HeroPhone — inset 1.6%/1.4% + border-radius adaptée.
+     Fond blanc (au lieu du cream #F4EEDD) pour que les bandes haut/bas en
+     fit-par-largeur soient quasi invisibles. */
   .showcase-phone-screen-mask {
     position: absolute;
     inset: 1.6% 1.4%;
     border-radius: 11.5% / 5.6%;
     overflow: hidden;
     z-index: 1;
-    background: #F4EEDD;
+    background: #FFFFFF;
   }
 
   /* Wrapper div pour chaque screen : isole l'animation GSAP (scale + opacity
@@ -244,19 +246,17 @@ const phases = [
     transform: scale(1.02);
   }
 
-  /* Screen img : fit-par-hauteur centré pour remplir tout le mask (sinon
-     bande cream visible en bas car aspect screenshot 0.564 > aspect mask
-     0.488 → image plus courte que mask en fit-par-largeur). Les bords
-     latéraux sont clippés (~8% chaque côté) par le wrap overflow:hidden.
-     Transform dédié au centrage — GSAP anime le parent wrap, donc cette
-     transform n'est jamais écrasée. */
+  /* Screen img : fit-par-largeur centré, image entière visible. L'aspect
+     screenshot 0.564 > mask 0.488 → laisse ~6.7% d'espace haut/bas mais
+     le fond mask blanc le rend quasi invisible. Transform dédié au
+     centrage — GSAP anime le parent wrap, jamais cette transform. */
   .showcase-phone-screen-img {
     position: absolute;
-    top: 0;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
-    height: 100%;
-    width: auto;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: auto;
     display: block;
     max-width: none; /* override global img max-width */
   }
