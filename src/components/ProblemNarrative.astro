@@ -53,7 +53,9 @@ const t = useT(locale);
     margin-bottom: var(--space-9);
   }
 
-  /* Stack des lignes — typo XXL Fraunces italic, tracking serré (pattern donmolinico) */
+  /* Stack des lignes — typo XXL Inter, tracking serré.
+     letter-spacing ajusté pour Inter (-0.025em) — Fraunces tolérait plus
+     de tracking négatif (-0.045em) sans casser. */
   .problem-stack {
     display: flex;
     flex-direction: column;
@@ -64,7 +66,7 @@ const t = useT(locale);
     font-family: var(--font-display);
     font-size: clamp(2rem, 5.5vw, 4rem);
     line-height: 1.05;
-    letter-spacing: -0.045em;
+    letter-spacing: -0.025em;
     color: var(--primary);
     max-width: 22ch;
     margin: 0 auto;
