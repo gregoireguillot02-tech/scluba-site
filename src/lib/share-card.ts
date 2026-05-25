@@ -380,6 +380,16 @@ function drawLogoOverlay(
   ctx.fill();
   ctx.restore();
 
+  // Clip ALL subsequent drawing to the circle. Sans ça, un PNG carré à fond
+  // blanc (cas majoritaire des logos importés) déborde aux 4 coins du cercle :
+  // la demi-diagonale du carré (= innerR × √2 ≈ 79) dépasse le rayon (70), et
+  // les 4 coins du carré blanc viennent former une silhouette festonnée sur
+  // le fond cream/photo de la share card.
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, circleR, 0, Math.PI * 2);
+  ctx.clip();
+
   // Logo fit "contain" centré (pas cover, sinon coupe les bords)
   const innerR = circleR - 14;
   const innerD = innerR * 2;
@@ -388,6 +398,7 @@ function drawLogoOverlay(
   if (aspect >= 1) { lw = innerD; lh = innerD / aspect; }
   else { lh = innerD; lw = innerD * aspect; }
   ctx.drawImage(logoImg, cx - lw / 2, cy - lh / 2, lw, lh);
+  ctx.restore();
 }
 
 // Helper: draw a single leaderboard row inside a given rect (x, y, w, h).
