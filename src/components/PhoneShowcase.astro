@@ -244,16 +244,18 @@ const phases = [
     transform: scale(1.02);
   }
 
-  /* Screen img : absolute centré dans le wrap via left:50% + translateX(-50%).
-     Le transform est dédié uniquement au centrage — GSAP n'anime que le
+  /* Screen img : fit-par-largeur centré dans le wrap (avant : fit-par-hauteur
+     clippait les bords car aspect screenshot 0.564 > aspect mask 0.488).
+     Avec width:100% l'image entière est visible, espace cream en haut/bas
+     (~6.7% chaque côté). Transform dédié au centrage — GSAP anime le
      parent wrap, donc cette transform n'est jamais écrasée. */
   .showcase-phone-screen-img {
     position: absolute;
-    top: 0;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
-    height: 100%;
-    width: auto;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: auto;
     display: block;
     max-width: none; /* override global img max-width */
   }
