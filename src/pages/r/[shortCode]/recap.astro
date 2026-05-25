@@ -13,6 +13,7 @@ import ShareCardModal from '../../../components/ShareCardModal.astro';
 
 const { shortCode } = Astro.params;
 const sb = serviceClient();
+const isDebug = Astro.url.searchParams.get('_debug') === 'sponsor-recap-2026';
 
 // Séparé en 2 queries pour bypass un bug PostgREST où le join embed
 // `clubs(*)` retournait null silencieusement après l'ajout de nouvelles
@@ -23,6 +24,27 @@ const { data: roundRow, error: roundErr } = await sb
   .select('*')
   .eq('short_code', shortCode)
   .maybeSingle();
+
+if (isDebug) {
+  // Mode diagnostic temporaire — retourne le JSON brut au lieu de
+  // rendre la page. Active uniquement avec ?_debug=sponsor-recap-2026.
+  // À retirer une fois le bug 404 résolu.
+  let clubProbe: unknown = null;
+  let clubProbeErr: unknown = null;
+  if (roundRow?.club_id) {
+    const { data, error } = await sb.from('clubs').select('id, name').eq('id', roundRow.club_id).maybeSingle();
+    clubProbe = data;
+    clubProbeErr = error;
+  }
+  return new Response(JSON.stringify({
+    shortCode,
+    supabaseUrl: import.meta.env.PUBLIC_SUPABASE_URL,
+    roundRow,
+    roundErr,
+    clubProbe,
+    clubProbeErr,
+  }, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
+}
 
 if (roundErr) {
   console.error('[recap] round query failed', { shortCode, roundErr });
