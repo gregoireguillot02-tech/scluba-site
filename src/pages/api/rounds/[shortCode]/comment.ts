@@ -74,26 +74,24 @@ export const POST: APIRoute = async ({ request, params, cookies }) => {
     .maybeSingle();
   if (!round) return new Response('Round not found', { status: 404 });
 
-  // Only the round creator can edit the round-wide comment. A future column
-  // on round_players will allow per-viewer comments; for now restricting to
-  // the creator prevents teammates from overwriting each other's text.
-  // (audit HIGH: anyone-in-round can replace the recap comment + brand
-  // text on the share-card PNG.)
+  // Commentaire perso : chaque joueur écrit sur SA row (migration 0020). On
+  // garde la vérif d'appartenance à la partie pour rejeter cookies stale /
+  // partages cross-round, mais plus de gate is_creator — l'audit HIGH
+  // "anyone-in-round can overwrite the shared comment" est résolu par
+  // construction : chacun n'a accès qu'à sa propre row.
   const { data: player } = await sb
     .from('round_players')
-    .select('id, is_creator')
+    .select('id')
     .eq('id', playerId)
     .eq('round_id', round.id)
     .maybeSingle();
   if (!player) return new Response('Player not in this round', { status: 403 });
-  if (!player.is_creator) {
-    return new Response('Seul l\'organisateur peut modifier le commentaire.', { status: 403 });
-  }
 
   const { error } = await sb
-    .from('rounds')
+    .from('round_players')
     .update({ comment: commentText })
-    .eq('id', round.id);
+    .eq('id', playerId)
+    .eq('round_id', round.id);
   if (error) {
     console.error('[api/rounds/comment] update failed', error);
     return new Response('Save failed', { status: 500 });
