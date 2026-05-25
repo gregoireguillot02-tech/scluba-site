@@ -32,15 +32,15 @@ const isHomeRoute = pathname === '/' || pathname === '/en' || pathname === '/en/
   <meta name="theme-color" content="#1B4332" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-  <!-- Fonts landing "Country Club Light" (2026-05-20) :
-       Fraunces (display serif éditorial, opsz + SOFT axes) + JetBrains Mono
-       pour les eyebrows mono. Cohérent avec le thème Greenroom de tokens.css
-       utilisé par défaut sur toutes les pages. -->
+  <!-- Fonts landing (2026-05-25) :
+       Inter (sans-serif moderne, weights 400→900) + JetBrains Mono pour
+       les eyebrows mono. Remplace Fraunces — direction B2B factuel
+       sec, le serif éditorial renforçait un ton trop "magazine". -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400..900,0..100&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
   />
 </head>
 <body data-landing={isHomeRoute ? '' : undefined}>

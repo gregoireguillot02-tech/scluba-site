@@ -55,13 +55,14 @@
   --rule: rgba(15, 42, 30, 0.12);
   --rule-strong: rgba(15, 42, 30, 0.24);
 
-  /* === Typographie ===
-     --font-display : Fraunces variable (opsz + wght) prepended sur la stack.
-     Si Fraunces ne charge pas, fallback transparent sur Georgia (le rendu
-     reste cohérent avec l'ancien design). Aucun changement breaking. */
-  --font-display: 'Fraunces', Georgia, 'Cormorant Garamond', 'Times New Roman', serif;
-  --font-serif: 'Fraunces', Georgia, 'Times New Roman', 'Cormorant Garamond', serif;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  /* === Typographie (2026-05-25) ===
+     --font-display / --font-serif : Inter sans-serif (remplace Fraunces).
+     Direction B2B factuel sec — le serif éditorial Fraunces renforçait un
+     ton trop "magazine" pour la cible directeur de club. --font-serif est
+     conservé comme alias pour les composants qui le référencent encore. */
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-serif: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   /* Tailles texte */

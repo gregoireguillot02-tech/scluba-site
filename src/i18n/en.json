@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "Scluba — The branded digital scorecard for your golf club",
-    "description": "Your golfers play. Your club shines. Scluba turns every round into social visibility for your golf course — no app to install."
+    "title": "Scluba — Digital scorecard for golf clubs.",
+    "description": "A digital scorecard in your club's colors. QR frame at the counter, native mobile sharing, 7-day rollout. From $49/month."
   },
   "nav": {
     "pricing": "Pricing",
@@ -10,36 +10,36 @@
   },
   "hero": {
     "eyebrow": "Digital scorecard · golf clubs",
-    "tagline": "Your players share.<br>With you, this time.",
-    "subtagline": "The digital scorecard branded to your club. Every round mentions your golf on social — without ad spend.",
+    "tagline": "Your players post.<br>Your club too.",
+    "subtagline": "A digital scorecard in your club's colors. Players share it at the end of every round. Your name shows up in every post.",
     "cta": "See my mockup in 24h",
-    "ctaSecondary": "See a 10-min demo",
+    "ctaSecondary": "See a demo",
     "beforeLabel": "Today",
     "afterLabel": "With Scluba",
     "dragHint": "Drag to compare",
-    "scroll": "Discover the concept"
+    "scroll": "How it works"
   },
   "problem": {
-    "eyebrow": "Origin story",
+    "eyebrow": "The reality",
     "lines": [
-      "We are two golfers.",
-      "Every round, the same move: snap a photo of the paper scorecard.",
-      "Send it to friends. Post a story.",
-      "No trace of the club we just played at."
+      "Today, your players photograph their paper scorecard.",
+      "They send it on WhatsApp.",
+      "They post it to their stories.",
+      "No mention of your club."
     ],
-    "punchline": "Everything went digital in our lives. Except that moment."
+    "punchline": "Every round is a post for golf — without the golf course."
   },
   "insight": {
-    "eyebrow": "The insight",
-    "title": "What if every round became a showcase for your club?",
-    "sub": "A scorecard branded to your club is an Instagram post with your logo. Every round. No ad spend."
+    "eyebrow": "The idea",
+    "title": "Player side: a QR, nothing else.",
+    "sub": "No app, no account. The player scans at the counter, plays, leaves with a card in the club's colors. Sharing takes two seconds."
   },
   "pillars": {
     "eyebrow": "The product",
-    "title": "Everything you need, in 3 pillars.",
-    "lead": "A branded digital scorecard, a live leaderboard for your players, a QR frame for your desk. Zero installation, zero burden on your team.",
+    "title": "Three pillars, one piece of equipment.",
+    "lead": "A branded digital scorecard, a live leaderboard during the round, a QR frame at the counter. Zero install on the player side. Zero burden on your team.",
     "founders_quote": {
-      "text": "We didn't set out to build an app. We wanted an elegant frame that turns a round into a shared souvenir — and a post for the club.",
+      "text": "We built Scluba because we were tired of seeing paper scorecards photographed without any mention of the club.",
       "authors": "Grégoire & Paul",
       "role": "Scluba co-founders"
     },
@@ -52,12 +52,12 @@
       {
         "num": "02",
         "title": "Live leaderboard + share",
-        "body": "Real-time leaderboard during the round. Final card sharable as image and link, with your logo as signature."
+        "body": "Real-time leaderboard during the round. Final card shareable as image and link, with your logo as signature."
       },
       {
         "num": "03",
         "title": "QR frame on the counter",
-        "body": "An elegant display delivered turnkey, placed at reception or the pro shop. The player scans, the round starts."
+        "body": "A display delivered turnkey, placed at reception or the pro shop. The player scans, the round starts."
       }
     ]
   },
@@ -65,16 +65,16 @@
     "eyebrow": "The Scluba flow",
     "phase1Tag": "01 · During the round",
     "phase1Title": "Hole-by-hole entry. Live leaderboard.",
-    "phase1Lead": "Each player enters their score at each hole. The leaderboard updates in real time — everyone sees who's ahead, and the round becomes a real match.",
+    "phase1Lead": "Each player enters their score at each hole. The leaderboard updates in real time — everyone sees who's ahead.",
     "phase2Tag": "02 · The card",
-    "phase2Title": "A scorecard branded to your club.",
-    "phase2Lead": "Photo, logo, course, weather, score, holes grid: everything is composed automatically at the end of the round. Ready to share, ready to shine.",
+    "phase2Title": "A scorecard in your club's colors.",
+    "phase2Lead": "Photo, logo, course, weather, score, holes grid: everything is composed automatically at the end of the round. Ready to share.",
     "phase3Tag": "03 · The recap",
     "phase3Title": "Final leaderboard, personal note.",
-    "phase3Lead": "Your players recap the round, add a comment, sign their card. The souvenir is ready — all that's left is to share it.",
+    "phase3Lead": "Players recap the round, add a note, sign their card. The card is ready.",
     "phase4Tag": "04 · The share",
-    "phase4Title": "Instant share. Your club travels along.",
-    "phase4Lead": "iMessage, WhatsApp, Instagram Stories, Snap: one tap → branded card sent. Your club shows up at every share, effortlessly, no ad spend.",
+    "phase4Title": "One tap, one card sent.",
+    "phase4Lead": "iMessage, WhatsApp, Instagram Stories, Snap: one gesture to share. Your club's name shows up on every send.",
     "joinClubMeta": "Sat. May 11 · 2:30 PM",
     "joinEyebrow": "Round code",
     "joinHelper": "Type this code or scan the desk QR",
@@ -147,9 +147,9 @@
     "linkCopied": "Link copied!"
   },
   "showcase": {
-    "eyebrow": "Made to measure",
-    "title": "One card per club identity.",
-    "lead": "Coastal, forest, classic, clay: the card adopts the visual codes of your golf course. No generic templates. No third-party branding.",
+    "eyebrow": "Identity",
+    "title": "Your card, in your golf course's identity.",
+    "lead": "Coastal, forest, Mediterranean, heritage: the card adopts the visual codes of your club. No generic templates.",
     "palettes": [
       {
         "name": "Coastal",
@@ -183,30 +183,30 @@
   },
   "benefits": {
     "eyebrow": "For your club",
-    "title": "Three concrete benefits for your golf course.",
-    "lead": "Beyond the gadget: a visibility lever, a brand signal, a step ahead of neighboring clubs.",
+    "title": "Three concrete benefits.",
+    "lead": "Beyond the scorecard: a visibility lever, a brand signal, a commercial edge against neighboring clubs.",
     "items": [
       {
         "num": "01",
         "title": "Organic visibility",
-        "body": "Every shared round mentions your club on social. No ad budget to unlock, no campaign to manage — your players become your best ambassadors."
+        "body": "Every shared round mentions your club on social. No ad budget to unlock. Your players become your ambassadors."
       },
       {
         "num": "02",
         "title": "Modern brand image",
-        "body": "A strong signal for golfers under 45 in an aging sport. Your club shows it lives with its time — without giving up its style."
+        "body": "A strong signal for golfers under 45, in a sport whose average age keeps rising. Your club shows it has anticipated."
       },
       {
         "num": "03",
         "title": "Differentiation",
-        "body": "The first modern club in your region. A concrete pitch for prospects and members, and an edge against neighboring golfs."
+        "body": "A concrete pitch against neighboring clubs. A topic for your prospects, your members, and your commercial campaigns."
       }
     ]
   },
   "how": {
     "eyebrow": "The proof",
     "title": "See your card before you sign.",
-    "lead": "Give us your golf's URL. We extract logo, colors and photos to build your mockup in 24h. No commitment, no credit card.",
+    "lead": "Give us your golf course URL. We extract logo, colors and photos to build your mockup in 24h. No commitment, no credit card.",
     "items": [
       {
         "num": "1",
@@ -216,24 +216,24 @@
       {
         "num": "2",
         "title": "Mockup in 24h",
-        "body": "A card in your image, ready to validate. Unlimited tweaks until your green light — you see exactly what your players will see."
+        "body": "A card in your image, ready to validate. Unlimited tweaks until your green light."
       },
       {
         "num": "3",
         "title": "QR frame delivered",
-        "body": "An elegant frame ready to place on the reception desk. Zero technical install on the club side, zero burden on your team."
+        "body": "A frame ready to place on the reception desk. No technical install on the club side."
       },
       {
         "num": "4",
         "title": "Monthly reporting",
-        "body": "An email recap every month: scans, rounds played, social shares. The impact of your card, readable in 30 seconds."
+        "body": "An email recap every month: scans, rounds played, social shares. Scluba usage in 30 seconds."
       }
     ]
   },
   "pricing": {
     "eyebrow": "Pricing",
-    "title": "One offer. One promise.",
-    "lead": "Everything you need to turn every round into club visibility. No commitment, cancel any month.",
+    "title": "One price, all-inclusive.",
+    "lead": "Everything you need to equip your club. No commitment, cancel any month.",
     "trust": {
       "engagement_label": "No commitment",
       "engagement_note": "Cancel any month",
@@ -249,63 +249,63 @@
     "plans": [
       {
         "name": "Scluba",
-        "tagline": "A branded scorecard, shared by every player.",
+        "tagline": "Your club's name, on every shared card.",
         "price": "$49",
         "period": "/month",
         "engagement": "or $39/month with 3-year commitment (−20%)",
         "features": [
-          "Scorecard in your club's colors",
-          "Natural social-media presence with every round",
-          "Elegant QR frame delivered to the reception desk",
+          "Digital scorecard in your club's identity",
+          "Club name visible on every player share",
+          "QR frame delivered to the reception desk",
           "Multi-player live score entry, no install",
-          "Souvenir photo included with every round",
+          "Round photo embedded in the scorecard",
           "Monthly email reporting: scans, rounds, shares"
         ]
       }
     ]
   },
   "faq": {
-    "eyebrow": "Frequently asked",
-    "title": "We've anticipated your questions.",
-    "lead": "The questions golf club managers ask us most often. If yours isn't here, drop us a line.",
-    "support_eyebrow": "NOT FOUND?",
+    "eyebrow": "FAQ",
+    "title": "Frequently asked questions.",
+    "lead": "The questions we get most often. If yours isn't here, drop us a line.",
+    "support_eyebrow": "YOUR QUESTION ISN'T HERE?",
     "support_email": "team@scluba.com",
     "support_note": "Reply within 24 business hours.",
     "items": [
       {
         "q": "Does the player need to install an app?",
-        "a": "No. A QR scan opens the web app in their browser. No install, no account. Native sharing then works on any phone."
+        "a": "No. A QR to scan, accessible from any phone. No install, no account."
       },
       {
         "q": "Do you need our logo and brand guidelines?",
-        "a": "No. We start from your website and automatically extract logo, colors and photos. Mockup delivered within 24h, refined until your validation."
+        "a": "No. We extract logo, colors and photos from your website to build the mockup. You validate."
       },
       {
-        "q": "How do we track Scluba usage at the club?",
-        "a": "Every month you receive a clear email reporting: number of scans, rounds played, social shares. No interface to learn, no tools to install on the club side."
+        "q": "How do we track Scluba usage?",
+        "a": "A monthly email: scans, rounds played, social shares. Readable in 30 seconds."
       },
       {
         "q": "Is there a commitment?",
-        "a": "None by default, cancel any month. The 3-year commitment gives −20% off ($39/month)."
+        "a": "None. Cancel any month. The 3-year commitment gives 20% off ($39/month)."
       },
       {
-        "q": "Do you need any specific equipment at the club?",
-        "a": "No. The provided QR frame is the only thing to set up. It works without power, without club wifi, without your team's intervention."
+        "q": "Do you need specific equipment?",
+        "a": "No. We deliver a QR frame for the counter. No technical install on the club side."
       },
       {
         "q": "Is this an official handicap tracking tool?",
-        "a": "No. Scluba is a leisure round and social-sharing tool. It complements your official tools without replacing them."
+        "a": "No. Scluba is a complementary service for player experience and club visibility. Not a replacement for official handicap tools."
       },
       {
         "q": "How many clubs are already onboard?",
-        "a": "We're launching our commercial offer in summer 2026 with a pilot of founding club partners. The 1st-month-free offer is reserved for the first 10 clubs — you get direct support from the co-founders."
+        "a": "We're launching in summer 2026 with a pilot of founding club partners. The 1st-month-free offer is reserved for the first 10 clubs — direct support from the co-founders."
       }
     ]
   },
   "cta": {
-    "eyebrow": "10-minute demo",
-    "title": "See what your card would look like before any decision.",
-    "lead": "Give us your golf course URL, we generate the mockup in 24h. No credit card required.",
+    "eyebrow": "Request a demo",
+    "title": "See your card within 24h.",
+    "lead": "Give us your golf course URL. We send you a personalized mockup within 24h. No credit card required.",
     "form": {
       "name": "Your name",
       "club": "Club name",
@@ -318,7 +318,7 @@
     "qrLabel": "Scan: see a sample card"
   },
   "footer": {
-    "tagline": "The branded digital scorecard for golf clubs.",
+    "tagline": "Digital scorecard for golf clubs.",
     "rights": "© 2026 Scluba. All rights reserved.",
     "legal": "Legal notice",
     "privacy": "Privacy policy",
