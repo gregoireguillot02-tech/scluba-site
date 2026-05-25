@@ -1,10 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
-import Hero from '../components/Hero.astro';
+import HeroSplit from '../components/HeroSplit.astro';
 import ProblemNarrative from '../components/ProblemNarrative.astro';
-import ThreeSteps from '../components/ThreeSteps.astro';
+import Insight from '../components/Insight.astro';
+import ThreePillars from '../components/ThreePillars.astro';
 import PhoneShowcase from '../components/PhoneShowcase.astro';
 import ClubsShowcase from '../components/ClubsShowcase.astro';
+import ClubBenefits from '../components/ClubBenefits.astro';
 import HowItWorks from '../components/HowItWorks.astro';
 import Pricing from '../components/Pricing.astro';
 import FAQ from '../components/FAQ.astro';
@@ -14,11 +16,13 @@ const locale = 'fr' as const;
 ---
 
 <Base locale={locale}>
-  <Hero locale={locale} />
+  <HeroSplit locale={locale} />
   <ProblemNarrative locale={locale} />
-  <ThreeSteps locale={locale} />
+  <Insight locale={locale} />
+  <ThreePillars locale={locale} />
   <PhoneShowcase locale={locale} />
   <ClubsShowcase locale={locale} />
+  <ClubBenefits locale={locale} />
   <HowItWorks locale={locale} />
   <Pricing locale={locale} />
   <FAQ locale={locale} />

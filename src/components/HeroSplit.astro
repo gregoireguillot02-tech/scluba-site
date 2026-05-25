@@ -1,0 +1,852 @@
+---
+import { useT, type Locale } from '../i18n';
+import HeroPhone from './HeroPhone.astro';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useT(locale);
+---
+
+<section class="hero hero-split depth-atmosphere">
+  <div class="container hero-content">
+    <div class="hero-text">
+      <span class="hero-eyebrow eyebrow-mono" data-anim="hero-eyebrow">{t.hero.eyebrow}</span>
+      <h1 class="hero-tagline text-mega" data-anim="hero-tagline" set:html={t.hero.tagline}></h1>
+      <p class="hero-sub" data-anim="hero-sub">{t.hero.subtagline}</p>
+      <div class="hero-ctas" data-anim="hero-cta">
+        <a href="#cta" class="btn btn-accent hero-cta">
+          {t.hero.cta}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14"/>
+            <path d="m12 5 7 7-7 7"/>
+          </svg>
+        </a>
+        <a href="#how" class="hero-cta-secondary">{t.hero.ctaSecondary}</a>
+      </div>
+    </div>
+
+    <div class="hero-morph" data-morph-root aria-hidden="true" style="--morph: 0;">
+      <div class="hero-morph-stage">
+        <!-- AVANT : carte papier réaliste scorecard 9 trous -->
+        <figure class="hero-paper" data-morph-paper>
+          <span class="hero-state-label hero-state-before">{t.hero.beforeLabel}</span>
+          <div class="hero-paper-card">
+            <div class="hero-paper-grain" aria-hidden="true"></div>
+            <div class="hero-paper-stain" aria-hidden="true">
+              <svg viewBox="0 0 80 80" fill="none">
+                <ellipse cx="40" cy="40" rx="34" ry="30" fill="#7B5C2E" opacity="0.08"/>
+                <ellipse cx="38" cy="42" rx="28" ry="24" fill="#7B5C2E" opacity="0.10"/>
+                <ellipse cx="42" cy="38" rx="22" ry="18" fill="#7B5C2E" opacity="0.06"/>
+              </svg>
+            </div>
+
+            <header class="hero-paper-head">
+              <div class="hero-paper-title-block">
+                <span class="hero-paper-club">Golf du Soleil</span>
+                <span class="hero-paper-meta">Hauts-de-France · 18 trous · Par 72</span>
+              </div>
+              <div class="hero-paper-meta-block">
+                <span class="hero-paper-label">JOUEUR</span>
+                <span class="hero-paper-handwrite-sm">Grégoire</span>
+                <span class="hero-paper-label hero-paper-label-second">DÉPART</span>
+                <span class="hero-paper-handwrite-sm">Jaunes</span>
+              </div>
+            </header>
+
+            <div class="hero-paper-grid">
+              <div class="hero-paper-row hero-paper-row-head">
+                <span class="hero-paper-cell hero-paper-cell-label">Trou</span>
+                <span class="hero-paper-cell">1</span>
+                <span class="hero-paper-cell">2</span>
+                <span class="hero-paper-cell">3</span>
+                <span class="hero-paper-cell">4</span>
+                <span class="hero-paper-cell">5</span>
+                <span class="hero-paper-cell">6</span>
+                <span class="hero-paper-cell">7</span>
+                <span class="hero-paper-cell">8</span>
+                <span class="hero-paper-cell">9</span>
+              </div>
+              <div class="hero-paper-row">
+                <span class="hero-paper-cell hero-paper-cell-label">Par</span>
+                <span class="hero-paper-cell">4</span>
+                <span class="hero-paper-cell">3</span>
+                <span class="hero-paper-cell">5</span>
+                <span class="hero-paper-cell">4</span>
+                <span class="hero-paper-cell">4</span>
+                <span class="hero-paper-cell">3</span>
+                <span class="hero-paper-cell">5</span>
+                <span class="hero-paper-cell">4</span>
+                <span class="hero-paper-cell">4</span>
+              </div>
+              <div class="hero-paper-row hero-paper-row-score">
+                <span class="hero-paper-cell hero-paper-cell-label">Score</span>
+                <span class="hero-paper-cell hand" style="--tilt: -4deg;">5</span>
+                <span class="hero-paper-cell hand" style="--tilt: 2deg;">4</span>
+                <span class="hero-paper-cell hand strike" style="--tilt: -2deg;">7</span>
+                <span class="hero-paper-cell hand" style="--tilt: 3deg;">6</span>
+                <span class="hero-paper-cell hand" style="--tilt: -3deg;">5</span>
+                <span class="hero-paper-cell hand" style="--tilt: 1deg;">3</span>
+                <span class="hero-paper-cell hand" style="--tilt: -5deg;">7</span>
+                <span class="hero-paper-cell hand" style="--tilt: 2deg;">5</span>
+                <span class="hero-paper-cell hand" style="--tilt: -1deg;">5</span>
+              </div>
+            </div>
+
+            <footer class="hero-paper-foot">
+              <span class="hero-paper-total-label">OUT · 9 trous</span>
+              <span class="hero-paper-total-value hand">47</span>
+            </footer>
+
+            <span class="hero-paper-fold" aria-hidden="true"></span>
+          </div>
+        </figure>
+
+        <!-- APRÈS : phone digital brandé -->
+        <figure class="hero-after" data-morph-after>
+          <span class="hero-state-label hero-state-after">{t.hero.afterLabel}</span>
+          <HeroPhone locale={locale} animate={false} />
+        </figure>
+      </div>
+
+      <!-- Slider de comparaison — cursor draggable -->
+      <div class="hero-morph-control" data-morph-control>
+        <span class="hero-morph-label hero-morph-label-left">{t.hero.beforeLabel}</span>
+        <div class="hero-morph-track" data-morph-track>
+          <div class="hero-morph-progress" aria-hidden="true"></div>
+          <button class="hero-morph-knob" type="button" data-morph-knob
+                  role="slider"
+                  aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+                  aria-label={t.hero.dragHint}>
+            <svg class="hero-morph-knob-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 6L4 10l4 4"/>
+              <path d="M16 6l4 4-4 4"/>
+              <path d="M4 10h16"/>
+            </svg>
+            <span class="hero-morph-cursor-hint" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path d="M3 2l6.5 17 2.2-7.3L19 9.5 3 2z"/>
+              </svg>
+            </span>
+          </button>
+        </div>
+        <span class="hero-morph-label hero-morph-label-right">{t.hero.afterLabel}</span>
+      </div>
+    </div>
+  </div>
+
+  <a href="#problem" class="hero-scroll" aria-label={t.hero.scroll}>
+    <span>{t.hero.scroll}</span>
+    <svg width="14" height="20" viewBox="0 0 14 20" fill="none" aria-hidden="true">
+      <path d="M7 1v18m0 0L1 13m6 6 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+</section>
+
+<script>
+  // Hero morph comparison slider — drag-to-compare paper vs phone
+  document.addEventListener('astro:page-load', initMorph);
+  initMorph();
+
+  function initMorph() {
+    const root = document.querySelector('[data-morph-root]') as HTMLElement | null;
+    if (!root) return;
+    const track = root.querySelector<HTMLElement>('[data-morph-track]');
+    const knob = root.querySelector<HTMLElement>('[data-morph-knob]');
+    const control = root.querySelector<HTMLElement>('[data-morph-control]');
+    if (!track || !knob || !control) return;
+
+    let dragging = false;
+    let hasInteracted = false;
+
+    const setMorph = (value: number, withTransition = false) => {
+      const clamped = Math.max(0, Math.min(1, value));
+      if (withTransition) root.classList.add('is-morph-smooth');
+      else root.classList.remove('is-morph-smooth');
+      root.style.setProperty('--morph', String(clamped));
+      knob.setAttribute('aria-valuenow', String(Math.round(clamped * 100)));
+    };
+
+    const onPointer = (clientX: number) => {
+      const rect = track.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const ratio = x / rect.width;
+      setMorph(ratio);
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      dragging = true;
+      hasInteracted = true;
+      control.classList.add('is-dragging');
+      knob.setPointerCapture?.(e.pointerId);
+      onPointer(e.clientX);
+    };
+    const onPointerMove = (e: PointerEvent) => {
+      if (!dragging) return;
+      onPointer(e.clientX);
+    };
+    const onPointerUp = (e: PointerEvent) => {
+      if (!dragging) return;
+      dragging = false;
+      control.classList.remove('is-dragging');
+      try { knob.releasePointerCapture?.(e.pointerId); } catch {}
+    };
+
+    // Pointer events on knob + track (click anywhere on track also moves)
+    knob.addEventListener('pointerdown', onPointerDown);
+    track.addEventListener('pointerdown', (e) => {
+      onPointer(e.clientX);
+      hasInteracted = true;
+      // Then start dragging
+      dragging = true;
+      control.classList.add('is-dragging');
+    });
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+
+    // Keyboard nav on knob
+    knob.addEventListener('keydown', (e) => {
+      const current = parseInt(knob.getAttribute('aria-valuenow') || '0', 10) / 100;
+      const step = e.shiftKey ? 0.1 : 0.04;
+      let next = current;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = current - step;
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = current + step;
+      else if (e.key === 'Home') next = 0;
+      else if (e.key === 'End') next = 1;
+      else return;
+      e.preventDefault();
+      hasInteracted = true;
+      setMorph(next, true);
+    });
+
+    // Auto-animation teaser on first view (IntersectionObserver)
+    const playTeaser = () => {
+      if (hasInteracted) return;
+      const steps: Array<[number, number]> = [
+        [0, 0],       // start at "Aujourd'hui"
+        [600, 1],     // → fully "Avec Scluba"
+        [1400, 0.42], // settle in showing both, slight bias toward after
+      ];
+      steps.forEach(([delay, value]) => {
+        setTimeout(() => {
+          if (hasInteracted) return;
+          setMorph(value, true);
+        }, delay);
+      });
+    };
+
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setTimeout(playTeaser, 800);
+            io.disconnect();
+            return;
+          }
+        }
+      }, { threshold: 0.4 });
+      io.observe(root);
+    } else {
+      setTimeout(playTeaser, 1200);
+    }
+  }
+</script>
+
+<style>
+  .hero-split {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    padding: 160px 0 100px;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-7);
+    align-items: center;
+  }
+
+  @media (min-width: 1024px) {
+    .hero-content {
+      grid-template-columns: 1.05fr 1fr;
+      gap: var(--space-8);
+    }
+  }
+
+  .hero-eyebrow {
+    display: block;
+    margin-bottom: var(--space-4);
+    color: var(--accent);
+  }
+
+  .hero-tagline {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(2.2rem, 5.4vw, 4.6rem);
+    line-height: 0.98;
+    color: var(--primary);
+    margin-bottom: var(--space-5);
+    letter-spacing: -0.035em;
+    max-width: 14ch;
+  }
+
+  .hero-sub {
+    font-size: var(--text-lg);
+    color: var(--ink);
+    margin-bottom: var(--space-6);
+    max-width: 38ch;
+    line-height: 1.5;
+  }
+
+  .hero-ctas {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+  }
+  .hero-cta {
+    padding: 14px 28px;
+    font-size: var(--text-base);
+  }
+  .hero-cta-secondary {
+    color: var(--ink);
+    font-size: var(--text-sm);
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1.5px;
+    transition: color 0.2s ease;
+  }
+  .hero-cta-secondary:hover { color: var(--primary); }
+
+  /* ===== HERO MORPH (comparison slider) ===== */
+  .hero-morph {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-6);
+    width: 100%;
+    --morph: 0;
+  }
+
+  .hero-morph-stage {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    height: min(72vh, 640px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Transition smooth quand pilotée par JS auto-teaser ou clavier */
+  .hero-morph.is-morph-smooth .hero-paper,
+  .hero-morph.is-morph-smooth .hero-after {
+    transition:
+      opacity 0.6s var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)),
+      transform 0.7s var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
+  }
+
+  /* === Layer commun : centrer paper et phone sur la même position === */
+  .hero-paper,
+  .hero-after {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    will-change: opacity, transform;
+  }
+
+  /* Paper card : opaque/normal à morph=0, dégagé à morph=1 */
+  .hero-paper {
+    opacity: calc(1 - var(--morph));
+    transform:
+      rotate(calc(-2.4deg - var(--morph) * 6deg))
+      translate(calc(var(--morph) * -28px), calc(var(--morph) * -18px))
+      scale(calc(1 - var(--morph) * 0.06));
+    z-index: calc(2 - var(--morph) * 2);
+  }
+
+  /* Phone : caché à morph=0, présent à morph=1 */
+  .hero-after {
+    opacity: var(--morph);
+    transform:
+      translateY(calc((1 - var(--morph)) * 32px))
+      scale(calc(0.88 + var(--morph) * 0.12));
+    z-index: calc(var(--morph) * 2);
+  }
+
+  /* État labels avant/après — petits chips en haut */
+  .hero-state-label {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-3);
+    padding: 4px 12px;
+    border-radius: 999px;
+  }
+  .hero-state-before {
+    color: #8B6F4E;
+    background: rgba(139, 111, 78, 0.10);
+    border: 1px solid rgba(139, 111, 78, 0.25);
+  }
+  .hero-state-after {
+    color: var(--accent);
+    background: rgba(212, 165, 116, 0.14);
+    border: 1px solid var(--accent);
+  }
+
+  /* ===== CARTE PAPIER (scorecard 9 trous réaliste) ===== */
+  .hero-paper-card {
+    position: relative;
+    width: clamp(280px, 36vw, 380px);
+    background: #F2E9D2;
+    background-image:
+      linear-gradient(120deg, rgba(255, 250, 235, 0.7) 0%, transparent 35%),
+      radial-gradient(circle at 18% 84%, rgba(120, 90, 50, 0.08) 0%, transparent 55%),
+      radial-gradient(circle at 86% 16%, rgba(120, 90, 50, 0.06) 0%, transparent 45%);
+    border-radius: 3px;
+    padding: 18px 20px 18px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.6) inset,
+      0 3px 10px rgba(70, 50, 30, 0.16),
+      0 18px 36px rgba(70, 50, 30, 0.22),
+      0 32px 64px rgba(70, 50, 30, 0.12);
+    border: 1px solid rgba(120, 90, 50, 0.12);
+  }
+  .hero-paper-grain {
+    position: absolute;
+    inset: 0;
+    border-radius: 3px;
+    opacity: 0.30;
+    pointer-events: none;
+    background-image:
+      repeating-linear-gradient(0deg,
+        rgba(120, 90, 50, 0.045) 0px,
+        rgba(120, 90, 50, 0.045) 1px,
+        transparent 1px,
+        transparent 3px),
+      repeating-linear-gradient(90deg,
+        rgba(120, 90, 50, 0.025) 0px,
+        rgba(120, 90, 50, 0.025) 1px,
+        transparent 1px,
+        transparent 5px);
+    mix-blend-mode: multiply;
+  }
+  /* Tache café — décorative en haut à droite */
+  .hero-paper-stain {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 72px;
+    height: 72px;
+    pointer-events: none;
+    opacity: 0.85;
+    transform: rotate(-12deg);
+  }
+  .hero-paper-stain svg { width: 100%; height: 100%; display: block; }
+
+  /* Coin froissé en bas à droite */
+  .hero-paper-fold {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 38px;
+    height: 38px;
+    background: linear-gradient(
+      135deg,
+      transparent 50%,
+      rgba(120, 90, 50, 0.12) 50%,
+      rgba(120, 90, 50, 0.18) 70%,
+      rgba(70, 50, 30, 0.24) 100%
+    );
+    border-bottom-right-radius: 3px;
+    pointer-events: none;
+  }
+  .hero-paper-fold::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 0 20px 20px;
+    border-color: transparent transparent #E5DAB5 transparent;
+  }
+
+  /* Header papier — club + meta + joueur/départ */
+  .hero-paper-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+    border-bottom: 1.5px solid rgba(120, 90, 50, 0.30);
+    position: relative;
+  }
+  .hero-paper-title-block {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .hero-paper-club {
+    font-family: var(--font-display, 'Fraunces');
+    font-size: 18px;
+    font-weight: 800;
+    color: #3C2E1A;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .hero-paper-meta {
+    font-family: var(--font-mono, 'JetBrains Mono');
+    font-size: 8.5px;
+    letter-spacing: 0.10em;
+    color: rgba(60, 46, 26, 0.7);
+    text-transform: uppercase;
+  }
+  .hero-paper-meta-block {
+    text-align: right;
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: baseline;
+    gap: 2px 8px;
+    flex-shrink: 0;
+  }
+  .hero-paper-label {
+    font-family: var(--font-mono);
+    font-size: 7.5px;
+    letter-spacing: 0.18em;
+    color: rgba(60, 46, 26, 0.55);
+    text-transform: uppercase;
+    text-align: left;
+  }
+  .hero-paper-label-second {
+    margin-top: 2px;
+  }
+  .hero-paper-handwrite-sm {
+    font-family: 'Caveat', 'Marker Felt', 'Comic Sans MS', cursive;
+    font-size: 16px;
+    color: #2C3E50;
+    line-height: 1;
+    text-align: left;
+  }
+
+  /* Grille 9 trous */
+  .hero-paper-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 4px 0 10px;
+  }
+  .hero-paper-row {
+    display: grid;
+    grid-template-columns: minmax(36px, 0.8fr) repeat(9, 1fr);
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px dotted rgba(120, 90, 50, 0.22);
+  }
+  .hero-paper-row-head {
+    border-bottom: 1.5px solid rgba(120, 90, 50, 0.40);
+    padding-bottom: 5px;
+  }
+  .hero-paper-row-score {
+    border-bottom: none;
+    padding-top: 6px;
+  }
+  .hero-paper-cell {
+    font-family: var(--font-mono, 'JetBrains Mono');
+    font-size: 10.5px;
+    color: #3C2E1A;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .hero-paper-row-head .hero-paper-cell {
+    font-weight: 600;
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+  }
+  .hero-paper-cell-label {
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(60, 46, 26, 0.6);
+    text-align: left;
+    font-weight: 500;
+  }
+  .hero-paper-row-score .hero-paper-cell-label {
+    color: rgba(60, 46, 26, 0.78);
+  }
+  .hero-paper-cell.hand {
+    font-family: 'Caveat', 'Marker Felt', cursive;
+    font-size: 22px;
+    color: #1E3A4B;
+    line-height: 0.9;
+    transform: rotate(var(--tilt, 0deg)) translateY(-1px);
+    display: inline-block;
+  }
+  .hero-paper-cell.hand.strike {
+    position: relative;
+    color: rgba(30, 58, 75, 0.45);
+  }
+  .hero-paper-cell.hand.strike::after {
+    content: "";
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    top: 50%;
+    height: 1.5px;
+    background: #1E3A4B;
+    transform: rotate(-10deg);
+  }
+
+  /* Footer total */
+  .hero-paper-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-top: 10px;
+    border-top: 2px solid rgba(120, 90, 50, 0.40);
+  }
+  .hero-paper-total-label {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    color: #3C2E1A;
+    font-weight: 500;
+  }
+  .hero-paper-total-value {
+    font-family: 'Caveat', 'Marker Felt', cursive;
+    font-size: 34px;
+    color: #1E3A4B;
+    line-height: 0.85;
+    transform: rotate(-3deg);
+    display: inline-block;
+  }
+
+  /* ===== CONTROL : slider de comparaison ===== */
+  .hero-morph-control {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: min(360px, 100%);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .hero-morph-label {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted, #7A7A7A);
+    white-space: nowrap;
+    transition: color 0.2s ease;
+  }
+  .hero-morph-label-left {
+    color: color-mix(in srgb, #8B6F4E, transparent calc((1 - var(--morph)) * -100% + 30%));
+    color: rgba(139, 111, 78, calc(0.4 + (1 - var(--morph)) * 0.6));
+  }
+  .hero-morph-label-right {
+    color: rgba(212, 165, 116, calc(0.4 + var(--morph) * 0.6));
+  }
+
+  .hero-morph-track {
+    position: relative;
+    flex: 1;
+    height: 36px;
+    cursor: pointer;
+    touch-action: none;
+    display: flex;
+    align-items: center;
+  }
+  .hero-morph-track::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(120, 90, 50, 0.18);
+  }
+  .hero-morph-progress {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: calc(var(--morph) * 100%);
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(139, 111, 78, 0.6) 0%, var(--accent, #D4A574) 100%);
+    pointer-events: none;
+    transition: width 0s linear;
+  }
+  .hero-morph.is-morph-smooth .hero-morph-progress {
+    transition: width 0.7s var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
+  }
+
+  .hero-morph-knob {
+    position: absolute;
+    top: 50%;
+    left: calc(var(--morph) * 100%);
+    transform: translate(-50%, -50%);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--bg, #F4EEDD);
+    border: 2px solid var(--accent, #D4A574);
+    box-shadow:
+      0 2px 6px rgba(70, 50, 30, 0.18),
+      0 6px 16px rgba(70, 50, 30, 0.12);
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary, #1B4332);
+    padding: 0;
+    transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), width 0s linear, height 0s linear, left 0s linear;
+    z-index: 2;
+  }
+  .hero-morph.is-morph-smooth .hero-morph-knob {
+    transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), left 0.7s var(--ease-out);
+  }
+  .hero-morph-knob:hover {
+    transform: translate(-50%, -50%) scale(1.08);
+    box-shadow:
+      0 3px 8px rgba(70, 50, 30, 0.22),
+      0 8px 20px rgba(70, 50, 30, 0.15);
+  }
+  .hero-morph-knob:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 4px rgba(212, 165, 116, 0.35),
+      0 2px 6px rgba(70, 50, 30, 0.18);
+  }
+  .hero-morph-control.is-dragging .hero-morph-knob {
+    cursor: grabbing;
+    transform: translate(-50%, -50%) scale(1.14);
+  }
+  .hero-morph-knob-icon {
+    pointer-events: none;
+  }
+
+  /* Cursor hint : petit pointer décoratif à côté du knob, ne s'affiche
+     qu'avant la première interaction */
+  .hero-morph-cursor-hint {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translate(-30%, -8px);
+    color: var(--accent, #D4A574);
+    pointer-events: none;
+    opacity: 0;
+    animation: cursorHintIn 0.6s ease 1.4s forwards, cursorHintWiggle 1.8s ease-in-out 2s infinite;
+    filter: drop-shadow(0 1px 2px rgba(70, 50, 30, 0.4));
+  }
+  .hero-morph-control.is-dragging .hero-morph-cursor-hint,
+  .hero-morph[style*="--morph: 0."]:not([style*="--morph: 0.0"]) .hero-morph-cursor-hint {
+    animation: cursorHintOut 0.4s ease forwards;
+  }
+  @keyframes cursorHintIn {
+    from { opacity: 0; transform: translate(-30%, 4px); }
+    to   { opacity: 0.85; transform: translate(-30%, -8px); }
+  }
+  @keyframes cursorHintOut {
+    to { opacity: 0; transform: translate(-30%, -8px) scale(0.9); }
+  }
+  @keyframes cursorHintWiggle {
+    0%, 100% { transform: translate(-30%, -8px) rotate(-4deg); }
+    50%      { transform: translate(-30%, -2px) rotate(2deg); }
+  }
+
+  /* === Hero scroll hint === */
+  .hero-scroll {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    z-index: 1;
+    opacity: 0.65;
+    animation: scrollHint 2.4s ease-in-out infinite;
+  }
+  @keyframes scrollHint {
+    0%, 100% { transform: translate(-50%, 0); }
+    50% { transform: translate(-50%, 8px); }
+  }
+
+  /* === Animation hero fade out au scroll (scroll-driven CSS natif) === */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .hero-tagline,
+      .hero-sub {
+        animation: heroFadeOut linear both;
+        animation-timeline: view();
+        animation-range: cover 40% cover 90%;
+      }
+      @keyframes heroFadeOut {
+        to { opacity: 0.35; transform: translateY(-24px); }
+      }
+    }
+  }
+
+  /* === Responsive : mobile, simplifier === */
+  @media (max-width: 1023px) {
+    .hero-split {
+      padding: 120px 0 80px;
+      min-height: auto;
+    }
+    .hero-tagline {
+      font-size: clamp(2rem, 8vw, 3.4rem);
+    }
+    .hero-morph-stage {
+      height: 60vh;
+      min-height: 480px;
+    }
+    .hero-paper-card {
+      width: min(320px, 84vw);
+    }
+    .hero-paper-cell.hand {
+      font-size: 20px;
+    }
+    .hero-paper-total-value {
+      font-size: 30px;
+    }
+  }
+
+  /* Reduce motion : pas d'auto-animation, état initial à 50/50 */
+  @media (prefers-reduced-motion: reduce) {
+    .hero-morph { --morph: 0.5; }
+    .hero-morph .hero-paper,
+    .hero-morph .hero-after {
+      transition: none !important;
+    }
+    .hero-morph-cursor-hint { animation: none; opacity: 0; }
+  }
+</style>
