@@ -10,71 +10,59 @@
   },
   "hero": {
     "eyebrow": "Digital scorecard · golf clubs",
-    "tagline": "Your players share.<br>With you, this time.",
-    "subtagline": "The digital scorecard branded to your club. Every round mentions your golf on social — without ad spend.",
-    "cta": "See my mockup in 24h",
-    "ctaSecondary": "See a 10-min demo",
-    "beforeLabel": "Today",
-    "afterLabel": "With Scluba",
-    "dragHint": "Drag to compare",
+    "tagline": "The branded digital scorecard for your club.",
+    "subtagline": "Your golfers play. Your club shines.",
+    "cta": "See a 10-min demo",
     "scroll": "Discover the concept"
   },
   "problem": {
-    "eyebrow": "Origin story",
+    "eyebrow": "The reality",
     "lines": [
-      "We are two golfers.",
-      "Every round, the same move: snap a photo of the paper scorecard.",
-      "Send it to friends. Post a story.",
-      "No trace of the club we just played at."
+      "Today, your golfers walk off the course.",
+      "They take out their smartphone.",
+      "And snap a picture of their paper scorecard.",
+      "Without any mention of your club."
     ],
-    "punchline": "Everything went digital in our lives. Except that moment."
+    "punchline": "Every round is a missed visibility opportunity."
   },
-  "insight": {
-    "eyebrow": "The insight",
-    "title": "What if every round became a showcase for your club?",
-    "sub": "A scorecard branded to your club is an Instagram post with your logo. Every round. No ad spend."
-  },
-  "pillars": {
-    "eyebrow": "The product",
-    "title": "Everything you need, in 3 pillars.",
-    "lead": "A branded digital scorecard, a live leaderboard for your players, a QR frame for your desk. Zero installation, zero burden on your team.",
+  "steps": {
+    "eyebrow": "The solution",
+    "title": "Scluba in 3 gestures",
+    "lead": "A simple mechanic, designed for the club and the player. Zero installation, zero complexity for your team.",
     "founders_quote": {
-      "text": "We didn't set out to build an app. We wanted an elegant frame that turns a round into a shared souvenir — and a post for the club.",
+      "text": "We weren't planning to build an app. We just wanted an elegant frame that turns a round into a shared souvenir.",
       "authors": "Grégoire & Paul",
       "role": "Scluba co-founders"
     },
     "items": [
       {
         "num": "01",
-        "title": "Branded digital scorecard",
-        "body": "Colors, logo, typography, your club's actual course. A web app — no download, no account for the player."
+        "title": "QR at the desk",
+        "body": "We send you an elegant frame to place on your reception counter."
       },
       {
         "num": "02",
-        "title": "Live leaderboard + share",
-        "body": "Real-time leaderboard during the round. Final card sharable as image and link, with your logo as signature."
+        "title": "The player scans and plays",
+        "body": "One web app, no install. Multiple players can enter their scores hole by hole from a single QR."
       },
       {
         "num": "03",
-        "title": "QR frame on the counter",
-        "body": "An elegant display delivered turnkey, placed at reception or the pro shop. The player scans, the round starts."
+        "title": "Shared everywhere",
+        "body": "Post-ready image in your club's colors with souvenir photo. Native share on iOS, Android, desktop."
       }
     ]
   },
   "flow": {
     "eyebrow": "The Scluba flow",
-    "phase1Tag": "01 · During the round",
-    "phase1Title": "Hole-by-hole entry. Live leaderboard.",
-    "phase1Lead": "Each player enters their score at each hole. The leaderboard updates in real time — everyone sees who's ahead, and the round becomes a real match.",
-    "phase2Tag": "02 · The card",
-    "phase2Title": "A scorecard branded to your club.",
-    "phase2Lead": "Photo, logo, course, weather, score, holes grid: everything is composed automatically at the end of the round. Ready to share, ready to shine.",
-    "phase3Tag": "03 · The recap",
-    "phase3Title": "Final leaderboard, personal note.",
-    "phase3Lead": "Your players recap the round, add a comment, sign their card. The souvenir is ready — all that's left is to share it.",
-    "phase4Tag": "04 · The share",
-    "phase4Title": "Instant share. Your club travels along.",
-    "phase4Lead": "iMessage, WhatsApp, Instagram Stories, Snap: one tap → branded card sent. Your club shows up at every share, effortlessly, no ad spend.",
+    "phase1Tag": "01 · Join",
+    "phase1Title": "One QR. The whole round signed in within 30 seconds.",
+    "phase1Lead": "Player 1 creates the round by scanning the QR at the desk. Others join with the same code — no app, no account, no magic-link.",
+    "phase2Tag": "02 · Scorecard",
+    "phase2Title": "A real branded scorecard. Not a screenshot.",
+    "phase2Lead": "Club identity, Front 9 / Back 9 rows, birdie/par/bogey cells, SCLUBA signature. Hole-by-hole entry for every player.",
+    "phase3Tag": "03 · Share",
+    "phase3Title": "Post-ready PNG, native share everywhere.",
+    "phase3Lead": "Personal photo, 1080×1350 PNG, native iOS / Android / desktop sheet. The club shows up in every feed.",
     "joinClubMeta": "Sat. May 11 · 2:30 PM",
     "joinEyebrow": "Round code",
     "joinHelper": "Type this code or scan the desk QR",
@@ -181,52 +169,29 @@
       }
     ]
   },
-  "benefits": {
-    "eyebrow": "For your club",
-    "title": "Three concrete benefits for your golf course.",
-    "lead": "Beyond the gadget: a visibility lever, a brand signal, a step ahead of neighboring clubs.",
-    "items": [
-      {
-        "num": "01",
-        "title": "Organic visibility",
-        "body": "Every shared round mentions your club on social. No ad budget to unlock, no campaign to manage — your players become your best ambassadors."
-      },
-      {
-        "num": "02",
-        "title": "Modern brand image",
-        "body": "A strong signal for golfers under 45 in an aging sport. Your club shows it lives with its time — without giving up its style."
-      },
-      {
-        "num": "03",
-        "title": "Differentiation",
-        "body": "The first modern club in your region. A concrete pitch for prospects and members, and an edge against neighboring golfs."
-      }
-    ]
-  },
   "how": {
-    "eyebrow": "The proof",
-    "title": "See your card before you sign.",
-    "lead": "Give us your golf's URL. We extract logo, colors and photos to build your mockup in 24h. No commitment, no credit card.",
+    "eyebrow": "Onboarding",
+    "title": "From signature to first card shared: 7 days.",
     "items": [
       {
         "num": "1",
         "title": "5 min on the phone",
-        "body": "You share your website URL. We briefly discuss your identity, your courses, your constraints."
+        "body": "Give us your website URL. We extract logo, colors and photos to build a mockup."
       },
       {
         "num": "2",
         "title": "Mockup in 24h",
-        "body": "A card in your image, ready to validate. Unlimited tweaks until your green light — you see exactly what your players will see."
+        "body": "You receive the branded page to validate. Unlimited tweaks until your OK."
       },
       {
         "num": "3",
         "title": "QR frame delivered",
-        "body": "An elegant frame ready to place on the reception desk. Zero technical install on the club side, zero burden on your team."
+        "body": "We ship you an elegant QR frame, ready to place on your reception desk."
       },
       {
         "num": "4",
         "title": "Monthly reporting",
-        "body": "An email recap every month: scans, rounds played, social shares. The impact of your card, readable in 30 seconds."
+        "body": "Every month, an email recap: scans, rounds played, social shares."
       }
     ]
   },
@@ -255,11 +220,11 @@
         "engagement": "or $39/month with 3-year commitment (−20%)",
         "features": [
           "Scorecard in your club's colors",
-          "Natural social-media presence with every round",
-          "Elegant QR frame delivered to the reception desk",
-          "Multi-player live score entry, no install",
-          "Souvenir photo included with every round",
-          "Monthly email reporting: scans, rounds, shares"
+          "End-of-round souvenir photo",
+          "Post-ready PNG image (Stories, WhatsApp, Mail)",
+          "Multi-player score entry on a single QR",
+          "Elegant QR frame for the desk",
+          "Monthly club visibility reporting"
         ]
       }
     ]
@@ -295,10 +260,6 @@
       {
         "q": "Is this an official handicap tracking tool?",
         "a": "No. Scluba is a leisure round and social-sharing tool. It complements your official tools without replacing them."
-      },
-      {
-        "q": "How many clubs are already onboard?",
-        "a": "We're launching our commercial offer in summer 2026 with a pilot of founding club partners. The 1st-month-free offer is reserved for the first 10 clubs — you get direct support from the co-founders."
       }
     ]
   },

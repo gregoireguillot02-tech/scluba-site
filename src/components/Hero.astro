@@ -1,0 +1,687 @@
+---
+import { useT, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useT(locale);
+---
+
+<section class="hero depth-atmosphere">
+  <div class="container hero-content">
+    <div class="hero-text">
+      <span class="hero-eyebrow eyebrow-mono" data-anim="hero-eyebrow">{t.hero.eyebrow}</span>
+      <h1 class="hero-logo text-mega"><span class="hero-logo-text" data-anim="hero-logo">Scluba</span></h1>
+      <p class="hero-tagline" data-anim="hero-tagline">{t.hero.tagline}</p>
+      <p class="hero-sub" data-anim="hero-sub">{t.hero.subtagline}</p>
+      <a href="#cta" class="btn btn-accent hero-cta" data-anim="hero-cta">
+        {t.hero.cta}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h14"/>
+          <path d="m12 5 7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+
+    <div class="hero-visual" data-anim="hero-phone" aria-hidden="true">
+      <div class="hero-phone-stage">
+        <div class="hero-phone">
+          <!-- Boutons latéraux -->
+          <span class="hero-phone-btn hero-phone-btn-action"></span>
+          <span class="hero-phone-btn hero-phone-btn-volup"></span>
+          <span class="hero-phone-btn hero-phone-btn-voldown"></span>
+          <span class="hero-phone-btn hero-phone-btn-side"></span>
+
+          <div class="hero-phone-screen">
+            <!-- Dynamic Island -->
+            <div class="hero-phone-island">
+              <span class="hero-phone-camera"></span>
+            </div>
+
+            <!-- V4.4 : Hero phone = écran "Démarrer une partie" (entry point
+                 du flow joueur, mirror Scluba webapp réelle). Photo Golf du
+                 Soleil + logo + identité + stats + form solo/multi. -->
+            <div class="hero-card hero-card-start">
+              <!-- Photo banner top -->
+              <div class="hero-card-photo">
+                <img src="/photos/golf-du-soleil.jpg" alt="" width="280" height="180" loading="eager" decoding="async" fetchpriority="high" />
+              </div>
+
+              <!-- Logo circle overlapping -->
+              <div class="hero-card-logo-wrap">
+                <img src="/logos/golf-du-soleil.svg" alt="" class="hero-card-logo" width="60" height="60" loading="eager" decoding="async" />
+              </div>
+
+              <!-- Club identity -->
+              <div class="hero-card-identity">
+                <span class="hero-card-city">HAUTS-DE-FRANCE</span>
+                <h3 class="hero-card-name">GOLF DU SOLEIL</h3>
+                <span class="hero-card-rule" aria-hidden="true"></span>
+              </div>
+
+              <!-- Stats strip -->
+              <div class="hero-card-stats">
+                <div class="hero-card-stat">
+                  <span class="hero-card-stat-label">TROUS</span>
+                  <span class="hero-card-stat-value">18</span>
+                </div>
+                <div class="hero-card-stat">
+                  <span class="hero-card-stat-label">PAR</span>
+                  <span class="hero-card-stat-value">72</span>
+                </div>
+                <div class="hero-card-stat">
+                  <span class="hero-card-stat-label">DÉPART</span>
+                  <span class="hero-card-stat-value">Libre</span>
+                </div>
+              </div>
+
+              <!-- Action section : "Démarrer une partie" — sélection prénom +
+                   parcours (9/18 trous) + CTA, mirror Scluba webapp réelle. -->
+              <div class="hero-card-action">
+                <span class="hero-card-eyebrow">SCORECARD DIGITALE</span>
+                <h4 class="hero-card-title">Démarrer une partie</h4>
+
+                <div class="hero-card-tabs" aria-hidden="true">
+                  <span class="hero-card-tab is-active">En solo</span>
+                  <span class="hero-card-tab">À plusieurs</span>
+                </div>
+
+                <div class="hero-card-field">
+                  <label>TON PRÉNOM</label>
+                  <div class="hero-card-input">
+                    <span class="hero-card-input-placeholder">Antoine</span>
+                    <span class="hero-card-input-caret"></span>
+                  </div>
+                </div>
+
+                <div class="hero-card-field">
+                  <label>QUEL PARCOURS ?</label>
+                  <div class="hero-card-radio-group" role="group">
+                    <label class="hero-card-radio is-active">
+                      <span class="hero-card-radio-dot" aria-hidden="true"></span>
+                      <span class="hero-card-radio-label">18 trous · Les Pins</span>
+                    </label>
+                    <label class="hero-card-radio">
+                      <span class="hero-card-radio-dot" aria-hidden="true"></span>
+                      <span class="hero-card-radio-label">9 trous · L'Académie</span>
+                    </label>
+                  </div>
+                </div>
+
+                <button class="hero-card-cta" type="button" tabindex="-1" aria-hidden="true">
+                  Démarrer la partie
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14"/>
+                    <path d="m12 5 7 7-7 7"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <a href="#problem" class="hero-scroll" aria-label={t.hero.scroll}>
+    <span>{t.hero.scroll}</span>
+    <svg width="14" height="20" viewBox="0 0 14 20" fill="none" aria-hidden="true">
+      <path d="M7 1v18m0 0L1 13m6 6 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    padding: 160px 0 80px;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-7);
+    align-items: center;
+  }
+
+  @media (min-width: 1024px) {
+    .hero-content {
+      grid-template-columns: 1.1fr 1fr;
+      gap: var(--space-8);
+    }
+  }
+
+  /* Eyebrow mono au-dessus du logo — pattern jeskojets/drinksom */
+  .hero-eyebrow {
+    display: block;
+    margin-bottom: var(--space-4);
+    color: var(--accent);
+  }
+
+  /* Hero logo SCLUBA caps Big Shoulders Display — cohérent avec le wordmark
+     Nav/Footer (Modern Mono direction validée 2026-05-19 PR #95). La balle
+     SVG inline historique est supprimée — la balle 3D Three.js (fixed
+     inset:0) joue ce rôle visuel maintenant à plus grande échelle. */
+  .hero-logo {
+    line-height: 0.82;
+    margin-bottom: var(--space-5);
+    color: var(--primary);
+    overflow: hidden;
+  }
+  .hero-logo .hero-logo-text {
+    font-family: var(--font-display);
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    color: var(--primary);
+    display: inline-block;
+  }
+
+  .hero-logo :global(.char) {
+    display: inline-block;
+    will-change: transform;
+  }
+
+  .hero-tagline {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    line-height: 1.15;
+    color: var(--ink);
+    margin-bottom: var(--space-4);
+    max-width: 22ch;
+    letter-spacing: -0.025em;
+  }
+
+  .hero-sub {
+    font-size: var(--text-md);
+    color: var(--muted);
+    margin-bottom: var(--space-6);
+    max-width: 32ch;
+    line-height: 1.5;
+  }
+
+  .hero-cta {
+    padding: 14px 28px;
+    font-size: var(--text-base);
+  }
+
+  /* Phone preview hero — virage.one : panneau pastel + phone vertical face-on */
+  .hero-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .hero-phone-stage {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+  }
+
+  /* === Progressive enhancement : scroll-driven CSS natif ===
+     Chrome 115+ / Edge 115+ / Safari 18+. Sur les autres browsers, les
+     keyframes ne s'exécutent pas → rendu standard inchangé (aucune régression). */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .hero-tagline,
+      .hero-sub {
+        animation: heroFadeOut linear both;
+        animation-timeline: view();
+        animation-range: cover 40% cover 90%;
+      }
+      @keyframes heroFadeOut {
+        to { opacity: 0.35; transform: translateY(-24px); }
+      }
+
+      .hero-phone-stage {
+        animation: heroPhoneRise linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 30%;
+      }
+      @keyframes heroPhoneRise {
+        from { transform: translateY(28px); }
+        to   { transform: translateY(0); }
+      }
+    }
+  }
+
+  /* Balle de golf — point du wordmark "Scluba." */
+  .hero-ball {
+    display: inline-block;
+    width: 0.42em;
+    height: 0.42em;
+    vertical-align: -0.02em;
+    margin-left: 0.05em;
+    filter: drop-shadow(1.5px 3px 4px rgba(27, 67, 50, 0.28));
+    will-change: transform, opacity;
+  }
+  .hero-ball svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* V4.2 — iPhone 17 Pro titanium frame plus large + couches CSS détaillées.
+     Height 75vh (était 64vh, +17% présence). Bevel intérieur + gloss
+     reflection + speaker grille top pour pousser le réalisme. */
+  .hero-phone {
+    position: relative;
+    height: min(75vh, 680px);
+    aspect-ratio: 9 / 19.5;
+    width: auto;
+    background:
+      linear-gradient(135deg,
+        #6E6E72 0%,
+        #48484A 22%,
+        #2C2C2E 50%,
+        #48484A 78%,
+        #6E6E72 100%);
+    border-radius: 56px;
+    padding: 12px;
+    box-shadow:
+      0 24px 48px rgba(0, 0, 0, 0.40),
+      0 48px 96px rgba(0, 0, 0, 0.30),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 0 0 1.5px rgba(0, 0, 0, 0.70);
+    will-change: transform;
+    z-index: 1;
+  }
+  /* Bevel intérieur — micro-trait clair à la jonction frame/screen */
+  .hero-phone::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border-radius: 50px;
+    pointer-events: none;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    z-index: 2;
+  }
+  /* Reflet diagonal gloss subtil sur le verre */
+  .hero-phone::after {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border-radius: 44px;
+    pointer-events: none;
+    background: linear-gradient(
+      138deg,
+      rgba(255, 255, 255, 0.10) 0%,
+      rgba(255, 255, 255, 0) 35%,
+      rgba(255, 255, 255, 0) 75%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+    z-index: 4;
+    mix-blend-mode: screen;
+  }
+
+  /* Boutons latéraux titanium (gradient cohérent avec le frame) */
+  .hero-phone-btn {
+    position: absolute;
+    background: linear-gradient(180deg, #5C5C5E 0%, #2C2C2E 50%, #5C5C5E 100%);
+    border-radius: 1.5px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
+  }
+  /* Action button gold/champagne — signature iPhone Pro */
+  .hero-phone-btn-action {
+    left: -2px; top: 84px; width: 4px; height: 26px;
+    background: linear-gradient(180deg, #C9A96A 0%, #8B7344 50%, #C9A96A 100%);
+  }
+  .hero-phone-btn-volup { left: -2px; top: 122px; width: 4px; height: 48px; }
+  .hero-phone-btn-voldown { left: -2px; top: 180px; width: 4px; height: 48px; }
+  .hero-phone-btn-side { right: -2px; top: 122px; width: 4px; height: 76px; }
+
+  .hero-phone-screen {
+    /* Sub-context palette "carnet de partie" — forest + honey, isolé du
+       contexte parent. Accent honey #D4A574 (au lieu du vert néon) pour
+       coller au country-club light du reste du site. */
+    --primary: #1B4332;
+    --primary-soft: #2D6A4F;
+    --primary-deep: #0F2A1E;
+    --primary-bg: rgba(212, 165, 116, 0.10);
+    --accent: #D4A574;
+    --accent-soft: rgba(212, 165, 116, 0.16);
+    --accent-bright: #E8C089;
+    --ink: #1B4332;
+    --ink-soft: #2D6A4F;
+    --bg: #F4EEDD;
+    --muted: #7A7A7A;
+    --line: rgba(27, 67, 50, 0.14);
+
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #F4EEDD 0%, #E8DEC5 100%);
+    border-radius: 44px;
+    overflow: hidden;
+  }
+  /* Speaker grille top — barre fine subtile (au-dessus du Dynamic Island) */
+  .hero-phone-screen::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12%;
+    max-width: 50px;
+    height: 2px;
+    border-radius: 1px;
+    background: rgba(0, 0, 0, 0.18);
+    z-index: 4;
+  }
+  .hero-phone-island {
+    /* Dynamic Island iPhone 17 Pro — légèrement plus large + plus bas */
+    position: absolute;
+    top: 11px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32%;
+    max-width: 124px;
+    min-width: 96px;
+    height: 30px;
+    background: #000;
+    border-radius: 18px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+  }
+  .hero-phone-camera {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #2a3a40, #050a0c);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  }
+
+  /* V4.4 — Hero card "Démarrer une partie" (Grégoire spec image 1).
+     Mirror Scluba webapp entry point : photo + logo + identité + stats
+     + form solo/multi avec CTA dark navy. */
+  .hero-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .hero-card-photo {
+    position: relative;
+    height: 130px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .hero-card-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 50%;
+  }
+
+  .hero-card-logo-wrap {
+    width: 64px;
+    height: 64px;
+    margin: -32px auto 0;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+    padding: 4px;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  .hero-card-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .hero-card-identity {
+    text-align: center;
+    padding: 6px 16px 0;
+  }
+  .hero-card-city {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .hero-card-name {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: -0.015em;
+    color: var(--primary);
+    margin: 0 0 4px;
+    text-transform: uppercase;
+    line-height: 1.1;
+  }
+  .hero-card-rule {
+    display: block;
+    width: 36px;
+    height: 1px;
+    background: var(--accent);
+    margin: 0 auto;
+    opacity: 0.5;
+  }
+
+  .hero-card-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    padding: 8px 10px;
+    margin: 10px 12px 0;
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 6px;
+  }
+  .hero-card-stat {
+    text-align: center;
+  }
+  .hero-card-stat-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+  .hero-card-stat-value {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.02em;
+  }
+
+  .hero-card-action {
+    padding: 10px 16px 14px;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .hero-card-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: var(--accent);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .hero-card-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--primary);
+    margin: 0 0 10px;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  .hero-card-tabs {
+    display: inline-flex;
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 16px;
+    padding: 3px;
+    margin: 0 auto 12px;
+    border: 1px solid var(--line);
+  }
+  .hero-card-tab {
+    padding: 4px 12px;
+    border-radius: 14px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .hero-card-tab.is-active {
+    background: var(--bg);
+    color: var(--primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .hero-card-field {
+    text-align: left;
+    margin-bottom: 12px;
+  }
+  .hero-card-field label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .hero-card-input {
+    background: rgba(255, 255, 255, 0.45);
+    border: 1.5px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .hero-card-input-placeholder {
+    color: var(--muted);
+    flex: 1;
+  }
+  .hero-card-input-caret {
+    display: inline-block;
+    width: 1.5px;
+    height: 14px;
+    background: var(--accent);
+    animation: heroCaretBlink 1s infinite;
+  }
+  @keyframes heroCaretBlink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  /* V6.4 — Section "Quel parcours ?" : 2 radios (un 9 trous + un 18 trous).
+     L'option active a un dot rempli vert néon, l'inactive un dot creux. */
+  .hero-card-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .hero-card-radio {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    background: rgba(255, 255, 255, 0.35);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-size: 12.5px;
+    color: var(--ink);
+    cursor: default;
+  }
+  .hero-card-radio.is-active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .hero-card-radio-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .hero-card-radio.is-active .hero-card-radio-dot {
+    border-color: var(--accent);
+  }
+  .hero-card-radio.is-active .hero-card-radio-dot::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .hero-card-radio-label {
+    flex: 1;
+  }
+
+  .hero-card-cta {
+    margin-top: auto;
+    width: 100%;
+    padding: 11px;
+    background: var(--primary);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: default;
+    letter-spacing: -0.01em;
+  }
+  .hero-card-cta svg {
+    display: inline-block;
+  }
+
+  .hero-scroll {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    z-index: 1;
+    opacity: 0.65;
+    animation: scrollHint 2.4s ease-in-out infinite;
+  }
+  @keyframes scrollHint {
+    0%, 100% { transform: translate(-50%, 0); }
+    50% { transform: translate(-50%, 8px); }
+  }
+</style>
+
+{/* V4.1 : inline script iOS Share Sheet supprimé — Grégoire a demandé
+    explicitement la refonte du Hero phone (drop iOS Share Sheet magic moment). */}

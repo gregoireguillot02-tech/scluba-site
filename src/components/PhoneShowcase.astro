@@ -1,17 +1,12 @@
 ---
-// V5 (2026-05-23) — Refonte PhoneShowcase 4 phases avec screenshots app réels.
-// Drop l'ancien mockup CSS iPhone (frame titanium + 2 screens HTML/CSS inline)
-// Replace par : pattern HeroPhone (mask + frame.png par-dessus) avec 4 écrans
-// PNG empilés qui morph au scroll.
+// V4.4 — Refonte PhoneShowcase (Grégoire spec images 2 + 3) :
+// drop l'ancienne 3-screens morph (join / card / share).
+// Replace par 2 screens qui matchent la vraie webapp Scluba :
+//   Screen 1 — Trou 1/9 scoring (image 2)
+//   Screen 2 — Partager ta carte avec iOS native share menu (image 3)
 //
-// Les 4 phases tell le post-round flow (chronologique) :
-//   01 Scoring     — saisie trou par trou + classement live
-//   02 Carte       — récap brandée club (photo, score, météo)
-//   03 Bilan       — classement final + commentaire + CTA Partager
-//   04 Partage     — iOS native share sheet iMessage
-//
-// Animation : src/scripts/animations.ts initPhoneShowcase() refactorée en
-// boucle dynamique N phases (extensible si on rajoute une phase 05).
+// Anim cablée dans src/scripts/animations.ts initPhoneShowcase().
+// Frame iPhone 17 Pro titanium + néon sweep conic-gradient préservés.
 
 import { useT, type Locale } from '../i18n';
 
@@ -21,67 +16,148 @@ interface Props {
 
 const { locale } = Astro.props;
 const t = useT(locale);
-
-const phases = [
-  { num: 1, tag: t.flow.phase1Tag, title: t.flow.phase1Title, lead: t.flow.phase1Lead, img: '/photos/phone-screen-scoring.png' },
-  { num: 2, tag: t.flow.phase2Tag, title: t.flow.phase2Title, lead: t.flow.phase2Lead, img: '/photos/phone-screen-card.png' },
-  { num: 3, tag: t.flow.phase3Tag, title: t.flow.phase3Title, lead: t.flow.phase3Lead, img: '/photos/phone-screen-leaderboard.png' },
-  { num: 4, tag: t.flow.phase4Tag, title: t.flow.phase4Title, lead: t.flow.phase4Lead, img: '/photos/phone-screen-share.png' },
-];
 ---
 
 <section class="showcase-section" data-anim="showcase-wrap">
   <div class="showcase-pin">
     <div class="container showcase-grid">
 
-      <!-- Narrative gauche : 4 blocs superposés -->
+      <!-- Narrative gauche -->
       <div class="showcase-narrative">
         <span class="section-eyebrow">{t.flow.eyebrow}</span>
 
         <div class="narrative-stack">
-          {phases.map((p) => (
-            <article class="narrative-block" data-flow-phase={p.num}>
-              <span class={`phase-chip phase-chip-${p.num}`}>{p.tag}</span>
-              <h2 class="section-title">{p.title}</h2>
-              <p class="section-lead">{p.lead}</p>
-            </article>
-          ))}
+          <article class="narrative-block" data-flow-phase="1">
+            <span class="phase-chip phase-chip-1">{t.flow.phase2Tag}</span>
+            <h2 class="section-title">{t.flow.phase2Title}</h2>
+            <p class="section-lead">{t.flow.phase2Lead}</p>
+          </article>
+          <article class="narrative-block" data-flow-phase="2">
+            <span class="phase-chip phase-chip-2">{t.flow.phase3Tag}</span>
+            <h2 class="section-title">{t.flow.phase3Title}</h2>
+            <p class="section-lead">{t.flow.phase3Lead}</p>
+          </article>
         </div>
 
-        <!-- Progress 4 dots + 3 segments -->
+        <!-- Progress 2 dots -->
         <div class="phase-progress" aria-hidden="true">
-          {phases.map((p, i) => (
-            <>
-              <span class="phase-dot" data-progress-dot={p.num}></span>
-              {i < phases.length - 1 && (
-                <span class="phase-bar"><span class="phase-bar-fill" data-progress-bar={i + 1}></span></span>
-              )}
-            </>
-          ))}
+          <span class="phase-dot" data-progress-dot="1"></span>
+          <span class="phase-bar"><span class="phase-bar-fill" data-progress-bar></span></span>
+          <span class="phase-dot" data-progress-dot="2"></span>
         </div>
       </div>
 
-      <!-- Phone droite : pattern HeroPhone (mask + frame img) avec 4 screens stackés.
-           Chaque screen est wrappé dans un div pour isoler le centrage (flex)
-           de l'animation GSAP (scale + opacity sur le wrapper). -->
+      <!-- Phone droite -->
       <div class="showcase-stage" aria-hidden="true">
-        <div class="showcase-phone-stage" data-flow-phone>
-          <div class="showcase-phone-img">
-            <div class="showcase-phone-screen-mask">
-              {phases.map((p) => (
-                <div class="showcase-phone-screen-wrap" data-flow-screen={p.num}>
-                  <img class="showcase-phone-screen-img"
-                       src={p.img}
-                       alt=""
-                       loading="eager" decoding="async" fetchpriority={p.num === 1 ? 'high' : 'auto'} />
+        <!-- V4.2 Néon sweep conic-gradient continu — .showcase-phone::before -->
+        <div class="showcase-phone" data-flow-phone>
+          <div class="phone-frame">
+            <span class="phone-btn phone-btn-side-l-1"></span>
+            <span class="phone-btn phone-btn-side-l-2"></span>
+            <span class="phone-btn phone-btn-side-l-3"></span>
+            <span class="phone-btn phone-btn-side-r"></span>
+            <span class="phone-rim"></span>
+
+            <div class="phone-screen">
+              <!-- Dynamic Island -->
+              <div class="phone-island">
+                <span class="phone-island-cam"></span>
+              </div>
+
+              <!-- Status bar -->
+              <div class="phone-status">
+                <span class="status-time">14:30</span>
+                <div class="status-icons">
+                  <span class="status-signal"></span>
+                  <span class="status-wifi"></span>
+                  <span class="status-battery"></span>
                 </div>
-              ))}
+              </div>
+
+              <!-- ====== SCREEN 1 — CLASSEMENT MULTI-JOUEUR (V6.4) ======
+                   Classement live pendant la partie : 4 joueurs, leader vert
+                   highlight + 3 autres neutres, score total + diff vs par. -->
+              <div class="screen screen-leaderboard" data-flow-screen="1">
+                <div class="lb-header">
+                  <span class="lb-header-eyebrow">PARTIE EN COURS · TROU 12 / 18</span>
+                  <h3 class="lb-header-title">Classement</h3>
+                </div>
+
+                <ul class="lb-list">
+                  <li class="lb-row lb-row--leader">
+                    <span class="lb-rank">1</span>
+                    <span class="lb-name">Grégoire</span>
+                    <span class="lb-score">38</span>
+                    <span class="lb-diff lb-diff--under">−2</span>
+                  </li>
+                  <li class="lb-row">
+                    <span class="lb-rank">2</span>
+                    <span class="lb-name">Paul</span>
+                    <span class="lb-score">41</span>
+                    <span class="lb-diff lb-diff--over">+1</span>
+                  </li>
+                  <li class="lb-row">
+                    <span class="lb-rank">3</span>
+                    <span class="lb-name">Antoine</span>
+                    <span class="lb-score">43</span>
+                    <span class="lb-diff lb-diff--over">+3</span>
+                  </li>
+                  <li class="lb-row">
+                    <span class="lb-rank">4</span>
+                    <span class="lb-name">Marc</span>
+                    <span class="lb-score">45</span>
+                    <span class="lb-diff lb-diff--over">+5</span>
+                  </li>
+                </ul>
+
+                <button class="lb-cta" tabindex="-1" aria-hidden="true">
+                  Saisir mon score · Trou 13
+                </button>
+              </div>
+
+              <!-- ====== SCREEN 2 — PARTAGER TA CARTE (image 3) ====== -->
+              <div class="screen screen-share" data-flow-screen="2">
+                <div class="share-modal-header">
+                  <span class="share-modal-title">Partager ta carte</span>
+                  <span class="share-modal-close" aria-hidden="true">×</span>
+                </div>
+
+                <div class="share-photo">
+                  <img src="/photos/golf-du-soleil.jpg" alt="" width="280" height="100" loading="lazy" decoding="async" />
+                  <div class="share-photo-logo">
+                    <img src="/logos/golf-du-soleil.svg" alt="" width="32" height="32" loading="lazy" />
+                  </div>
+                </div>
+
+                <!-- iOS native share menu mocked compact -->
+                <div class="ios-menu">
+                  <div class="ios-file">
+                    <span class="ios-file-icon">PNG</span>
+                    <div class="ios-file-meta">
+                      <strong>carte-golf-du-soleil</strong>
+                      <small>Image PNG · 858 ko</small>
+                    </div>
+                  </div>
+
+                  <div class="ios-contacts">
+                    <span class="ios-contact"><em class="ios-ava" style="--ava:#1B4332">A</em>Antoine</span>
+                    <span class="ios-contact"><em class="ios-ava" style="--ava:#D4A574">S</em>Sophie</span>
+                    <span class="ios-contact"><em class="ios-ava" style="--ava:#3B6B8E">P</em>Paul</span>
+                    <span class="ios-contact"><em class="ios-ava" style="--ava:#C46444">L</em>Léa</span>
+                  </div>
+
+                  <ul class="ios-apps">
+                    <li>AirDrop</li>
+                    <li>Mail</li>
+                    <li>Messages</li>
+                    <li>Notes</li>
+                  </ul>
+                </div>
+
+                <button class="share-cta" tabindex="-1">Partager maintenant</button>
+              </div>
+
             </div>
-            <img class="showcase-phone-frame-img"
-                 src="/photos/phone-frame.png"
-                 alt=""
-                 width="420" height="861"
-                 loading="eager" decoding="async" />
           </div>
         </div>
       </div>
@@ -130,17 +206,12 @@ const phases = [
     top: 0; left: 0; right: 0;
     will-change: opacity, transform;
   }
-  /* Phases 2/3/4 cachées à l'init — phase 1 visible par défaut */
-  .narrative-block[data-flow-phase="2"],
-  .narrative-block[data-flow-phase="3"],
-  .narrative-block[data-flow-phase="4"] {
+  .narrative-block[data-flow-phase="2"] {
     opacity: 0;
     transform: translateY(20px);
   }
   .narrative-block .section-title { margin-bottom: var(--space-3); }
 
-  /* Phase chips : couleur progressive (accent plein actif, soft inactif).
-     JS gère .is-active mais on garde un look neutre par défaut. */
   .phase-chip {
     display: inline-block;
     padding: 4px 12px;
@@ -151,29 +222,27 @@ const phases = [
     letter-spacing: 0.16em;
     text-transform: uppercase;
     margin-bottom: var(--space-3);
-    background: var(--accent-soft);
-    color: var(--accent);
   }
   .phase-chip-1 { background: var(--accent); color: var(--ink); }
+  .phase-chip-2 { background: var(--accent-soft); color: var(--accent); }
 
-  /* Progress 4 dots + 3 segments */
+  /* Progress 2 dots */
   .phase-progress {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-3);
   }
   .phase-dot {
     width: 10px; height: 10px;
     border-radius: 50%;
     background: var(--line);
     transition: background 0.3s var(--ease-out);
-    flex-shrink: 0;
   }
   .phase-dot[data-progress-dot="1"] { background: var(--accent); }
   .phase-bar {
     flex: 1;
     height: 2px;
-    max-width: 60px;
+    max-width: 80px;
     background: var(--line);
     border-radius: var(--radius-full);
     overflow: hidden;
@@ -194,86 +263,497 @@ const phases = [
     align-items: center;
     padding: var(--space-5) 0;
   }
-  .showcase-phone-stage {
+  .showcase-phone {
     position: relative;
-    display: inline-block;
-    line-height: 0;
+    height: min(82vh, 740px);
+    aspect-ratio: 9 / 19.5;
     will-change: transform;
-    filter:
-      drop-shadow(0 22px 44px rgba(70, 50, 30, 0.30))
-      drop-shadow(0 44px 96px rgba(70, 50, 30, 0.20));
   }
 
-  /* Container = aspect ratio frame. Sizing piloté par la HAUTEUR pour que
-     le tel rentre toujours dans le viewport (retour Grégoire 2026-05-23 :
-     "pas aussi zoomé, doit tenir sur la page entière"). aspect-ratio dérive
-     la largeur. Cap à 720px pour gros écrans, plancher à 540px pour
-     petits laptops.
-     Note : on évite width:%+max-width parce que le parent
-     .showcase-phone-stage est inline-block (dépendance circulaire). */
-  .showcase-phone-img {
+  /* iPhone 17 Pro titanium frame (cohérent avec Hero) */
+  .phone-frame {
     position: relative;
-    height: clamp(540px, 78vh, 720px);
-    aspect-ratio: 420 / 861;
-  }
-
-  /* Screen mask : pattern HeroPhone — inset 1.6%/1.4% + border-radius adaptée.
-     Fond blanc (au lieu du cream #F4EEDD) pour que les bandes haut/bas en
-     fit-par-largeur soient quasi invisibles. */
-  .showcase-phone-screen-mask {
-    position: absolute;
-    inset: 1.6% 1.4%;
-    border-radius: 11.5% / 5.6%;
-    overflow: hidden;
-    z-index: 1;
-    background: #FFFFFF;
-  }
-
-  /* Wrapper div pour chaque screen : isole l'animation GSAP (scale + opacity
-     sur le wrapper) du centrage CSS de l'img (translateX(-50%) propre, jamais
-     touché par GSAP). Wrap a overflow:hidden pour clipper le screen img qui
-     déborde latéralement (aspect screenshot 0.564 vs mask 0.488). */
-  .showcase-phone-screen-wrap {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    will-change: opacity, transform;
-  }
-  .showcase-phone-screen-wrap[data-flow-screen="2"],
-  .showcase-phone-screen-wrap[data-flow-screen="3"],
-  .showcase-phone-screen-wrap[data-flow-screen="4"] {
-    opacity: 0;
-    transform: scale(1.02);
-  }
-
-  /* Screen img : fit-par-largeur centré, image entière visible. L'aspect
-     screenshot 0.564 > mask 0.488 → laisse ~6.7% d'espace haut/bas mais
-     le fond mask blanc le rend quasi invisible. Transform dédié au
-     centrage — GSAP anime le parent wrap, jamais cette transform. */
-  .showcase-phone-screen-img {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    height: auto;
-    display: block;
-    max-width: none; /* override global img max-width */
-  }
-
-  /* Frame iPhone Pro orange par-dessus */
-  .showcase-phone-frame-img {
-    position: absolute;
-    inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    background:
+      linear-gradient(135deg, #6E6E72 0%, #48484A 22%, #2C2C2E 50%, #48484A 78%, #6E6E72 100%);
+    border-radius: 56px;
+    padding: 12px;
+    box-shadow:
+      0 24px 48px rgba(0, 0, 0, 0.40),
+      0 48px 96px rgba(0, 0, 0, 0.30),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 0 0 1.5px rgba(0, 0, 0, 0.70);
+  }
+  .phone-frame::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border-radius: 50px;
     pointer-events: none;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
     z-index: 2;
-    display: block;
+  }
+  .phone-frame::after {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border-radius: 44px;
+    pointer-events: none;
+    background: linear-gradient(
+      138deg,
+      rgba(255, 255, 255, 0.10) 0%,
+      rgba(255, 255, 255, 0) 35%,
+      rgba(255, 255, 255, 0) 75%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+    z-index: 4;
+    mix-blend-mode: screen;
+  }
+  .phone-rim {
+    position: absolute; inset: 4px;
+    border-radius: 52px;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,0.16) 0%, transparent 30%, transparent 70%, rgba(255,255,255,0.06) 100%);
+  }
+  .phone-btn {
+    position: absolute;
+    background: linear-gradient(180deg, #5C5C5E 0%, #2C2C2E 50%, #5C5C5E 100%);
+    border-radius: 1.5px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
+  }
+  .phone-btn-side-l-1 {
+    left: -2px; top: 90px; width: 4px; height: 28px;
+    background: linear-gradient(180deg, #C9A96A 0%, #8B7344 50%, #C9A96A 100%);
+  }
+  .phone-btn-side-l-2 { left: -2px; top: 130px; width: 4px; height: 50px; }
+  .phone-btn-side-l-3 { left: -2px; top: 188px; width: 4px; height: 50px; }
+  .phone-btn-side-r { right: -2px; top: 130px; width: 4px; height: 80px; }
+
+  .phone-screen {
+    /* Sub-context palette "carnet de partie" — forest + honey, cohérent
+       avec .hero-phone-screen pour ne pas casser le ton country-club. */
+    --primary: #1B4332;
+    --primary-soft: #2D6A4F;
+    --primary-deep: #0F2A1E;
+    --primary-bg: rgba(212, 165, 116, 0.10);
+    --accent: #D4A574;
+    --accent-soft: rgba(212, 165, 116, 0.16);
+    --accent-bright: #E8C089;
+    --ink: #1B4332;
+    --ink-soft: #2D6A4F;
+    --bg: #F4EEDD;
+    --muted: #7A7A7A;
+    --line: rgba(27, 67, 50, 0.14);
+
+    position: relative;
+    width: 100%; height: 100%;
+    background: linear-gradient(180deg, #F4EEDD 0%, #E8DEC5 100%);
+    border-radius: 44px;
+    overflow: hidden;
+  }
+  .phone-screen::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12%;
+    max-width: 50px;
+    height: 2px;
+    border-radius: 1px;
+    background: rgba(0, 0, 0, 0.18);
+    z-index: 4;
   }
 
-  /* ===== Mobile : stack vertical, pas de pin, 1 seul screen visible ===== */
+  /* Dynamic Island */
+  .phone-island {
+    position: absolute;
+    top: 11px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32%;
+    max-width: 124px;
+    min-width: 96px;
+    height: 30px;
+    background: #000;
+    border-radius: 18px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+  }
+  .phone-island-cam {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #2a3a40, #050a0c);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  }
+
+  /* Status bar */
+  .phone-status {
+    position: absolute;
+    top: 13px; left: 0; right: 0;
+    z-index: 9;
+    padding: 0 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+  }
+  .status-icons { display: flex; align-items: center; gap: 4px; }
+  .status-signal {
+    width: 13px; height: 8px;
+    background:
+      linear-gradient(to right,
+        currentColor 0 2.5px, transparent 2.5px 3.5px,
+        currentColor 3.5px 6px, transparent 6px 7px,
+        currentColor 7px 9.5px, transparent 9.5px 10.5px,
+        currentColor 10.5px 13px);
+  }
+  .status-wifi {
+    width: 11px; height: 8px;
+    background: currentColor;
+    -webkit-mask: radial-gradient(circle at 50% 100%, #000 35%, transparent 36%) center/100% 100% no-repeat;
+            mask: radial-gradient(circle at 50% 100%, #000 35%, transparent 36%) center/100% 100% no-repeat;
+  }
+  .status-battery {
+    width: 20px; height: 9px;
+    border: 1px solid currentColor;
+    border-radius: 2.5px;
+    position: relative;
+    padding: 1px;
+  }
+  .status-battery::before {
+    content: ""; display: block;
+    width: 80%; height: 100%;
+    background: currentColor;
+    border-radius: 1px;
+  }
+  .status-battery::after {
+    content: ""; position: absolute;
+    right: -3px; top: 2px;
+    width: 2px; height: 5px;
+    background: currentColor;
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* ===== Screens (2 layers stacked) ===== */
+  .screen {
+    position: absolute;
+    inset: 0;
+    padding: 50px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    will-change: opacity, transform;
+    overflow: hidden;
+  }
+  .screen-share { opacity: 0; transform: scale(1.02); }
+
+  /* ====== SCREEN 1 — CLASSEMENT MULTI-JOUEUR (V6.4) ====== */
+  .lb-header {
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .lb-header-eyebrow {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 7.5px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 3px;
+  }
+  .lb-header-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--primary);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+
+  .lb-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .lb-row {
+    display: grid;
+    grid-template-columns: 18px 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 7px 9px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 11px;
+  }
+  .lb-row--leader {
+    background: rgba(212, 165, 116, 0.10);
+    border-color: rgba(212, 165, 116, 0.32);
+    box-shadow: 0 0 14px rgba(212, 165, 116, 0.20);
+  }
+  .lb-rank {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 9.5px;
+    color: var(--muted);
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .lb-row--leader .lb-rank {
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: 50%;
+  }
+  .lb-name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lb-score {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--primary);
+    letter-spacing: -0.02em;
+  }
+  .lb-diff {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 4px;
+    min-width: 28px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .lb-diff--under {
+    background: rgba(212, 165, 116, 0.22);
+    color: var(--accent);
+  }
+  .lb-diff--over {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--muted);
+  }
+
+  .lb-cta {
+    margin-top: auto;
+    width: 100%;
+    padding: 10px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: default;
+    letter-spacing: -0.005em;
+  }
+
+  /* ====== SCREEN 2 — PARTAGER TA CARTE ====== */
+  .share-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 4px 10px;
+    margin-bottom: 4px;
+  }
+  .share-modal-title {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .share-modal-close {
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1;
+  }
+
+  .share-photo {
+    position: relative;
+    height: 96px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+  .share-photo img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: center 50%;
+    display: block;
+  }
+  .share-photo-logo {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 32px;
+    height: 32px;
+    background: var(--bg);
+    border-radius: 50%;
+    padding: 3px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  }
+  .share-photo-logo img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+
+  /* iOS native share menu — sober dark variant cohérent Tech Bold */
+  .ios-menu {
+    background: rgba(45, 45, 45, 0.96);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+            backdrop-filter: saturate(180%) blur(12px);
+    border-radius: 10px;
+    padding: 6px;
+    margin-bottom: 8px;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ios-file {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+  }
+  .ios-file-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, #555, #333);
+    color: #fff;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 7px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .ios-file-meta {
+    flex: 1;
+    min-width: 0;
+  }
+  .ios-file-meta strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 9.5px;
+    font-weight: 600;
+    color: #fff;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .ios-file-meta small {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 7px;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 1px;
+  }
+
+  .ios-contacts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    padding: 4px 2px;
+  }
+  .ios-contact {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.85);
+    font-family: var(--font-display);
+    font-weight: 500;
+  }
+  .ios-ava {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--ava, #444);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    font-style: normal;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+
+  .ios-apps {
+    list-style: none;
+    margin: 0;
+    padding: 4px 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .ios-apps li {
+    font-family: var(--font-display);
+    font-size: 9.5px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    padding: 4px 2px;
+    border-bottom: 0.5px solid rgba(255, 255, 255, 0.06);
+  }
+  .ios-apps li:last-child { border-bottom: none; }
+
+  .share-cta {
+    width: 100%;
+    padding: 10px;
+    background: var(--primary);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: default;
+    letter-spacing: -0.005em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .screen-share { opacity: 1; transform: scale(1); }
+  }
+
+  /* ===== MOBILE (<1024px) — anim GSAP désactivée, layout vertical statique =====
+     Le morph 2-phases (narrative-block superposés + screen 1↔2 morph) ne marche
+     qu'avec le grid desktop 2-cols + ScrollTrigger pin. En mobile on bascule sur :
+     - narrative-blocks empilés en flow normal, tous deux lisibles
+     - un seul téléphone à taille raisonnable montrant le classement (screen 1)
+     - progress dots cachés (pas d'animation à indiquer) */
   @media (max-width: 1023px) {
     .showcase-pin {
       min-height: 0;
@@ -286,9 +766,7 @@ const phases = [
       gap: var(--space-5);
     }
     .narrative-block,
-    .narrative-block[data-flow-phase="2"],
-    .narrative-block[data-flow-phase="3"],
-    .narrative-block[data-flow-phase="4"] {
+    .narrative-block[data-flow-phase="2"] {
       position: static;
       opacity: 1;
       transform: none;
@@ -296,25 +774,14 @@ const phases = [
     .phase-progress { display: none; }
 
     .showcase-stage { padding: var(--space-4) 0 0; }
-    .showcase-phone-img {
-      height: min(72vh, 640px);
-      width: auto;
+    .showcase-phone {
+      height: auto;
+      width: min(78vw, 320px);
+      aspect-ratio: 9 / 19.5;
+      margin: 0 auto;
     }
-    /* En mobile on garde seulement le screen 1 (scoring) visible — les autres
-       sont expliqués par les narrative blocks empilés en texte. Évite de
-       cloner 4 phones. */
-    .showcase-phone-screen-wrap[data-flow-screen="2"],
-    .showcase-phone-screen-wrap[data-flow-screen="3"],
-    .showcase-phone-screen-wrap[data-flow-screen="4"] {
-      display: none;
-    }
-  }
-
-  /* Reduce motion : pas d'anim, montre screen 1 + narrative 1 */
-  @media (prefers-reduced-motion: reduce) {
-    .showcase-phone-screen-wrap,
-    .narrative-block {
-      transition: none !important;
-    }
+    /* screen 2 (partage) caché en mobile — la narrative phase 2 explique
+       le partage en texte ; on évite de cloner le téléphone pour rester sobre */
+    .screen-share { display: none; }
   }
 </style>
