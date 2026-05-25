@@ -242,9 +242,6 @@ const sharePayload = JSON.stringify({
   playedPar: myTotal.playedPar,
   weather: r.weather,
   comment: me.comment,
-  // 4 sponsors max, déjà répartis L/R par le SSR. Le PNG les redessine
-  // dans le même ordre flanquant le score (cf. share-card.ts).
-  sponsors: allSponsors,
   leaderboard: isMultiplayer
     ? leaderboard.map((row) => ({
         display_name: row.display_name,
