@@ -395,6 +395,16 @@ function drawLogoOverlay(
   ctx.fill();
   ctx.restore();
 
+  // Clip ALL subsequent drawing to the circle. Sans ça, un PNG carré à fond
+  // blanc (cas majoritaire des logos importés) déborde aux 4 coins du cercle :
+  // la demi-diagonale du carré (= innerR × √2 ≈ 79) dépasse le rayon (70), et
+  // les 4 coins du carré blanc viennent former une silhouette festonnée sur
+  // le fond cream/photo de la share card.
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, circleR, 0, Math.PI * 2);
+  ctx.clip();
+
   // Logo fit "contain" centré (pas cover, sinon coupe les bords)
   const innerR = circleR - 14;
   const innerD = innerR * 2;
@@ -403,6 +413,7 @@ function drawLogoOverlay(
   if (aspect >= 1) { lw = innerD; lh = innerD / aspect; }
   else { lh = innerD; lw = innerD * aspect; }
   ctx.drawImage(logoImg, cx - lw / 2, cy - lh / 2, lw, lh);
+  ctx.restore();
 }
 
 // Helper: draw a single leaderboard row inside a given rect (x, y, w, h).
@@ -583,9 +594,17 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
     ctx.fillRect(0, gy, W, 1);
   }
 
-  // Charger photo et logo en parallèle (les deux peuvent fail indépendamment)
+  // Charger photo et logo en parallèle (les deux peuvent fail indépendamment).
+  // Les sponsors aussi : dérivés des colonnes club.sponsor_*_url (max 4),
+  // chaque image qui échoue est skippée silencieusement.
   let photoImg: HTMLImageElement | null = null;
   let logoImg: HTMLImageElement | null = null;
+  const sponsorUrls: string[] = [];
+  for (const i of [1, 2, 3, 4] as const) {
+    const u = club[`sponsor_${i}_url` as const];
+    if (u) sponsorUrls.push(u);
+  }
+  const sponsorImgs: (HTMLImageElement | null)[] = new Array(sponsorUrls.length).fill(null);
   await Promise.all([
     input.photoUrl
       ? loadImage(input.photoUrl).then((img) => { photoImg = img; }, (err) => {
@@ -597,6 +616,11 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
           console.error('[share-card] logo load failed, skip overlay', err);
         })
       : Promise.resolve(),
+    ...sponsorUrls.map((url, i) =>
+      loadImage(url).then((img) => { sponsorImgs[i] = img; }, (err) => {
+        console.error('[share-card] sponsor load failed, skip', i, err);
+      }),
+    ),
   ]);
 
   // Section 1 : Photo (0..675) ou gradient
@@ -685,6 +709,53 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
     ? `${diffStr} · Par ${parDisplayed}`
     : `${diffStr} · Par ${parDisplayed} · ${input.holesPlayed}/${input.holes.length} trous`;
   ctx.fillText(subSubText, W / 2, SCORE_Y + 170);
+
+  // Section 3b : Sponsors flanquant le score (0..4 logos). Disposition
+  // identique au recap HTML : Math.ceil(N/2) à gauche, reste à droite,
+  // centrés verticalement sur le grand chiffre du score.
+  const loadedSponsors = sponsorImgs.filter((img): img is HTMLImageElement => img != null);
+  if (loadedSponsors.length > 0) {
+    const TILE_W = 160;
+    const TILE_H = 108;
+    const TILE_GAP = 16;
+    const TILE_PAD = 10;
+    const TILE_R = 14;
+    const SPONSOR_CX_LEFT = 40;
+    const SPONSOR_CX_RIGHT = W - 40 - TILE_W;
+    const sponsorCenterY = SCORE_Y + 90;
+    const leftHalf = Math.ceil(loadedSponsors.length / 2);
+    const leftImgs = loadedSponsors.slice(0, leftHalf);
+    const rightImgs = loadedSponsors.slice(leftHalf);
+
+    function drawSponsorStack(imgs: HTMLImageElement[], x: number) {
+      const totalH = imgs.length * TILE_H + (imgs.length - 1) * TILE_GAP;
+      let y = sponsorCenterY - totalH / 2;
+      for (const img of imgs) {
+        drawRoundedRect(ctx!, x, y, TILE_W, TILE_H, TILE_R);
+        ctx!.fillStyle = '#FFFFFF';
+        ctx!.fill();
+        ctx!.strokeStyle = 'rgba(15, 42, 30, 0.10)';
+        ctx!.lineWidth = 1;
+        ctx!.stroke();
+        const innerW = TILE_W - 2 * TILE_PAD;
+        const innerH = TILE_H - 2 * TILE_PAD;
+        const aspect = img.width / img.height;
+        let lw: number, lh: number;
+        if (aspect >= innerW / innerH) {
+          lw = innerW;
+          lh = innerW / aspect;
+        } else {
+          lh = innerH;
+          lw = innerH * aspect;
+        }
+        ctx!.drawImage(img, x + (TILE_W - lw) / 2, y + (TILE_H - lh) / 2, lw, lh);
+        y += TILE_H + TILE_GAP;
+      }
+    }
+
+    if (leftImgs.length > 0) drawSponsorStack(leftImgs, SPONSOR_CX_LEFT);
+    if (rightImgs.length > 0) drawSponsorStack(rightImgs, SPONSOR_CX_RIGHT);
+  }
 
   // Section 4 : Scorecard rows. If the caller provided named sections (loops),
   // draw one row per section with its loop name. Otherwise fall back to the
