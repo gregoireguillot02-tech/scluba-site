@@ -26,24 +26,53 @@ const { data: roundRow, error: roundErr } = await sb
   .maybeSingle();
 
 if (isDebug) {
-  // Mode diagnostic temporaire — retourne le JSON brut au lieu de
-  // rendre la page. Active uniquement avec ?_debug=sponsor-recap-2026.
-  // À retirer une fois le bug 404 résolu.
-  let clubProbe: unknown = null;
-  let clubProbeErr: unknown = null;
-  if (roundRow?.club_id) {
-    const { data, error } = await sb.from('clubs').select('id, name').eq('id', roundRow.club_id).maybeSingle();
-    clubProbe = data;
-    clubProbeErr = error;
-  }
-  return new Response(JSON.stringify({
+  // Mode diagnostic temporaire élargi — exécute la suite du flow recap
+  // pour pinpointer où ça crashe / où ça retourne null.
+  const dbg: Record<string, unknown> = {
     shortCode,
     supabaseUrl: import.meta.env.PUBLIC_SUPABASE_URL,
-    roundRow,
     roundErr,
-    clubProbe,
-    clubProbeErr,
-  }, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    roundRow_present: roundRow != null,
+  };
+  try {
+    if (!roundRow) {
+      dbg.stage = 'no_roundRow';
+      return new Response(JSON.stringify(dbg, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const { data: clubFull, error: clubFullErr } = await sb
+      .from('clubs')
+      .select('*')
+      .eq('id', roundRow.club_id)
+      .maybeSingle();
+    dbg.clubFullErr = clubFullErr;
+    dbg.clubFull_present = clubFull != null;
+    dbg.clubFull_keys = clubFull ? Object.keys(clubFull) : null;
+    dbg.clubFull_hasCourseData = clubFull?.course_data != null;
+    dbg.clubFull_sponsor_1_url_type = clubFull ? typeof clubFull.sponsor_1_url : 'missing-row';
+
+    if (!clubFull) {
+      dbg.stage = 'no_clubFull';
+      return new Response(JSON.stringify(dbg, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const { data: playersDbg, error: playersDbgErr } = await sb
+      .from('round_players')
+      .select('id, display_name, is_creator')
+      .eq('round_id', roundRow.id)
+      .order('joined_at');
+    dbg.playersDbgErr = playersDbgErr;
+    dbg.players_count = playersDbg?.length ?? 0;
+    dbg.players_hasCreator = (playersDbg ?? []).some((p) => p.is_creator);
+    dbg.players_first = (playersDbg ?? [])[0] ?? null;
+
+    dbg.stage = 'all_queries_ok';
+    return new Response(JSON.stringify(dbg, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  } catch (err) {
+    dbg.exception = String(err);
+    dbg.exceptionStack = err instanceof Error ? err.stack : null;
+    return new Response(JSON.stringify(dbg, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
 }
 
 if (roundErr) {
