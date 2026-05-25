@@ -698,13 +698,13 @@ export async function composeShareImage(input: ComposeInput): Promise<Blob> {
   // centrés verticalement sur le grand chiffre du score.
   const loadedSponsors = sponsorImgs.filter((img): img is HTMLImageElement => img != null);
   if (loadedSponsors.length > 0) {
-    const TILE_W = 120;
-    const TILE_H = 80;
-    const TILE_GAP = 12;
-    const TILE_PAD = 6;
-    const TILE_R = 12;
-    const SPONSOR_CX_LEFT = 50;
-    const SPONSOR_CX_RIGHT = W - 50 - TILE_W;
+    const TILE_W = 160;
+    const TILE_H = 108;
+    const TILE_GAP = 16;
+    const TILE_PAD = 10;
+    const TILE_R = 14;
+    const SPONSOR_CX_LEFT = 40;
+    const SPONSOR_CX_RIGHT = W - 40 - TILE_W;
     const sponsorCenterY = SCORE_Y + 90;
     const leftHalf = Math.ceil(loadedSponsors.length / 2);
     const leftImgs = loadedSponsors.slice(0, leftHalf);
