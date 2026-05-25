@@ -4,7 +4,17 @@ import { uuidSchema } from '../../../../../lib/validation/schemas';
 
 export const prerender = false;
 
-const ALLOWED_KINDS = new Set(['logo', 'photo']);
+// Kind → column. Sponsors share the same constraints as the logo (small
+// raster file). Adding a new kind here is enough to wire a new asset slot.
+const KIND_TO_COLUMN: Record<string, string> = {
+  logo: 'logo_url',
+  photo: 'photo_url',
+  sponsor1: 'sponsor_1_url',
+  sponsor2: 'sponsor_2_url',
+  sponsor3: 'sponsor_3_url',
+  sponsor4: 'sponsor_4_url',
+};
+const ALLOWED_KINDS = new Set(Object.keys(KIND_TO_COLUMN));
 // SVG removed from logo allowlist: stored SVG served from same-origin can host
 // inline <script> and attribute-based payloads even with `image/svg+xml`. Until
 // we ship a sanitizer or move the bucket to a separate origin, accept raster
@@ -53,17 +63,18 @@ export const POST: APIRoute = async ({ request, params, locals, redirect, url })
   const id = idParsed.data;
 
   const kind = String(url.searchParams.get('kind') ?? '');
-  if (!ALLOWED_KINDS.has(kind)) return new Response('Invalid kind (use logo or photo)', { status: 400 });
+  if (!ALLOWED_KINDS.has(kind)) return new Response('Invalid kind', { status: 400 });
 
   const form = await request.formData();
   const file = form.get('file');
   if (!(file instanceof File)) return new Response('No file uploaded', { status: 400 });
 
-  const allowedTypes = kind === 'logo' ? ALLOWED_LOGO_TYPES : ALLOWED_PHOTO_TYPES;
+  const isPhoto = kind === 'photo';
+  const allowedTypes = isPhoto ? ALLOWED_PHOTO_TYPES : ALLOWED_LOGO_TYPES;
   if (!allowedTypes.has(file.type)) {
     return new Response(`Unsupported type ${file.type}`, { status: 415 });
   }
-  const maxBytes = kind === 'logo' ? MAX_LOGO_BYTES : MAX_PHOTO_BYTES;
+  const maxBytes = isPhoto ? MAX_PHOTO_BYTES : MAX_LOGO_BYTES;
   if (file.size > maxBytes) {
     return new Response(`File too big (${Math.round(file.size / 1024)} KB, max ${Math.round(maxBytes / 1024)} KB)`, { status: 413 });
   }
@@ -98,7 +109,7 @@ export const POST: APIRoute = async ({ request, params, locals, redirect, url })
   const { data: pub } = sb.storage.from('club-assets').getPublicUrl(path);
   const publicUrl = pub.publicUrl;
 
-  const column = kind === 'logo' ? 'logo_url' : 'photo_url';
+  const column = KIND_TO_COLUMN[kind];
   const { error: updErr } = await sb.from('clubs').update({ [column]: publicUrl }).eq('id', id);
   if (updErr) {
     console.error('[api/ops/clubs/[id]/upload] DB update failed', updErr);

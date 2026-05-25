@@ -45,6 +45,17 @@ export interface Club {
   latitude: number | null;
   longitude: number | null;
   course_data: CourseData;
+  // 4 sponsors optionnels affichés flanquant le score sur la carte
+  // recap publique et la share card PNG. Slot vide (url null) = invisible.
+  // Le lien est optionnel — si présent l'image devient un <a target="_blank">.
+  sponsor_1_url: string | null;
+  sponsor_2_url: string | null;
+  sponsor_3_url: string | null;
+  sponsor_4_url: string | null;
+  sponsor_1_link: string | null;
+  sponsor_2_link: string | null;
+  sponsor_3_link: string | null;
+  sponsor_4_link: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
