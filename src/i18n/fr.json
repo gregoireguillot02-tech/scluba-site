@@ -3,11 +3,6 @@
     "title": "Scluba — L'équipement digital pour les clubs de golf premium.",
     "description": "Une carte de score digitale aux couleurs de votre club, posée sur le comptoir d'accueil. Un nouvel équipement qui enrichit l'expérience de vos joueurs et fait rayonner votre golf au-delà du parcours."
   },
-  "launch": {
-    "tag": "Offre de lancement",
-    "text": "1er mois offert pour les 10 premiers clubs partenaires.",
-    "cta": "Réserver ma place"
-  },
   "nav": {
     "pricing": "Tarifs",
     "how": "Comment ça marche",
@@ -204,14 +199,13 @@
     "eyebrow": "Tarifs",
     "title": "Une offre. Une promesse.",
     "lead": "Tout l'essentiel pour faire de chaque partie un moment fort pour vos joueurs et un atout pour votre club. Sans engagement, résiliable au mois.",
-    "launchBadge": "1ER MOIS OFFERT",
     "trust": {
       "engagement_label": "Sans engagement",
       "engagement_note": "Résiliable au mois",
       "setup_label": "Setup 30 min",
       "setup_note": "Aucune installation côté joueur",
-      "trial_label": "1er mois offert",
-      "trial_note": "Testez sans risque",
+      "trial_label": "Maquette gratuite 24h",
+      "trial_note": "Sans carte de crédit",
       "rgpd_label": "Données RGPD",
       "rgpd_note": "Hébergement EU",
       "contact_label": "Une question ?",
