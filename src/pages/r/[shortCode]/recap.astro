@@ -104,11 +104,21 @@ function fmtTime(iso: string | null): string {
 // Identify the visitor via cookie (same as play.astro). Without this, every
 // player downloading their recap was getting the creator's scorecard.
 const playerId = Astro.cookies.get(`scluba_player_${shortCode}`)?.value ?? null;
-const me = allPlayers.find((p) => p.id === playerId) ?? null;
+let me = allPlayers.find((p) => p.id === playerId) ?? null;
 if (!me) {
-  // Stranger / stale cookie / shared link: bounce to the claim page so they
-  // pick a name before seeing a recap that isn't theirs.
-  return Astro.redirect(`/r/${shortCode}/join`, 302);
+  // Round actif : on bounce vers /join pour que le visiteur choisisse un
+  // nom avant de voir une carte qui n'est pas la sienne.
+  //
+  // Round finished : NE PAS bouncer vers /join — join.astro:26-28 redirige
+  // les rounds finis vers /recap, ce qui crée une boucle infinie que
+  // Cloudflare cape en 404. Fallback sur la carte du créateur (mode partage
+  // public : n'importe qui avec le lien voit la carte du créateur du round).
+  if (r.status === 'finished') {
+    me = allPlayers.find((p) => p.is_creator) ?? allPlayers[0] ?? null;
+  }
+  if (!me) {
+    return Astro.redirect(`/r/${shortCode}/join`, 302);
+  }
 }
 
 const myScoreMap = scoresFor(me.id);
