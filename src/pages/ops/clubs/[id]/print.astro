@@ -23,7 +23,7 @@ const qrColor = SCLUBA_GREEN;
 const cardQr = await qrSvg(pageUrl, { errorCorrectionLevel: 'H', dark: qrColor, margin: 1 });
 const stickerQr = await qrSvg(pageUrl, { errorCorrectionLevel: 'M', dark: qrColor, margin: 1 });
 const tees = Array.from({ length: 18 }, (_, i) => i + 1);
-const cardSlots = [0, 1, 2, 3];
+const cardSlots = [0];
 ---
 
 <OpsLayout title={`Kit imprimable — ${c.name}`} active="clubs">
@@ -282,10 +282,9 @@ const cardSlots = [0, 1, 2, 3];
   .cards-grid {
     width: 100%;
     height: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, 10.5cm);
-    grid-template-rows: repeat(2, 14.8cm);
-    place-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .qr-card {
     position: relative;
