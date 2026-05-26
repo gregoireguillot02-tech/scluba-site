@@ -18,12 +18,12 @@ const c = club as Club;
 const origin = Astro.url.origin;
 const pageUrl = clubPageUrl(c.slug, origin);
 
-// Use the club's primary color for the printed QR if it's dark enough; fall back
-// to Scluba green to keep contrast safe on white paper.
-const qrColor = c.primary_color ?? SCLUBA_GREEN;
-const posterQr = await qrSvg(pageUrl, { errorCorrectionLevel: 'H', dark: qrColor, margin: 1 });
+// Forest #1B4332 forcé pour cohérence avec la scorecard digitale.
+const qrColor = SCLUBA_GREEN;
+const cardQr = await qrSvg(pageUrl, { errorCorrectionLevel: 'H', dark: qrColor, margin: 1 });
 const stickerQr = await qrSvg(pageUrl, { errorCorrectionLevel: 'M', dark: qrColor, margin: 1 });
 const tees = Array.from({ length: 18 }, (_, i) => i + 1);
+const cardSlots = [0, 1, 2, 3];
 ---
 
 <OpsLayout title={`Kit imprimable — ${c.name}`} active="clubs">
@@ -49,46 +49,108 @@ const tees = Array.from({ length: 18 }, (_, i) => i + 1);
     <h2>Comment utiliser ce kit</h2>
     <p>Cette page contient 3 documents prêts à imprimer (Cmd+P → "Enregistrer en PDF" pour archiver) :</p>
     <ol class="intro-list">
-      <li><strong>Affiche A4</strong> à laisser à l'accueil du club</li>
-      <li><strong>18 stickers QR</strong> (1 par tee) — découper et installer</li>
-      <li><strong>Mémo équipe d'accueil</strong> A5 — 1 par hôte</li>
+      <li><strong>4 cartes QR A6</strong> sur 1 feuille A4 — découper les 4 cartes le long des pointillés (accueil, vestiaire, restaurant, voiturette…)</li>
+      <li><strong>18 stickers QR</strong> (1 par tee) — à découper et installer sur les piquets de départ</li>
+      <li><strong>Mémo équipe d'accueil</strong> A4 — 1 par hôte</li>
     </ol>
     <p class="intro-hint">L'URL pointe vers <code>{pageUrl}</code>. Si tu changes le slug ensuite, regénère ce kit.</p>
   </div>
 
   <!-- ========================================================== -->
-  <!-- SHEET 1 — Affiche A4 (portrait)                            -->
+  <!-- SHEET 1 — 4 cartes QR A6 (template éditorial dark)         -->
   <!-- ========================================================== -->
-  <section class="print-sheet poster">
-    <div class="poster-inner">
-      <header class="poster-head">
-        {c.logo_url && <img class="poster-logo" src={c.logo_url} alt="" />}
-        <p class="poster-eyebrow">Scorecard digitale</p>
-        <h2 class="poster-title" style={`color: ${qrColor}`}>{c.name}</h2>
-        {c.city && <p class="poster-city">{c.city}</p>}
-      </header>
+  <section class="print-sheet cards-sheet">
+    <div class="cards-grid">
+      {cardSlots.map(() => (
+        <article class="qr-card">
+          <div class="qr-card-inner">
 
-      <div class="poster-qr-wrap">
-        <div class="poster-qr" set:html={posterQr}></div>
-      </div>
+            <!-- HERO CLUB : logo + nom + tagline -->
+            <header class="qr-card-club-hero">
+              {c.logo_url && <img class="club-hero-logo" src={c.logo_url} alt="" />}
+              <h2 class="club-hero-name">{c.name}</h2>
+              <div class="qr-card-tagline">
+                <span class="tagline-rule" aria-hidden="true"></span>
+                <span class="tagline-text">Carte de score digitale</span>
+                <span class="tagline-rule" aria-hidden="true"></span>
+              </div>
+            </header>
 
-      <div class="poster-instructions">
-        <ol>
-          <li><strong>Scannez</strong> le QR avec votre téléphone</li>
-          <li><strong>Saisissez</strong> votre prénom</li>
-          <li><strong>Jouez</strong> votre carte digitale, partagez à la fin</li>
-        </ol>
-        <p class="poster-recover">
-          Tel cassé en cours ? Re-scannez n'importe quel QR du parcours, votre partie est sauvegardée.
-        </p>
-      </div>
+            <!-- QR avec corner brackets honey -->
+            <div class="qr-card-qr-frame">
+              <span class="bracket bracket-tl" aria-hidden="true"></span>
+              <span class="bracket bracket-tr" aria-hidden="true"></span>
+              <span class="bracket bracket-bl" aria-hidden="true"></span>
+              <span class="bracket bracket-br" aria-hidden="true"></span>
+              <div class="qr-card-qr" set:html={cardQr}></div>
+            </div>
 
-      <footer class="poster-footer">
-        <span>une carte propre, faite à</span>
-        <strong>SCLUBA</strong>
-        <span class="poster-footer-dot" aria-hidden="true"></span>
-        <span class="poster-footer-url">{pageUrl.replace(/^https?:\/\//, '')}</span>
-      </footer>
+            <!-- STEPS : 3 icônes en cercle honey -->
+            <ol class="qr-card-steps">
+              <li>
+                <span class="step-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="7" y="2" width="10" height="20" rx="2" />
+                    <line x1="11" y1="18" x2="13" y2="18" />
+                  </svg>
+                </span>
+                <span class="step-label">1. Scannez</span>
+                <span class="step-desc">le QR avec votre téléphone</span>
+              </li>
+              <li>
+                <span class="step-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="6" y1="3" x2="6" y2="21" />
+                    <path d="M6 4l11 3-11 3" fill="currentColor" />
+                    <circle cx="6" cy="21" r="0.8" fill="currentColor" stroke="none" />
+                  </svg>
+                </span>
+                <span class="step-label">2. Jouez</span>
+                <span class="step-desc">votre carte de score digitale</span>
+              </li>
+              <li>
+                <span class="step-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="9" r="3" />
+                    <circle cx="16" cy="10" r="2.2" />
+                    <path d="M3 19c0-3 3-5 6-5s6 2 6 5" />
+                    <path d="M14 18c.5-2 2.5-3.5 4.5-3.5S22 16 22 18" />
+                  </svg>
+                </span>
+                <span class="step-label">3. Partagez</span>
+                <span class="step-desc">votre score, défiez vos amis</span>
+              </li>
+            </ol>
+
+            <!-- FOOTER : "by Scluba" + balle (attribution discrète) -->
+            <footer class="qr-card-footer">
+              <span class="by-label">by</span>
+              <span class="scluba-mark">
+                <span class="scluba-wordmark">Scluba</span>
+                <span class="scluba-ball" aria-hidden="true">
+                  <svg viewBox="0 0 32 32">
+                    <defs>
+                      <radialGradient id="ball-gradient" cx="32%" cy="28%" r="78%">
+                        <stop offset="0%" stop-color="#FFFFFF" />
+                        <stop offset="55%" stop-color="#E8E8E8" />
+                        <stop offset="100%" stop-color="#909090" />
+                      </radialGradient>
+                    </defs>
+                    <circle cx="16" cy="16" r="13.8" fill="url(#ball-gradient)" />
+                    <g fill="#000" opacity="0.13">
+                      <circle cx="11" cy="10" r="0.8" /><circle cx="16" cy="10" r="0.8" /><circle cx="21" cy="10" r="0.8" />
+                      <circle cx="11" cy="16" r="0.8" /><circle cx="16" cy="16" r="0.8" /><circle cx="21" cy="16" r="0.8" />
+                      <circle cx="11" cy="22" r="0.8" /><circle cx="16" cy="22" r="0.8" /><circle cx="21" cy="22" r="0.8" />
+                    </g>
+                    <ellipse cx="11.5" cy="9" rx="3.6" ry="2.2" fill="#FFFFFF" opacity="0.6" />
+                  </svg>
+                </span>
+              </span>
+            </footer>
+
+          </div>
+        </article>
+      ))}
     </div>
   </section>
 
@@ -97,8 +159,9 @@ const tees = Array.from({ length: 18 }, (_, i) => i + 1);
   <!-- ========================================================== -->
   <section class="print-sheet stickers-sheet">
     <header class="stickers-head">
-      <h2>Stickers QR — Caen-La-Mer</h2>
-      <p>1 sticker par tee. Découper le long des pointillés et coller sur le piquet ou la borne du départ.</p>
+      <p class="stickers-eyebrow">Stickers QR · 1 par tee</p>
+      <h2 class="stickers-title">{c.name}</h2>
+      <p class="stickers-sub">Découper le long des pointillés et coller sur le piquet ou la borne du départ.</p>
     </header>
     <div class="stickers-grid">
       {tees.map((n) => (
@@ -120,7 +183,7 @@ const tees = Array.from({ length: 18 }, (_, i) => i + 1);
     <div class="memo-inner">
       <header class="memo-head">
         <p class="memo-eyebrow">Mémo · Équipe d'accueil</p>
-        <h2 class="memo-title" style={`color: ${qrColor}`}>{c.name} · Scorecard digitale</h2>
+        <h2 class="memo-title">{c.name} · Scorecard digitale</h2>
       </header>
 
       <section class="memo-section">
@@ -167,12 +230,11 @@ const tees = Array.from({ length: 18 }, (_, i) => i + 1);
 </OpsLayout>
 
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+
   /* === Screen-only chrome (hidden on print) === */
   .intro-card { margin-bottom: 24px; }
-  .intro-list {
-    margin: 8px 0 0 24px;
-    padding: 0;
-  }
+  .intro-list { margin: 8px 0 0 24px; padding: 0; }
   .intro-list li { margin: 6px 0; }
   .intro-hint { margin-top: 12px; color: var(--muted); font-size: 13px; }
   .intro-hint code {
@@ -182,270 +244,375 @@ const tees = Array.from({ length: 18 }, (_, i) => i + 1);
     border-radius: 4px;
     font-size: 12px;
   }
-  .back-link {
-    color: var(--muted);
-    font-size: 13px;
-    text-decoration: none;
-  }
+  .back-link { color: var(--muted); font-size: 13px; text-decoration: none; }
   .back-link:hover { color: var(--primary); }
   .header-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
-  /* === Sheets — common === */
+  /* === Sheets — design tokens === */
   .print-sheet {
-    background: #fff;
+    --forest:        #1B4332;
+    --forest-deep:   #0A1F14;
+    --honey:         #D4A574;
+    --cream:         #F5E6CF;
+    --muted:         #6B7280;
+    --ink:           #1A1A1A;
+    --line:          #E5E7EB;
+    --grid-line:     rgba(27, 67, 50, 0.10);
+    --grid-cell:     28px;
+    --cut-line:      rgba(27, 67, 50, 0.30);
+
     color: #1A1A1A;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    background: #fff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     margin: 24px auto;
-    padding: 24px;
-    max-width: 21cm; /* A4 width */
+    max-width: 21cm;
     border-radius: 8px;
-    font-family: Georgia, 'Times New Roman', serif;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   }
 
-  /* === SHEET 1 — Poster === */
-  .poster {
+  /* ==========================================================
+     SHEET 1 — 4 cartes A6 éditoriales dark mode
+     ========================================================== */
+  .cards-sheet {
     aspect-ratio: 21 / 29.7;
     padding: 0;
-    overflow: hidden;
+    background: #fff;
   }
-  .poster-inner {
+  .cards-grid {
+    width: 100%;
     height: 100%;
-    padding: 1.5cm 1.5cm 1cm;
+    display: grid;
+    grid-template-columns: repeat(2, 10.5cm);
+    grid-template-rows: repeat(2, 14.8cm);
+    place-content: center;
+  }
+  .qr-card {
+    position: relative;
+    width: 10.5cm;
+    height: 14.8cm;
+    box-sizing: border-box;
+    border: 1px dashed var(--cut-line);
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, rgba(10, 31, 20, 0.92) 0%, rgba(10, 31, 20, 0.85) 50%, rgba(10, 31, 20, 0.95) 100%),
+      url('/photos/golf-du-soleil.jpg') center/cover no-repeat,
+      var(--forest-deep);
+    color: #FFFFFF;
+  }
+  .qr-card-inner {
+    position: relative;
+    height: 100%;
+    padding: 0.85cm 0.7cm;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+  }
+  .qr-card-inner::before {
+    content: '';
+    position: absolute;
+    inset: 0.25cm;
+    border: 0.8px solid rgba(212, 165, 116, 0.45);
+    pointer-events: none;
+  }
+
+  /* === HERO CLUB === */
+  .qr-card-club-hero {
+    margin-top: 0.1cm;
     display: flex;
     flex-direction: column;
     align-items: center;
-    text-align: center;
-    box-sizing: border-box;
+    gap: 0.18cm;
   }
-  .poster-head { padding-top: 0.5cm; }
-  .poster-logo {
-    width: 3cm;
-    height: 3cm;
+  .club-hero-logo {
+    width: 1.5cm;
+    height: 1.5cm;
     object-fit: contain;
-    margin: 0 auto 0.5cm;
-    display: block;
+    filter:
+      drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45))
+      drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
   }
-  .poster-eyebrow {
-    margin: 0 0 0.3cm;
-    font-size: 11pt;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: #6B7280;
-    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  }
-  .poster-title {
-    margin: 0;
-    font-size: 36pt;
+  .club-hero-name {
+    margin: 0.1cm 0 0;
+    font-family: 'Bodoni Moda', serif;
     font-weight: 700;
+    font-size: 14pt;
+    line-height: 1.05;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    line-height: 1.1;
+    color: #FFFFFF;
+    max-width: 8.5cm;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   }
-  .poster-city {
-    margin: 0.3cm 0 0;
-    font-size: 14pt;
-    color: #6B7280;
-    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  }
-  .poster-qr-wrap {
-    flex: 1;
+
+  /* === Tagline honey === */
+  .qr-card-tagline {
     display: flex;
     align-items: center;
-    justify-content: center;
-    margin: 1cm 0;
+    gap: 0.22cm;
+    color: var(--honey);
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 9pt;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    margin-top: 0.1cm;
   }
-  .poster-qr {
-    width: 11cm;
-    height: 11cm;
-    padding: 0.4cm;
-    border: 4px solid #1A1A1A;
-    background: #fff;
+  .tagline-rule {
+    width: 0.85cm;
+    height: 0.5px;
+    background: var(--honey);
+    opacity: 0.7;
   }
-  .poster-qr :global(svg) {
+
+  /* === QR avec corner brackets honey === */
+  .qr-card-qr-frame {
+    position: relative;
+    margin: 0.55cm auto 0.5cm;
+    width: 4.5cm;
+    height: 4.5cm;
+  }
+  .qr-card-qr {
+    width: 100%;
+    height: 100%;
+    padding: 0.2cm;
+    background: #FFFFFF;
+    border-radius: 4px;
+    box-sizing: border-box;
+    box-shadow:
+      0 10px 30px rgba(0, 0, 0, 0.35),
+      0 3px 8px rgba(0, 0, 0, 0.22);
+  }
+  .qr-card-qr :global(svg) {
     width: 100%;
     height: 100%;
     display: block;
   }
-  .poster-instructions {
-    width: 100%;
-    max-width: 14cm;
-    margin: 0 auto;
-    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  }
-  .poster-instructions ol {
-    list-style: none;
-    counter-reset: step;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.6cm;
-  }
-  .poster-instructions li {
-    counter-increment: step;
-    font-size: 11pt;
-    text-align: center;
-    line-height: 1.4;
-    position: relative;
-    padding-top: 1.2cm;
-  }
-  .poster-instructions li::before {
-    content: counter(step);
+  .bracket {
     position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0.9cm;
-    height: 0.9cm;
-    border-radius: 50%;
-    border: 2px solid #1A1A1A;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: Georgia, serif;
-    font-size: 14pt;
-    font-weight: 700;
+    width: 0.5cm;
+    height: 0.5cm;
+    border: 1.2px solid var(--honey);
+    pointer-events: none;
   }
-  .poster-recover {
-    margin: 0.6cm 0 0;
-    text-align: center;
-    font-size: 9pt;
-    color: #6B7280;
-    font-style: italic;
-  }
-  .poster-footer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.3cm;
-    padding-top: 0.6cm;
-    border-top: 1px solid #E5E7EB;
-    font-size: 9pt;
-    letter-spacing: 0.05em;
-    color: #6B7280;
-    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  }
-  .poster-footer strong {
-    font-family: Georgia, serif;
-    font-weight: 700;
-    color: #1A1A1A;
-    font-size: 11pt;
-    letter-spacing: 0.1em;
-  }
-  .poster-footer-dot {
-    width: 4px; height: 4px;
-    background: #D4A574;
-    border-radius: 1px;
-  }
-  .poster-footer-url { font-family: ui-monospace, monospace; font-size: 8pt; }
+  .bracket-tl { top: -0.15cm; left: -0.15cm; border-right: 0; border-bottom: 0; }
+  .bracket-tr { top: -0.15cm; right: -0.15cm; border-left: 0; border-bottom: 0; }
+  .bracket-bl { bottom: -0.15cm; left: -0.15cm; border-right: 0; border-top: 0; }
+  .bracket-br { bottom: -0.15cm; right: -0.15cm; border-left: 0; border-top: 0; }
 
-  /* === SHEET 2 — Stickers === */
-  .stickers-sheet { padding: 1.2cm; }
-  .stickers-head {
-    text-align: center;
-    margin-bottom: 0.8cm;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  }
-  .stickers-head h2 { margin: 0 0 0.2cm; font-family: Georgia, serif; font-size: 16pt; }
-  .stickers-head p { margin: 0; font-size: 10pt; color: #6B7280; }
-  .stickers-grid {
+  /* === STEPS === */
+  .qr-card-steps {
+    list-style: none;
+    margin: 0.4cm 0 0;
+    padding: 0;
+    width: 100%;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.4cm;
+    gap: 0.2cm;
   }
+  .qr-card-steps li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1cm;
+    font-family: 'Inter', sans-serif;
+  }
+  .step-icon {
+    width: 0.85cm;
+    height: 0.85cm;
+    border-radius: 50%;
+    background: rgba(212, 165, 116, 0.15);
+    border: 0.8px solid var(--honey);
+    color: var(--honey);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step-icon svg {
+    width: 65%;
+    height: 65%;
+    display: block;
+  }
+  .step-label {
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #FFFFFF;
+    text-transform: uppercase;
+  }
+  .step-desc {
+    font-size: 6pt;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.25;
+    max-width: 2.4cm;
+  }
+
+  /* === FOOTER : "by Scluba" === */
+  .qr-card-footer {
+    padding-top: 0.3cm;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15cm;
+    border-top: 0.5px solid rgba(255, 255, 255, 0.15);
+  }
+  .by-label {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: 7pt;
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.03em;
+  }
+  .scluba-mark {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.03em;
+  }
+  .scluba-wordmark {
+    font-family: 'Bodoni Moda', serif;
+    font-weight: 800;
+    font-size: 11pt;
+    color: var(--cream);
+    letter-spacing: -0.01em;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+  .scluba-ball {
+    width: 0.55em;
+    height: 0.55em;
+    align-self: center;
+    display: inline-block;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+  }
+  .scluba-ball svg { width: 100%; height: 100%; display: block; }
+
+  /* ==========================================================
+     SHEET 2 — Stickers
+     ========================================================== */
+  .stickers-sheet {
+    padding: 1.2cm;
+    background:
+      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / var(--grid-cell) var(--grid-cell),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / var(--grid-cell) var(--grid-cell),
+      #FFFFFF;
+  }
+  .stickers-head { text-align: center; margin-bottom: 0.7cm; }
+  .stickers-eyebrow {
+    margin: 0 0 0.15cm;
+    font-size: 7.5pt;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .stickers-title {
+    margin: 0;
+    font-family: 'Bodoni Moda', serif;
+    font-weight: 700;
+    font-size: 18pt;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--forest);
+  }
+  .stickers-sub { margin: 0.2cm 0 0; font-size: 9pt; color: var(--muted); }
+  .stickers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4cm; }
   .sticker {
-    border: 1px dashed #9CA3AF;
+    background: #FFFFFF;
+    border: 1px dashed var(--cut-line);
     padding: 0.3cm;
     display: flex;
     align-items: center;
     gap: 0.3cm;
     aspect-ratio: 5 / 3;
     box-sizing: border-box;
+    box-shadow: 0 1px 3px rgba(27, 67, 50, 0.05);
   }
-  .sticker-qr {
-    width: 2.6cm;
-    height: 2.6cm;
-    flex-shrink: 0;
-  }
-  .sticker-qr :global(svg) {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-  .sticker-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1cm;
-    min-width: 0;
-  }
+  .sticker-qr { width: 2.6cm; height: 2.6cm; flex-shrink: 0; }
+  .sticker-qr :global(svg) { width: 100%; height: 100%; display: block; }
+  .sticker-text { display: flex; flex-direction: column; gap: 0.1cm; min-width: 0; }
   .sticker-tee {
-    font-family: Georgia, serif;
+    font-family: 'Bodoni Moda', serif;
     font-weight: 700;
     font-size: 14pt;
     letter-spacing: 0.04em;
+    color: var(--forest);
   }
   .sticker-club {
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 8pt;
-    color: #6B7280;
+    font-size: 7.5pt;
+    font-weight: 500;
+    color: var(--muted);
     letter-spacing: 0.04em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  /* === SHEET 3 — Memo (A5 landscape sur A4) === */
-  .memo-sheet { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-  .memo-inner { padding: 1cm; }
-  .memo-head { padding-bottom: 0.6cm; border-bottom: 2px solid #D4A574; margin-bottom: 0.6cm; }
+  /* ==========================================================
+     SHEET 3 — Mémo équipe
+     ========================================================== */
+  .memo-sheet {
+    background:
+      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / var(--grid-cell) var(--grid-cell),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / var(--grid-cell) var(--grid-cell),
+      #FFFFFF;
+  }
+  .memo-inner { padding: 1.2cm; }
+  .memo-head {
+    padding-bottom: 0.5cm;
+    border-bottom: 2px solid var(--honey);
+    margin-bottom: 0.6cm;
+  }
   .memo-eyebrow {
     margin: 0 0 0.2cm;
-    font-size: 9pt;
+    font-size: 8.5pt;
+    font-weight: 700;
     letter-spacing: 0.3em;
     text-transform: uppercase;
-    color: #D4A574;
-    font-weight: 700;
+    color: var(--honey);
   }
   .memo-title {
     margin: 0;
-    font-family: Georgia, serif;
-    font-size: 22pt;
+    font-family: 'Bodoni Moda', serif;
     font-weight: 700;
+    font-size: 22pt;
     line-height: 1.15;
+    color: var(--forest);
   }
-
   .memo-section { margin-bottom: 0.6cm; }
   .memo-section h3 {
     margin: 0 0 0.3cm;
-    font-family: Georgia, serif;
+    font-family: 'Bodoni Moda', serif;
+    font-weight: 700;
     font-size: 13pt;
-    color: #1B4332;
+    color: var(--forest);
   }
-  .memo-section ol, .memo-section ul {
-    margin: 0;
-    padding-left: 1cm;
-  }
+  .memo-section ol, .memo-section ul { margin: 0; padding-left: 1cm; }
   .memo-section li { margin: 0.15cm 0; font-size: 10.5pt; line-height: 1.45; }
   .memo-section dl { margin: 0; font-size: 10.5pt; }
-  .memo-section dt { font-weight: 700; margin-top: 0.3cm; color: #1A1A1A; }
+  .memo-section dt { font-weight: 700; margin-top: 0.3cm; color: var(--ink); }
   .memo-section dt:first-child { margin-top: 0; }
   .memo-section dd { margin: 0.1cm 0 0 0.5cm; color: #4B5563; line-height: 1.45; }
-  .memo-section em { font-style: italic; color: #1B4332; }
+  .memo-section em { font-style: italic; color: var(--forest); }
   .memo-section code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    background: #F3F4F6;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    background: rgba(27, 67, 50, 0.06);
     padding: 1px 6px;
     border-radius: 3px;
     font-size: 9pt;
+    color: var(--forest);
   }
-  .memo-section strong { font-weight: 700; }
-
   .memo-footer {
     margin-top: 0.5cm;
     padding-top: 0.4cm;
-    border-top: 1px solid #E5E7EB;
+    border-top: 1px solid var(--line);
     font-size: 8.5pt;
-    color: #6B7280;
+    color: var(--muted);
     text-align: center;
     letter-spacing: 0.04em;
     display: flex;
@@ -453,9 +620,11 @@ const tees = Array.from({ length: 18 }, (_, i) => i + 1);
     align-items: center;
     gap: 0.3cm;
   }
-  .memo-footer .dot { color: #D4A574; }
+  .memo-footer .dot { color: var(--honey); }
 
-  /* === Print rules === */
+  /* ==========================================================
+     Print rules
+     ========================================================== */
   @media print {
     .no-print { display: none !important; }
     body { background: #fff; }
@@ -464,14 +633,22 @@ const tees = Array.from({ length: 18 }, (_, i) => i + 1);
     .print-sheet {
       box-shadow: none;
       margin: 0;
-      padding: 0;
       max-width: none;
       border-radius: 0;
       page-break-after: always;
       width: 21cm;
       min-height: 29.7cm;
+      overflow: hidden;
     }
     .print-sheet:last-child { page-break-after: auto; }
-    @page { size: A4; margin: 0; }
+    .qr-card,
+    .stickers-sheet,
+    .memo-sheet,
+    .qr-card-qr {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @page { size: A4 portrait; margin: 0; }
   }
 </style>
+</OpsLayout>
