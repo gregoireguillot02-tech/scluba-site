@@ -754,14 +754,9 @@ const cardSlots = [0];
     }
     .print-sheet:last-child { page-break-after: auto; }
 
-    /* Sheets dark mode : flex pour que le contenu remplisse */
-    .stickers-sheet,
-    .memo-sheet {
-      display: flex !important;
-      flex-direction: column;
-    }
-    .stickers-grid { flex: 1; align-content: space-between; }
-    .memo-inner { flex: 1; display: flex; flex-direction: column; }
+    /* Sheets : le bg de la sheet remplit toute la hauteur A4 (29.7cm),
+       le contenu reste à sa taille naturelle en haut. Pas de flex hacks
+       qui décalent en print. */
 
     /* Force backgrounds + colors to print exact */
     .qr-card,
