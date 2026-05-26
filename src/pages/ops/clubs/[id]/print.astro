@@ -183,15 +183,23 @@ const cardSlots = [0];
     <div class="memo-inner">
       <header class="memo-head">
         <p class="memo-eyebrow">Mémo · Équipe d'accueil</p>
-        <h2 class="memo-title">{c.name} · Scorecard digitale</h2>
+        <h2 class="memo-title">Carte de score digitale Scluba</h2>
       </header>
+
+      <aside class="memo-pilot-callout">
+        <p class="pilot-label">Phase de test pilote</p>
+        <p class="pilot-body">
+          Nous testons cette solution avec votre club. <strong>Notez toutes les frustrations, retours, bugs et suggestions</strong> — des joueurs comme de l'équipe d'accueil. C'est ce qui nous permet d'améliorer Scluba avant le lancement officiel. Transmettez-les à <strong>team@scluba.com</strong> (un screenshot aide énormément).
+        </p>
+      </aside>
 
       <section class="memo-section">
         <h3>Quand un golfeur arrive au comptoir</h3>
         <ol>
-          <li>Indiquez le QR à l'accueil ou n'importe quel piquet de tee.</li>
-          <li>Précisez : "<em>Pas besoin de compte. Tape ton prénom et joue.</em>"</li>
-          <li>Si plusieurs golfeurs jouent ensemble : un seul crée la partie, les autres rejoignent avec le code à 6 caractères affiché à l'écran.</li>
+          <li>Indiquez le QR à l'accueil.</li>
+          <li>Précisez : "<em>Pas besoin de compte. Tapez votre prénom et jouez.</em>"</li>
+          <li><strong>Partie à plusieurs (le plus simple)</strong> : une seule personne scanne le QR et saisit les prénoms de tous les joueurs. Les autres suivent en direct et peuvent modifier leurs scores depuis le même téléphone.</li>
+          <li><strong>Si chacun veut son téléphone</strong> : le créateur affiche un QR partagé (ou un code à 6 chiffres) depuis l'écran de la partie ; les autres le scannent / le saisissent depuis l'écran d'accueil pour rejoindre.</li>
         </ol>
       </section>
 
@@ -212,9 +220,19 @@ const cardSlots = [0];
       <section class="memo-section">
         <h3>En cas de pépin</h3>
         <ul>
-          <li><strong>Tel cassé / batterie morte</strong> : re-scanner n'importe quel QR du parcours, taper son prénom dans "Reprendre ma partie" → la carte est récupérée.</li>
+          <li><strong>Page fermée par mégarde</strong> : scannez le QR au début du trou suivant, cliquez sur "Reprendre la partie" et retapez votre prénom — la carte est récupérée à l'identique.</li>
           <li><strong>QR illisible</strong> : URL à taper manuellement = <code>{pageUrl.replace(/^https?:\/\//, '')}</code></li>
-          <li><strong>Bug bloquant</strong> : prendre un screenshot + envoyer à <strong>greg@scluba.com</strong>.</li>
+          <li><strong>Bug bloquant</strong> : prendre un screenshot + envoyer à <strong>team@scluba.com</strong>.</li>
+        </ul>
+      </section>
+
+      <section class="memo-section">
+        <h3>En cours de déploiement</h3>
+        <ul>
+          <li><strong>Timer de partie</strong> — chronomètre intégré pour suivre le rythme de jeu (utile au starter pour repérer les parties qui ralentissent).</li>
+          <li><strong>Carnet de parcours</strong> — distances, plans des trous et conseils de jeu accessibles directement depuis le téléphone du joueur.</li>
+          <li><strong>Avis sur le golf</strong> — en fin de partie, le joueur note son expérience (accueil, parcours, restauration). Retours agrégés transmis au club.</li>
+          <li><strong>Infos terrain pour le jardinier</strong> — les joueurs peuvent signaler l'état des greens, fairways, bunkers, etc. Remontées directement à l'équipe d'entretien.</li>
         </ul>
       </section>
 
@@ -223,7 +241,7 @@ const cardSlots = [0];
         <span class="dot">·</span>
         <span>{pageUrl.replace(/^https?:\/\//, '')}</span>
         <span class="dot">·</span>
-        <span>greg@scluba.com</span>
+        <span>team@scluba.com</span>
       </footer>
     </div>
   </section>
@@ -492,58 +510,95 @@ const cardSlots = [0];
   .scluba-ball svg { width: 100%; height: 100%; display: block; }
 
   /* ==========================================================
-     SHEET 2 — Stickers
+     SHEET 2 — Stickers (dark editorial)
      ========================================================== */
   .stickers-sheet {
-    padding: 1.2cm;
+    padding: 1.4cm 1.2cm;
     background:
-      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / var(--grid-cell) var(--grid-cell),
-      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / var(--grid-cell) var(--grid-cell),
-      #FFFFFF;
+      linear-gradient(180deg, rgba(10, 31, 20, 0.94) 0%, rgba(10, 31, 20, 0.88) 50%, rgba(10, 31, 20, 0.96) 100%),
+      url('/photos/golf-du-soleil.jpg') center/cover no-repeat,
+      var(--forest-deep);
+    color: #FFFFFF;
   }
-  .stickers-head { text-align: center; margin-bottom: 0.7cm; }
+  .stickers-head { text-align: center; margin-bottom: 0.9cm; }
   .stickers-eyebrow {
-    margin: 0 0 0.15cm;
-    font-size: 7.5pt;
-    font-weight: 600;
+    margin: 0 0 0.25cm;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.22cm;
+    color: var(--honey);
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 8pt;
     letter-spacing: 0.3em;
     text-transform: uppercase;
-    color: var(--muted);
+  }
+  .stickers-eyebrow::before,
+  .stickers-eyebrow::after {
+    content: '';
+    width: 0.85cm;
+    height: 0.5px;
+    background: var(--honey);
+    opacity: 0.7;
   }
   .stickers-title {
     margin: 0;
-    font-family: 'Bodoni Moda', serif;
+    font-family: 'Cormorant Garamond', 'Bodoni Moda', serif;
     font-weight: 700;
-    font-size: 18pt;
+    font-size: 22pt;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--forest);
+    color: #FFFFFF;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   }
-  .stickers-sub { margin: 0.2cm 0 0; font-size: 9pt; color: var(--muted); }
-  .stickers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4cm; }
+  .stickers-sub {
+    margin: 0.25cm 0 0;
+    font-size: 9pt;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 14cm;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .stickers-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.45cm;
+  }
   .sticker {
     background: #FFFFFF;
-    border: 1px dashed var(--cut-line);
-    padding: 0.3cm;
+    border: 1px dashed rgba(212, 165, 116, 0.45);
+    padding: 0.35cm;
     display: flex;
     align-items: center;
     gap: 0.3cm;
     aspect-ratio: 5 / 3;
     box-sizing: border-box;
-    box-shadow: 0 1px 3px rgba(27, 67, 50, 0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
   }
-  .sticker-qr { width: 2.6cm; height: 2.6cm; flex-shrink: 0; }
+  .sticker-qr {
+    width: 2.3cm;
+    height: 2.3cm;
+    flex-shrink: 0;
+  }
   .sticker-qr :global(svg) { width: 100%; height: 100%; display: block; }
-  .sticker-text { display: flex; flex-direction: column; gap: 0.1cm; min-width: 0; }
+  .sticker-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1cm;
+    min-width: 0;
+    flex: 1;
+  }
   .sticker-tee {
-    font-family: 'Bodoni Moda', serif;
+    font-family: 'Cormorant Garamond', 'Bodoni Moda', serif;
     font-weight: 700;
-    font-size: 14pt;
+    font-size: 15pt;
     letter-spacing: 0.04em;
     color: var(--forest);
+    text-transform: uppercase;
   }
   .sticker-club {
-    font-size: 7.5pt;
+    font-size: 7pt;
     font-weight: 500;
     color: var(--muted);
     letter-spacing: 0.04em;
@@ -553,7 +608,7 @@ const cardSlots = [0];
   }
 
   /* ==========================================================
-     SHEET 3 — Mémo équipe
+     SHEET 3 — Mémo équipe (light, lisibilité prioritaire)
      ========================================================== */
   .memo-sheet {
     background:
@@ -561,34 +616,71 @@ const cardSlots = [0];
       linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / var(--grid-cell) var(--grid-cell),
       #FFFFFF;
   }
-  .memo-inner { padding: 1.2cm; }
+  .memo-inner { padding: 1.3cm 1.4cm; }
   .memo-head {
-    padding-bottom: 0.5cm;
+    padding-bottom: 0.6cm;
     border-bottom: 2px solid var(--honey);
-    margin-bottom: 0.6cm;
+    margin-bottom: 0.7cm;
   }
   .memo-eyebrow {
-    margin: 0 0 0.2cm;
-    font-size: 8.5pt;
-    font-weight: 700;
+    margin: 0 0 0.25cm;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.22cm;
+    font-size: 8pt;
+    font-weight: 600;
     letter-spacing: 0.3em;
     text-transform: uppercase;
     color: var(--honey);
   }
+  .memo-eyebrow::after {
+    content: '';
+    width: 0.85cm;
+    height: 0.5px;
+    background: var(--honey);
+    opacity: 0.7;
+  }
   .memo-title {
     margin: 0;
-    font-family: 'Bodoni Moda', serif;
+    font-family: 'Cormorant Garamond', 'Bodoni Moda', serif;
     font-weight: 700;
-    font-size: 22pt;
-    line-height: 1.15;
+    font-size: 26pt;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
     color: var(--forest);
   }
-  .memo-section { margin-bottom: 0.6cm; }
+  .memo-pilot-callout {
+    margin: 0 0 0.7cm;
+    padding: 0.4cm 0.5cm;
+    background: rgba(212, 165, 116, 0.10);
+    border-left: 3px solid var(--honey);
+    border-radius: 2px;
+  }
+  .pilot-label {
+    margin: 0 0 0.2cm;
+    font-family: 'Inter', sans-serif;
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--honey);
+  }
+  .pilot-body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .pilot-body strong { font-weight: 700; color: var(--forest); }
+
+  .memo-section { margin-bottom: 0.7cm; }
   .memo-section h3 {
     margin: 0 0 0.3cm;
-    font-family: 'Bodoni Moda', serif;
+    font-family: 'Cormorant Garamond', 'Bodoni Moda', serif;
     font-weight: 700;
-    font-size: 13pt;
+    font-size: 15pt;
+    letter-spacing: 0.02em;
     color: var(--forest);
   }
   .memo-section ol, .memo-section ul { margin: 0; padding-left: 1cm; }
