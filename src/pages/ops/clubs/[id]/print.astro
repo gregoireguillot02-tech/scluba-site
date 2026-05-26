@@ -718,27 +718,43 @@ const cardSlots = [0];
      ========================================================== */
   @media print {
     .no-print { display: none !important; }
-    body { background: #fff; }
+    html, body {
+      background: #fff;
+      margin: 0;
+      padding: 0;
+      width: 21cm;
+    }
     .ops-main, .ops-header { all: unset; }
     .ops-header { display: none !important; }
+
     .print-sheet {
-      box-shadow: none;
-      margin: 0;
-      max-width: none;
-      border-radius: 0;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      max-width: none !important;
+      min-height: 0 !important;
+      aspect-ratio: auto !important;
+      width: 21cm !important;
+      height: 29.7cm !important;
       page-break-after: always;
-      width: 21cm;
-      min-height: 29.7cm;
+      page-break-inside: avoid;
+      box-sizing: border-box;
       overflow: hidden;
     }
     .print-sheet:last-child { page-break-after: auto; }
+
+    /* Force backgrounds + colors to print exact */
     .qr-card,
     .stickers-sheet,
     .memo-sheet,
-    .qr-card-qr {
+    .qr-card-qr,
+    .step-icon,
+    .memo-pilot-callout {
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      color-adjust: exact;
     }
+
     @page { size: A4 portrait; margin: 0; }
   }
 </style>
