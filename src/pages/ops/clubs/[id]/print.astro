@@ -34,27 +34,21 @@ const cardSlots = [0];
       <p class="ops-page-subtitle">{c.name} · slug <code>{c.slug}</code></p>
     </div>
     <div class="header-actions">
-      <button type="button" class="ops-btn ops-btn-primary" onclick="window.print()">
+      <button id="downloadPdfBtn" type="button" class="ops-btn ops-btn-primary">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="7 10 12 15 17 10"/>
           <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
-        Enregistrer en PDF
+        <span class="btn-label">Télécharger PDF</span>
       </button>
     </div>
   </div>
 
   <div class="ops-card no-print intro-card">
-    <h2>Comment générer le PDF</h2>
-    <p>Clique sur <strong>"Enregistrer en PDF"</strong> en haut à droite. Le dialog d'impression s'ouvre — utilise ces réglages pour avoir un PDF propre A4 plein bord :</p>
-    <ul class="print-settings">
-      <li><strong>Destination</strong> → <code>Enregistrer au format PDF</code> (pas une imprimante)</li>
-      <li><strong>Marges</strong> → <code>Aucune</code> (sinon Chrome/Safari ajoute du blanc autour)</li>
-      <li><strong>Échelle</strong> → <code>100%</code> ou <code>Par défaut</code> (pas "Adapter à la page")</li>
-      <li><strong>Graphiques d'arrière-plan</strong> → <strong>coché</strong> (sinon le fond dark forest disparaît)</li>
-    </ul>
-    <p>Le kit fait 3 pages A4 : carte QR centrée · 18 stickers · mémo équipe. Une fois le PDF sauvegardé, ouvre-le dans Aperçu et imprime depuis là — c'est plus fiable que de cliquer "Imprimer" directement depuis le navigateur.</p>
+    <h2>Comment ça marche</h2>
+    <p>Clique sur <strong>"Télécharger PDF"</strong> en haut à droite. Le PDF est généré directement dans ton navigateur (pas de dialog d'impression à configurer) et téléchargé en quelques secondes. Tu n'as plus qu'à l'ouvrir dans Aperçu et imprimer depuis là.</p>
+    <p>Le kit fait 3 pages A4 : carte QR centrée · 18 stickers · mémo équipe.</p>
     <p class="intro-hint">L'URL pointe vers <code>{pageUrl}</code>. Si tu changes le slug ensuite, regénère ce kit.</p>
   </div>
 
@@ -247,6 +241,61 @@ const cardSlots = [0];
       </footer>
     </div>
   </section>
+
+  <!-- html2pdf.js : génère le PDF côté client, sans dialog d'impression -->
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js" is:inline></script>
+  <script is:inline define:vars={{ slug: c.slug }}>
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('downloadPdfBtn');
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        const sheets = Array.from(document.querySelectorAll('.print-sheet'));
+        if (!sheets.length) return;
+        const label = btn.querySelector('.btn-label') || btn;
+        const original = label.textContent;
+        label.textContent = 'Génération…';
+        btn.disabled = true;
+        try {
+          // Build a clean container with all 3 sheets stacked, no on-screen chrome
+          const container = document.createElement('div');
+          container.style.cssText = 'background:#fff;margin:0;padding:0;width:21cm;';
+          sheets.forEach((sheet, i) => {
+            const clone = sheet.cloneNode(true);
+            // Force exact A4 dimensions + remove on-screen chrome
+            clone.style.cssText = [
+              'width:21cm', 'height:29.7cm',
+              'margin:0', 'box-shadow:none', 'border-radius:0',
+              'box-sizing:border-box',
+              i < sheets.length - 1 ? 'page-break-after:always' : '',
+            ].filter(Boolean).join(';');
+            container.appendChild(clone);
+          });
+          // Attach off-screen so html2canvas can render it
+          container.style.position = 'fixed';
+          container.style.left = '-10000px';
+          container.style.top = '0';
+          document.body.appendChild(container);
+
+          await window.html2pdf().set({
+            margin: 0,
+            filename: `scluba-kit-${slug}.pdf`,
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+            jsPDF: { unit: 'cm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'] },
+          }).from(container).save();
+
+          document.body.removeChild(container);
+        } catch (err) {
+          console.error('PDF generation failed:', err);
+          alert('Erreur lors de la génération du PDF. Détails dans la console.');
+        } finally {
+          label.textContent = original;
+          btn.disabled = false;
+        }
+      });
+    });
+  </script>
 </OpsLayout>
 
 <style>
