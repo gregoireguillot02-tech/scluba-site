@@ -36,23 +36,25 @@ const cardSlots = [0];
     <div class="header-actions">
       <button type="button" class="ops-btn ops-btn-primary" onclick="window.print()">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polyline points="6 9 6 2 18 2 18 9"/>
-          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-          <rect x="6" y="14" width="12" height="8"/>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
-        Imprimer / PDF
+        Enregistrer en PDF
       </button>
     </div>
   </div>
 
   <div class="ops-card no-print intro-card">
-    <h2>Comment utiliser ce kit</h2>
-    <p>Cette page contient 3 documents prêts à imprimer (Cmd+P → "Enregistrer en PDF" pour archiver) :</p>
-    <ol class="intro-list">
-      <li><strong>4 cartes QR A6</strong> sur 1 feuille A4 — découper les 4 cartes le long des pointillés (accueil, vestiaire, restaurant, voiturette…)</li>
-      <li><strong>18 stickers QR</strong> (1 par tee) — à découper et installer sur les piquets de départ</li>
-      <li><strong>Mémo équipe d'accueil</strong> A4 — 1 par hôte</li>
-    </ol>
+    <h2>Comment générer le PDF</h2>
+    <p>Clique sur <strong>"Enregistrer en PDF"</strong> en haut à droite. Le dialog d'impression s'ouvre — utilise ces réglages pour avoir un PDF propre A4 plein bord :</p>
+    <ul class="print-settings">
+      <li><strong>Destination</strong> → <code>Enregistrer au format PDF</code> (pas une imprimante)</li>
+      <li><strong>Marges</strong> → <code>Aucune</code> (sinon Chrome/Safari ajoute du blanc autour)</li>
+      <li><strong>Échelle</strong> → <code>100%</code> ou <code>Par défaut</code> (pas "Adapter à la page")</li>
+      <li><strong>Graphiques d'arrière-plan</strong> → <strong>coché</strong> (sinon le fond dark forest disparaît)</li>
+    </ul>
+    <p>Le kit fait 3 pages A4 : carte QR centrée · 18 stickers · mémo équipe. Une fois le PDF sauvegardé, ouvre-le dans Aperçu et imprime depuis là — c'est plus fiable que de cliquer "Imprimer" directement depuis le navigateur.</p>
     <p class="intro-hint">L'URL pointe vers <code>{pageUrl}</code>. Si tu changes le slug ensuite, regénère ce kit.</p>
   </div>
 
@@ -255,6 +257,27 @@ const cardSlots = [0];
   .intro-list { margin: 8px 0 0 24px; padding: 0; }
   .intro-list li { margin: 6px 0; }
   .intro-hint { margin-top: 12px; color: var(--muted); font-size: 13px; }
+  .print-settings {
+    margin: 10px 0 16px;
+    padding: 12px 16px;
+    background: rgba(212, 165, 116, 0.10);
+    border-left: 3px solid #D4A574;
+    border-radius: 4px;
+    list-style: none;
+  }
+  .print-settings li {
+    margin: 6px 0;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .print-settings code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: rgba(27, 67, 50, 0.08);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+    color: #1B4332;
+  }
   .intro-hint code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     background: var(--line-soft);
