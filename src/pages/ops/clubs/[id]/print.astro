@@ -34,20 +34,20 @@ const cardSlots = [0];
       <p class="ops-page-subtitle">{c.name} · slug <code>{c.slug}</code></p>
     </div>
     <div class="header-actions">
-      <button id="downloadPdfBtn" type="button" class="ops-btn ops-btn-primary" data-slug={c.slug}>
+      <button type="button" class="ops-btn ops-btn-primary" onclick="window.print()">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
         </svg>
-        <span class="btn-label">Télécharger PDF</span>
+        <span class="btn-label">Imprimer / PDF</span>
       </button>
     </div>
   </div>
 
   <div class="ops-card no-print intro-card">
     <h2>Comment ça marche</h2>
-    <p>Clique sur <strong>"Télécharger PDF"</strong> en haut à droite. Le PDF est généré directement dans ton navigateur (pas de dialog d'impression) et téléchargé en quelques secondes. Tu n'as plus qu'à l'ouvrir dans Aperçu et imprimer depuis là.</p>
+    <p>Clique sur <strong>"Imprimer / PDF"</strong> en haut à droite (ou <code>Cmd+P</code>). Dans la fenêtre d'impression, choisis la destination <strong>"Enregistrer au format PDF"</strong> pour archiver, ou ton imprimante pour sortir le kit directement. Pense à activer <strong>"Graphiques d'arrière-plan"</strong> pour conserver le fond et les couleurs.</p>
     <p>Le kit fait 3 pages A4 : carte QR centrée · 18 stickers · mémo équipe.</p>
     <p class="intro-hint">L'URL pointe vers <code>{pageUrl}</code>. Si tu changes le slug ensuite, regénère ce kit.</p>
   </div>
@@ -242,84 +242,6 @@ const cardSlots = [0];
     </div>
   </section>
 
-  <!-- PDF généré client-side via html2canvas + jsPDF — chaque sheet captureé en place -->
-  <script>
-    import html2canvas from 'html2canvas';
-    import { jsPDF } from 'jspdf';
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('downloadPdfBtn') as HTMLButtonElement | null;
-      if (!btn) return;
-      const slug = btn.dataset.slug || 'kit';
-
-      btn.addEventListener('click', async () => {
-        const sheets = Array.from(document.querySelectorAll<HTMLElement>('.print-sheet'));
-        if (!sheets.length) return;
-        const label = (btn.querySelector('.btn-label') as HTMLElement | null) || btn;
-        const original = label.textContent;
-        label.textContent = 'Génération…';
-        btn.disabled = true;
-
-        try {
-          const pdf = new jsPDF({ unit: 'cm', format: 'a4', orientation: 'portrait' });
-          const A4_W = 794;   // 21cm @ 96dpi
-          const A4_H = 1123;  // 29.7cm @ 96dpi
-
-          // Hide tout le body pour avoir un espace propre sans interférence
-          const bodyChildren = Array.from(document.body.children) as HTMLElement[];
-          const savedDisplays = bodyChildren.map((el) => el.style.display);
-          bodyChildren.forEach((el) => { el.style.display = 'none'; });
-
-          // Wrapper contrôlé pour les clones
-          const wrapper = document.createElement('div');
-          wrapper.style.cssText = 'background:#fff;margin:0;padding:0;position:absolute;top:0;left:0;width:21cm;';
-          document.body.appendChild(wrapper);
-
-          try {
-            for (let i = 0; i < sheets.length; i++) {
-              const clone = sheets[i].cloneNode(true) as HTMLElement;
-              // Force dimensions A4 exactes + reset des contraintes screen
-              clone.style.cssText = 'width:21cm !important;height:29.7cm !important;min-height:29.7cm !important;max-width:none !important;aspect-ratio:auto !important;margin:0 !important;padding:0 !important;box-shadow:none !important;border-radius:0 !important;overflow:hidden;box-sizing:border-box;position:relative;display:block;';
-              // Vide le wrapper et insère le clone courant
-              wrapper.innerHTML = '';
-              wrapper.appendChild(clone);
-
-              // Reflow + laisse les fonts/images se charger
-              await new Promise((r) => setTimeout(r, 250));
-
-              const canvas = await html2canvas(clone, {
-                scale: 2,
-                width: A4_W,
-                height: A4_H,
-                windowWidth: A4_W,
-                windowHeight: A4_H,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff',
-                logging: false,
-              });
-
-              const imgData = canvas.toDataURL('image/jpeg', 0.95);
-              if (i > 0) pdf.addPage();
-              pdf.addImage(imgData, 'JPEG', 0, 0, 21, 29.7);
-            }
-          } finally {
-            // Restore body
-            document.body.removeChild(wrapper);
-            bodyChildren.forEach((el, idx) => { el.style.display = savedDisplays[idx]; });
-          }
-
-          pdf.save(`scluba-kit-${slug}.pdf`);
-        } catch (err) {
-          console.error('PDF generation failed:', err);
-          alert('Erreur lors de la génération du PDF. Détails dans la console.');
-        } finally {
-          label.textContent = original;
-          btn.disabled = false;
-        }
-      });
-    });
-  </script>
 </OpsLayout>
 
 <style>
