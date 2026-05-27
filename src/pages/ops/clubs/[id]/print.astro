@@ -48,7 +48,7 @@ const cardSlots = [0];
   <div class="ops-card no-print intro-card">
     <h2>Comment ça marche</h2>
     <p>Clique sur <strong>"Imprimer / PDF"</strong> en haut à droite (ou <code>Cmd+P</code>). Dans la fenêtre d'impression, choisis la destination <strong>"Enregistrer au format PDF"</strong> pour archiver, ou ton imprimante pour sortir le kit directement. Pense à activer <strong>"Graphiques d'arrière-plan"</strong> pour conserver le fond et les couleurs.</p>
-    <p>Le kit fait 4 pages A4 : carte QR · 18 stickers · mémo équipe · cartes de remerciement à signer à la main.</p>
+    <p>Le kit fait 4 pages A4 : carte QR · 18 stickers · mémo équipe · carte de remerciement à signer à la main.</p>
     <p class="intro-hint">L'URL pointe vers <code>{pageUrl}</code>. Si tu changes le slug ensuite, regénère ce kit.</p>
   </div>
 
@@ -243,32 +243,30 @@ const cardSlots = [0];
   </section>
 
   <!-- ========================================================== -->
-  <!-- SHEET 4 — 4 cartes de remerciement A6 kraft (à signer main) -->
+  <!-- SHEET 4 — carte de remerciement (1 carte, à signer à la main) -->
   <!-- ========================================================== -->
   <section class="print-sheet thanks-sheet">
     <div class="thanks-grid">
-      {[0, 1, 2, 3].map(() => (
-        <article class="thanks-card">
-          <div class="thanks-card-inner">
-            <header class="thanks-head">
-              <img class="thanks-logo" src="/scluba-logo-wood.png" alt="" />
-              <p class="thanks-merci">Merci.</p>
-            </header>
+      <article class="thanks-card">
+        <div class="thanks-card-inner">
+          <header class="thanks-head">
+            <img class="thanks-logo" src="/scluba-logo-wood.png" alt="" />
+            <p class="thanks-merci">Merci.</p>
+          </header>
 
-            <p class="thanks-body">
-              Merci de compter parmi les premiers clubs à tester Scluba.
-              Votre confiance, à ce stade, compte énormément pour nous.
-              On a hâte de construire la suite avec vous.
-            </p>
+          <p class="thanks-body">
+            Merci de compter parmi les premiers clubs à tester Scluba.
+            Votre confiance, à ce stade, compte énormément pour nous.
+            On a hâte de construire la suite avec vous.
+          </p>
 
-            <footer class="thanks-sign">
-              <span class="thanks-sign-line" aria-hidden="true"></span>
-              <p class="thanks-sign-name">Grégoire &amp; Paul · Scluba</p>
-              {c.name && <p class="thanks-club">pour {c.name}</p>}
-            </footer>
-          </div>
-        </article>
-      ))}
+          <footer class="thanks-sign">
+            <span class="thanks-sign-line" aria-hidden="true"></span>
+            <p class="thanks-sign-name">Grégoire &amp; Paul · Scluba</p>
+            {c.name && <p class="thanks-club">pour {c.name}</p>}
+          </footer>
+        </div>
+      </article>
     </div>
   </section>
 
@@ -762,7 +760,7 @@ const cardSlots = [0];
   .memo-footer .dot { color: var(--honey); }
 
   /* ==========================================================
-     SHEET 4 — Cartes de remerciement A6 kraft
+     SHEET 4 — Carte de remerciement kraft (1 carte centrée)
      ========================================================== */
   .thanks-sheet {
     aspect-ratio: 21 / 29.7;
@@ -772,27 +770,27 @@ const cardSlots = [0];
   .thanks-grid {
     width: 100%;
     height: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, 10.5cm);
-    grid-template-rows: repeat(2, 14.8cm);
-    place-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
+  /* Une seule carte, centrée et agrandie (à découper le long des pointillés). */
   .thanks-card {
     position: relative;
-    width: 10.5cm;
-    height: 14.8cm;
+    width: 13cm;
+    height: 18.5cm;
     box-sizing: border-box;
     border: 1px dashed var(--cut-line);
     overflow: hidden;
     background:
-      radial-gradient(circle at 30% 18%, rgba(212, 165, 116, 0.14), transparent 62%),
+      radial-gradient(circle at 30% 16%, rgba(212, 165, 116, 0.16), transparent 60%),
       #EFE3CE;
     color: #4A3725;
   }
   .thanks-card-inner {
     position: relative;
     height: 100%;
-    padding: 0.95cm 0.85cm;
+    padding: 1.5cm 1.4cm;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -803,7 +801,7 @@ const cardSlots = [0];
   .thanks-card-inner::before {
     content: '';
     position: absolute;
-    inset: 0.32cm;
+    inset: 0.5cm;
     border: 0.8px solid rgba(74, 55, 37, 0.30);
     pointer-events: none;
   }
@@ -811,55 +809,57 @@ const cardSlots = [0];
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25cm;
-    margin-top: 0.15cm;
+    gap: 0.35cm;
+    margin-top: 0.3cm;
   }
   .thanks-logo {
-    width: 3.8cm;
-    height: 1.5cm;
+    width: 7cm;
+    height: 2.8cm;
     object-fit: contain;
   }
   .thanks-merci {
     margin: 0;
     font-family: 'Caveat', cursive;
     font-weight: 700;
-    font-size: 34pt;
+    font-size: 56pt;
     line-height: 1;
     color: var(--forest);
   }
+  /* Corps en manuscrit (Caveat) — agrandi pour rester lisible. */
   .thanks-body {
     margin: 0;
-    font-family: 'Inter', sans-serif;
-    font-size: 11pt;
-    line-height: 1.6;
+    font-family: 'Caveat', cursive;
+    font-weight: 600;
+    font-size: 24pt;
+    line-height: 1.35;
     color: #4A3725;
-    max-width: 8.2cm;
+    max-width: 10.5cm;
   }
   .thanks-sign {
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.12cm;
+    gap: 0.15cm;
   }
   .thanks-sign-line {
-    width: 5cm;
+    width: 7cm;
     height: 0.8px;
     background: rgba(74, 55, 37, 0.45);
-    margin-bottom: 0.18cm;
+    margin-bottom: 0.22cm;
   }
   .thanks-sign-name {
     margin: 0;
     font-family: 'Inter', sans-serif;
-    font-size: 9pt;
+    font-size: 10.5pt;
     font-weight: 600;
     letter-spacing: 0.04em;
     color: var(--forest);
   }
   .thanks-club {
-    margin: 0.05cm 0 0;
+    margin: 0.1cm 0 0;
     font-family: 'Inter', sans-serif;
-    font-size: 7.5pt;
+    font-size: 8.5pt;
     font-style: italic;
     color: rgba(74, 55, 37, 0.70);
   }
