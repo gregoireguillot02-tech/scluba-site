@@ -242,9 +242,10 @@ const cardSlots = [0];
     </div>
   </section>
 
-  <!-- html2pdf.js bundlé localement (npm) — CSP-compliant, pas de CDN externe -->
+  <!-- PDF généré client-side via html2canvas + jsPDF — chaque sheet captureé en place -->
   <script>
-    import html2pdf from 'html2pdf.js';
+    import html2canvas from 'html2canvas';
+    import { jsPDF } from 'jspdf';
 
     document.addEventListener('DOMContentLoaded', () => {
       const btn = document.getElementById('downloadPdfBtn') as HTMLButtonElement | null;
@@ -258,48 +259,26 @@ const cardSlots = [0];
         const original = label.textContent;
         label.textContent = 'Génération…';
         btn.disabled = true;
+
         try {
-          const container = document.createElement('div');
-          container.style.cssText = 'background:#fff;margin:0;padding:0;width:21cm;';
-          sheets.forEach((sheet, i) => {
-            const clone = sheet.cloneNode(true) as HTMLElement;
-            clone.style.cssText = [
-              'width:21cm', 'height:29.7cm',
-              'margin:0', 'box-shadow:none', 'border-radius:0',
-              'box-sizing:border-box',
-              i < sheets.length - 1 ? 'page-break-after:always' : '',
-            ].filter(Boolean).join(';');
-            container.appendChild(clone);
-          });
-          // Container visible but hors-viewport en bas, pour que html2canvas
-          // puisse réellement le rendre (offscreen left causait des PDFs vides).
-          container.style.position = 'absolute';
-          container.style.top = '100vh';
-          container.style.left = '0';
-          container.style.zIndex = '-1';
-          document.body.appendChild(container);
+          const pdf = new jsPDF({ unit: 'cm', format: 'a4', orientation: 'portrait' });
 
-          // Petit délai pour laisser les fonts/images se charger dans le clone.
-          await new Promise((r) => setTimeout(r, 300));
-
-          await html2pdf().set({
-            margin: 0,
-            filename: `scluba-kit-${slug}.pdf`,
-            image: { type: 'jpeg', quality: 0.95 },
-            html2canvas: {
+          for (let i = 0; i < sheets.length; i++) {
+            const sheet = sheets[i];
+            const canvas = await html2canvas(sheet, {
               scale: 2,
               useCORS: true,
               allowTaint: true,
               backgroundColor: '#ffffff',
-              logging: true,
-              windowWidth: 794,
-              windowHeight: 1123 * sheets.length,
-            },
-            jsPDF: { unit: 'cm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['css', 'legacy'] },
-          }).from(container).save();
+              logging: false,
+            });
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            if (i > 0) pdf.addPage();
+            // 21 × 29.7 cm = A4 exact, bord à bord
+            pdf.addImage(imgData, 'JPEG', 0, 0, 21, 29.7);
+          }
 
-          document.body.removeChild(container);
+          pdf.save(`scluba-kit-${slug}.pdf`);
         } catch (err) {
           console.error('PDF generation failed:', err);
           alert('Erreur lors de la génération du PDF. Détails dans la console.');
