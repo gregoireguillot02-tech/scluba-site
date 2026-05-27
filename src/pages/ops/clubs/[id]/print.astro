@@ -737,16 +737,19 @@ const cardSlots = [0];
   @media print {
     .no-print { display: none !important; }
 
-    html, body {
-      background: #fff;
+    /* Layout elements live in OpsLayout (different Astro scope hash), so these
+       overrides MUST be :global() — otherwise they never match and .ops-main
+       keeps its 32px/24px/80px padding, leaving a white border on every page. */
+    :global(html), :global(body) {
+      background: #fff !important;
       margin: 0 !important;
       padding: 0 !important;
       width: 21cm !important;
       min-width: 21cm !important;
     }
 
-    .ops-header { display: none !important; }
-    .ops-main {
+    :global(.ops-header) { display: none !important; }
+    :global(.ops-main) {
       display: block !important;
       margin: 0 !important;
       padding: 0 !important;
