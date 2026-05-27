@@ -249,21 +249,23 @@ const cardSlots = [0];
     <div class="thanks-grid">
       <article class="thanks-card">
         <div class="thanks-card-inner">
-          <header class="thanks-head">
-            <img class="thanks-logo" src="/scluba-logo-wood.png" alt="" />
-            <p class="thanks-merci">Merci.</p>
-          </header>
+          <div class="thanks-top">
+            <header class="thanks-head">
+              <img class="thanks-logo" src="/scluba-logo-wood.png" alt="" />
+              <p class="thanks-merci">Merci.</p>
+            </header>
 
-          <p class="thanks-body">
-            Merci de compter parmi les premiers clubs à tester Scluba.
-            Votre confiance, à ce stade, compte énormément pour nous.
-            On a hâte de construire la suite avec vous.
-          </p>
+            <p class="thanks-body">
+              Merci de compter parmi les premiers clubs à tester Scluba.
+              Votre confiance, à ce stade, compte énormément pour nous.
+              On a hâte de construire la suite avec vous.
+            </p>
+          </div>
 
+          <!-- Zone laissée vide : Grégoire & Paul écrivent leurs noms + signent à la main au-dessus du trait. -->
           <footer class="thanks-sign">
             <span class="thanks-sign-line" aria-hidden="true"></span>
-            <p class="thanks-sign-name">Grégoire &amp; Paul · Scluba</p>
-            {c.name && <p class="thanks-club">pour {c.name}</p>}
+            {c.name && <p class="thanks-club">pour {c.name} · Scluba</p>}
           </footer>
         </div>
       </article>
@@ -805,12 +807,18 @@ const cardSlots = [0];
     border: 0.8px solid rgba(74, 55, 37, 0.30);
     pointer-events: none;
   }
+  .thanks-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6cm;
+    margin-top: 0.3cm;
+  }
   .thanks-head {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.35cm;
-    margin-top: 0.3cm;
   }
   .thanks-logo {
     width: 7cm;
@@ -835,26 +843,20 @@ const cardSlots = [0];
     color: #4A3725;
     max-width: 10.5cm;
   }
+  /* Footer = trait de signature + tag club ; l'espace au-dessus du trait
+     est laissé vide pour l'écriture manuelle (noms + signature). */
   .thanks-sign {
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.15cm;
+    gap: 0.25cm;
+    padding-bottom: 0.2cm;
   }
   .thanks-sign-line {
-    width: 7cm;
+    width: 8cm;
     height: 0.8px;
     background: rgba(74, 55, 37, 0.45);
-    margin-bottom: 0.22cm;
-  }
-  .thanks-sign-name {
-    margin: 0;
-    font-family: 'Inter', sans-serif;
-    font-size: 10.5pt;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    color: var(--forest);
   }
   .thanks-club {
     margin: 0.1cm 0 0;
