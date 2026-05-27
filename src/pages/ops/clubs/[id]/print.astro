@@ -23,6 +23,9 @@ const qrColor = SCLUBA_GREEN;
 const cardQr = await qrSvg(pageUrl, { errorCorrectionLevel: 'H', dark: qrColor, margin: 1 });
 const stickerQr = await qrSvg(pageUrl, { errorCorrectionLevel: 'M', dark: qrColor, margin: 1 });
 const tees = Array.from({ length: 18 }, (_, i) => i + 1);
+// 9 stickers par page A4 → QR XL ; 18 départs = 2 pages.
+const teeChunks: number[][] = [];
+for (let i = 0; i < tees.length; i += 9) teeChunks.push(tees.slice(i, i + 9));
 const cardSlots = [0];
 ---
 
@@ -48,7 +51,7 @@ const cardSlots = [0];
   <div class="ops-card no-print intro-card">
     <h2>Comment ça marche</h2>
     <p>Clique sur <strong>"Imprimer / PDF"</strong> en haut à droite (ou <code>Cmd+P</code>). Dans la fenêtre d'impression, choisis la destination <strong>"Enregistrer au format PDF"</strong> pour archiver, ou ton imprimante pour sortir le kit directement. Pense à activer <strong>"Graphiques d'arrière-plan"</strong> pour conserver le fond et les couleurs.</p>
-    <p>Le kit fait 4 pages A4 : carte QR · 18 stickers · mémo équipe · carte de remerciement à signer à la main.</p>
+    <p>Le kit fait 5 pages A4 : carte QR · 18 stickers (2 pages, QR XL) · mémo équipe · carte de remerciement à signer à la main.</p>
     <p class="intro-hint">L'URL pointe vers <code>{pageUrl}</code>. Si tu changes le slug ensuite, regénère ce kit.</p>
   </div>
 
@@ -151,26 +154,27 @@ const cardSlots = [0];
   </section>
 
   <!-- ========================================================== -->
-  <!-- SHEET 2 — Stickers QR (1 par tee)                           -->
+  <!-- SHEET 2 — Stickers QR (1 par départ · 9 par page, QR XL)    -->
   <!-- ========================================================== -->
-  <section class="print-sheet stickers-sheet">
-    <header class="stickers-head">
-      <p class="stickers-eyebrow">Stickers QR · 1 par tee</p>
-      <h2 class="stickers-title">{c.name}</h2>
-      <p class="stickers-sub">Découper le long des pointillés et coller sur le piquet ou la borne du départ.</p>
-    </header>
-    <div class="stickers-grid">
-      {tees.map((n) => (
-        <div class="sticker">
-          <div class="sticker-qr" set:html={stickerQr}></div>
-          <div class="sticker-text">
+  {teeChunks.map((chunk) => (
+    <section class="print-sheet stickers-sheet">
+      <header class="stickers-head">
+        <p class="stickers-eyebrow">À découper le long des pointillés · un sticker par départ</p>
+      </header>
+      <div class="stickers-grid">
+        {chunk.map((n) => (
+          <div class="sticker">
+            <div class="sticker-qr" set:html={stickerQr}></div>
             <span class="sticker-tee">Tee {n}</span>
-            <span class="sticker-club">{c.name}</span>
+            <span class="sticker-brand" aria-hidden="true">
+              <span class="brand-word">Scluba</span>
+              <span class="brand-ball"></span>
+            </span>
           </div>
-        </div>
-      ))}
-    </div>
-  </section>
+        ))}
+      </div>
+    </section>
+  ))}
 
   <!-- ========================================================== -->
   <!-- SHEET 3 — Mémo équipe d'accueil                             -->
@@ -265,7 +269,7 @@ const cardSlots = [0];
           <!-- Zone laissée vide : Grégoire & Paul écrivent leurs noms + signent à la main au-dessus du trait. -->
           <footer class="thanks-sign">
             <span class="thanks-sign-line" aria-hidden="true"></span>
-            {c.name && <p class="thanks-club">pour {c.name} · Scluba</p>}
+            {c.name && <p class="thanks-club">pour le {c.name} · Scluba</p>}
           </footer>
         </div>
       </article>
@@ -558,101 +562,74 @@ const cardSlots = [0];
   .scluba-ball svg { width: 100%; height: 100%; display: block; }
 
   /* ==========================================================
-     SHEET 2 — Stickers (dark editorial)
+     SHEET 2 — Stickers (blanc minimal, QR XL, 9 par page)
      ========================================================== */
   .stickers-sheet {
-    padding: 1.4cm 1.2cm;
-    background:
-      linear-gradient(180deg, rgba(10, 31, 20, 0.94) 0%, rgba(10, 31, 20, 0.88) 50%, rgba(10, 31, 20, 0.96) 100%),
-      url('/photos/golf-du-soleil.jpg') center/cover no-repeat,
-      var(--forest-deep);
-    color: #FFFFFF;
+    padding: 1cm 1cm 0.8cm;
+    background: #fff;
   }
-  .stickers-head { text-align: center; margin-bottom: 0.9cm; }
+  .stickers-head { text-align: center; margin-bottom: 0.65cm; }
   .stickers-eyebrow {
-    margin: 0 0 0.25cm;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.22cm;
-    color: var(--honey);
+    margin: 0;
+    color: var(--muted);
     font-family: 'Inter', sans-serif;
     font-weight: 500;
     font-size: 8pt;
-    letter-spacing: 0.3em;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
-  }
-  .stickers-eyebrow::before,
-  .stickers-eyebrow::after {
-    content: '';
-    width: 0.85cm;
-    height: 0.5px;
-    background: var(--honey);
-    opacity: 0.7;
-  }
-  .stickers-title {
-    margin: 0;
-    font-family: 'Cormorant Garamond', 'Bodoni Moda', serif;
-    font-weight: 700;
-    font-size: 22pt;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #FFFFFF;
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-  }
-  .stickers-sub {
-    margin: 0.25cm 0 0;
-    font-size: 9pt;
-    color: rgba(255, 255, 255, 0.7);
-    max-width: 14cm;
-    margin-left: auto;
-    margin-right: auto;
   }
   .stickers-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.45cm;
+    gap: 0.5cm;
   }
   .sticker {
     background: #FFFFFF;
-    border: 1px dashed rgba(212, 165, 116, 0.45);
-    padding: 0.35cm;
+    border: 1px dashed var(--cut-line);
+    border-radius: 4px;
+    padding: 0.4cm 0.3cm 0.35cm;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.3cm;
-    aspect-ratio: 5 / 3;
+    justify-content: center;
+    gap: 0.22cm;
     box-sizing: border-box;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-    overflow: hidden;
   }
   .sticker-qr {
-    width: 2.3cm;
-    height: 2.3cm;
+    width: 5cm;
+    height: 5cm;
     flex-shrink: 0;
   }
   .sticker-qr :global(svg) { width: 100%; height: 100%; display: block; }
-  .sticker-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1cm;
-    min-width: 0;
-    flex: 1;
-  }
   .sticker-tee {
     font-family: 'Cormorant Garamond', 'Bodoni Moda', serif;
     font-weight: 700;
-    font-size: 15pt;
-    letter-spacing: 0.04em;
+    font-size: 21pt;
+    line-height: 1;
+    letter-spacing: 0.05em;
     color: var(--forest);
     text-transform: uppercase;
   }
-  .sticker-club {
-    font-size: 7pt;
-    font-weight: 500;
-    color: var(--muted);
-    letter-spacing: 0.04em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .sticker-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.12cm;
+    opacity: 0.9;
+  }
+  .brand-word {
+    font-family: 'Bodoni Moda', serif;
+    font-weight: 800;
+    font-size: 8pt;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    color: var(--forest);
+  }
+  .brand-ball {
+    width: 0.3cm;
+    height: 0.3cm;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, #FFFFFF 0%, #E8E8E8 55%, #8C8C8C 100%);
+    box-shadow: inset 0 0 0 0.3px rgba(0, 0, 0, 0.15);
   }
 
   /* ==========================================================
@@ -792,7 +769,7 @@ const cardSlots = [0];
   .thanks-card-inner {
     position: relative;
     height: 100%;
-    padding: 1.5cm 1.4cm;
+    padding: 0.9cm 1.4cm 1.6cm;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -812,7 +789,7 @@ const cardSlots = [0];
     flex-direction: column;
     align-items: center;
     gap: 0.6cm;
-    margin-top: 0.3cm;
+    margin-top: 0;
   }
   .thanks-head {
     display: flex;
