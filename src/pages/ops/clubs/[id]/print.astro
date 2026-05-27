@@ -262,19 +262,46 @@ const cardSlots = [0];
 
         try {
           const pdf = new jsPDF({ unit: 'cm', format: 'a4', orientation: 'portrait' });
+          // A4 at 96 DPI in pixels (jsPDF + html2canvas defaults)
+          const A4_W = 794;
+          const A4_H = 1123;
 
           for (let i = 0; i < sheets.length; i++) {
             const sheet = sheets[i];
+
+            // Force A4 dimensions during capture (aspect-ratio + overflow:hidden
+            // donne height 0 sur .cards-sheet → on impose explicitement).
+            const orig = {
+              width: sheet.style.width,
+              height: sheet.style.height,
+              aspectRatio: sheet.style.aspectRatio,
+            };
+            sheet.style.width = '21cm';
+            sheet.style.height = '29.7cm';
+            sheet.style.aspectRatio = 'auto';
+
+            // Laisse le navigateur reflow avec les nouvelles dimensions
+            await new Promise((r) => setTimeout(r, 100));
+
             const canvas = await html2canvas(sheet, {
               scale: 2,
+              width: A4_W,
+              height: A4_H,
+              windowWidth: A4_W,
+              windowHeight: A4_H,
               useCORS: true,
               allowTaint: true,
               backgroundColor: '#ffffff',
               logging: false,
             });
+
+            // Restore les styles original
+            sheet.style.width = orig.width;
+            sheet.style.height = orig.height;
+            sheet.style.aspectRatio = orig.aspectRatio;
+
             const imgData = canvas.toDataURL('image/jpeg', 0.95);
             if (i > 0) pdf.addPage();
-            // 21 × 29.7 cm = A4 exact, bord à bord
             pdf.addImage(imgData, 'JPEG', 0, 0, 21, 29.7);
           }
 
