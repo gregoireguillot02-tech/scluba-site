@@ -262,47 +262,51 @@ const cardSlots = [0];
 
         try {
           const pdf = new jsPDF({ unit: 'cm', format: 'a4', orientation: 'portrait' });
-          // A4 at 96 DPI in pixels (jsPDF + html2canvas defaults)
-          const A4_W = 794;
-          const A4_H = 1123;
+          const A4_W = 794;   // 21cm @ 96dpi
+          const A4_H = 1123;  // 29.7cm @ 96dpi
 
-          for (let i = 0; i < sheets.length; i++) {
-            const sheet = sheets[i];
+          // Hide tout le body pour avoir un espace propre sans interférence
+          const bodyChildren = Array.from(document.body.children) as HTMLElement[];
+          const savedDisplays = bodyChildren.map((el) => el.style.display);
+          bodyChildren.forEach((el) => { el.style.display = 'none'; });
 
-            // Force A4 dimensions during capture (aspect-ratio + overflow:hidden
-            // donne height 0 sur .cards-sheet → on impose explicitement).
-            const orig = {
-              width: sheet.style.width,
-              height: sheet.style.height,
-              aspectRatio: sheet.style.aspectRatio,
-            };
-            sheet.style.width = '21cm';
-            sheet.style.height = '29.7cm';
-            sheet.style.aspectRatio = 'auto';
+          // Wrapper contrôlé pour les clones
+          const wrapper = document.createElement('div');
+          wrapper.style.cssText = 'background:#fff;margin:0;padding:0;position:absolute;top:0;left:0;width:21cm;';
+          document.body.appendChild(wrapper);
 
-            // Laisse le navigateur reflow avec les nouvelles dimensions
-            await new Promise((r) => setTimeout(r, 100));
+          try {
+            for (let i = 0; i < sheets.length; i++) {
+              const clone = sheets[i].cloneNode(true) as HTMLElement;
+              // Force dimensions A4 exactes + reset des contraintes screen
+              clone.style.cssText = 'width:21cm !important;height:29.7cm !important;min-height:29.7cm !important;max-width:none !important;aspect-ratio:auto !important;margin:0 !important;padding:0 !important;box-shadow:none !important;border-radius:0 !important;overflow:hidden;box-sizing:border-box;position:relative;display:block;';
+              // Vide le wrapper et insère le clone courant
+              wrapper.innerHTML = '';
+              wrapper.appendChild(clone);
 
-            const canvas = await html2canvas(sheet, {
-              scale: 2,
-              width: A4_W,
-              height: A4_H,
-              windowWidth: A4_W,
-              windowHeight: A4_H,
-              useCORS: true,
-              allowTaint: true,
-              backgroundColor: '#ffffff',
-              logging: false,
-            });
+              // Reflow + laisse les fonts/images se charger
+              await new Promise((r) => setTimeout(r, 250));
 
-            // Restore les styles original
-            sheet.style.width = orig.width;
-            sheet.style.height = orig.height;
-            sheet.style.aspectRatio = orig.aspectRatio;
+              const canvas = await html2canvas(clone, {
+                scale: 2,
+                width: A4_W,
+                height: A4_H,
+                windowWidth: A4_W,
+                windowHeight: A4_H,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+              });
 
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            if (i > 0) pdf.addPage();
-            pdf.addImage(imgData, 'JPEG', 0, 0, 21, 29.7);
+              const imgData = canvas.toDataURL('image/jpeg', 0.95);
+              if (i > 0) pdf.addPage();
+              pdf.addImage(imgData, 'JPEG', 0, 0, 21, 29.7);
+            }
+          } finally {
+            // Restore body
+            document.body.removeChild(wrapper);
+            bodyChildren.forEach((el, idx) => { el.style.display = savedDisplays[idx]; });
           }
 
           pdf.save(`scluba-kit-${slug}.pdf`);
