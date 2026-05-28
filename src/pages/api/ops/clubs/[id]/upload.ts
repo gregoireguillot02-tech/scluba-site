@@ -15,6 +15,16 @@ const KIND_TO_COLUMN: Record<string, string> = {
   sponsor4: 'sponsor_4_url',
 };
 const ALLOWED_KINDS = new Set(Object.keys(KIND_TO_COLUMN));
+
+// `hole` is a special kind: it does not map to a single column. It uploads one
+// course-guide image (carnet de parcours) and merges its URL into the
+// clubs.hole_guides JSON map under the hole number. The /ops carnet uploader
+// posts one hole at a time via fetch — so this branch answers JSON, not a
+// redirect. Callers MUST upload holes sequentially (the map is read-modify-
+// write; parallel posts would clobber each other).
+const HOLE_KIND = 'hole';
+const MAX_HOLE_NUMBER = 36;
+
 // SVG removed from logo allowlist: stored SVG served from same-origin can host
 // inline <script> and attribute-based payloads even with `image/svg+xml`. Until
 // we ship a sanitizer or move the bucket to a separate origin, accept raster
@@ -23,6 +33,7 @@ const ALLOWED_LOGO_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const ALLOWED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_LOGO_BYTES = 500 * 1024; // 500 KB
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5 MB
+const MAX_HOLE_BYTES = 5 * 1024 * 1024; // 5 MB — a carnet page rendered to PNG can be large
 
 function extFor(mime: string): string {
   switch (mime) {
@@ -63,18 +74,29 @@ export const POST: APIRoute = async ({ request, params, locals, redirect, url })
   const id = idParsed.data;
 
   const kind = String(url.searchParams.get('kind') ?? '');
-  if (!ALLOWED_KINDS.has(kind)) return new Response('Invalid kind', { status: 400 });
+  const isHole = kind === HOLE_KIND;
+  if (!isHole && !ALLOWED_KINDS.has(kind)) return new Response('Invalid kind', { status: 400 });
+
+  let holeNum = 0;
+  if (isHole) {
+    holeNum = Number(url.searchParams.get('hole') ?? '');
+    if (!Number.isInteger(holeNum) || holeNum < 1 || holeNum > MAX_HOLE_NUMBER) {
+      return new Response('Invalid hole number', { status: 400 });
+    }
+  }
 
   const form = await request.formData();
   const file = form.get('file');
   if (!(file instanceof File)) return new Response('No file uploaded', { status: 400 });
 
-  const isPhoto = kind === 'photo';
-  const allowedTypes = isPhoto ? ALLOWED_PHOTO_TYPES : ALLOWED_LOGO_TYPES;
+  // Hole guides and photos share the larger raster envelope; logo/sponsors are
+  // the smaller one.
+  const usePhotoLimits = kind === 'photo' || isHole;
+  const allowedTypes = usePhotoLimits ? ALLOWED_PHOTO_TYPES : ALLOWED_LOGO_TYPES;
   if (!allowedTypes.has(file.type)) {
     return new Response(`Unsupported type ${file.type}`, { status: 415 });
   }
-  const maxBytes = isPhoto ? MAX_PHOTO_BYTES : MAX_LOGO_BYTES;
+  const maxBytes = isHole ? MAX_HOLE_BYTES : (kind === 'photo' ? MAX_PHOTO_BYTES : MAX_LOGO_BYTES);
   if (file.size > maxBytes) {
     return new Response(`File too big (${Math.round(file.size / 1024)} KB, max ${Math.round(maxBytes / 1024)} KB)`, { status: 413 });
   }
@@ -92,7 +114,8 @@ export const POST: APIRoute = async ({ request, params, locals, redirect, url })
 
   const sb = serviceClient();
   const ext = extFor(sniffed);
-  const path = `${id}/${kind}-${Date.now()}.${ext}`;
+  const slot = isHole ? `hole-${holeNum}` : kind;
+  const path = `${id}/${slot}-${Date.now()}.${ext}`;
 
   const { error: upErr } = await sb.storage
     .from('club-assets')
@@ -108,6 +131,31 @@ export const POST: APIRoute = async ({ request, params, locals, redirect, url })
 
   const { data: pub } = sb.storage.from('club-assets').getPublicUrl(path);
   const publicUrl = pub.publicUrl;
+
+  if (isHole) {
+    // Merge { holeNum: url } into clubs.hole_guides. Read-modify-write — safe
+    // because the carnet uploader posts holes sequentially.
+    const { data: row, error: selErr } = await sb
+      .from('clubs').select('hole_guides').eq('id', id).single();
+    if (selErr) {
+      console.error('[api/ops/clubs/[id]/upload] hole_guides read failed', selErr);
+      return new Response('DB read failed', { status: 500 });
+    }
+    const guides: Record<string, string> =
+      row?.hole_guides && typeof row.hole_guides === 'object'
+        ? { ...(row.hole_guides as Record<string, string>) }
+        : {};
+    guides[String(holeNum)] = publicUrl;
+    const { error: updErr } = await sb.from('clubs').update({ hole_guides: guides }).eq('id', id);
+    if (updErr) {
+      console.error('[api/ops/clubs/[id]/upload] hole_guides update failed', updErr);
+      return new Response('DB update failed', { status: 500 });
+    }
+    return new Response(JSON.stringify({ ok: true, hole: holeNum, url: publicUrl }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
 
   const column = KIND_TO_COLUMN[kind];
   const { error: updErr } = await sb.from('clubs').update({ [column]: publicUrl }).eq('id', id);

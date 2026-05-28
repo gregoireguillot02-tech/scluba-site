@@ -1,0 +1,225 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../lib/supabase';
+import { STATUS_COLORS, type ProspectStatus } from '../../lib/ops-types';
+
+const sb = serviceClient();
+const url = Astro.url;
+
+type Demo = {
+  id: string;
+  club_name: string;
+  demo_at: string;
+  status: ProspectStatus;
+};
+
+const { data } = await sb
+  .from('prospects')
+  .select('id, club_name, demo_at, status')
+  .not('demo_at', 'is', null)
+  .order('demo_at', { ascending: true });
+const demos = (data ?? []) as Demo[];
+
+const pad = (n: number) => String(n).padStart(2, '0');
+
+// "Aujourd'hui" + mois affiché en heure de Paris.
+const todayStr = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Paris',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+}).format(new Date());
+
+const monthParam = url.searchParams.get('month');
+const baseMonth = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : todayStr.slice(0, 7);
+const [curY, curM] = baseMonth.split('-').map(Number);
+
+const daysInMonth = new Date(Date.UTC(curY, curM, 0)).getUTCDate();
+const firstWeekday = (new Date(Date.UTC(curY, curM - 1, 1)).getUTCDay() + 6) % 7; // Lundi = 0
+
+type Cell = { dateStr: string; day: number } | null;
+const cells: Cell[] = [];
+for (let i = 0; i < firstWeekday; i++) cells.push(null);
+for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, dateStr: `${curY}-${pad(curM)}-${pad(d)}` });
+
+// Démos par jour ('YYYY-MM-DD').
+const byDay = new Map<string, Demo[]>();
+for (const d of demos) {
+  const day = d.demo_at.slice(0, 10);
+  if (!byDay.has(day)) byDay.set(day, []);
+  byDay.get(day)!.push(d);
+}
+for (const list of byDay.values()) list.sort((a, b) => a.demo_at.localeCompare(b.demo_at));
+
+const prev = curM === 1 ? { y: curY - 1, m: 12 } : { y: curY, m: curM - 1 };
+const next = curM === 12 ? { y: curY + 1, m: 1 } : { y: curY, m: curM + 1 };
+const monthStr = (y: number, m: number) => `${y}-${pad(m)}`;
+const monthLabel = new Date(Date.UTC(curY, curM - 1, 1)).toLocaleDateString('fr-FR', {
+  timeZone: 'UTC',
+  month: 'long',
+  year: 'numeric',
+});
+
+const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+// Prochains RDV (à partir d'aujourd'hui), pour l'aperçu sous le calendrier.
+const upcoming = demos.filter((d) => d.demo_at.slice(0, 10) >= todayStr).slice(0, 8);
+function fmtFull(s: string): string {
+  const [date, time] = s.split('T');
+  const [, m, d] = date.split('-');
+  return `${d}/${m}${time ? ` à ${time.replace(':', 'h')}` : ''}`;
+}
+---
+
+<OpsLayout title="Calendrier" active="calendrier">
+  <div class="ops-page-header">
+    <div>
+      <h1 class="ops-page-title">Calendrier</h1>
+      <p class="ops-page-subtitle">Vos démos / RDV programmés</p>
+    </div>
+    <div class="cal-nav">
+      <a class="ops-btn" href={`?month=${monthStr(prev.y, prev.m)}`} aria-label="Mois précédent">←</a>
+      <span class="cal-month">{monthLabel}</span>
+      <a class="ops-btn" href={`?month=${monthStr(next.y, next.m)}`} aria-label="Mois suivant">→</a>
+      {baseMonth !== todayStr.slice(0, 7) && (
+        <a class="ops-btn ops-btn-ghost" href="/ops/calendrier">Aujourd'hui</a>
+      )}
+    </div>
+  </div>
+
+  <div class="ops-card">
+    <div class="cal-grid cal-head">
+      {WEEKDAYS.map((w) => <div class="cal-weekday">{w}</div>)}
+    </div>
+    <div class="cal-grid">
+      {cells.map((cell) =>
+        cell === null ? (
+          <div class="cal-cell cal-empty"></div>
+        ) : (
+          <div class={`cal-cell${cell.dateStr === todayStr ? ' cal-today' : ''}`}>
+            <div class="cal-daynum">{cell.day}</div>
+            {(byDay.get(cell.dateStr) ?? []).map((d) => (
+              <a
+                href={`/ops/prospects/${d.id}`}
+                class="cal-event"
+                style={`border-left-color:${STATUS_COLORS[d.status]}`}
+                title={`${fmtFull(d.demo_at)} — ${d.club_name}`}
+              >
+                <span class="cal-event-time">{d.demo_at.slice(11, 16)}</span>
+                <span class="cal-event-club">{d.club_name}</span>
+              </a>
+            ))}
+          </div>
+        )
+      )}
+    </div>
+  </div>
+
+  <div class="ops-card" style="margin-top:24px">
+    <h2>Prochains RDV</h2>
+    {upcoming.length === 0 ? (
+      <p class="ops-empty">Aucune démo à venir. Booke-en une depuis une fiche prospect.</p>
+    ) : (
+      <ul class="up-list">
+        {upcoming.map((d) => (
+          <li class="up-row">
+            <span class="up-date">{fmtFull(d.demo_at)}</span>
+            <a href={`/ops/prospects/${d.id}`} class="up-club">{d.club_name}</a>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</OpsLayout>
+
+<style>
+  .cal-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .cal-nav .ops-btn { padding: 8px 12px; }
+  .cal-month {
+    font-weight: 600;
+    color: var(--primary);
+    min-width: 150px;
+    text-align: center;
+    text-transform: capitalize;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .cal-head { margin-bottom: 6px; }
+  .cal-weekday {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    padding: 4px 0;
+  }
+  .cal-cell {
+    min-height: 92px;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--bg);
+  }
+  .cal-empty { border: none; background: transparent; }
+  .cal-today {
+    border-color: var(--primary-soft);
+    box-shadow: inset 0 0 0 1px var(--primary-soft);
+  }
+  .cal-daynum {
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .cal-today .cal-daynum { color: var(--primary); font-weight: 700; }
+
+  .cal-event {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--bg-soft);
+    border-left: 3px solid var(--primary);
+    border-radius: 4px;
+    padding: 3px 6px;
+    text-decoration: none;
+    color: inherit;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+  .cal-event:hover { background: var(--line-soft); }
+  .cal-event-time { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .cal-event-club { color: var(--primary); font-weight: 600; word-break: break-word; }
+
+  @media (max-width: 700px) {
+    .cal-cell { min-height: 64px; }
+    .cal-event-club { font-size: 11px; }
+  }
+
+  .up-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+  .up-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 14px;
+  }
+  .up-row:last-child { border-bottom: 0; }
+  .up-date { color: var(--ink-soft); font-variant-numeric: tabular-nums; min-width: 130px; }
+  .up-club { color: var(--primary); font-weight: 600; text-decoration: none; }
+  .up-club:hover { text-decoration: underline; }
+</style>

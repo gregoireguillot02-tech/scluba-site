@@ -104,7 +104,10 @@ function fmtDate(iso: string): string {
               {logo && <img class="club-tile-logo" src={logo} alt="" />}
             </div>
             <div class="club-tile-body">
-              <h2 class="club-tile-name" style={{ color: accent }}>{c.name}</h2>
+              <h2 class="club-tile-name">
+                <span class="club-tile-dot" style={{ background: accent }} aria-hidden="true"></span>
+                {c.name}
+              </h2>
               <p class="club-tile-meta">
                 {c.city && <span>{c.city}</span>}
                 {c.city && <span class="dot" aria-hidden="true">·</span>}
@@ -223,6 +226,17 @@ function fmtDate(iso: string): string {
     font-weight: 700;
     margin: 0;
     letter-spacing: 0.02em;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .club-tile-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.18);
   }
   .club-tile-meta {
     margin: 0;
@@ -262,8 +276,8 @@ function fmtDate(iso: string): string {
     gap: 8px;
   }
   .active-badge {
-    background: rgba(212, 165, 116, 0.18);
-    color: #92400E;
+    background: color-mix(in srgb, var(--primary) 16%, transparent);
+    color: var(--primary);
     padding: 2px 8px;
     border-radius: 999px;
     font-size: 11px;

@@ -56,6 +56,12 @@ export interface Club {
   sponsor_2_link: string | null;
   sponsor_3_link: string | null;
   sponsor_4_link: string | null;
+  // Carnet de parcours : map { "<numéro de trou>": "<url image publique>" }.
+  // Renseigné via /ops (dépôt du carnet club). Vide/absent = pas de carnet,
+  // donc aucun bouton "Voir le trou" côté joueur. Clé = numéro de trou de
+  // course_data.holes (OK pour les clubs mono-parcours type Téoula ; les clubs
+  // multi-boucles sont une limite v1). Voir migration 0022.
+  hole_guides?: Record<string, string>;
   created_by: string | null;
   created_at: string;
   updated_at: string;

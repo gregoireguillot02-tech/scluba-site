@@ -329,6 +329,15 @@ function fmtRelative(iso: string | null): string {
         </form>
       </div>
 
+      <!-- Carnet de parcours -->
+      <div class="ops-card" style="margin-top:16px">
+        <h2>Carnet de parcours</h2>
+        <p class="ops-hint" style="margin: 0 0 12px">
+          Dépose le carnet du club (PDF ou images) et assigne un visuel à chaque trou. Les golfeurs verront un bouton « Voir le trou » sur la scorecard.
+        </p>
+        <a class="ops-btn ops-btn-primary" href={`/ops/clubs/${c.id}/carnet`}>Gérer le carnet de parcours →</a>
+      </div>
+
       <!-- Sponsors (4 slots optionnels) -->
       <div class="ops-card" style="margin-top:16px">
         <h2>Sponsors</h2>

@@ -60,6 +60,11 @@ function fmtDateTime(iso: string): string {
                   <input type="hidden" name="source" value="CTA scluba.com" />
                   <button type="submit" class="ops-btn ops-btn-ghost" style="font-size:12px; padding:4px 10px">→ Ajouter au CRM</button>
                 </form>
+                <form method="POST" action="/api/ops/leads" style="display:inline">
+                  <input type="hidden" name="action" value="delete" />
+                  <input type="hidden" name="id" value={l.id} />
+                  <button type="submit" class="lead-del" title="Supprimer ce lead" aria-label="Supprimer" onclick="return confirm('Supprimer ce lead ?')">×</button>
+                </form>
               </td>
             </tr>
           ))}
@@ -100,6 +105,17 @@ function fmtDateTime(iso: string): string {
     text-decoration: none;
   }
   .email-link:hover { text-decoration: underline; }
+  .lead-del {
+    background: none;
+    border: none;
+    color: var(--muted-soft);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin-left: 4px;
+  }
+  .lead-del:hover { color: #DC2626; }
   code {
     background: var(--line-soft);
     padding: 1px 6px;

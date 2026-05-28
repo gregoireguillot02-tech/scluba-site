@@ -4,6 +4,7 @@ export const prerender = false;
 import PlayerLayout from '../../../layouts/PlayerLayout.astro';
 import Scorecard from '../../../components/player/Scorecard.astro';
 import ScoreInput from '../../../components/player/ScoreInput.astro';
+import HoleGuideModal from '../../../components/player/HoleGuideModal.astro';
 import { serviceClient } from '../../../lib/supabase';
 import type { Club, Round, RoundPlayer, Score } from '../../../lib/clubs-types';
 import { resolveRoundHoles, resolveRoundSections } from '../../../lib/clubs-types';
@@ -223,6 +224,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       data-me-id={me.id}
       data-can-host-switch={String(canHostSwitch)}
       data-course={JSON.stringify({ holes: roundHoles })}
+      data-hole-guides={JSON.stringify(r.club.hole_guides ?? {})}
       data-scores={JSON.stringify(scoresByHole)}
       data-picked-up={JSON.stringify(pickedUpHoles)}
       data-all-scores={JSON.stringify(allScoresByPlayer)}
@@ -241,6 +243,13 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         <div class="hole-par-label">PAR</div>
         <div class="hole-par-value" data-par-value>{initialPar}</div>
       </div>
+
+      {/* Carnet de parcours : bouton affiché uniquement si le trou courant a
+          un visuel (toggle en JS dans render()). Ouvre HoleGuideModal. */}
+      <button type="button" class="hole-guide-btn" data-hole-guide-btn hidden>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span>Voir le trou</span>
+      </button>
 
       <ScoreInput
         holeCount={roundHoles.length}
@@ -263,6 +272,8 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
 
     <p class="play-status" data-status role="status" aria-live="polite"></p>
   </main>
+
+  <HoleGuideModal />
 
   <script>
     import { subscribeToRound, unsubscribeFromRound } from '../../../lib/realtime';
@@ -516,6 +527,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       const meIdEntry = root.dataset.meId!;
       const canHostSwitch = root.dataset.canHostSwitch === 'true';
       const course = JSON.parse(root.dataset.course!) as CourseData;
+      const holeGuides = JSON.parse(root.dataset.holeGuides ?? '{}') as Record<string, string>;
       const totalPar = Number(root.dataset.par);
       const holeCount = Number(root.dataset.holeCount);
 
@@ -558,6 +570,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       // === Refs DOM ===
       const holeNumberEl = root.querySelector<HTMLElement>('[data-hole-number]')!;
       const parValueEl = root.querySelector<HTMLElement>('[data-par-value]')!;
+      const holeGuideBtn = root.querySelector<HTMLButtonElement>('[data-hole-guide-btn]');
       const totalStrokesEl = document.querySelector<HTMLElement>('[data-total-strokes]')!;
       const finishForm = document.querySelector<HTMLFormElement>('[data-finish-form]')!;
       const statusEl = document.querySelector<HTMLElement>('[data-status]')!;
@@ -646,6 +659,14 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         const hole = holeAt(currentHole);
         holeNumberEl.textContent = String(currentHole);
         parValueEl.textContent = String(hole.par);
+
+        // Carnet de parcours : montre le bouton "Voir le trou" si ce trou a un
+        // visuel, sinon le cache. L'URL est stockée pour le handler de clic.
+        if (holeGuideBtn) {
+          const guideUrl = holeGuides[String(currentHole)];
+          holeGuideBtn.hidden = !guideUrl;
+          holeGuideBtn.dataset.url = guideUrl ?? '';
+        }
 
         const s = scores[currentHole];
         const isPickup = pickedUp.has(currentHole);
@@ -965,6 +986,14 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           const offset = Number(btn.dataset.rel);
           const strokes = holeAt(currentHole).par + offset;
           saveScore(strokes, { advance: true });
+        });
+      }
+
+      // === Bouton "Voir le trou" (carnet de parcours) ===
+      if (holeGuideBtn) {
+        holeGuideBtn.addEventListener('click', () => {
+          const url = holeGuideBtn.dataset.url;
+          if (url) (window as any).openHoleGuideModal?.(url, currentHole);
         });
       }
 
@@ -1690,6 +1719,38 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
+
+    /* === Carnet de parcours : bouton "Voir le trou" ===
+       Pill honey discrète sous le PAR. Caché (hidden) quand le trou n'a pas
+       de visuel. Centré via le text-align:center du .hole-card parent. */
+    .hole-guide-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin: 0 0 var(--space-4);
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      background: rgba(212, 165, 116, 0.10);
+      color: var(--primary, #1B4332);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: background 150ms, transform 100ms;
+    }
+    .hole-guide-btn[hidden] { display: none; }
+    .hole-guide-btn:hover { background: rgba(212, 165, 116, 0.20); }
+    .hole-guide-btn:active { transform: scale(0.97); }
+    .hole-guide-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 5px rgba(15, 42, 30, 0.12);
+    }
+    .hole-guide-btn svg { color: var(--accent); }
 
     /* Score input (par-relative XL, dots, Autre/Abandonner pills)
        → src/components/player/ScoreInput.astro. La saisie + le pickup

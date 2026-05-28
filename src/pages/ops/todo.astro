@@ -37,15 +37,12 @@ function isOverdue(t: Task): boolean {
   return new Date(t.due_date).getTime() < Date.now() - 24 * 3600 * 1000;
 }
 
-// Group by status. La colonne "done" est tronquée pour éviter l'accumulation
-// historique — les anciennes tâches restent en DB, juste cachées de la vue.
 const byStatus: Record<TaskStatus, TaskWithClub[]> = { todo: [], doing: [], done: [] };
 for (const t of tasks) byStatus[t.status].push(t);
 byStatus.done.sort((a, b) => (b.done_at ?? '').localeCompare(a.done_at ?? ''));
 const doneVisible = byStatus.done.slice(0, DONE_LIMIT);
 const doneHidden = byStatus.done.length - doneVisible.length;
 
-// Status précédent / suivant pour les boutons flèches.
 const PREV: Record<TaskStatus, TaskStatus | null> = { todo: null, doing: 'todo', done: 'doing' };
 const NEXT: Record<TaskStatus, TaskStatus | null> = { todo: 'doing', doing: 'done', done: null };
 
@@ -56,51 +53,55 @@ const columns: { status: TaskStatus; items: TaskWithClub[]; total: number }[] = 
 ];
 ---
 
-<OpsLayout title="Todo partagée" active="todo">
+<OpsLayout title="Todo générale" active="todo">
   <div class="ops-page-header">
     <div>
-      <h1 class="ops-page-title">Todo partagée</h1>
+      <h1 class="ops-page-title">Todo générale</h1>
       <p class="ops-page-subtitle">{tasks.length} tâche{tasks.length > 1 ? 's' : ''}</p>
     </div>
   </div>
 
-  <form method="POST" action="/api/ops/tasks" class="todo-create">
-    <input type="hidden" name="action" value="create" />
-    <input class="ops-input" name="title" placeholder="Nouvelle tâche…" required />
-    <select class="ops-select" name="assignee">
-      {OWNERS.map((o) => <option value={o} selected={o === 'shared'}>{OWNER_LABELS[o]}</option>)}
-    </select>
-    <input class="ops-input" type="date" name="due_date" />
-    <button type="submit" class="ops-btn ops-btn-primary">Ajouter</button>
-  </form>
-
-  <div class="todo-filters">
-    <a href="/ops/todo" class={`todo-filter${!filterAssignee ? ' active' : ''}`}>Toutes</a>
-    {OWNERS.map((o) => (
-      <a href={`/ops/todo?assignee=${o}`} class={`todo-filter${filterAssignee === o ? ' active' : ''}`}>{OWNER_LABELS[o]}</a>
-    ))}
+  <div class="ops-card create-card">
+    <form method="POST" action="/api/ops/tasks" class="todo-create">
+      <input type="hidden" name="action" value="create" />
+      <input class="ops-input" name="title" placeholder="Nouvelle tâche…" required />
+      <select class="ops-select" name="assignee">
+        {OWNERS.map((o) => <option value={o} selected={o === 'shared'}>{OWNER_LABELS[o]}</option>)}
+      </select>
+      <input class="ops-input" type="date" name="due_date" />
+      <button type="submit" class="ops-btn ops-btn-primary">Ajouter</button>
+    </form>
+    <div class="todo-filters">
+      <a href="/ops/todo" class={`todo-filter${!filterAssignee ? ' active' : ''}`}>Toutes</a>
+      {OWNERS.map((o) => (
+        <a href={`/ops/todo?assignee=${o}`} class={`todo-filter${filterAssignee === o ? ' active' : ''}`}>{OWNER_LABELS[o]}</a>
+      ))}
+    </div>
   </div>
 
   <div class="kanban">
     {columns.map((col) => (
       <section class={`kanban-col kanban-col-${col.status}`}>
         <header class="kanban-col-head">
-          <span class="kanban-col-title">{TASK_STATUS_LABELS[col.status]}</span>
+          <span class="kanban-col-pip" aria-hidden="true"></span>
+          <h2 class="kanban-col-title">{TASK_STATUS_LABELS[col.status]}</h2>
           <span class="kanban-col-count">{col.total}</span>
         </header>
         {col.items.length === 0 ? (
-          <div class="kanban-empty">—</div>
+          <ul class="kanban-list" data-status={col.status}>
+            <li class="kanban-empty" aria-hidden="true"><span class="kanban-empty-line"></span></li>
+          </ul>
         ) : (
-          <ul class="kanban-list">
+          <ul class="kanban-list" data-status={col.status}>
             {col.items.map((t) => (
-              <li class={`kanban-card${isOverdue(t) ? ' overdue' : ''}`}>
+              <li class={`kanban-card${isOverdue(t) ? ' overdue' : ''}`} draggable="true" data-task-id={t.id}>
                 <div class="kanban-card-main">
                   <div class="kanban-card-title">{t.title}</div>
                   {t.prospects?.club_name && (
                     <a href={`/ops/prospects/${t.prospect_id}`} class="kanban-card-club">→ {t.prospects.club_name}</a>
                   )}
                   <div class="kanban-card-meta">
-                    <span class="ops-tag">{OWNER_LABELS[t.assignee]}</span>
+                    <span class={`owner-chip owner-${t.assignee}`}>{OWNER_LABELS[t.assignee]}</span>
                     {t.due_date && <span class="kanban-card-due">{fmtDate(t.due_date)}</span>}
                   </div>
                 </div>
@@ -139,20 +140,120 @@ const columns: { status: TaskStatus; items: TaskWithClub[]; total: number }[] = 
   </div>
 </OpsLayout>
 
+<script>
+  const board = document.querySelector('.kanban');
+  if (board) {
+    let dragged: HTMLElement | null = null;
+
+    function syncEmpty(list: Element | null) {
+      if (!list) return;
+      const hasCard = list.querySelector('.kanban-card');
+      const ph = list.querySelector('.kanban-empty');
+      if (hasCard && ph) ph.remove();
+      if (!hasCard && !ph) {
+        const li = document.createElement('li');
+        li.className = 'kanban-empty';
+        li.setAttribute('aria-hidden', 'true');
+        li.innerHTML = '<span class="kanban-empty-line"></span>';
+        list.appendChild(li);
+      }
+    }
+
+    function bumpCount(status: string | undefined, delta: number) {
+      if (!status) return;
+      const el = board.querySelector('.kanban-col-' + status + ' .kanban-col-count');
+      if (!el) return;
+      el.textContent = String(Math.max(0, parseInt(el.textContent || '0', 10) + delta));
+    }
+
+    function clearHighlight() {
+      board.querySelectorAll('.kanban-col.drag-over').forEach((c) => c.classList.remove('drag-over'));
+    }
+
+    board.querySelectorAll<HTMLElement>('.kanban-card').forEach((card) => {
+      card.addEventListener('dragstart', (e) => {
+        dragged = card;
+        card.classList.add('dragging');
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', card.dataset.taskId || '');
+        }
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        clearHighlight();
+        dragged = null;
+      });
+    });
+
+    board.querySelectorAll<HTMLElement>('.kanban-list').forEach((list) => {
+      list.addEventListener('dragover', (e) => {
+        if (!dragged) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        clearHighlight();
+        list.closest('.kanban-col')?.classList.add('drag-over');
+      });
+      list.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        clearHighlight();
+        const card = dragged;
+        if (!card) return;
+        const sourceList = card.closest('.kanban-list') as HTMLElement | null;
+        const targetStatus = list.dataset.status;
+        if (!targetStatus || !sourceList || sourceList === list) return;
+        const sourceStatus = sourceList.dataset.status;
+        const taskId = card.dataset.taskId || '';
+
+        list.appendChild(card);
+        syncEmpty(sourceList);
+        syncEmpty(list);
+        bumpCount(sourceStatus, -1);
+        bumpCount(targetStatus, 1);
+        if (targetStatus === 'done') card.classList.remove('overdue');
+
+        try {
+          const fd = new FormData();
+          fd.set('action', 'set_status');
+          fd.set('id', taskId);
+          fd.set('status', targetStatus);
+          const res = await fetch('/api/ops/tasks', { method: 'POST', body: fd });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+        } catch {
+          sourceList.appendChild(card);
+          syncEmpty(sourceList);
+          syncEmpty(list);
+          bumpCount(sourceStatus, 1);
+          bumpCount(targetStatus, -1);
+          alert('Déplacement non enregistré — réessaie.');
+        }
+      });
+    });
+  }
+</script>
+
 <style>
+  .create-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
   .todo-create {
     display: grid;
-    grid-template-columns: 1fr 160px 160px auto;
+    grid-template-columns: 1fr 150px 150px auto;
     gap: 8px;
-    margin-bottom: 16px;
+    flex: 1;
+    min-width: 300px;
   }
-  @media (max-width: 700px) {
+  @media (max-width: 720px) {
     .todo-create { grid-template-columns: 1fr; }
   }
+
   .todo-filters {
     display: flex;
     gap: 4px;
-    margin-bottom: 16px;
     flex-wrap: wrap;
   }
   .todo-filter {
@@ -162,16 +263,16 @@ const columns: { status: TaskStatus; items: TaskWithClub[]; total: number }[] = 
     color: var(--muted);
     font-size: 13px;
     background: var(--line-soft);
+    transition: background 0.15s, color 0.15s;
   }
-  .todo-filter.active {
-    background: var(--primary);
-    color: var(--bg);
-  }
+  .todo-filter:hover { color: var(--ink); }
+  .todo-filter.active { background: var(--primary); color: var(--bg); }
 
+  /* ---- Kanban ---- */
   .kanban {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 12px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
     align-items: start;
   }
   @media (max-width: 900px) {
@@ -179,32 +280,49 @@ const columns: { status: TaskStatus; items: TaskWithClub[]; total: number }[] = 
   }
 
   .kanban-col {
-    background: var(--line-soft);
-    border-radius: 8px;
-    padding: 12px;
-    min-height: 80px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 12px 14px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: inset 0 2px 0 var(--col-accent, var(--line));
   }
+  .kanban-col-todo { --col-accent: #9CA3AF; }
+  .kanban-col-doing { --col-accent: var(--accent); }
+  .kanban-col-done { --col-accent: #10B981; }
+
   .kanban-col-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    padding: 0 2px;
+    gap: 8px;
+    margin: 4px 2px 12px;
+  }
+  .kanban-col-pip {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--col-accent);
+    flex-shrink: 0;
   }
   .kanban-col-title {
-    font-weight: 500;
-    font-size: 13px;
+    flex: 1;
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--muted);
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
   }
   .kanban-col-count {
-    font-size: 12px;
-    color: var(--muted-soft);
-    background: var(--bg);
-    padding: 2px 8px;
-    border-radius: 999px;
     font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--line-soft);
+    padding: 2px 9px;
+    border-radius: 999px;
   }
 
   .kanban-list {
@@ -214,33 +332,49 @@ const columns: { status: TaskStatus; items: TaskWithClub[]; total: number }[] = 
     display: flex;
     flex-direction: column;
     gap: 8px;
+    flex: 1;
   }
   .kanban-empty {
-    text-align: center;
-    color: var(--muted-soft);
-    font-size: 13px;
-    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-height: 70px;
+  }
+  .kanban-empty-line {
+    width: 24px;
+    height: 2px;
+    background: var(--line);
+    border-radius: 2px;
   }
   .kanban-truncated {
     text-align: center;
     color: var(--muted-soft);
     font-size: 12px;
-    padding: 8px 0 0;
+    padding: 10px 0 2px;
   }
 
+  /* ---- Card (aligné sur les lignes "À faire") ---- */
   .kanban-card {
+    position: relative;
     background: var(--bg);
-    border: 1px solid var(--line-soft);
-    border-radius: 6px;
-    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 8px 10px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    font-size: 14px;
+    gap: 5px;
+    font-size: 13.5px;
+    box-shadow: 0 1px 2px rgba(15,42,30,0.04);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    cursor: grab;
   }
-  .kanban-card.overdue { border-color: #DC2626; }
+  .kanban-card:active { cursor: grabbing; }
+  .kanban-card.dragging { opacity: 0.4; }
+  .kanban-card:hover { box-shadow: var(--shadow-sm, 0 4px 12px rgba(15,42,30,0.08)); }
+  .kanban-card.overdue { border-color: #FECACA; }
 
-  .kanban-card-main { display: flex; flex-direction: column; gap: 4px; }
+  .kanban-card-main { display: flex; flex-direction: column; gap: 3px; padding-right: 18px; }
   .kanban-card-title { color: var(--ink); line-height: 1.3; }
   .kanban-card-club { font-size: 12px; color: var(--primary-soft); text-decoration: none; }
   .kanban-card-club:hover { text-decoration: underline; }
@@ -249,43 +383,83 @@ const columns: { status: TaskStatus; items: TaskWithClub[]; total: number }[] = 
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-    margin-top: 2px;
   }
   .kanban-card-due {
     color: var(--muted);
     font-size: 12px;
     font-variant-numeric: tabular-nums;
   }
-  .kanban-card.overdue .kanban-card-due { color: #DC2626; font-weight: 500; }
+  .kanban-card.overdue .kanban-card-due { color: #DC2626; font-weight: 600; }
 
+  .owner-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .owner-greg { background: rgba(45, 106, 79, 0.12); color: var(--primary); }
+  .owner-paul { background: rgba(212, 165, 116, 0.22); color: #8B5A3C; }
+  .owner-shared { background: rgba(15, 42, 30, 0.08); color: var(--primary-deep); }
+
+  /* Desktop : pas de flèches (drag & drop), × en coin haut-droit pour gagner de la place */
   .kanban-card-actions {
+    position: absolute;
+    top: 5px;
+    right: 5px;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 4px;
-    border-top: 1px solid var(--line-soft);
-    padding-top: 6px;
+    gap: 2px;
   }
   .kanban-arrow {
-    background: none;
-    border: 1px solid var(--line-soft);
-    border-radius: 4px;
+    display: none;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
     color: var(--muted);
     font-size: 14px;
     cursor: pointer;
-    padding: 2px 8px;
+    padding: 3px 9px;
     line-height: 1.2;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
   }
-  .kanban-arrow:hover { background: var(--line-soft); color: var(--ink); }
+  .kanban-arrow:hover { background: var(--line-soft); color: var(--primary); border-color: var(--primary-soft); }
   .kanban-delete {
     background: none;
     border: none;
     color: var(--muted-soft);
     font-size: 16px;
     cursor: pointer;
-    padding: 2px 6px;
+    padding: 0 4px;
     line-height: 1;
-    margin-left: 4px;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
   }
+  .kanban-card:hover .kanban-delete { opacity: 1; }
   .kanban-delete:hover { color: #DC2626; }
+
+  /* État drag & drop */
+  .kanban-col.drag-over { border-color: var(--col-accent); }
+  .kanban-col.drag-over .kanban-list {
+    outline: 2px dashed var(--col-accent);
+    outline-offset: 3px;
+    border-radius: 8px;
+  }
+
+  /* Mobile / tablette : retour des flèches + barre d'actions en bas */
+  @media (max-width: 900px) {
+    .kanban-card { cursor: default; }
+    .kanban-card-main { padding-right: 0; }
+    .kanban-arrow { display: inline-flex; }
+    .kanban-delete { opacity: 1; padding: 2px 8px; }
+    .kanban-card-actions {
+      position: static;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-top: 2px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line-soft);
+    }
+  }
 </style>
