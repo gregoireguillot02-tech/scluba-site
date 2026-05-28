@@ -1,0 +1,91 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../lib/supabase';
+import { EMAIL_TEMPLATE_KEYS, type EmailTemplate } from '../../lib/email-templates';
+
+const sb = serviceClient();
+const { data } = await sb.from('email_templates').select('*');
+const templates = (data ?? []) as EmailTemplate[];
+// Ordre stable : démo puis démarchage.
+const ordered = EMAIL_TEMPLATE_KEYS
+  .map((k) => templates.find((t) => t.key === k))
+  .filter((t): t is EmailTemplate => Boolean(t));
+---
+
+<OpsLayout title="Paramètres" active="parametres">
+  <div class="ops-page-header">
+    <div>
+      <h1 class="ops-page-title">Paramètres</h1>
+      <p class="ops-page-subtitle">Modèles d'email réutilisables (démo, démarchage)</p>
+    </div>
+  </div>
+
+  <div class="ops-card hint">
+    <strong>Placeholders disponibles</strong> — remplis automatiquement depuis la fiche prospect :
+    <code>{'{{prenom}}'}</code> <code>{'{{club}}'}</code> <code>{'{{lien_visio}}'}</code>
+    <span class="hint-note">(<code>{'{{lien_visio}}'}</code> se remplit au moment d'écrire le mail de démo)</span>
+  </div>
+
+  {ordered.length === 0 ? (
+    <div class="ops-card">
+      <div class="ops-empty">Aucun modèle trouvé. Applique la migration <code>0024</code> sur Supabase, puis recharge.</div>
+    </div>
+  ) : (
+    <div class="tpl-list">
+      {ordered.map((t) => (
+        <form method="POST" action="/api/ops/email-templates" class="ops-card tpl-form">
+          <input type="hidden" name="action" value="save" />
+          <input type="hidden" name="key" value={t.key} />
+          <h2>{t.name}</h2>
+          <label class="ops-label">Objet
+            <input class="ops-input" name="subject" value={t.subject} maxlength="300" />
+          </label>
+          <label class="ops-label">Corps
+            <textarea class="ops-textarea tpl-body" name="body" rows="12" maxlength="8000">{t.body}</textarea>
+          </label>
+          <div class="tpl-actions">
+            <button type="submit" class="ops-btn ops-btn-primary">Enregistrer</button>
+          </div>
+        </form>
+      ))}
+    </div>
+  )}
+</OpsLayout>
+
+<style>
+  .hint {
+    margin-bottom: 18px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .hint code {
+    background: var(--line-soft);
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--primary);
+  }
+  .hint-note { color: var(--muted); font-size: 13px; }
+  .hint-note code { background: none; padding: 0; }
+
+  .tpl-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .tpl-list { grid-template-columns: 1fr; }
+  }
+  .tpl-form { display: flex; flex-direction: column; gap: 12px; }
+  .tpl-body {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 220px;
+  }
+  .tpl-actions { display: flex; justify-content: flex-end; }
+</style>

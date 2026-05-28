@@ -1,0 +1,220 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../../../lib/supabase';
+import type { Club } from '../../../../lib/clubs-types';
+
+const { id } = Astro.params;
+const sb = serviceClient();
+
+const { data: club } = await sb.from('clubs').select('*').eq('id', id).maybeSingle();
+if (!club) {
+  return Astro.redirect('/ops/clubs', 302);
+}
+const c = club as Club;
+
+// Numéros de trous canoniques (course_data.holes). Pour un club mono-parcours
+// (type Téoula) c'est 1..N ; la map hole_guides est clé par ce numéro.
+const holeNumbers = c.course_data.holes.map((h) => h.number);
+const existing: Record<string, string> = (c.hole_guides ?? {}) as Record<string, string>;
+const filledCount = holeNumbers.filter((n) => existing[String(n)]).length;
+---
+
+<OpsLayout title={`Carnet de parcours — ${c.name}`} active="clubs">
+  <main class="carnet" data-carnet-root data-club-id={id}>
+    <header class="carnet-head">
+      <a class="carnet-back" href={`/ops/clubs/${id}/edit`}>← {c.name}</a>
+      <h1>Carnet de parcours</h1>
+      <p class="carnet-sub">
+        Dépose le carnet du club (PDF ou images). Chaque page / image devient un
+        visuel à assigner à un trou. Vérifie l'assignation puis enregistre.
+        <strong>{filledCount}/{holeNumbers.length}</strong> trou(s) déjà renseigné(s).
+      </p>
+    </header>
+
+    <section class="carnet-drop">
+      <label class="carnet-dropzone">
+        <input type="file" accept="image/*,application/pdf" multiple data-carnet-input hidden />
+        <span class="carnet-dropzone-icon" aria-hidden="true">＋</span>
+        <span class="carnet-dropzone-text">Choisir un PDF ou des images</span>
+        <span class="carnet-dropzone-hint">PDF (1 trou/page) ou plusieurs images</span>
+      </label>
+      <p class="carnet-status" data-carnet-status role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="carnet-grid" aria-label="Assignation des trous">
+      {holeNumbers.map((n) => (
+        <div class="carnet-hole" data-carnet-hole={n}>
+          <span class="carnet-hole-num">Trou {n}</span>
+          <div class="carnet-thumb" data-carnet-thumb>
+            {existing[String(n)] && <img src={existing[String(n)]} alt={`Trou ${n}`} loading="lazy" />}
+          </div>
+          <select class="carnet-select" data-carnet-select aria-label={`Visuel du trou ${n}`}>
+            <option value="">— aucun / garder —</option>
+          </select>
+        </div>
+      ))}
+    </section>
+
+    <div class="carnet-actions">
+      <button type="button" class="carnet-save" data-carnet-save>Enregistrer le carnet</button>
+    </div>
+  </main>
+
+  <script>
+    import { filesToCandidates, type CarnetCandidate } from '../../../../lib/carnet-split';
+
+    const root = document.querySelector<HTMLElement>('[data-carnet-root]');
+    if (root) {
+      const clubId = root.dataset.clubId!;
+      const input = root.querySelector<HTMLInputElement>('[data-carnet-input]')!;
+      const statusEl = root.querySelector<HTMLElement>('[data-carnet-status]')!;
+      const saveBtn = root.querySelector<HTMLButtonElement>('[data-carnet-save]')!;
+      const holeEls = Array.from(root.querySelectorAll<HTMLElement>('[data-carnet-hole]'));
+
+      let candidates: CarnetCandidate[] = [];
+
+      function populate(sel: HTMLSelectElement) {
+        const prev = sel.value;
+        sel.replaceChildren();
+        sel.add(new Option('— aucun / garder —', ''));
+        candidates.forEach((cand, i) => sel.add(new Option(cand.label, String(i))));
+        sel.value = prev;
+      }
+
+      function updateThumb(holeEl: HTMLElement) {
+        const sel = holeEl.querySelector<HTMLSelectElement>('select')!;
+        const thumb = holeEl.querySelector<HTMLElement>('[data-carnet-thumb]')!;
+        const idx = sel.value;
+        if (idx !== '' && candidates[Number(idx)]) {
+          thumb.replaceChildren();
+          const img = document.createElement('img');
+          img.src = candidates[Number(idx)].previewUrl;
+          img.alt = '';
+          thumb.appendChild(img);
+        }
+        // Sinon : on laisse le thumb SSR (visuel déjà enregistré) tel quel.
+      }
+
+      input.addEventListener('change', async () => {
+        const files = Array.from(input.files ?? []);
+        if (!files.length) return;
+        statusEl.textContent = 'Traitement du document…';
+        try {
+          candidates = await filesToCandidates(files);
+          if (!candidates.length) {
+            statusEl.textContent = 'Aucun visuel exploitable dans ce fichier.';
+            return;
+          }
+          for (let i = 0; i < holeEls.length; i++) {
+            const sel = holeEls[i].querySelector<HTMLSelectElement>('select')!;
+            populate(sel);
+            // Auto-assignation : page/image i → trou i (si le slot est vide).
+            if (candidates[i] && sel.value === '') sel.value = String(i);
+            updateThumb(holeEls[i]);
+          }
+          statusEl.textContent = `${candidates.length} visuel(s) détecté(s). Vérifie l'assignation puis enregistre.`;
+        } catch (e) {
+          statusEl.textContent = 'Erreur de lecture : ' + (e as Error).message;
+        }
+      });
+
+      for (const holeEl of holeEls) {
+        holeEl.querySelector<HTMLSelectElement>('select')!.addEventListener('change', () => updateThumb(holeEl));
+      }
+
+      saveBtn.addEventListener('click', async () => {
+        const assigned = holeEls.filter((el) => {
+          const v = el.querySelector<HTMLSelectElement>('select')!.value;
+          return v !== '' && candidates[Number(v)];
+        });
+        if (!assigned.length) {
+          statusEl.textContent = 'Rien à enregistrer : assigne au moins un visuel.';
+          return;
+        }
+        saveBtn.disabled = true;
+        let ok = 0;
+        let fail = 0;
+        // Upload SÉQUENTIEL : l'endpoint fait un read-modify-write de
+        // hole_guides, des uploads parallèles s'écraseraient.
+        for (const el of assigned) {
+          const n = el.dataset.carnetHole!;
+          const idx = Number(el.querySelector<HTMLSelectElement>('select')!.value);
+          statusEl.textContent = `Envoi du trou ${n}… (${ok + fail + 1}/${assigned.length})`;
+          const fd = new FormData();
+          fd.append('file', candidates[idx].file);
+          try {
+            const res = await fetch(`/api/ops/clubs/${clubId}/upload?kind=hole&hole=${n}`, {
+              method: 'POST',
+              body: fd,
+            });
+            if (!res.ok) throw new Error(await res.text());
+            ok++;
+          } catch (e) {
+            fail++;
+            console.error('[carnet] upload trou', n, e);
+          }
+        }
+        statusEl.textContent = `Terminé : ${ok} enregistré(s)${fail ? `, ${fail} échec(s)` : ''}.`;
+        saveBtn.disabled = false;
+        if (ok > 0) setTimeout(() => location.reload(), 1400);
+      });
+    }
+  </script>
+
+  <style>
+    .carnet { max-width: 880px; margin: 0 auto; padding: 24px 16px 64px; }
+    .carnet-back {
+      display: inline-block; margin-bottom: 8px;
+      font-size: 13px; color: #6B7280; text-decoration: none;
+    }
+    .carnet-back:hover { color: #1B4332; }
+    .carnet-head h1 { margin: 0 0 6px; font-size: 26px; color: #1B4332; }
+    .carnet-sub { margin: 0; color: #6B7280; font-size: 14px; line-height: 1.5; }
+    .carnet-sub strong { color: #1B4332; }
+
+    .carnet-drop { margin: 24px 0; }
+    .carnet-dropzone {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 28px; border: 2px dashed #D4A574; border-radius: 14px;
+      background: rgba(212, 165, 116, 0.06); cursor: pointer; text-align: center;
+      transition: background 150ms, border-color 150ms;
+    }
+    .carnet-dropzone:hover { background: rgba(212, 165, 116, 0.12); }
+    .carnet-dropzone-icon { font-size: 28px; color: #D4A574; line-height: 1; }
+    .carnet-dropzone-text { font-weight: 600; color: #1B4332; }
+    .carnet-dropzone-hint { font-size: 12px; color: #9CA3AF; }
+    .carnet-status { margin: 10px 2px 0; font-size: 13px; color: #6B7280; min-height: 1.2em; }
+
+    .carnet-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px;
+    }
+    .carnet-hole {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 12px; border: 1px solid #E5E7EB; border-radius: 12px; background: #fff;
+    }
+    .carnet-hole-num {
+      font-family: monospace; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: #1B4332;
+    }
+    .carnet-thumb {
+      aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden;
+      background: #F6F7F8; display: flex; align-items: center; justify-content: center;
+    }
+    .carnet-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .carnet-select {
+      width: 100%; padding: 6px 8px; border: 1px solid #E5E7EB; border-radius: 8px;
+      font-size: 13px; background: #fff; color: #1B4332;
+    }
+
+    .carnet-actions { margin-top: 28px; }
+    .carnet-save {
+      width: 100%; padding: 16px; border: none; border-radius: 12px;
+      background: #1B4332; color: #FAF7EE; font-size: 16px; font-weight: 600;
+      cursor: pointer;
+    }
+    .carnet-save:disabled { opacity: 0.6; cursor: progress; }
+  </style>
+</OpsLayout>

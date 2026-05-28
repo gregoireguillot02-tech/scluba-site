@@ -1,0 +1,401 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../lib/supabase';
+import {
+  PROSPECT_STATUSES,
+  STATUS_LABELS,
+  STATUS_COLORS,
+  OWNER_LABELS,
+  type Prospect,
+  type Task,
+  type Lead,
+} from '../../lib/ops-types';
+import {
+  NETWORK_STATUSES,
+  NETWORK_STATUS_LABELS,
+  NETWORK_STATUS_COLORS,
+  type NetworkContact,
+} from '../../lib/network-types';
+
+const sb = serviceClient();
+
+const [{ data: prospects }, { data: tasks }, { data: leads }, { data: network }] = await Promise.all([
+  sb.from('prospects').select('*').order('updated_at', { ascending: false }),
+  sb.from('tasks').select('*').order('created_at', { ascending: false }),
+  sb.from('leads').select('*').order('created_at', { ascending: false }).limit(50),
+  sb.from('network_contacts').select('*').order('updated_at', { ascending: false }),
+]);
+
+const allProspects: Prospect[] = (prospects ?? []) as Prospect[];
+const allTasks: Task[] = (tasks ?? []) as Task[];
+const allLeads: Lead[] = (leads ?? []) as Lead[];
+const allNetwork: NetworkContact[] = (network ?? []) as NetworkContact[];
+
+const total = allProspects.length;
+const activeClients = allProspects.filter((p) => p.status === 'active_client').length;
+const lost = allProspects.filter((p) => p.status === 'lost').length;
+const inPipeline = total - activeClients - lost;
+
+const networkTotal = allNetwork.length;
+const networkCounts = NETWORK_STATUSES.map((status) => ({
+  status,
+  count: allNetwork.filter((c) => c.status === status).length,
+}));
+const topIntros = [...allNetwork]
+  .filter((c) => c.intros_made.length > 0)
+  .sort((a, b) => b.intros_made.length - a.intros_made.length)
+  .slice(0, 3);
+
+const oneWeek = 7 * 24 * 3600 * 1000;
+const now = Date.now();
+const recentLeads = allLeads.filter((l) => now - new Date(l.created_at).getTime() < oneWeek).length;
+
+const demos = allProspects.filter((p) => p.status === 'demo_scheduled').length;
+const pctPipeline = total ? Math.round((inPipeline / total) * 100) : 0;
+const pctActive = total ? Math.round((activeClients / total) * 100) : 0;
+const pctDemos = total ? Math.round((demos / total) * 100) : 0;
+const pctLeads = allLeads.length ? Math.round((recentLeads / allLeads.length) * 100) : 0;
+
+const upcomingTasks = allTasks
+  .filter((t) => !t.done)
+  .sort((a, b) => {
+    const ad = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+    const bd = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+    return ad - bd;
+  })
+  .slice(0, 8);
+
+const pipelineCounts = PROSPECT_STATUSES.map((status) => ({
+  status,
+  count: allProspects.filter((p) => p.status === status).length,
+}));
+
+const recentProspects = [...allProspects].slice(0, 6);
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+---
+
+<OpsLayout title="Vue d'ensemble" active="stats">
+  <div class="ops-page-header">
+    <div>
+      <h1 class="ops-page-title">Vue d'ensemble</h1>
+      <p class="ops-page-subtitle">Pilotage Scluba — pipeline, todo, leads</p>
+    </div>
+    <a href="/ops/prospects" class="ops-btn ops-btn-primary">Prospection clubs →</a>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="ops-kpi ops-kpi-blue">
+      <div class="ops-kpi-main">
+        <div class="ops-kpi-label">Prospects en pipeline</div>
+        <div class="ops-kpi-value">{inPipeline}</div>
+        <div class="ops-kpi-sub">{total} prospects au total</div>
+      </div>
+      <div class="ops-donut" style={`--pct:${pctPipeline}`} role="img" aria-label={`${pctPipeline}% du total en pipeline`}></div>
+    </div>
+    <div class="ops-kpi ops-kpi-emerald">
+      <div class="ops-kpi-main">
+        <div class="ops-kpi-label">Clients actifs</div>
+        <div class="ops-kpi-value">{activeClients}</div>
+        <div class="ops-kpi-sub">≈ {(activeClients * 49).toLocaleString('fr-FR')} $/mois MRR théorique</div>
+      </div>
+      <div class="ops-donut" style={`--pct:${pctActive}`} role="img" aria-label={`${pctActive}% de clients actifs`}></div>
+    </div>
+    <div class="ops-kpi ops-kpi-violet">
+      <div class="ops-kpi-main">
+        <div class="ops-kpi-label">Démos prévues</div>
+        <div class="ops-kpi-value">{demos}</div>
+        <div class="ops-kpi-sub">Programmées</div>
+      </div>
+      <div class="ops-donut" style={`--pct:${pctDemos}`} role="img" aria-label={`${pctDemos}% du total`}></div>
+    </div>
+    <div class="ops-kpi ops-kpi-amber">
+      <div class="ops-kpi-main">
+        <div class="ops-kpi-label">Leads CTA (7j)</div>
+        <div class="ops-kpi-value">{recentLeads}</div>
+        <div class="ops-kpi-sub">{allLeads.length} au total</div>
+      </div>
+      <div class="ops-donut" style={`--pct:${pctLeads}`} role="img" aria-label={`${pctLeads}% des leads sur 7j`}></div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="ops-card">
+      <h2>Pipeline</h2>
+      <div class="pipeline-bars">
+        {pipelineCounts.map(({ status, count }) => {
+          const max = Math.max(...pipelineCounts.map((p) => p.count), 1);
+          const pct = (count / max) * 100;
+          return (
+            <a href={`/ops/prospects?status=${status}`} class="pipeline-row">
+              <span class="pipeline-label">
+                <span class="pipeline-dot" style={`background:${STATUS_COLORS[status]}`}></span>
+                {STATUS_LABELS[status]}
+              </span>
+              <span class="pipeline-bar-track">
+                <span class="pipeline-bar-fill" style={`width:${pct}%; background:${STATUS_COLORS[status]}`}></span>
+              </span>
+              <span class="pipeline-count">{count}</span>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+
+    <div class="ops-card">
+      <h2>Todo en cours</h2>
+      {upcomingTasks.length === 0 ? (
+        <div class="ops-empty">Aucune tâche en cours. <a href="/ops/todo" style="color:var(--primary-soft)">En ajouter une</a></div>
+      ) : (
+        <ul class="task-list">
+          {upcomingTasks.map((t) => (
+            <li class="task-row">
+              <form method="POST" action="/api/ops/tasks" style="display:inline">
+                <input type="hidden" name="action" value="toggle" />
+                <input type="hidden" name="id" value={t.id} />
+                <input type="hidden" name="done" value={String(!t.done)} />
+                <button type="submit" class="task-check" aria-label="Marquer fait"></button>
+              </form>
+              <span class="task-title">{t.title}</span>
+              <span class="ops-tag">{OWNER_LABELS[t.assignee]}</span>
+              <span class="task-due">{fmtDate(t.due_date)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p style="margin-top:12px"><a href="/ops/todo" class="ops-btn ops-btn-ghost">Toute la todo →</a></p>
+    </div>
+  </div>
+
+  <div class="ops-card stat-card" style="margin-top:24px">
+    <div class="stat-card-header">
+      <h2>Prospection réseau</h2>
+      <a href="/ops/reseau" class="stat-card-link">Voir tout →</a>
+    </div>
+    <div class="stat-card-total">{networkTotal}</div>
+    <p class="stat-card-sub">contact{networkTotal > 1 ? 's' : ''} d'intro institutionnelle</p>
+
+    <ul class="stat-status-list">
+      {networkCounts.map(({ status, count }) => (
+        <li>
+          <span class="stat-status-dot" style={`background:${NETWORK_STATUS_COLORS[status]}`}></span>
+          <span class="stat-status-label">{NETWORK_STATUS_LABELS[status]}</span>
+          <span class="stat-status-count">{count}</span>
+        </li>
+      ))}
+    </ul>
+
+    {topIntros.length > 0 && (
+      <div class="stat-top-intros">
+        <h3>Top intros faites</h3>
+        <ul>
+          {topIntros.map((c) => (
+            <li>
+              <a href={`/ops/reseau/${c.id}`}>{c.name}</a>
+              <span class="stat-top-intros-count">{c.intros_made.length} club{c.intros_made.length > 1 ? 's' : ''}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </div>
+
+  <div class="ops-card" style="margin-top:24px">
+    <h2>Prospects récents</h2>
+    {recentProspects.length === 0 ? (
+      <div class="ops-empty">
+        Aucun prospect.
+        <a href="/ops/prospects" style="color:var(--primary-soft);margin-left:6px">Ajouter le premier club →</a>
+      </div>
+    ) : (
+      <table class="ops-table">
+        <thead>
+          <tr>
+            <th>Club</th>
+            <th>Contact</th>
+            <th>Ville</th>
+            <th>Statut</th>
+            <th>Owner</th>
+            <th>Maj</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recentProspects.map((p) => (
+            <tr>
+              <td><a href={`/ops/prospects/${p.id}`} class="prospect-link">{p.club_name}</a></td>
+              <td>{p.contact_name ?? '—'}</td>
+              <td>{p.city ?? '—'}</td>
+              <td><span class="ops-tag" style={`background:${STATUS_COLORS[p.status]}22; color:${STATUS_COLORS[p.status]}`}>{STATUS_LABELS[p.status]}</span></td>
+              <td>{OWNER_LABELS[p.owner]}</td>
+              <td>{fmtDate(p.updated_at)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+</OpsLayout>
+
+<style>
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 800px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+  .pipeline-bars { display: flex; flex-direction: column; gap: 10px; }
+  .pipeline-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 32px;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+    padding: 4px 0;
+  }
+  .pipeline-row:hover { background: var(--line-soft); border-radius: 6px; }
+  .pipeline-label {
+    font-size: 13px;
+    color: var(--ink-soft);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pipeline-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .pipeline-bar-track {
+    position: relative;
+    height: 8px;
+    background: var(--line-soft);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .pipeline-bar-fill {
+    position: absolute; top: 0; left: 0; bottom: 0;
+    border-radius: 999px;
+    transition: width 0.4s ease;
+  }
+  .pipeline-count {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  .task-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  .task-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 14px;
+  }
+  .task-row:last-child { border-bottom: 0; }
+  .task-check {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+    background: var(--bg);
+    cursor: pointer;
+    padding: 0;
+  }
+  .task-check:hover { border-color: var(--primary-soft); }
+  .task-title { color: var(--ink); }
+  .task-due { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  .ops-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .ops-table th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .ops-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .prospect-link { color: var(--primary); text-decoration: none; font-weight: 500; }
+  .prospect-link:hover { color: var(--primary-deep); text-decoration: underline; }
+
+  .stat-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .stat-card-header h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-card-link { font-size: 13px; color: var(--primary); text-decoration: none; }
+  .stat-card-total { font-size: 36px; font-weight: 700; line-height: 1; font-family: var(--font-serif); color: var(--primary); font-variant-numeric: tabular-nums; }
+  .stat-card-sub { color: var(--muted); font-size: 13px; margin: 4px 0 16px; }
+
+  .stat-status-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px;
+    display: grid;
+    gap: 6px;
+  }
+  .stat-status-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+  }
+  .stat-status-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .stat-status-label { flex: 1; }
+  .stat-status-count { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .stat-top-intros {
+    border-top: 1px solid var(--line-soft);
+    padding-top: 12px;
+  }
+  .stat-top-intros h3 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 8px;
+  }
+  .stat-top-intros ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 4px;
+  }
+  .stat-top-intros li {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+  .stat-top-intros a { color: inherit; text-decoration: none; }
+  .stat-top-intros a:hover { text-decoration: underline; }
+  .stat-top-intros-count { color: var(--muted); }
+</style>

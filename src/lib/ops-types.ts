@@ -70,6 +70,7 @@ export interface Prospect {
   id: string;
   club_name: string;
   contact_name: string | null;
+  contact_role: string | null;
   email: string | null;
   phone: string | null;
   city: string | null;
@@ -78,6 +79,10 @@ export interface Prospect {
   owner: Owner;
   notes: string | null;
   source: string | null;
+  next_action_at: string | null;
+  next_action_note: string | null;
+  demo_at: string | null;
+  demo_link: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -88,6 +93,16 @@ export interface ProspectEvent {
   type: EventType;
   body: string | null;
   author: string | null;
+  created_at: string;
+}
+
+export interface ProspectAction {
+  id: string;
+  prospect_id: string;
+  due_on: string;
+  note: string | null;
+  done: boolean;
+  done_at: string | null;
   created_at: string;
 }
 

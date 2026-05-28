@@ -4,406 +4,358 @@ export const prerender = false;
 import OpsLayout from '../../layouts/OpsLayout.astro';
 import { serviceClient } from '../../lib/supabase';
 import {
-  PROSPECT_STATUSES,
   STATUS_LABELS,
   STATUS_COLORS,
   OWNER_LABELS,
-  type Prospect,
+  OWNERS,
+  type ProspectStatus,
   type Task,
-  type Lead,
 } from '../../lib/ops-types';
-import {
-  NETWORK_STATUSES,
-  NETWORK_STATUS_LABELS,
-  NETWORK_STATUS_COLORS,
-  type NetworkContact,
-} from '../../lib/network-types';
 
 const sb = serviceClient();
 
-const [{ data: prospects }, { data: tasks }, { data: leads }, { data: network }] = await Promise.all([
-  sb.from('prospects').select('*').order('updated_at', { ascending: false }),
-  sb.from('tasks').select('*').order('created_at', { ascending: false }),
-  sb.from('leads').select('*').order('created_at', { ascending: false }).limit(50),
-  sb.from('network_contacts').select('*').order('updated_at', { ascending: false }),
+type TaskWithClub = Task & { prospects: { club_name: string } | null };
+type ActionProspect = {
+  id: string;
+  club_name: string;
+  contact_name: string | null;
+  contact_role: string | null;
+  phone: string | null;
+  email: string | null;
+  status: ProspectStatus;
+};
+type ActionRow = {
+  id: string;
+  due_on: string;
+  note: string | null;
+  prospect: ActionProspect | ActionProspect[] | null;
+};
+
+const [{ data: actionsRaw }, { data: tasksRaw }] = await Promise.all([
+  sb
+    .from('prospect_actions')
+    .select('id, due_on, note, prospect:prospects(id, club_name, contact_name, contact_role, phone, email, status)')
+    .eq('done', false)
+    .order('due_on', { ascending: true }),
+  sb
+    .from('tasks')
+    .select('*, prospects(club_name)')
+    .neq('status', 'done')
+    .not('due_date', 'is', null)
+    .order('due_date', { ascending: true }),
 ]);
 
-const allProspects: Prospect[] = (prospects ?? []) as Prospect[];
-const allTasks: Task[] = (tasks ?? []) as Task[];
-const allLeads: Lead[] = (leads ?? []) as Lead[];
-const allNetwork: NetworkContact[] = (network ?? []) as NetworkContact[];
+const actionRows = (actionsRaw ?? []) as ActionRow[];
+const tasks: TaskWithClub[] = (tasksRaw ?? []) as TaskWithClub[];
 
-const total = allProspects.length;
-const activeClients = allProspects.filter((p) => p.status === 'active_client').length;
-const lost = allProspects.filter((p) => p.status === 'lost').length;
-const inPipeline = total - activeClients - lost;
+// "Aujourd'hui" en heure de Paris (le serveur tourne en UTC sur Cloudflare).
+// Colonnes 'YYYY-MM-DD' → comparaison de chaînes ISO = ordre chronologique.
+const TZ = 'Europe/Paris';
+function isoDay(d: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+const todayStr = isoDay(new Date());
+const weekEndStr = isoDay(new Date(Date.now() + 7 * 86400000));
 
-const networkTotal = allNetwork.length;
-const networkCounts = NETWORK_STATUSES.map((status) => ({
-  status,
-  count: allNetwork.filter((c) => c.status === status).length,
-}));
-const topIntros = [...allNetwork]
-  .filter((c) => c.intros_made.length > 0)
-  .sort((a, b) => b.intros_made.length - a.intros_made.length)
-  .slice(0, 3);
+type Item =
+  | { kind: 'action'; day: string; id: string; note: string | null; p: ActionProspect }
+  | { kind: 'task'; day: string; t: TaskWithClub };
 
-const oneWeek = 7 * 24 * 3600 * 1000;
-const now = Date.now();
-const recentLeads = allLeads.filter((l) => now - new Date(l.created_at).getTime() < oneWeek).length;
+const items: Item[] = [];
+for (const a of actionRows) {
+  const p = Array.isArray(a.prospect) ? a.prospect[0] : a.prospect;
+  if (!a.due_on || !p) continue;
+  items.push({ kind: 'action', day: a.due_on.slice(0, 10), id: a.id, note: a.note, p });
+}
+for (const t of tasks) {
+  if (t.due_date) items.push({ kind: 'task', day: t.due_date.slice(0, 10), t });
+}
+items.sort((a, b) => a.day.localeCompare(b.day));
 
-const upcomingTasks = allTasks
-  .filter((t) => !t.done)
-  .sort((a, b) => {
-    const ad = a.due_date ? new Date(a.due_date).getTime() : Infinity;
-    const bd = b.due_date ? new Date(b.due_date).getTime() : Infinity;
-    return ad - bd;
-  })
-  .slice(0, 8);
+const buckets: Record<string, Item[]> = {
+  overdue: items.filter((i) => i.day < todayStr),
+  today: items.filter((i) => i.day === todayStr),
+  week: items.filter((i) => i.day > todayStr && i.day <= weekEndStr),
+  later: items.filter((i) => i.day > weekEndStr),
+};
 
-const pipelineCounts = PROSPECT_STATUSES.map((status) => ({
-  status,
-  count: allProspects.filter((p) => p.status === status).length,
-}));
+const bucketDefs: { key: keyof typeof buckets; label: string; cls: string }[] = [
+  { key: 'overdue', label: 'En retard', cls: 'b-overdue' },
+  { key: 'today', label: "Aujourd'hui", cls: 'b-today' },
+  { key: 'week', label: 'Cette semaine', cls: 'b-week' },
+  { key: 'later', label: 'Plus tard', cls: 'b-later' },
+];
 
-const recentProspects = [...allProspects].slice(0, 6);
+const overdueCount = buckets.overdue.length;
+const todayCount = buckets.today.length;
 
-function fmtDate(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
+function fmtDay(day: string): string {
+  const d = new Date(`${day}T12:00:00`);
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 ---
 
-<OpsLayout title="Vue d'ensemble" active="home">
+<OpsLayout title="Todo commerciale" active="home">
   <div class="ops-page-header">
     <div>
-      <h1 class="ops-page-title">Vue d'ensemble</h1>
-      <p class="ops-page-subtitle">Pilotage Scluba — pipeline, todo, leads</p>
+      <h1 class="ops-page-title">Todo commerciale</h1>
+      <p class="ops-page-subtitle">
+        {items.length === 0
+          ? 'Relances et tâches du moment'
+          : `${overdueCount} en retard · ${todayCount} aujourd'hui`}
+      </p>
     </div>
-    <a href="/ops/prospects" class="ops-btn ops-btn-primary">Prospection clubs →</a>
+    <a href="/ops/stats" class="ops-btn ops-btn-ghost">Voir les stats →</a>
   </div>
 
-  <div class="kpi-grid">
-    <div class="kpi-card">
-      <div class="kpi-label">Prospects en pipeline</div>
-      <div class="kpi-value">{inPipeline}</div>
-      <div class="kpi-sub">{total} prospects au total</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Clients actifs</div>
-      <div class="kpi-value" style="color:#10B981">{activeClients}</div>
-      <div class="kpi-sub">≈ {(activeClients * 49).toLocaleString('fr-FR')} $/mois MRR théorique</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Démos prévues</div>
-      <div class="kpi-value">{allProspects.filter((p) => p.status === 'demo_scheduled').length}</div>
-      <div class="kpi-sub">Programmées</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Leads CTA (7j)</div>
-      <div class="kpi-value">{recentLeads}</div>
-      <div class="kpi-sub">{allLeads.length} au total</div>
-    </div>
-  </div>
-
-  <div class="two-col">
+  {items.length === 0 ? (
     <div class="ops-card">
-      <h2>Pipeline</h2>
-      <div class="pipeline-bars">
-        {pipelineCounts.map(({ status, count }) => {
-          const max = Math.max(...pipelineCounts.map((p) => p.count), 1);
-          const pct = (count / max) * 100;
-          return (
-            <a href={`/ops/prospects?status=${status}`} class="pipeline-row">
-              <span class="pipeline-label">
-                <span class="pipeline-dot" style={`background:${STATUS_COLORS[status]}`}></span>
-                {STATUS_LABELS[status]}
-              </span>
-              <span class="pipeline-bar-track">
-                <span class="pipeline-bar-fill" style={`width:${pct}%; background:${STATUS_COLORS[status]}`}></span>
-              </span>
-              <span class="pipeline-count">{count}</span>
-            </a>
-          );
-        })}
-      </div>
-    </div>
-
-    <div class="ops-card">
-      <h2>Todo en cours</h2>
-      {upcomingTasks.length === 0 ? (
-        <div class="ops-empty">Aucune tâche en cours. <a href="/ops/todo" style="color:var(--primary-soft)">En ajouter une</a></div>
-      ) : (
-        <ul class="task-list">
-          {upcomingTasks.map((t) => (
-            <li class="task-row">
-              <form method="POST" action="/api/ops/tasks" style="display:inline">
-                <input type="hidden" name="action" value="toggle" />
-                <input type="hidden" name="id" value={t.id} />
-                <input type="hidden" name="done" value={String(!t.done)} />
-                <button type="submit" class="task-check" aria-label="Marquer fait"></button>
-              </form>
-              <span class="task-title">{t.title}</span>
-              <span class="ops-tag">{OWNER_LABELS[t.assignee]}</span>
-              <span class="task-due">{fmtDate(t.due_date)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      <p style="margin-top:12px"><a href="/ops/todo" class="ops-btn ops-btn-ghost">Toute la todo →</a></p>
-    </div>
-  </div>
-
-  <div class="ops-card stat-card" style="margin-top:24px">
-    <div class="stat-card-header">
-      <h2>Prospection réseau</h2>
-      <a href="/ops/reseau" class="stat-card-link">Voir tout →</a>
-    </div>
-    <div class="stat-card-total">{networkTotal}</div>
-    <p class="stat-card-sub">contact{networkTotal > 1 ? 's' : ''} d'intro institutionnelle</p>
-
-    <ul class="stat-status-list">
-      {networkCounts.map(({ status, count }) => (
-        <li>
-          <span class="stat-status-dot" style={`background:${NETWORK_STATUS_COLORS[status]}`}></span>
-          <span class="stat-status-label">{NETWORK_STATUS_LABELS[status]}</span>
-          <span class="stat-status-count">{count}</span>
-        </li>
-      ))}
-    </ul>
-
-    {topIntros.length > 0 && (
-      <div class="stat-top-intros">
-        <h3>Top intros faites</h3>
-        <ul>
-          {topIntros.map((c) => (
-            <li>
-              <a href={`/ops/reseau/${c.id}`}>{c.name}</a>
-              <span class="stat-top-intros-count">{c.intros_made.length} club{c.intros_made.length > 1 ? 's' : ''}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    )}
-  </div>
-
-  <div class="ops-card" style="margin-top:24px">
-    <h2>Prospects récents</h2>
-    {recentProspects.length === 0 ? (
       <div class="ops-empty">
-        Aucun prospect.
-        <a href="/ops/prospects" style="color:var(--primary-soft);margin-left:6px">Ajouter le premier club →</a>
+        Rien de programmé pour l'instant.<br />
+        Ajoute une <strong>prochaine action</strong> sur un prospect (fiche → « Prochaines actions »)
+        ou crée une tâche ci-dessous.
       </div>
-    ) : (
-      <table class="ops-table">
-        <thead>
-          <tr>
-            <th>Club</th>
-            <th>Contact</th>
-            <th>Ville</th>
-            <th>Statut</th>
-            <th>Owner</th>
-            <th>Maj</th>
-          </tr>
-        </thead>
-        <tbody>
-          {recentProspects.map((p) => (
-            <tr>
-              <td><a href={`/ops/prospects/${p.id}`} class="prospect-link">{p.club_name}</a></td>
-              <td>{p.contact_name ?? '—'}</td>
-              <td>{p.city ?? '—'}</td>
-              <td><span class="ops-tag" style={`background:${STATUS_COLORS[p.status]}22; color:${STATUS_COLORS[p.status]}`}>{STATUS_LABELS[p.status]}</span></td>
-              <td>{OWNER_LABELS[p.owner]}</td>
-              <td>{fmtDate(p.updated_at)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    )}
+    </div>
+  ) : (
+    <div class="buckets">
+      {bucketDefs.map(({ key, label, cls }) => {
+        const list = buckets[key];
+        if (list.length === 0) return null;
+        return (
+          <section class={`bucket ${cls}`}>
+            <header class="bucket-head">
+              <span class="bucket-pip" aria-hidden="true"></span>
+              <h2 class="bucket-title">{label}</h2>
+              <span class="bucket-count">{list.length}</span>
+            </header>
+            <div class="bucket-body">
+              {list.map((item) =>
+                item.kind === 'action' ? (
+                  <div class="ai-item">
+                    <div class="ai-main">
+                      <div class="ai-row1">
+                        <a href={`/ops/prospects/${item.p.id}`} class="ai-title">{item.p.club_name}</a>
+                        <span
+                          class="ops-tag"
+                          style={`background:${STATUS_COLORS[item.p.status]}22; color:${STATUS_COLORS[item.p.status]}`}
+                        >{STATUS_LABELS[item.p.status]}</span>
+                        <span class="ai-day">{fmtDay(item.day)}</span>
+                      </div>
+                      {item.note && <div class="ai-note">{item.note}</div>}
+                      <div class="ai-contacts">
+                        {item.p.contact_name && <span class="ai-contact">{item.p.contact_name}{item.p.contact_role ? ` · ${item.p.contact_role}` : ''}</span>}
+                        {item.p.phone && (
+                          <a href={`tel:${item.p.phone}`} class="ai-contact ai-link">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            {item.p.phone}
+                          </a>
+                        )}
+                        {item.p.email && (
+                          <a href={`mailto:${item.p.email}`} class="ai-contact ai-link">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+                            {item.p.email}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <form method="POST" action="/api/ops/prospect-actions" class="ai-actions">
+                      <input type="hidden" name="action" value="complete" />
+                      <input type="hidden" name="id" value={item.id} />
+                      <button type="submit" class="ops-btn ops-btn-primary ai-done">Fait</button>
+                    </form>
+                  </div>
+                ) : (
+                  <div class="ai-item ai-task">
+                    <div class="ai-main">
+                      <div class="ai-row1">
+                        <span class="ai-title ai-title-task">{item.t.title}</span>
+                        <span class="ops-tag">{OWNER_LABELS[item.t.assignee]}</span>
+                        <span class="ai-day">{fmtDay(item.day)}</span>
+                      </div>
+                      {item.t.prospects?.club_name && (
+                        <a href={`/ops/prospects/${item.t.prospect_id}`} class="ai-note ai-task-club">→ {item.t.prospects.club_name}</a>
+                      )}
+                    </div>
+                    <form method="POST" action="/api/ops/tasks" class="ai-actions">
+                      <input type="hidden" name="action" value="set_status" />
+                      <input type="hidden" name="id" value={item.t.id} />
+                      <input type="hidden" name="status" value="done" />
+                      <button type="submit" class="ops-btn ai-done">Fait</button>
+                    </form>
+                  </div>
+                )
+              )}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  )}
+
+  <div class="ops-card quick-card">
+    <form method="POST" action="/api/ops/tasks" class="quick-task">
+      <input type="hidden" name="action" value="create" />
+      <input class="ops-input" name="title" placeholder="Ajouter une tâche…" required />
+      <select class="ops-select" name="assignee">
+        {OWNERS.map((o) => <option value={o} selected={o === 'shared'}>{OWNER_LABELS[o]}</option>)}
+      </select>
+      <input class="ops-input" type="date" name="due_date" />
+      <button type="submit" class="ops-btn ops-btn-primary">Ajouter</button>
+    </form>
+    <a href="/ops/todo" class="ops-btn ops-btn-ghost">Toute la todo →</a>
   </div>
 </OpsLayout>
 
 <style>
-  .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
+  .buckets {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
     margin-bottom: 24px;
   }
-  .kpi-card {
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 1px 2px rgba(15,42,30,0.04);
-  }
-  .kpi-label {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-  .kpi-value {
-    font-family: var(--font-serif);
-    font-size: 32px;
-    color: var(--primary);
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-  }
-  .kpi-sub {
-    margin-top: 8px;
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .two-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-  @media (max-width: 800px) {
-    .two-col { grid-template-columns: 1fr; }
-  }
-  .pipeline-bars { display: flex; flex-direction: column; gap: 10px; }
-  .pipeline-row {
-    display: grid;
-    grid-template-columns: 140px 1fr 32px;
-    align-items: center;
-    gap: 12px;
-    text-decoration: none;
-    color: inherit;
-    padding: 4px 0;
-  }
-  .pipeline-row:hover { background: var(--line-soft); border-radius: 6px; }
-  .pipeline-label {
-    font-size: 13px;
-    color: var(--ink-soft);
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .pipeline-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-  }
-  .pipeline-bar-track {
-    position: relative;
-    height: 8px;
-    background: var(--line-soft);
-    border-radius: 999px;
-    overflow: hidden;
-  }
-  .pipeline-bar-fill {
-    position: absolute; top: 0; left: 0; bottom: 0;
-    border-radius: 999px;
-    transition: width 0.4s ease;
-  }
-  .pipeline-count {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    color: var(--ink-soft);
-    font-weight: 500;
-    font-size: 14px;
-  }
 
-  .task-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-  .task-row {
-    display: grid;
-    grid-template-columns: auto 1fr auto auto;
+  .bucket-head {
+    display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--line-soft);
-    font-size: 14px;
+    gap: 9px;
+    margin-bottom: 10px;
   }
-  .task-row:last-child { border-bottom: 0; }
-  .task-check {
-    width: 18px; height: 18px;
+  .bucket-pip {
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
-    border: 1.5px solid var(--line);
-    background: var(--bg);
-    cursor: pointer;
-    padding: 0;
+    background: var(--muted);
   }
-  .task-check:hover { border-color: var(--primary-soft); }
-  .task-title { color: var(--ink); }
-  .task-due { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-
-  .ops-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-  }
-  .ops-table th {
-    text-align: left;
-    font-weight: 500;
-    font-size: 12px;
+  .bucket-title {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+  .bucket-count {
+    font-variant-numeric: tabular-nums;
     color: var(--muted);
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--line);
-  }
-  .ops-table td {
-    padding: 12px 10px;
-    border-bottom: 1px solid var(--line-soft);
-  }
-  .prospect-link { color: var(--primary); text-decoration: none; font-weight: 500; }
-  .prospect-link:hover { color: var(--primary-deep); text-decoration: underline; }
-
-  .stat-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-  .stat-card-header h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  .stat-card-link { font-size: 13px; color: var(--primary); text-decoration: none; }
-  .stat-card-total { font-size: 36px; font-weight: 700; line-height: 1; font-family: var(--font-serif); color: var(--primary); font-variant-numeric: tabular-nums; }
-  .stat-card-sub { color: var(--muted); font-size: 13px; margin: 4px 0 16px; }
-
-  .stat-status-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 16px;
-    display: grid;
-    gap: 6px;
-  }
-  .stat-status-list li {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-  }
-  .stat-status-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .stat-status-label { flex: 1; }
-  .stat-status-count { color: var(--muted); font-variant-numeric: tabular-nums; }
-
-  .stat-top-intros {
-    border-top: 1px solid var(--line-soft);
-    padding-top: 12px;
-  }
-  .stat-top-intros h3 {
     font-size: 12px;
     font-weight: 600;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin: 0 0 8px;
+    background: var(--line-soft);
+    padding: 2px 9px;
+    border-radius: 999px;
   }
-  .stat-top-intros ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    gap: 4px;
-  }
-  .stat-top-intros li {
+  .b-overdue .bucket-pip { background: #DC2626; }
+  .b-overdue .bucket-title { color: #B91C1C; }
+  .b-today .bucket-pip { background: var(--primary); }
+  .b-today .bucket-title { color: var(--primary); }
+  .b-week .bucket-pip { background: var(--accent); }
+  .b-later .bucket-pip { background: var(--muted-soft); }
+
+  .bucket-body {
     display: flex;
-    justify-content: space-between;
-    font-size: 13px;
+    flex-direction: column;
+    gap: 8px;
   }
-  .stat-top-intros a { color: inherit; text-decoration: none; }
-  .stat-top-intros a:hover { text-decoration: underline; }
-  .stat-top-intros-count { color: var(--muted); }
+
+  .ai-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 2px rgba(15,42,30,0.04);
+  }
+  .b-overdue .ai-item { border-color: #FECACA; }
+
+  .ai-main { min-width: 0; flex: 1; }
+  .ai-row1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .ai-title {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 15px;
+    text-decoration: none;
+  }
+  .ai-title:hover { text-decoration: underline; }
+  .ai-title-task { color: var(--ink); }
+  .ai-day {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .b-overdue .ai-day { color: #DC2626; font-weight: 600; }
+
+  .ai-note {
+    margin-top: 4px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+  }
+  .ai-task-club {
+    display: inline-block;
+    color: var(--primary-soft);
+    text-decoration: none;
+  }
+  .ai-task-club:hover { text-decoration: underline; }
+
+  .ai-contacts {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .ai-contact {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .ai-link { color: var(--primary-soft); text-decoration: none; }
+  .ai-link:hover { text-decoration: underline; }
+
+  .ai-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .ai-done { padding: 8px 16px; }
+
+  @media (max-width: 700px) {
+    .ai-item { flex-direction: column; align-items: stretch; }
+    .ai-actions { justify-content: flex-end; }
+    .ai-day { margin-left: 0; }
+  }
+
+  .quick-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .quick-task {
+    display: grid;
+    grid-template-columns: 1fr 150px 150px auto;
+    gap: 8px;
+    flex: 1;
+    min-width: 280px;
+  }
+  @media (max-width: 700px) {
+    .quick-task { grid-template-columns: 1fr; }
+  }
 </style>

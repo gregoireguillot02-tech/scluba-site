@@ -16,6 +16,14 @@ function parseUuid(raw: unknown): string | null {
   return r.success ? r.data : null;
 }
 
+// 'YYYY-MM-DDTHH:MM' → "le 12/06 à 14h00"
+function fmtDemo(s: string): string {
+  const [date, time] = s.split('T');
+  const [, m, d] = (date ?? '').split('-');
+  if (!d || !m) return '';
+  return `le ${d}/${m}${time ? ` à ${time.replace(':', 'h')}` : ''}`;
+}
+
 export const POST: APIRoute = async ({ request, locals, redirect }) => {
   const user = locals.user;
   if (!user || !isAllowedEmail(user.email)) {
@@ -41,6 +49,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
         .insert({
           club_name,
           contact_name: nullable(form.get('contact_name'), 255),
+          contact_role: nullable(form.get('contact_role'), 120),
           email: nullable(form.get('email'), 320),
           phone: nullable(form.get('phone'), 64),
           city: nullable(form.get('city'), 120),
@@ -100,6 +109,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       const updates = {
         club_name,
         contact_name: nullable(form.get('contact_name'), 255),
+        contact_role: nullable(form.get('contact_role'), 120),
         email: nullable(form.get('email'), 320),
         phone: nullable(form.get('phone'), 64),
         city: nullable(form.get('city'), 120),
@@ -124,6 +134,96 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
           author: user.email,
         });
       }
+
+      return redirect(`/ops/prospects/${id}`, 302);
+    }
+
+    // Change uniquement le statut (sans toucher aux autres champs, contrairement
+    // à "update"). Utilisé par le bouton "Booker une démo". Le param `compose`
+    // permet de rouvrir la fiche avec la modal d'email ouverte.
+    if (action === 'set_status') {
+      const id = parseUuid(form.get('id'));
+      if (!id) return new Response('invalid id', { status: 400 });
+
+      const raw = form.get('status');
+      const status =
+        raw !== null && String(raw) !== '' ? (String(raw) as ProspectStatus) : null;
+      if (!status || !PROSPECT_STATUSES.includes(status)) {
+        return new Response('bad status', { status: 400 });
+      }
+
+      const { data: prev } = await sb.from('prospects').select('status').eq('id', id).maybeSingle();
+      const { error } = await sb.from('prospects').update({ status }).eq('id', id);
+      if (error) {
+        console.error('[api/ops/prospects] set_status failed', error);
+        return new Response('Update failed', { status: 500 });
+      }
+      if (prev && prev.status !== status) {
+        await sb.from('prospect_events').insert({
+          prospect_id: id,
+          type: 'status_change',
+          body: `${prev.status} → ${status}`,
+          author: user.email,
+        });
+      }
+
+      const compose = String(form.get('compose') ?? '');
+      const suffix = compose ? `?compose=${encodeURIComponent(compose)}` : '';
+      return redirect(`/ops/prospects/${id}${suffix}`, 302);
+    }
+
+    // Booker une démo : enregistre le créneau + le lien visio, passe en
+    // "Démo prévue", et crée un rappel J-1 dans les prochaines actions.
+    if (action === 'book_demo') {
+      const id = parseUuid(form.get('id'));
+      if (!id) return new Response('invalid id', { status: 400 });
+
+      const demoAt = String(form.get('demo_at') ?? '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(demoAt)) {
+        return new Response('créneau invalide', { status: 400 });
+      }
+      const demoLink = nullable(form.get('demo_link'), 1000);
+
+      const { data: prev } = await sb.from('prospects').select('status').eq('id', id).maybeSingle();
+      const { error } = await sb
+        .from('prospects')
+        .update({ status: 'demo_scheduled', demo_at: demoAt, demo_link: demoLink })
+        .eq('id', id);
+      if (error) {
+        console.error('[api/ops/prospects] book_demo failed', error);
+        return new Response('Booking failed', { status: 500 });
+      }
+
+      const quand = fmtDemo(demoAt);
+      if (prev && prev.status !== 'demo_scheduled') {
+        await sb.from('prospect_events').insert({
+          prospect_id: id,
+          type: 'status_change',
+          body: `${prev.status} → demo_scheduled`,
+          author: user.email,
+        });
+      }
+      await sb.from('prospect_events').insert({
+        prospect_id: id,
+        type: 'meeting',
+        body: `Démo programmée ${quand}`,
+        author: user.email,
+      });
+
+      // Deux actions auto : aujourd'hui (envoyer le mail pour la visio) + la
+      // veille de la démo (mail de rappel).
+      const todayParis = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Paris',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+      const dd = new Date(`${demoAt.slice(0, 10)}T00:00:00Z`);
+      dd.setUTCDate(dd.getUTCDate() - 1);
+      await sb.from('prospect_actions').insert([
+        { prospect_id: id, due_on: todayParis, note: 'Envoyer le mail pour la visio' },
+        { prospect_id: id, due_on: dd.toISOString().slice(0, 10), note: `Envoyer le mail de rappel démo ${quand}` },
+      ]);
 
       return redirect(`/ops/prospects/${id}`, 302);
     }

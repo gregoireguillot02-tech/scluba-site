@@ -7,23 +7,23 @@ import {
   PROSPECT_STATUSES,
   STATUS_LABELS,
   STATUS_COLORS,
-  OWNERS,
-  OWNER_LABELS,
   EVENT_LABELS,
   EVENT_TYPES,
   type Prospect,
   type ProspectEvent,
-  type Task,
+  type ProspectAction,
 } from '../../../lib/ops-types';
+import type { EmailTemplate } from '../../../lib/email-templates';
 
 const { id } = Astro.params;
 const sb = serviceClient();
 
-const [{ data: prospect }, { data: events }, { data: tasks }, { data: club }] = await Promise.all([
+const [{ data: prospect }, { data: events }, { data: club }, { data: emailTemplatesRaw }, { data: actionsRaw }] = await Promise.all([
   sb.from('prospects').select('*').eq('id', id).maybeSingle(),
   sb.from('prospect_events').select('*').eq('prospect_id', id).order('created_at', { ascending: false }),
-  sb.from('tasks').select('*').eq('prospect_id', id).order('done').order('due_date'),
   sb.from('clubs').select('id, slug').eq('prospect_id', id).maybeSingle(),
+  sb.from('email_templates').select('key, subject, body'),
+  sb.from('prospect_actions').select('*').eq('prospect_id', id).eq('done', false).order('due_on', { ascending: true }),
 ]);
 
 if (!prospect) {
@@ -32,14 +32,26 @@ if (!prospect) {
 
 const p: Prospect = prospect as Prospect;
 const allEvents: ProspectEvent[] = (events ?? []) as ProspectEvent[];
-const allTasks: Task[] = (tasks ?? []) as Task[];
+const actions: ProspectAction[] = (actionsRaw ?? []) as ProspectAction[];
+
+const prenom = p.contact_name ? p.contact_name.trim().split(/\s+/)[0] : '';
+const composeParam = Astro.url.searchParams.get('compose') ?? '';
+
+// demo_at = 'YYYY-MM-DDTHH:MM' → "le 12/06 à 14h00"
+function fmtDemo(s: string | null): string {
+  if (!s) return '';
+  const [date, time] = s.split('T');
+  const [, m, d] = (date ?? '').split('-');
+  if (!d || !m) return '';
+  return `le ${d}/${m}${time ? ` à ${time.replace(':', 'h')}` : ''}`;
+}
+const demoQuand = fmtDemo(p.demo_at);
+const emailTemplates = (emailTemplatesRaw ?? []) as Pick<EmailTemplate, 'key' | 'subject' | 'body'>[];
+const templatesForClient: Record<string, { subject: string; body: string }> = {};
+for (const t of emailTemplates) templatesForClient[t.key] = { subject: t.subject, body: t.body };
 
 function fmtDateTime(iso: string): string {
   return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
-function fmtDate(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 ---
 
@@ -76,9 +88,48 @@ function fmtDate(iso: string | null): string {
     </div>
   </div>
 
+  <div class="email-actions">
+    <button type="button" class="ops-btn ops-btn-primary" data-open-booking>Booker une démo</button>
+    <button type="button" class="ops-btn" data-open-cmp="outreach">Mail démarchage</button>
+    <button type="button" class="ops-btn" data-open-cmp="demo_prospect">Mail démo prospect</button>
+    <button type="button" class="ops-btn" data-open-cmp="demo_pilote">Mail démo pilote</button>
+    <button type="button" class="ops-btn" data-open-cmp="demo_reminder">Mail de rappel</button>
+  </div>
+
   <div class="detail-grid">
     <div>
       <div class="ops-card">
+        <h2>Prochaines actions</h2>
+        {actions.length === 0 ? (
+          <p class="ops-empty">Aucune action programmée.</p>
+        ) : (
+          <ul class="pa-list">
+            {actions.map((a) => (
+              <li>
+                <form method="POST" action="/api/ops/prospect-actions" class="pa-row">
+                  <input type="hidden" name="id" value={a.id} />
+                  <input class="ops-input pa-date" type="date" name="due_on" value={a.due_on} required />
+                  <input class="ops-input pa-note" name="note" value={a.note ?? ''} placeholder="Quoi faire…" />
+                  <button type="submit" name="action" value="update" class="ops-btn pa-icon" title="Enregistrer les modifications" aria-label="Enregistrer">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  </button>
+                  <button type="submit" name="action" value="complete" class="ops-btn ops-btn-primary pa-done">Fait</button>
+                  <button type="submit" name="action" value="delete" class="pa-del" title="Supprimer" aria-label="Supprimer" onclick="return confirm('Supprimer cette action ?')">×</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form method="POST" action="/api/ops/prospect-actions" class="pa-add">
+          <input type="hidden" name="action" value="create" />
+          <input type="hidden" name="prospect_id" value={p.id} />
+          <input class="ops-input pa-date" type="date" name="due_on" required />
+          <input class="ops-input pa-note" name="note" placeholder="Ajouter une action…" />
+          <button type="submit" class="ops-btn">+ Ajouter</button>
+        </form>
+      </div>
+
+      <div class="ops-card" style="margin-top:16px">
         <h2>Détails</h2>
         <form method="POST" action="/api/ops/prospects" class="detail-form">
           <input type="hidden" name="action" value="update" />
@@ -91,6 +142,9 @@ function fmtDate(iso: string | null): string {
             <label class="ops-label">Contact
               <input class="ops-input" name="contact_name" value={p.contact_name ?? ''} />
             </label>
+            <label class="ops-label">Fonction
+              <input class="ops-input" name="contact_role" value={p.contact_role ?? ''} placeholder="Directeur, gérant…" />
+            </label>
             <label class="ops-label">Email
               <input class="ops-input" type="email" name="email" value={p.email ?? ''} />
             </label>
@@ -100,9 +154,6 @@ function fmtDate(iso: string | null): string {
             <label class="ops-label">Ville
               <input class="ops-input" name="city" value={p.city ?? ''} />
             </label>
-            <label class="ops-label">Région
-              <input class="ops-input" name="region" value={p.region ?? ''} />
-            </label>
             <label class="ops-label">Statut
               <select class="ops-select" name="status">
                 {PROSPECT_STATUSES.map((s) => (
@@ -110,20 +161,15 @@ function fmtDate(iso: string | null): string {
                 ))}
               </select>
             </label>
-            <label class="ops-label">Owner
-              <select class="ops-select" name="owner">
-                {OWNERS.map((o) => (
-                  <option value={o} selected={o === p.owner}>{OWNER_LABELS[o]}</option>
-                ))}
-              </select>
-            </label>
-            <label class="ops-label" style="grid-column:1/-1">Source
-              <input class="ops-input" name="source" value={p.source ?? ''} />
-            </label>
             <label class="ops-label" style="grid-column:1/-1">Notes
               <textarea class="ops-textarea" name="notes" rows="4">{p.notes ?? ''}</textarea>
             </label>
           </div>
+          {/* Champs conservés mais masqués de la fiche : réinjectés en hidden pour
+              ne pas les écraser au save (cf. action update qui lit tout le form). */}
+          <input type="hidden" name="owner" value={p.owner} />
+          <input type="hidden" name="region" value={p.region ?? ''} />
+          <input type="hidden" name="source" value={p.source ?? ''} />
 
           <div class="form-actions">
             <button type="submit" class="ops-btn ops-btn-primary">Enregistrer</button>
@@ -139,44 +185,11 @@ function fmtDate(iso: string | null): string {
           </form>
         </details>
       </div>
-
-      <div class="ops-card" style="margin-top:16px">
-        <h2>Tâches liées</h2>
-        {allTasks.length === 0 ? (
-          <p class="ops-empty">Aucune tâche pour ce club.</p>
-        ) : (
-          <ul class="task-list">
-            {allTasks.map((t) => (
-              <li class={`task-row${t.done ? ' done' : ''}`}>
-                <form method="POST" action="/api/ops/tasks" style="display:inline">
-                  <input type="hidden" name="action" value="toggle" />
-                  <input type="hidden" name="id" value={t.id} />
-                  <input type="hidden" name="done" value={String(!t.done)} />
-                  <button type="submit" class={`task-check${t.done ? ' checked' : ''}`} aria-label="Toggle"></button>
-                </form>
-                <span class="task-title">{t.title}</span>
-                <span class="ops-tag">{OWNER_LABELS[t.assignee]}</span>
-                <span class="task-due">{fmtDate(t.due_date)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <form method="POST" action="/api/ops/tasks" class="quick-task">
-          <input type="hidden" name="action" value="create" />
-          <input type="hidden" name="prospect_id" value={p.id} />
-          <input class="ops-input" name="title" placeholder="Ajouter une tâche…" required />
-          <select class="ops-select" name="assignee">
-            {OWNERS.map((o) => <option value={o}>{OWNER_LABELS[o]}</option>)}
-          </select>
-          <input class="ops-input" type="date" name="due_date" />
-          <button type="submit" class="ops-btn">+</button>
-        </form>
-      </div>
     </div>
 
     <div>
       <div class="ops-card">
-        <h2>Timeline</h2>
+        <h2>Historique</h2>
         <form method="POST" action={`/api/ops/prospects/${p.id}/events`} class="event-form">
           <select class="ops-select" name="type">
             {EVENT_TYPES.filter((t) => t !== 'status_change').map((t) => (
@@ -206,6 +219,69 @@ function fmtDate(iso: string | null): string {
       </div>
     </div>
   </div>
+
+  <!-- Données pour la composition d'email (lues par le script client) -->
+  <div
+    data-cmp-ctx
+    data-prenom={prenom}
+    data-club={p.club_name}
+    data-email={p.email ?? ''}
+    data-compose={composeParam}
+    data-demo-link={p.demo_link ?? ''}
+    data-demo-quand={demoQuand}
+    data-templates={JSON.stringify(templatesForClient)}
+    hidden
+  ></div>
+
+  <!-- Modal: composer un email -->
+  <div class="cmp-modal" data-cmp-modal hidden>
+    <div class="modal-backdrop" data-cmp-close></div>
+    <div class="cmp-card">
+      <div class="cmp-head">
+        <h2 data-cmp-title>Email</h2>
+        <button type="button" class="modal-x" data-cmp-close aria-label="Fermer">×</button>
+      </div>
+      <label class="ops-label cmp-visio" data-cmp-visio-wrap hidden>Lien visio
+        <input class="ops-input" type="url" data-cmp-visio placeholder="https://meet.google.com/…" />
+      </label>
+      <label class="ops-label">Objet
+        <input class="ops-input" data-cmp-subject />
+      </label>
+      <label class="ops-label">Corps
+        <textarea class="ops-textarea cmp-body" data-cmp-body rows="12"></textarea>
+      </label>
+      <div class="cmp-actions">
+        <button type="button" class="ops-btn" data-cmp-copy>Copier</button>
+        <a class="ops-btn ops-btn-primary" data-cmp-outlook target="_blank" rel="noopener">Ouvrir dans Outlook</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: booker une démo -->
+  <div class="cmp-modal" data-booking-modal hidden>
+    <div class="modal-backdrop" data-booking-close></div>
+    <div class="cmp-card">
+      <div class="cmp-head">
+        <h2>Booker une démo</h2>
+        <button type="button" class="modal-x" data-booking-close aria-label="Fermer">×</button>
+      </div>
+      <form method="POST" action="/api/ops/prospects" class="booking-form">
+        <input type="hidden" name="action" value="book_demo" />
+        <input type="hidden" name="id" value={p.id} />
+        <label class="ops-label">Date et heure
+          <input class="ops-input" type="datetime-local" name="demo_at" value={p.demo_at ?? ''} required />
+        </label>
+        <label class="ops-label">Lien visio
+          <input class="ops-input" type="url" name="demo_link" value={p.demo_link ?? ''} placeholder="https://meet.google.com/…" />
+        </label>
+        <p class="booking-hint">Passe le statut en « Démo prévue » et crée un rappel la veille dans « À faire ».</p>
+        <div class="cmp-actions">
+          <button type="button" class="ops-btn" data-booking-close>Annuler</button>
+          <button type="submit" class="ops-btn ops-btn-primary">Booker + rappel J-1</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </OpsLayout>
 
 <style>
@@ -232,6 +308,40 @@ function fmtDate(iso: string | null): string {
   }
   @media (max-width: 900px) {
     .detail-grid { grid-template-columns: 1fr; }
+  }
+
+  .pa-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pa-row, .pa-add {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pa-add { margin-top: 4px; }
+  .pa-date { width: 150px; flex-shrink: 0; }
+  .pa-note { flex: 1; min-width: 0; }
+  .pa-icon { padding: 8px 10px; flex-shrink: 0; }
+  .pa-done { padding: 8px 14px; flex-shrink: 0; }
+  .pa-del {
+    background: none;
+    border: none;
+    color: var(--muted-soft);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 6px;
+    flex-shrink: 0;
+  }
+  .pa-del:hover { color: #DC2626; }
+  @media (max-width: 600px) {
+    .pa-row, .pa-add { flex-wrap: wrap; }
+    .pa-date { width: 100%; }
   }
 
   .form-grid {
@@ -365,4 +475,138 @@ function fmtDate(iso: string | null): string {
   @media (max-width: 600px) {
     .quick-task { grid-template-columns: 1fr; }
   }
+
+  .email-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .inline-form { display: inline; margin: 0; }
+
+  .cmp-modal {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .cmp-modal[hidden] { display: none; }
+  .modal-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(15,42,30,0.45);
+    backdrop-filter: blur(2px);
+  }
+  .cmp-card {
+    position: relative;
+    background: var(--bg);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 620px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.32);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .cmp-head { display: flex; justify-content: space-between; align-items: center; }
+  .cmp-head h2 { font-family: var(--font-serif); font-size: 20px; margin: 0; color: var(--primary); }
+  .modal-x {
+    background: none; border: none;
+    font-size: 24px; line-height: 1;
+    color: var(--muted); cursor: pointer; padding: 4px 8px;
+  }
+  .cmp-body {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 13px; line-height: 1.5; min-height: 220px;
+  }
+  .cmp-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+  .booking-form { display: flex; flex-direction: column; gap: 12px; }
+  .booking-hint { font-size: 13px; color: var(--muted); margin: 0; }
 </style>
+
+<script>
+  import { renderTemplate, outlookComposeUrl } from '../../../lib/email-templates';
+
+  const ctx = document.querySelector('[data-cmp-ctx]');
+  const prenom = ctx?.getAttribute('data-prenom') || '';
+  const club = ctx?.getAttribute('data-club') || '';
+  const email = ctx?.getAttribute('data-email') || '';
+  const composeParam = ctx?.getAttribute('data-compose') || '';
+  const demoLink = ctx?.getAttribute('data-demo-link') || '';
+  const demoQuand = ctx?.getAttribute('data-demo-quand') || '';
+  let templates: Record<string, { subject: string; body: string }> = {};
+  try { templates = JSON.parse(ctx?.getAttribute('data-templates') || '{}'); } catch {}
+
+  const modal = document.querySelector('[data-cmp-modal]');
+  const titleEl = modal?.querySelector('[data-cmp-title]') as HTMLElement | null;
+  const subjectEl = modal?.querySelector('[data-cmp-subject]') as HTMLInputElement | null;
+  const bodyEl = modal?.querySelector('[data-cmp-body]') as HTMLTextAreaElement | null;
+  const visioWrap = modal?.querySelector('[data-cmp-visio-wrap]') as HTMLElement | null;
+  const visioEl = modal?.querySelector('[data-cmp-visio]') as HTMLInputElement | null;
+  const outlookEl = modal?.querySelector('[data-cmp-outlook]') as HTMLAnchorElement | null;
+  const copyEl = modal?.querySelector('[data-cmp-copy]') as HTMLButtonElement | null;
+
+  const LABELS: Record<string, string> = {
+    outreach: 'Mail de démarchage',
+    demo_prospect: 'Mail démo — prospect',
+    demo_pilote: 'Mail démo — pilote',
+    demo_reminder: 'Mail de rappel',
+  };
+  let current: string | null = null;
+
+  function updateOutlook() {
+    if (outlookEl && subjectEl && bodyEl) outlookEl.href = outlookComposeUrl(email, subjectEl.value, bodyEl.value);
+  }
+  function rerender() {
+    if (!current || !templates[current] || !subjectEl || !bodyEl) return;
+    const vars = { prenom, club, lien_visio: visioEl?.value || '', demo_quand: demoQuand };
+    subjectEl.value = renderTemplate(templates[current].subject || '', vars);
+    bodyEl.value = renderTemplate(templates[current].body || '', vars);
+    updateOutlook();
+  }
+  function openCmp(key: string) {
+    if (!templates[key]) { alert('Modèle introuvable — vérifie la page Paramètres.'); return; }
+    current = key;
+    if (titleEl) titleEl.textContent = LABELS[key] || 'Email';
+    const usesVisio = key.startsWith('demo');
+    if (usesVisio) visioWrap?.removeAttribute('hidden');
+    else visioWrap?.setAttribute('hidden', '');
+    if (visioEl) visioEl.value = usesVisio ? demoLink : '';
+    rerender();
+    modal?.removeAttribute('hidden');
+  }
+  function closeCmp() { modal?.setAttribute('hidden', ''); }
+
+  document.querySelectorAll('[data-open-cmp]').forEach((b) =>
+    b.addEventListener('click', () => openCmp(b.getAttribute('data-open-cmp') || ''))
+  );
+  document.querySelectorAll('[data-cmp-close]').forEach((b) => b.addEventListener('click', closeCmp));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCmp(); });
+  visioEl?.addEventListener('input', rerender);
+  subjectEl?.addEventListener('input', updateOutlook);
+  bodyEl?.addEventListener('input', updateOutlook);
+
+  copyEl?.addEventListener('click', async () => {
+    if (!subjectEl || !bodyEl) return;
+    const text = `Objet : ${subjectEl.value}\n\n${bodyEl.value}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      copyEl.textContent = 'Copié';
+      setTimeout(() => { if (copyEl) copyEl.textContent = 'Copier'; }, 1500);
+    } catch { copyEl.textContent = 'Échec copie'; }
+  });
+
+  // Modal "Booker une démo"
+  const bookingModal = document.querySelector('[data-booking-modal]');
+  document.querySelectorAll('[data-open-booking]').forEach((b) =>
+    b.addEventListener('click', () => bookingModal?.removeAttribute('hidden'))
+  );
+  document.querySelectorAll('[data-booking-close]').forEach((b) =>
+    b.addEventListener('click', () => bookingModal?.setAttribute('hidden', ''))
+  );
+
+  // Ouverture auto d'un mail après redirection ?compose=<clé> (ou 'demo' → prospect)
+  if (composeParam === 'demo') openCmp('demo_prospect');
+  else if (composeParam && templates[composeParam]) openCmp(composeParam);
+</script>
