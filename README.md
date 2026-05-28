@@ -1,82 +1,128 @@
 # scluba-site
 
-Marketing site (`scluba.com`) and internal ops dashboard (`scluba.com/ops`).
-Astro + Supabase, deployed on Netlify.
+Scluba — scorecard digitale pour clubs de golf. Ce repo contient le site marketing
+(`scluba.com`), l'expérience scorecard côté golfeur, et le dashboard ops interne
+(`scluba.com/ops`).
+
+**Stack : Astro 6 (SSR) + Supabase + Cloudflare Workers.**
+
+> Hébergement = **Cloudflare Workers** (Workers Builds). Le repo a un historique
+> Netlify : les checks CI Netlify dans les PRs sont des **zombies**, à ignorer.
 
 ## Stack
 
-- Astro 6 (static for the public pages, on-demand SSR for `/ops/*` and `/api/ops/*` via the Netlify adapter)
-- Supabase (auth via magic link + Postgres for the CRM)
-- GSAP for the hero animations
+- **Astro 6.2** — `output: server`, SSR à la demande via `@astrojs/cloudflare`
+- **Supabase** — Postgres + Auth (magic link) + RLS + Storage (`@supabase/ssr`)
+- **Cloudflare Workers** — runtime de prod (`wrangler.toml`, flag `nodejs_compat`)
+- **GSAP + Lenis** — animations hero / recap, smooth scroll
+- **Anthropic SDK** — import automatisé de clubs (`/ops/clubs/import`)
+- **Sentry** (optionnel) — monitoring d'erreurs
+- **Vitest** — tests unitaires
+- i18n `fr` (défaut) / `en`
 
-## Local dev
+## Surfaces
+
+### Public (marketing)
+- `/`, `/en` — landing FR / EN
+- `/demo` — démo interactive
+- `/c/[slug]`, `/[slug]` — page club
+
+### Joueur
+- `/r/[shortCode]/` — lobby (attente des joueurs)
+- `/r/[shortCode]/join` — inscription joueur
+- `/r/[shortCode]/play` — scorecard live (temps réel)
+- `/r/[shortCode]/recap` — récap + leaderboard + share card PNG
+
+### Ops (interne, noindex, login-gated)
+- `/ops` — KPIs (pipeline, MRR théorique, signups, démos) + todo
+- `/ops/prospects` — kanban CRM (8 statuts) + fiche + timeline d'événements
+- `/ops/reseau` — réseau FFGolf (chaînes, ligues, asso pros)
+- `/ops/clubs` — clubs : édition, kit imprimable (`/print`), QR (`/qr`), import (`/import`)
+- `/ops/signups` — leads remontés par le formulaire CTA public
+- `/ops/todo` — todo partagée greg / paul
+
+### API — `/api/*`
+REST joueur (`/api/rounds/[shortCode]/{join,start,finish,claim,scores,comment,players}`)
+et ops (`/api/ops/{clubs,prospects,network,tasks}`).
+
+## Features livrées
+
+- Scorecard **multi-joueurs temps réel** (Supabase realtime), 9 ou 18 trous
+- Modes de scoring `self` (chacun saisit) / `host` (l'organisateur valide)
+- Météo (snapshot Open-Meteo à la création), carte-photo de partie (Storage)
+- 4 sponsors club affichés sur le recap + la share card PNG
+- Kit QR imprimable (2 pages A4, 18 stickers) via `window.print()`
+- CRM ops, réseau FFGolf, import LLM de clubs (scrape + Anthropic)
+
+## Dev local
 
 ```bash
 npm install
-cp .env.example .env       # fill in Supabase keys + the ops allowlist
-npm run dev                # → http://localhost:4321
+cp .env.example .env   # remplir les clés Supabase + l'allowlist ops
+npm run dev            # → http://localhost:4321
 ```
 
-Public pages are at `/`, `/demo`, `/en`, `/variants`. The internal dashboard
-is at `/ops` (login via magic link).
+Scripts : `dev`, `build`, `preview`, `test`, `test:watch`, `test:import`.
 
-## Internal dashboard (`/ops`)
+## Variables d'environnement
 
-Hidden, noindex, login-gated. Authorized emails are whitelisted via the
-`OPS_ALLOWED_EMAILS` env var (comma-separated).
+| Var | Visibilité | Rôle |
+|---|---|---|
+| `PUBLIC_SUPABASE_URL` | public | URL du projet Supabase |
+| `PUBLIC_SUPABASE_ANON_KEY` | public | clé anon Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | **server** | clé service role (dashboard ops, bypass RLS) |
+| `OPS_ALLOWED_EMAILS` | server | emails autorisés `/ops`, séparés par des virgules |
+| `PUBLIC_DEMO_URL` | public | (opt) cible du bouton démo, défaut `/demo` |
+| `ANTHROPIC_API_KEY` | server | (opt) import LLM de clubs |
+| `PUBLIC_SENTRY_DSN` / `SENTRY_DSN` | public / server | (opt) monitoring Sentry |
+| `SENTRY_ENVIRONMENT` | server | (opt) environnement Sentry |
 
-Surfaces:
+## Base de données
 
-- `/ops` — KPIs (pipeline, MRR théorique, signups CTA, démos prévues) + todo en cours
-- `/ops/prospects` — kanban CRM (8 statuts, filtres, recherche, modale "nouveau club")
-- `/ops/prospects/[id]` — fiche club (édition, timeline d'événements, tâches liées)
-- `/ops/todo` — todo partagée greg/paul, filtres par owner, dates d'échéance
-- `/ops/signups` — leads remontés par le formulaire CTA public, conversion en prospect 1-clic
+Migrations dans `supabase/migrations/` (`0001` → `0021`, dernière =
+`0021_club_sponsors.sql`). À appliquer dans l'ordre via le SQL editor Supabase.
+RLS activé (deny-all par défaut ; le dashboard ops passe par le service role).
 
-### First-time setup
+Storage buckets : `club-assets` (logos / photos club), `round-share-photos`
+(photos de partie, compressées 1080×1350 JPEG).
 
-1. **Apply the SQL migration** to your Supabase project (SQL editor):
+## Auth
 
-   Copy/paste `supabase/migrations/0001_ops_schema.sql` and run it.
-   Creates `prospects`, `prospect_events`, `tasks` (RLS denies all by default —
-   the dashboard uses the service role to bypass).
+Magic link uniquement (`signInWithOtp`).
 
-2. **Configure env vars** in Netlify (`Site settings → Environment variables`):
+Flow **ops** (`/ops/login`) :
 
-   | Var | Where | Value |
-   |---|---|---|
-   | `PUBLIC_SUPABASE_URL` | public | Supabase project URL |
-   | `PUBLIC_SUPABASE_ANON_KEY` | public | Supabase anon/public key |
-   | `SUPABASE_SERVICE_ROLE_KEY` | **server-only** | Supabase service role key |
-   | `OPS_ALLOWED_EMAILS` | server-only | `greg@…,paul@…` |
+1. L'utilisateur entre son email
+2. On vérifie qu'il est dans `OPS_ALLOWED_EMAILS` *avant* de demander l'OTP à Supabase
+3. Supabase envoie un magic link → `/ops/auth/callback?code=…`
+4. Le callback échange le code contre un cookie de session (`sb-…`)
+5. Le middleware Astro re-vérifie l'allowlist sur **chaque** requête `/ops/*` (403 sinon)
 
-3. **Configure Supabase Auth redirect URLs** (Supabase dashboard →
-   Authentication → URL Configuration):
+Config Supabase (Authentication → URL Configuration) :
+- Site URL : `https://scluba.com`
+- Redirect allowlist : `https://scluba.com/ops/auth/callback` +
+  `http://localhost:4321/ops/auth/callback` (dev local)
 
-   - Site URL: `https://scluba.com`
-   - Add to redirect allowlist: `https://scluba.com/ops/auth/callback`
-     and `http://localhost:4321/ops/auth/callback` for local dev.
+## Déploiement (Cloudflare Workers)
 
-4. **Deploy**: push to `main` → Netlify auto-builds with the SSR adapter.
+**Le déploiement est automatique : Cloudflare Workers Builds rebuild et déploie la
+prod à chaque merge sur `main`** (la CI a les secrets `PUBLIC_*` / service role).
 
-### Auth flow
+⚠️ **Ne jamais lancer `npm run build` en local pour déployer.** Sans `.env`, les
+`PUBLIC_*` sont inlinées à `undefined` dans le bundle → prod cassée. Le build de
+prod passe obligatoirement par la CI Cloudflare.
 
-1. User goes to `/ops/login`, enters email
-2. We check the email is in `OPS_ALLOWED_EMAILS` *before* asking Supabase for an OTP
-3. Supabase emails a magic link → click → `/ops/auth/callback?code=…`
-4. Callback exchanges the code for a session cookie (`sb-…`)
-5. Astro middleware re-checks the allowlist on every `/ops/*` request — even if
-   someone else's email got into auth.users, they'll get a 403
+Config : `wrangler.toml` (`compatibility_date`, `nodejs_compat`). Le build Astro
+produit `dist/server/wrangler.json`. Le namespace KV `SESSION` est à créer
+manuellement dans le dashboard Cloudflare.
 
-## Public CTA form
+## Roadmap
 
-The form on the homepage writes to the existing `leads` table in Supabase
-(direct REST POST from the browser, anon key). Leads show up in `/ops/signups`
-where they can be promoted to a CRM prospect in one click.
+Pistes à venir (auth OAuth/OTP, app mobile/PWA, dashboard stats club, timer de
+partie, tracés / carnet de parcours, avis fin de partie, commentaire jardinier,
+balle connectée) : voir la section **Roadmap** du `CLAUDE.md` à la racine du projet.
 
-## Build / preview
+## Sécurité
 
-```bash
-npm run build              # → dist/ + .netlify/functions-internal/
-npm run preview            # serve the build locally
-```
+Voir `SECURITY.md` (CSP, CSRF, RLS, rate-limit, magic link, Sentry) — politique de
+rapport de vulnérabilités incluse.
