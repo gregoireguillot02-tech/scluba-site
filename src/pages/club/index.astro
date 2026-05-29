@@ -2,19 +2,108 @@
 export const prerender = false;
 import ClubLayout from '../../layouts/ClubLayout.astro';
 import { serviceClient } from '../../lib/supabase';
+
 const membership = Astro.locals.clubMembership!;
 const sb = serviceClient();
+
 const { data: club } = await sb.from('clubs').select('name').eq('id', membership.clubId).maybeSingle();
+
+// Agrégats du club (mêmes calculs que la fiche /ops).
+const now = new Date();
+const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
+const startOfWeek = new Date(now); startOfWeek.setDate(startOfWeek.getDate() - 7);
+const startOfMonth = new Date(now); startOfMonth.setDate(startOfMonth.getDate() - 30);
+
+const { data: rounds } = await sb
+  .from('rounds')
+  .select('id, status, created_at')
+  .eq('club_id', membership.clubId)
+  .order('created_at', { ascending: false });
+const allRounds = rounds ?? [];
+const roundIds = allRounds.map((r) => r.id);
+const { data: roster } = await sb
+  .from('round_players')
+  .select('display_name')
+  .in('round_id', roundIds);
+const allPlayers = roster ?? [];
+
+const roundsToday = allRounds.filter((r) => new Date(r.created_at) >= startOfDay).length;
+const roundsWeek = allRounds.filter((r) => new Date(r.created_at) >= startOfWeek).length;
+const roundsMonth = allRounds.filter((r) => new Date(r.created_at) >= startOfMonth).length;
+const totalRounds = allRounds.length;
+const finishedRounds = allRounds.filter((r) => r.status === 'finished').length;
+const uniquePlayers = new Set(allPlayers.map((p) => p.display_name.toLowerCase().trim())).size;
+
 const { count: openReports } = await sb
   .from('course_reports')
   .select('id', { count: 'exact', head: true })
   .eq('club_id', membership.clubId)
   .eq('status', 'nouveau');
+const openCount = openReports ?? 0;
 ---
-<ClubLayout title="Tableau de bord">
-  <h1>{club?.name ?? 'Votre club'}</h1>
-  <p>
-    <a href="/club/signalements" style="color:#D4A574"><strong>{openReports ?? 0}</strong> signalement(s) à traiter →</a>
-  </p>
-  <p style="color:#6b7280">Les statistiques arriveront bientôt ici.</p>
+<ClubLayout title="Tableau de bord" active="dashboard">
+  <div class="ops-page-header">
+    <div>
+      <h1 class="ops-page-title">{club?.name ?? 'Votre club'}</h1>
+      <p class="ops-page-subtitle">Activité du parcours</p>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <a href="/club/signalements" class="ops-kpi ops-kpi-coral kpi-link">
+      <div class="ops-kpi-main">
+        <div class="ops-kpi-label">Signalements à traiter</div>
+        <div class="ops-kpi-value">{openCount}</div>
+        <div class="ops-kpi-sub">souci(s) sur le parcours</div>
+      </div>
+    </a>
+    <div class="ops-kpi ops-kpi-blue">
+      <div class="ops-kpi-main">
+        <div class="ops-kpi-label">Parties aujourd'hui</div>
+        <div class="ops-kpi-value">{roundsToday}</div>
+        <div class="ops-kpi-sub">depuis minuit</div>
+      </div>
+    </div>
+    <div class="ops-kpi ops-kpi-emerald">
+      <div class="ops-kpi-main">
+        <div class="ops-kpi-label">7 derniers jours</div>
+        <div class="ops-kpi-value">{roundsWeek}</div>
+        <div class="ops-kpi-sub">parties jouées</div>
+      </div>
+    </div>
+    <div class="ops-kpi ops-kpi-violet">
+      <div class="ops-kpi-main">
+        <div class="ops-kpi-label">30 derniers jours</div>
+        <div class="ops-kpi-value">{roundsMonth}</div>
+        <div class="ops-kpi-sub">parties jouées</div>
+      </div>
+    </div>
+    <div class="ops-kpi ops-kpi-amber">
+      <div class="ops-kpi-main">
+        <div class="ops-kpi-label">Total parties</div>
+        <div class="ops-kpi-value">{totalRounds}</div>
+        <div class="ops-kpi-sub">dont {finishedRounds} terminée{finishedRounds > 1 ? 's' : ''}</div>
+      </div>
+    </div>
+    <div class="ops-kpi ops-kpi-magenta">
+      <div class="ops-kpi-main">
+        <div class="ops-kpi-label">Joueurs uniques</div>
+        <div class="ops-kpi-value">{uniquePlayers}</div>
+        <div class="ops-kpi-sub">par prénom</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="dash-note">Les tracés, avis de fin de partie et autres statistiques arriveront ici.</p>
 </ClubLayout>
+
+<style>
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .kpi-link { text-decoration: none; }
+  .dash-note { color: var(--muted); font-size: 13px; }
+</style>
