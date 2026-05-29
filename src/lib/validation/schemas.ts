@@ -34,6 +34,17 @@ export const uuidSchema = z.string().uuid('identifiant invalide');
 export const holeSchema = z.coerce.number().int().min(1).max(18);
 export const strokesSchema = z.coerce.number().int().min(1).max(20);
 
+// Signalement de souci parcours par un golfeur (Portail Club).
+export const reportCategorySchema = z.enum([
+  'bunker', 'green', 'fairway', 'rough', 'equipement', 'autre',
+]);
+
+export const courseReportSchema = z.object({
+  hole_number: z.coerce.number().int().min(1).max(18),
+  category: reportCategorySchema,
+  comment: z.string().trim().max(200, 'commentaire trop long (200 max)').optional().default(''),
+});
+
 // Bots that auto-fill every field will put something here; humans never see
 // the input. Server: any non-empty value → reject.
 export const honeypotSchema = z.string().max(0, 'spam_detected').optional();
