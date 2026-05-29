@@ -1,0 +1,132 @@
+---
+export const prerender = false;
+import ClubLayout from '../../layouts/ClubLayout.astro';
+import { serviceClient } from '../../lib/supabase';
+
+const membership = Astro.locals.clubMembership!;
+const url = Astro.url;
+const fCategory = url.searchParams.get('category') ?? '';
+const fStatus = url.searchParams.get('status') ?? '';
+const fHole = url.searchParams.get('hole') ?? '';
+
+const sb = serviceClient();
+let q = sb
+  .from('course_reports')
+  .select('id, hole_number, category, comment, status, created_at')
+  .eq('club_id', membership.clubId)
+  .order('status', { ascending: true }) // 'nouveau' avant 'traite'
+  .order('created_at', { ascending: false });
+if (fCategory) q = q.eq('category', fCategory);
+if (fStatus) q = q.eq('status', fStatus);
+if (fHole) q = q.eq('hole_number', Number(fHole));
+const { data: reports } = await q;
+
+const CATS = ['bunker', 'green', 'fairway', 'rough', 'equipement', 'autre'];
+---
+<ClubLayout title="Signalements">
+  <h1>Signalements parcours</h1>
+  <form method="get" class="filters">
+    <select name="status">
+      <option value="">Tous statuts</option>
+      <option value="nouveau" selected={fStatus === 'nouveau'}>À traiter</option>
+      <option value="traite" selected={fStatus === 'traite'}>Traités</option>
+    </select>
+    <select name="category">
+      <option value="">Toutes catégories</option>
+      {CATS.map((c) => <option value={c} selected={fCategory === c}>{c}</option>)}
+    </select>
+    <input name="hole" type="number" min="1" max="18" placeholder="Trou" value={fHole} />
+    <button type="submit">Filtrer</button>
+  </form>
+
+  {(!reports || reports.length === 0) && <p class="empty">Aucun signalement.</p>}
+
+  <ul class="report-list">
+    {reports?.map((r) => (
+      <li class:list={['report-item', { resolved: r.status === 'traite' }]}>
+        <div class="report-body">
+          <strong>Trou {r.hole_number}</strong> — {r.category}
+          {r.comment && <p class="report-comment">{r.comment}</p>}
+          <small class="report-date">{new Date(r.created_at).toLocaleString('fr-FR')}</small>
+        </div>
+        {r.status === 'nouveau' && (
+          <button type="button" class="resolve-btn" data-id={r.id}>Marquer traité</button>
+        )}
+        {r.status === 'traite' && <span class="resolved-tag">✔ traité</span>}
+      </li>
+    ))}
+  </ul>
+
+  <script>
+    document.querySelectorAll<HTMLButtonElement>('.resolve-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        btn.disabled = true;
+        const res = await fetch(`/api/club/reports/${id}/resolve`, { method: 'POST' });
+        if (res.ok) {
+          location.reload();
+        } else {
+          btn.disabled = false;
+          alert('Échec, réessayez.');
+        }
+      });
+    });
+  </script>
+</ClubLayout>
+
+<style>
+  .filters {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  .filters select,
+  .filters input,
+  .filters button {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font: inherit;
+  }
+  .filters input[type='number'] { width: 90px; }
+  .filters button {
+    background: #1B4332;
+    color: #fff;
+    border-color: #1B4332;
+    cursor: pointer;
+  }
+  .empty { color: #6b7280; }
+  .report-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .report-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  .report-item.resolved { opacity: 0.55; }
+  .report-body strong { color: #1B4332; }
+  .report-comment { margin: 0.25rem 0 0; }
+  .report-date { color: #6b7280; }
+  .resolve-btn {
+    flex: none;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid #1B4332;
+    background: #1B4332;
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font: inherit;
+  }
+  .resolve-btn:disabled { opacity: 0.5; cursor: default; }
+  .resolved-tag { color: #16a34a; flex: none; }
+</style>
