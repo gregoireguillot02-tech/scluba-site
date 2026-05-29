@@ -150,11 +150,18 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return applySecurityHeaders(context.redirect(`/auth/login?next=${next_}`, 302), pathname);
     }
     const sb = serviceClient();
-    const { data: membership } = await sb
+    // limit(1) + order : tolère un compte rattaché à plusieurs clubs (la
+    // contrainte est unique(user_id, club_id), pas unique(user_id)) sans que
+    // maybeSingle ne jette une erreur silencieuse → plus de lockout. On prend
+    // la membership la plus ancienne de façon déterministe (mono-club = pilote).
+    const { data: membershipRows, error: membershipErr } = await sb
       .from('club_users')
       .select('club_id, role')
       .eq('user_id', user.id)
-      .maybeSingle();
+      .order('created_at', { ascending: true })
+      .limit(1);
+    if (membershipErr) console.error('[middleware] club_users lookup failed', membershipErr);
+    const membership = membershipRows?.[0] ?? null;
     if (!membership) {
       const msg = isClubApi ? 'Forbidden' : 'Accès club non autorisé pour ce compte.';
       return applySecurityHeaders(new Response(msg, { status: 403 }), pathname);

@@ -22,7 +22,9 @@ const path = Astro.url.pathname;
         {showDashboard && <a href="/club" aria-current={path === '/club' ? 'page' : undefined} style="color:#1B4332">Tableau de bord</a>}
         <a href="/club/signalements" aria-current={path.startsWith('/club/signalements') ? 'page' : undefined} style="color:#1B4332">Signalements</a>
       </nav>
-      <a href="/auth/signout" style="margin-left:auto;color:#D4A574">Déconnexion</a>
+      <form action="/auth/signout" method="post" style="margin:0;margin-left:auto">
+        <button type="submit" style="background:none;border:none;padding:0;font:inherit;color:#D4A574;cursor:pointer">Déconnexion</button>
+      </form>
     </header>
     <main style="max-width:960px;margin:0 auto;padding:1.5rem">
       <slot />
