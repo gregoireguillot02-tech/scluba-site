@@ -36,6 +36,20 @@ export const STATUS_COLORS: Record<ProspectStatus, string> = {
 export const OWNERS = ['greg', 'paul', 'shared'] as const;
 export type Owner = (typeof OWNERS)[number];
 
+// Type d'exploitation du golf (prospection à froid).
+export const CLUB_TYPES = ['ugolf', 'bluegreen', 'resort', 'independant', 'municipal', 'associatif', 'autre'] as const;
+export type ClubType = (typeof CLUB_TYPES)[number];
+
+export const CLUB_TYPE_LABELS: Record<ClubType, string> = {
+  ugolf: 'UGolf',
+  bluegreen: 'Bluegreen',
+  resort: 'Resort',
+  independant: 'Indépendant',
+  municipal: 'Municipal',
+  associatif: 'Associatif',
+  autre: 'Autre',
+};
+
 export const OWNER_LABELS: Record<Owner, string> = {
   greg: 'Grégoire',
   paul: 'Paul',
@@ -71,6 +85,7 @@ export interface Prospect {
   club_name: string;
   contact_name: string | null;
   contact_role: string | null;
+  club_type: string | null;
   email: string | null;
   phone: string | null;
   city: string | null;

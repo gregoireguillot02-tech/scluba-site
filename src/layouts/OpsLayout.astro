@@ -4,7 +4,7 @@ import OpsIcon from '../components/ops/OpsIcon.astro';
 
 interface Props {
   title: string;
-  active?: 'home' | 'calendrier' | 'prospects' | 'reseau' | 'clubs' | 'todo' | 'signups' | 'stats' | 'parametres';
+  active?: 'home' | 'calendrier' | 'prospects' | 'reseau' | 'appels' | 'clubs' | 'todo' | 'signups' | 'stats' | 'parametres';
 }
 
 const { title, active } = Astro.props;
@@ -17,6 +17,7 @@ const navGroups = [
       { id: 'home', label: 'Todo commerciale', href: '/ops', icon: 'inbox' },
       { id: 'todo', label: 'Todo générale', href: '/ops/todo', icon: 'check-square' },
       { id: 'calendrier', label: 'Calendrier', href: '/ops/calendrier', icon: 'calendar' },
+      { id: 'appels', label: "Liste d'appel", href: '/ops/appels', icon: 'phone' },
       { id: 'prospects', label: 'Prospection clubs', href: '/ops/prospects', icon: 'flag' },
       { id: 'reseau', label: 'Prospection réseau', href: '/ops/reseau', icon: 'share' },
     ],

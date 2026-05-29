@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { serviceClient, isAllowedEmail } from '../../../lib/supabase';
 import { PROSPECT_STATUSES, OWNERS, type ProspectStatus, type Owner } from '../../../lib/ops-types';
 import { uuidSchema } from '../../../lib/validation/schemas';
+import { safeNextPath } from '../../../lib/safe-redirect';
 
 export const prerender = false;
 
@@ -44,23 +45,24 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       if (!PROSPECT_STATUSES.includes(status)) return new Response('bad status', { status: 400 });
       if (!OWNERS.includes(owner)) return new Response('bad owner', { status: 400 });
 
-      const { data, error } = await sb
-        .from('prospects')
-        .insert({
-          club_name,
-          contact_name: nullable(form.get('contact_name'), 255),
-          contact_role: nullable(form.get('contact_role'), 120),
-          email: nullable(form.get('email'), 320),
-          phone: nullable(form.get('phone'), 64),
-          city: nullable(form.get('city'), 120),
-          region: nullable(form.get('region'), 120),
-          status,
-          owner,
-          source: nullable(form.get('source'), 255),
-          notes: nullable(form.get('notes'), 4000),
-        })
-        .select('id')
-        .single();
+      const insertData: Record<string, unknown> = {
+        club_name,
+        contact_name: nullable(form.get('contact_name'), 255),
+        contact_role: nullable(form.get('contact_role'), 120),
+        email: nullable(form.get('email'), 320),
+        phone: nullable(form.get('phone'), 64),
+        city: nullable(form.get('city'), 120),
+        region: nullable(form.get('region'), 120),
+        status,
+        owner,
+        source: nullable(form.get('source'), 255),
+        notes: nullable(form.get('notes'), 4000),
+      };
+      // club_type seulement si le formulaire l'envoie : la création kanban ne
+      // l'envoie pas → insert sans la colonne (compatible avant migration 0028).
+      if (form.get('club_type') !== null) insertData.club_type = nullable(form.get('club_type'), 40);
+
+      const { data, error } = await sb.from('prospects').insert(insertData).select('id').single();
       if (error) {
         console.error('[api/ops/prospects] create failed', error);
         return new Response('Create failed', { status: 500 });
@@ -73,7 +75,11 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
         author: user.email,
       });
 
-      return redirect(`/ops/prospects/${data.id}`, 302);
+      // Saisie rapide depuis la liste d'appel : rester sur la liste plutôt que
+      // d'ouvrir la fiche. `next` validé comme chemin interne sûr.
+      const next = nullable(form.get('next'), 200);
+      const dest = next ? safeNextPath(next, `/ops/prospects/${data.id}`) : `/ops/prospects/${data.id}`;
+      return redirect(dest, 302);
     }
 
     if (action === 'update') {
@@ -106,7 +112,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
 
       const { data: prev } = await sb.from('prospects').select('status').eq('id', id).maybeSingle();
 
-      const updates = {
+      const updates: Record<string, unknown> = {
         club_name,
         contact_name: nullable(form.get('contact_name'), 255),
         contact_role: nullable(form.get('contact_role'), 120),
@@ -119,6 +125,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
         source: nullable(form.get('source'), 255),
         notes: nullable(form.get('notes'), 4000),
       };
+      if (form.get('club_type') !== null) updates.club_type = nullable(form.get('club_type'), 40);
 
       const { error } = await sb.from('prospects').update(updates).eq('id', id);
       if (error) {

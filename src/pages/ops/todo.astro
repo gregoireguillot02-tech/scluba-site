@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import OpsLayout from '../../layouts/OpsLayout.astro';
+import OpsIcon from '../../components/ops/OpsIcon.astro';
 import { serviceClient } from '../../lib/supabase';
 import {
   OWNERS,
@@ -122,12 +123,30 @@ const columns: { status: TaskStatus; items: TaskWithClub[]; total: number }[] = 
                       <button type="submit" class="kanban-arrow" aria-label="Avancer">→</button>
                     </form>
                   )}
+                  <button type="button" class="kanban-edit-btn" data-edit-toggle aria-label="Modifier la tâche">
+                    <OpsIcon name="pencil" size={15} />
+                  </button>
                   <form method="POST" action="/api/ops/tasks" style="display:inline">
                     <input type="hidden" name="action" value="delete" />
                     <input type="hidden" name="id" value={t.id} />
                     <button type="submit" class="kanban-delete" aria-label="Supprimer" onclick="return confirm('Supprimer cette tâche ?')">×</button>
                   </form>
                 </div>
+                <form method="POST" action="/api/ops/tasks" class="kanban-edit" hidden>
+                  <input type="hidden" name="action" value="update" />
+                  <input type="hidden" name="id" value={t.id} />
+                  <input class="ops-input kanban-edit-title" name="title" value={t.title} required maxlength="500" />
+                  <div class="kanban-edit-row">
+                    <select class="ops-select" name="assignee">
+                      {OWNERS.map((o) => <option value={o} selected={o === t.assignee}>{OWNER_LABELS[o]}</option>)}
+                    </select>
+                    <input class="ops-input" type="date" name="due_date" value={t.due_date ? t.due_date.slice(0, 10) : ''} />
+                  </div>
+                  <div class="kanban-edit-actions">
+                    <button type="button" class="ops-btn ops-btn-ghost" data-edit-cancel>Annuler</button>
+                    <button type="submit" class="ops-btn ops-btn-primary">Enregistrer</button>
+                  </div>
+                </form>
               </li>
             ))}
           </ul>
@@ -230,6 +249,29 @@ const columns: { status: TaskStatus; items: TaskWithClub[]; total: number }[] = 
       });
     });
   }
+
+  document.querySelectorAll('[data-edit-toggle]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const card = btn.closest('.kanban-card') as HTMLElement | null;
+      const form = card?.querySelector('.kanban-edit') as HTMLElement | null;
+      if (!card || !form) return;
+      if (form.hasAttribute('hidden')) {
+        form.removeAttribute('hidden');
+        card.setAttribute('draggable', 'false');
+        (form.querySelector('input[name="title"]') as HTMLInputElement | null)?.focus();
+      } else {
+        form.setAttribute('hidden', '');
+        card.setAttribute('draggable', 'true');
+      }
+    });
+  });
+  document.querySelectorAll('[data-edit-cancel]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const card = btn.closest('.kanban-card');
+      btn.closest('.kanban-edit')?.setAttribute('hidden', '');
+      card?.setAttribute('draggable', 'true');
+    });
+  });
 </script>
 
 <style>
@@ -448,11 +490,43 @@ const columns: { status: TaskStatus; items: TaskWithClub[]; total: number }[] = 
   }
 
   /* Mobile / tablette : retour des flèches + barre d'actions en bas */
+  .kanban-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--muted-soft);
+    cursor: pointer;
+    padding: 0 3px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+  }
+  .kanban-card:hover .kanban-edit-btn { opacity: 1; }
+  .kanban-edit-btn:hover { color: var(--primary); }
+
+  .kanban-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 9px;
+    padding-top: 9px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .kanban-edit-row { display: flex; gap: 6px; }
+  .kanban-edit-row .ops-select { flex: 1; min-width: 0; }
+  .kanban-edit-row .ops-input { width: 130px; }
+  .kanban-edit .ops-input, .kanban-edit .ops-select { font-size: 13px; padding: 6px 9px; }
+  .kanban-edit-actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .kanban-edit-actions .ops-btn { padding: 6px 12px; font-size: 13px; }
+
   @media (max-width: 900px) {
     .kanban-card { cursor: default; }
     .kanban-card-main { padding-right: 0; }
     .kanban-arrow { display: inline-flex; }
     .kanban-delete { opacity: 1; padding: 2px 8px; }
+    .kanban-edit-btn { opacity: 1; }
     .kanban-card-actions {
       position: static;
       justify-content: flex-end;

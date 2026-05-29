@@ -3,7 +3,7 @@ export const prerender = false;
 
 import OpsLayout from '../../layouts/OpsLayout.astro';
 import { serviceClient } from '../../lib/supabase';
-import { EMAIL_TEMPLATE_KEYS, type EmailTemplate } from '../../lib/email-templates';
+import { EMAIL_TEMPLATE_KEYS, EMAIL_TEMPLATE_LABELS, type EmailTemplate } from '../../lib/email-templates';
 
 const sb = serviceClient();
 const { data } = await sb.from('email_templates').select('*');
@@ -24,8 +24,8 @@ const ordered = EMAIL_TEMPLATE_KEYS
 
   <div class="ops-card hint">
     <strong>Placeholders disponibles</strong> — remplis automatiquement depuis la fiche prospect :
-    <code>{'{{prenom}}'}</code> <code>{'{{club}}'}</code> <code>{'{{lien_visio}}'}</code>
-    <span class="hint-note">(<code>{'{{lien_visio}}'}</code> se remplit au moment d'écrire le mail de démo)</span>
+    <code>{'{{prenom}}'}</code> <code>{'{{club}}'}</code> <code>{'{{lien_visio}}'}</code> <code>{'{{jour}}'}</code> <code>{'{{heure}}'}</code>
+    <span class="hint-note">(<code>{'{{jour}}'}</code>, <code>{'{{heure}}'}</code> et <code>{'{{lien_visio}}'}</code> se remplissent depuis la date/heure de démo de la fiche prospect)</span>
   </div>
 
   {ordered.length === 0 ? (
@@ -38,7 +38,7 @@ const ordered = EMAIL_TEMPLATE_KEYS
         <form method="POST" action="/api/ops/email-templates" class="ops-card tpl-form">
           <input type="hidden" name="action" value="save" />
           <input type="hidden" name="key" value={t.key} />
-          <h2>{t.name}</h2>
+          <h2>{EMAIL_TEMPLATE_LABELS[t.key]}</h2>
           <label class="ops-label">Objet
             <input class="ops-input" name="subject" value={t.subject} maxlength="300" />
           </label>
