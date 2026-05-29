@@ -109,7 +109,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // `/clubhouse`. La zone club = exactement /club, /club/* et /api/club/*.
   const isClubPage = pathname === '/club' || pathname.startsWith('/club/');
   const isClubApi = pathname.startsWith('/api/club/');
-  const isClubJoin = pathname === '/club/join';
 
   // Pages outside the auth/ops/club zones don't need the supabase client
   // populated, but they still need security headers applied to the response.
@@ -135,13 +134,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return applySecurityHeaders(response, pathname);
   }
 
-  // --- Zone Portail Club (séparée de /ops : membership club, pas allowlist) ---
+  // --- Zone Portail Club : accès par allowlist d'emails (table club_members,
+  // pré-autorisée depuis /ops). Pas de lien-secret : l'email connecté fait foi.
   if (isClubPage || isClubApi) {
-    // /club/join est public : la page consomme elle-même le token + magic-link.
-    if (isClubJoin) {
-      const response = await next();
-      return applySecurityHeaders(response, pathname);
-    }
     if (!user) {
       if (isClubApi) {
         return applySecurityHeaders(new Response('Unauthorized', { status: 401 }), pathname);
@@ -150,21 +145,38 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return applySecurityHeaders(context.redirect(`/auth/login?next=${next_}`, 302), pathname);
     }
     const sb = serviceClient();
-    // limit(1) + order : tolère un compte rattaché à plusieurs clubs (la
-    // contrainte est unique(user_id, club_id), pas unique(user_id)) sans que
-    // maybeSingle ne jette une erreur silencieuse → plus de lockout. On prend
-    // la membership la plus ancienne de façon déterministe (mono-club = pilote).
+    // Accès = l'email connecté est dans l'allowlist. limit(1) + order : si
+    // l'email est rattaché à plusieurs clubs (multi-parcours), on prend le plus
+    // ancien de façon déterministe, sans que maybeSingle ne jette d'erreur
+    // silencieuse (mono-club = pilote).
+    const email = (user.email ?? '').toLowerCase();
     const { data: membershipRows, error: membershipErr } = await sb
-      .from('club_users')
+      .from('club_members')
       .select('club_id, role')
-      .eq('user_id', user.id)
+      .eq('email', email)
       .order('created_at', { ascending: true })
       .limit(1);
-    if (membershipErr) console.error('[middleware] club_users lookup failed', membershipErr);
+    if (membershipErr) console.error('[middleware] club_members lookup failed', membershipErr);
     const membership = membershipRows?.[0] ?? null;
     if (!membership) {
-      const msg = isClubApi ? 'Forbidden' : 'Accès club non autorisé pour ce compte.';
-      return applySecurityHeaders(new Response(msg, { status: 403 }), pathname);
+      if (isClubApi) {
+        return applySecurityHeaders(new Response('Forbidden', { status: 403 }), pathname);
+      }
+      return applySecurityHeaders(
+        new Response(
+          `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Accès club</title></head>` +
+            `<body style="font-family:system-ui;max-width:520px;margin:80px auto;padding:0 20px;color:#1B4332">` +
+            `<h1>Accès non autorisé</h1>` +
+            `<p>Le compte <b>${escapeHtml(user.email ?? '')}</b> n'est pas rattaché à un club.</p>` +
+            `<p>Demandez à Scluba d'ajouter cet email aux accès de votre club.</p>` +
+            `<form action="/auth/signout" method="post" style="margin:0">` +
+            `<button type="submit" style="background:none;border:none;padding:0;color:#D4A574;cursor:pointer;font:inherit;text-decoration:underline">Se déconnecter</button>` +
+            `</form>` +
+            `</body></html>`,
+          { status: 403, headers: { 'Content-Type': 'text/html; charset=utf-8' } },
+        ),
+        pathname,
+      );
     }
     context.locals.clubMembership = { clubId: membership.club_id, role: membership.role };
 

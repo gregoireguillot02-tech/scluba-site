@@ -14,7 +14,15 @@ if (!club) {
 }
 const c = club as Club & { prospect: { id: string; club_name: string } | null };
 
+// Accès portail club : allowlist d'emails (table club_members).
+const { data: clubMembers } = await sb
+  .from('club_members')
+  .select('id, email, role')
+  .eq('club_id', c.id)
+  .order('created_at', { ascending: true });
+
 const url = new URL(Astro.request.url);
+const portalUrl = `${url.origin}/club`;
 const justSaved = url.searchParams.get('ok') === '1';
 const errMsg = url.searchParams.get('err');
 
@@ -415,18 +423,29 @@ function fmtRelative(iso: string | null): string {
       <div class="ops-card" style="margin-top:16px">
         <h2>Accès portail club</h2>
         <p class="ops-hint" style="margin: 0 0 12px">
-          Génère un lien d'invitation à envoyer au club. À l'ouverture, la personne crée son accès au portail (lien valable 7 jours, usage unique). « Jardinier » ne voit que les signalements du parcours.
+          Autorisez un email à accéder au portail. La personne se connecte sur <code>{portalUrl}</code> avec cet email (lien magique, sans mot de passe). « Jardinier » ne voit que les signalements.
         </p>
-        <div class="invite-row">
-          <label class="ops-label" style="margin:0">Rôle
-            <select class="ops-input" id="invite-role">
-              <option value="admin">Admin (voit tout)</option>
-              <option value="greenkeeper">Jardinier (signalements)</option>
-            </select>
-          </label>
-          <button type="button" class="ops-btn ops-btn-primary" id="gen-invite" data-club-id={c.id}>Générer un lien</button>
+
+        <ul class="member-list">
+          {(clubMembers ?? []).map((m) => (
+            <li class="member-row">
+              <span class="member-email">{m.email}</span>
+              <span class="member-role">{m.role === 'admin' ? 'Admin' : 'Jardinier'}</span>
+              <button type="button" class="ops-btn member-remove" data-remove-id={m.id}>Retirer</button>
+            </li>
+          ))}
+          {(clubMembers ?? []).length === 0 && <li class="member-empty">Aucun accès pour l'instant.</li>}
+        </ul>
+
+        <div class="member-add">
+          <input class="ops-input" type="email" id="member-email" placeholder="email@club.com" />
+          <select class="ops-input" id="member-role">
+            <option value="admin">Admin</option>
+            <option value="greenkeeper">Jardinier</option>
+          </select>
+          <button type="button" class="ops-btn ops-btn-primary" id="member-add-btn" data-club-id={c.id}>Ajouter</button>
         </div>
-        <output id="invite-out" class="invite-out"></output>
+        <output id="member-msg" class="member-msg"></output>
       </div>
     </div>
   </div>
@@ -552,39 +571,46 @@ function fmtRelative(iso: string | null): string {
 </script>
 
 <script is:inline>
-  // Génère un lien d'invitation portail club et l'affiche pour copie.
-  (function setupClubInvite() {
-    const btn = document.getElementById('gen-invite');
-    if (!btn) return;
-    const out = document.getElementById('invite-out');
-    const roleSel = document.getElementById('invite-role');
-    btn.addEventListener('click', async () => {
-      const clubId = btn.getAttribute('data-club-id');
-      btn.disabled = true;
-      out.textContent = 'Génération…';
+  // Gestion de l'allowlist d'emails du portail club (ajout / retrait).
+  (function setupClubMembers() {
+    const addBtn = document.getElementById('member-add-btn');
+    if (!addBtn) return;
+    const emailInput = document.getElementById('member-email');
+    const roleSel = document.getElementById('member-role');
+    const msg = document.getElementById('member-msg');
+
+    addBtn.addEventListener('click', async () => {
+      const email = emailInput.value.trim();
+      if (!email) { msg.textContent = 'Entrez un email.'; return; }
+      addBtn.disabled = true;
+      msg.textContent = 'Ajout…';
       try {
-        const res = await fetch('/api/ops/club-invites', {
+        const res = await fetch('/api/ops/club-members', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ club_id: clubId, role: roleSel.value }),
+          body: JSON.stringify({ club_id: addBtn.getAttribute('data-club-id'), email, role: roleSel.value }),
         });
-        if (res.ok) {
-          const data = await res.json();
-          out.innerHTML = '';
-          const input = document.createElement('input');
-          input.className = 'ops-input';
-          input.readOnly = true;
-          input.value = data.url;
-          input.addEventListener('focus', () => input.select());
-          out.appendChild(input);
-        } else {
-          out.textContent = 'Erreur : ' + (await res.text());
-        }
+        if (res.ok) { location.reload(); }
+        else { msg.textContent = 'Erreur : ' + (await res.text()); addBtn.disabled = false; }
       } catch (e) {
-        out.textContent = 'Erreur réseau, réessayez.';
-      } finally {
-        btn.disabled = false;
+        msg.textContent = 'Erreur réseau, réessayez.'; addBtn.disabled = false;
       }
+    });
+
+    document.querySelectorAll('.member-remove').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Retirer cet accès au portail ?')) return;
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/ops/club-members', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: btn.getAttribute('data-remove-id') }),
+          });
+          if (res.ok) { location.reload(); }
+          else { alert('Erreur, réessayez.'); btn.disabled = false; }
+        } catch (e) { alert('Erreur réseau, réessayez.'); btn.disabled = false; }
+      });
     });
   })();
 </script>
@@ -940,13 +966,17 @@ function fmtRelative(iso: string | null): string {
   .sponsor-delete-form { margin: 0; }
 
   /* Accès portail club */
-  .invite-row {
-    display: flex;
-    gap: 10px;
-    align-items: flex-end;
-    flex-wrap: wrap;
+  .member-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .member-row { display: flex; align-items: center; gap: 8px; }
+  .member-email { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+  .member-role {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 2px 6px; border-radius: 6px; background: var(--line-soft); color: var(--muted);
   }
-  .invite-row .ops-label { flex: 1; min-width: 140px; }
-  .invite-out { display: block; margin-top: 10px; }
-  .invite-out input { width: 100%; font-size: 12px; }
+  .member-empty { color: var(--muted); font-size: 13px; }
+  .member-add { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .member-add .ops-input[type="email"] { flex: 1; min-width: 160px; }
+  .member-add select { width: auto; }
+  .member-remove { font-size: 12px; padding: 4px 10px; }
+  .member-msg { display: block; margin-top: 8px; font-size: 12px; color: var(--muted); }
 </style>
