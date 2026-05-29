@@ -149,6 +149,22 @@ const recent = rounds.slice(0, 15);
           </table>
         </div>
       </div>
+
+      <div class="ops-card danger-zone">
+        <div>
+          <strong>Réinitialiser les stats de ce club</strong>
+          <p>Supprime définitivement les {total} partie{total > 1 ? 's' : ''} et tous les scores associés. Irréversible.</p>
+        </div>
+        <form method="POST" action="/api/ops/rounds">
+          <input type="hidden" name="action" value="reset" />
+          <input type="hidden" name="club_id" value={club.id} />
+          <button
+            type="submit"
+            class="ops-btn reset-btn"
+            onclick={`return confirm(${JSON.stringify(`Réinitialiser les stats de "${club.name}" ?\n\nCela supprime définitivement les ${total} partie(s) et tous les scores associés.\nAction IRRÉVERSIBLE.\n\nÊtes-vous bien sûr ?`)})`}
+          >Réinitialiser les stats</button>
+        </form>
+      </div>
     </>
   )}
 </OpsLayout>
@@ -174,4 +190,23 @@ const recent = rounds.slice(0, 15);
   }
   .bars-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; }
   .table-wrap { overflow-x: auto; }
+
+  .danger-zone {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-color: var(--danger-line);
+  }
+  .danger-zone strong { color: var(--ink); }
+  .danger-zone p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+  .reset-btn {
+    color: var(--danger);
+    border-color: var(--danger-line);
+    background: var(--danger-soft);
+    white-space: nowrap;
+  }
+  .reset-btn:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+  @media (max-width: 600px) { .danger-zone { flex-direction: column; align-items: flex-start; } }
 </style>
