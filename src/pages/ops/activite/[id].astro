@@ -1,0 +1,177 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../../lib/supabase';
+
+const { id } = Astro.params;
+const sb = serviceClient();
+
+const { data: club } = await sb.from('clubs').select('id, name, city, slug').eq('id', id).maybeSingle();
+if (!club) return Astro.redirect('/ops/activite');
+
+type RoundRow = {
+  id: string; status: string; scoring_mode: string | null;
+  share_photo_url: string | null; created_at: string; started_at: string | null; finished_at: string | null;
+};
+
+const { data: roundsRaw } = await sb
+  .from('rounds')
+  .select('id, status, scoring_mode, share_photo_url, created_at, started_at, finished_at')
+  .eq('club_id', id)
+  .order('created_at', { ascending: false });
+const rounds = (roundsRaw ?? []) as RoundRow[];
+const roundIds = rounds.map((r) => r.id);
+
+const { data: playersRaw } = roundIds.length
+  ? await sb.from('round_players').select('round_id, user_id, display_name').in('round_id', roundIds)
+  : { data: [] as { round_id: string; user_id: string | null; display_name: string }[] };
+const players = (playersRaw ?? []) as { round_id: string; user_id: string | null; display_name: string }[];
+
+const total = rounds.length;
+const finished = rounds.filter((r) => r.status === 'finished').length;
+const active = rounds.filter((r) => r.status === 'lobby' || r.status === 'playing').length;
+const shareCount = rounds.filter((r) => r.share_photo_url).length;
+const totalPlayers = players.length;
+const uniquePlayers = new Set(players.map((p) => (p.display_name || '').toLowerCase().trim()).filter(Boolean)).size;
+const avgPlayers = total ? totalPlayers / total : 0;
+const lastAt = rounds[0]?.started_at ?? rounds[0]?.created_at ?? null;
+
+const playersByRound = new Map<string, number>();
+for (const p of players) playersByRound.set(p.round_id, (playersByRound.get(p.round_id) ?? 0) + 1);
+
+// Tendance 30 jours
+const DAYS = 30;
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+const trend: { key: string; label: string; count: number }[] = [];
+for (let i = DAYS - 1; i >= 0; i--) {
+  const d = new Date(today);
+  d.setDate(d.getDate() - i);
+  trend.push({ key: d.toISOString().slice(0, 10), label: d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }), count: 0 });
+}
+const trendMap = new Map(trend.map((t) => [t.key, t]));
+for (const r of rounds) {
+  const slot = trendMap.get(new Date(r.created_at).toISOString().slice(0, 10));
+  if (slot) slot.count++;
+}
+const trendMax = Math.max(1, ...trend.map((t) => t.count));
+
+function pct(n: number, d: number): number {
+  return d ? Math.round((n / d) * 100) : 0;
+}
+function fmtDateTime(iso: string): string {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+const STATUS_FR: Record<string, string> = { lobby: 'Lobby', playing: 'En cours', finished: 'Terminée' };
+const completionPct = pct(finished, total);
+const sharePct = pct(shareCount, total);
+const recent = rounds.slice(0, 15);
+---
+
+<OpsLayout title={`Activité — ${club.name}`} active="activite">
+  <div class="ops-page-header">
+    <div>
+      <a href="/ops/activite" class="back-link">← Activité</a>
+      <h1 class="ops-page-title">{club.name}</h1>
+      <p class="ops-page-subtitle">{club.city ?? ''}{club.city ? ' · ' : ''}usage de la scorecard</p>
+    </div>
+    <a href={`/${club.slug}`} target="_blank" rel="noopener" class="ops-btn">Page publique →</a>
+  </div>
+
+  {total === 0 ? (
+    <div class="ops-card"><div class="ops-empty">Aucune partie pour ce club.</div></div>
+  ) : (
+    <>
+      <div class="kpi-grid">
+        <div class="ops-kpi ops-kpi-blue">
+          <div class="ops-kpi-main">
+            <div class="ops-kpi-label">Parties</div>
+            <div class="ops-kpi-value">{total}</div>
+            <div class="ops-kpi-sub">{active} en cours</div>
+          </div>
+        </div>
+        <div class="ops-kpi ops-kpi-emerald">
+          <div class="ops-kpi-main">
+            <div class="ops-kpi-label">Terminées</div>
+            <div class="ops-kpi-value">{finished}</div>
+            <div class="ops-kpi-sub">{completionPct}% complétées</div>
+          </div>
+          <div class="ops-donut" style={`--pct:${completionPct}`} role="img" aria-label={`${completionPct}%`}></div>
+        </div>
+        <div class="ops-kpi ops-kpi-violet">
+          <div class="ops-kpi-main">
+            <div class="ops-kpi-label">Joueurs</div>
+            <div class="ops-kpi-value">{totalPlayers}</div>
+            <div class="ops-kpi-sub">{uniquePlayers} uniques · {avgPlayers.toFixed(1)}/partie</div>
+          </div>
+        </div>
+        <div class="ops-kpi ops-kpi-amber">
+          <div class="ops-kpi-main">
+            <div class="ops-kpi-label">Cartes partagées</div>
+            <div class="ops-kpi-value">{shareCount}</div>
+            <div class="ops-kpi-sub">{sharePct}% des parties</div>
+          </div>
+          <div class="ops-donut" style={`--pct:${sharePct}`} role="img" aria-label={`${sharePct}%`}></div>
+        </div>
+      </div>
+
+      <div class="ops-card chart-card">
+        <h2>Parties par jour — 30 derniers jours</h2>
+        <div class="bars">
+          {trend.map((t) => (
+            <div class="bar-col" title={`${t.label} : ${t.count}`}>
+              <div class="bar" style={`height:${Math.round((t.count / trendMax) * 100)}%`}></div>
+            </div>
+          ))}
+        </div>
+        <div class="bars-axis"><span>{trend[0].label}</span><span>{trend[trend.length - 1].label}</span></div>
+      </div>
+
+      <div class="ops-card" style="margin-top:16px">
+        <h2>Parties récentes</h2>
+        <div class="table-wrap">
+          <table class="ops-table">
+            <thead>
+              <tr><th>Date</th><th>Statut</th><th>Joueurs</th><th>Mode</th><th>Carte</th></tr>
+            </thead>
+            <tbody>
+              {recent.map((r) => (
+                <tr>
+                  <td>{fmtDateTime(r.started_at ?? r.created_at)}</td>
+                  <td>{STATUS_FR[r.status] ?? r.status}</td>
+                  <td>{playersByRound.get(r.id) ?? 0}</td>
+                  <td>{r.scoring_mode === 'host' ? 'Host' : 'Self'}</td>
+                  <td>{r.share_photo_url ? 'Oui' : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  )}
+</OpsLayout>
+
+<style>
+  .back-link { font-size: 13px; color: var(--muted); text-decoration: none; }
+  .back-link:hover { color: var(--primary); }
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .ops-card h2 { margin-top: 0; }
+  .bars { display: flex; align-items: flex-end; gap: 2px; height: 150px; }
+  .bar-col { flex: 1; min-width: 0; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
+  .bar {
+    width: 100%;
+    max-width: 26px;
+    background: linear-gradient(180deg, var(--primary), var(--primary-deep));
+    border-radius: 4px 4px 0 0;
+    min-height: 2px;
+  }
+  .bars-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .table-wrap { overflow-x: auto; }
+</style>
