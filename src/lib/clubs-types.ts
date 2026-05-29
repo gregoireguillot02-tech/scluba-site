@@ -63,6 +63,10 @@ export interface Club {
   // course_data.holes (OK pour les clubs mono-parcours type Téoula ; les clubs
   // multi-boucles sont une limite v1). Voir migration 0022.
   hole_guides?: Record<string, string>;
+  // Mot de passe partagé du Portail Club (généré/ré-affichable depuis /ops).
+  // Le membre se connecte sur /club avec un email autorisé + ce code. Null tant
+  // qu'aucun code n'a été généré. Voir migration 0034.
+  portal_code: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

@@ -1,6 +1,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { authServerClient, isAllowedEmail, serviceClient } from './lib/supabase';
 import { canAccessSection, type ClubSection } from './lib/club-auth';
+import { verifyClubSession, portalCodeFingerprint, CLUB_SESSION_COOKIE } from './lib/club-session';
 import { applyRateLimit } from './lib/rate-limit';
 
 const PUBLIC_OPS_PATHS = new Set([
@@ -9,7 +10,7 @@ const PUBLIC_OPS_PATHS = new Set([
   '/ops/auth/signout',
 ]);
 
-const CSRF_PROTECTED_PREFIXES = ['/api/ops', '/api/rounds', '/api/clubs', '/api/club/'];
+const CSRF_PROTECTED_PREFIXES = ['/api/ops', '/api/rounds', '/api/clubs', '/api/club/', '/club/login'];
 const CSRF_PROTECTED_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 const CSP_VALUE = [
@@ -110,9 +111,102 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isClubPage = pathname === '/club' || pathname.startsWith('/club/');
   const isClubApi = pathname.startsWith('/api/club/');
 
-  // Pages outside the auth/ops/club zones don't need the supabase client
-  // populated, but they still need security headers applied to the response.
-  if (!isOpsPage && !isOpsApi && !isAuthPage && !isAuthApi && !isClubPage && !isClubApi) {
+  // --- Zone Portail Club : auth = email autorisé (allowlist club_members) +
+  // mot de passe partagé du club (clubs.portal_code). La session est un cookie
+  // signé HMAC (cf. club-session.ts) — pas de magic-link / Supabase Auth ici.
+  // Le rôle (admin/greenkeeper) vient de l'email et décide du dashboard.
+  if (isClubPage || isClubApi) {
+    context.locals.user = null;
+    // Client posé pour respecter le contrat de type (locals.supabase non-null) ;
+    // la zone club ne s'en sert pas (tout passe par serviceClient + la session).
+    context.locals.supabase = authServerClient(context.cookies, context.request.headers);
+    context.locals.clubMembership = null;
+
+    // Surfaces publiques : page de login + endpoints login/logout (POST).
+    const isPublicClub =
+      pathname === '/club/login' ||
+      pathname === '/api/club/login' ||
+      pathname === '/api/club/logout';
+    if (isPublicClub) {
+      const response = await next();
+      return applySecurityHeaders(response, pathname);
+    }
+
+    const session = await verifyClubSession(context.cookies.get(CLUB_SESSION_COOKIE)?.value);
+    if (!session) {
+      if (isClubApi) {
+        return applySecurityHeaders(new Response('Unauthorized', { status: 401 }), pathname);
+      }
+      const next_ = encodeURIComponent(pathname + context.url.search);
+      return applySecurityHeaders(context.redirect(`/club/login?next=${next_}`, 302), pathname);
+    }
+
+    // Révocation immédiate : la signature du cookie prouve qu'on s'est connecté,
+    // mais on revérifie l'état courant à chaque requête — (1) l'email est-il
+    // toujours dans l'allowlist du club ? (2) le code n'a-t-il pas été régénéré
+    // (empreinte pc) ? Ainsi « retirer un email » ou « régénérer » dans /ops
+    // coupe l'accès tout de suite, sans attendre l'expiration. On lit aussi le
+    // rôle à jour (un changement de rôle /ops s'applique au prochain hit).
+    // Fail-open sur erreur DB transitoire : la signature fait déjà foi.
+    let revoked = false;
+    let freshRole = session.role;
+    try {
+      const sb = serviceClient();
+      const { data: memberRows } = await sb
+        .from('club_members')
+        .select('role')
+        .eq('club_id', session.clubId)
+        .eq('email', session.email)
+        .limit(1);
+      const member = memberRows?.[0];
+      if (!member) {
+        revoked = true; // email retiré de l'allowlist
+      } else {
+        freshRole = member.role;
+        const { data: clubRow } = await sb
+          .from('clubs')
+          .select('portal_code')
+          .eq('id', session.clubId)
+          .maybeSingle();
+        const code = clubRow?.portal_code ?? null;
+        if (!code || (await portalCodeFingerprint(session.clubId, code)) !== session.pc) {
+          revoked = true; // code régénéré (ou absent)
+        }
+      }
+    } catch (e) {
+      console.error('[middleware] club session re-check failed (fail-open)', e);
+    }
+    if (revoked) {
+      context.cookies.delete(CLUB_SESSION_COOKIE, { path: '/' });
+      if (isClubApi) {
+        return applySecurityHeaders(new Response('Unauthorized', { status: 401 }), pathname);
+      }
+      const next_ = encodeURIComponent(pathname + context.url.search);
+      return applySecurityHeaders(context.redirect(`/club/login?next=${next_}`, 302), pathname);
+    }
+
+    context.locals.clubMembership = {
+      clubId: session.clubId,
+      role: freshRole,
+      email: session.email,
+    };
+
+    // Garde rôle sur les pages : greenkeeper ne voit que /club/signalements.
+    if (isClubPage) {
+      const section: ClubSection = pathname.startsWith('/club/signalements')
+        ? 'signalements'
+        : 'dashboard';
+      if (!canAccessSection(freshRole, section)) {
+        return applySecurityHeaders(context.redirect('/club/signalements', 302), pathname);
+      }
+    }
+    const response = await next();
+    return applySecurityHeaders(response, pathname);
+  }
+
+  // Pages outside the auth/ops zones don't need the supabase client populated,
+  // but they still need security headers applied to the response.
+  if (!isOpsPage && !isOpsApi && !isAuthPage && !isAuthApi) {
     const response = await next();
     return applySecurityHeaders(response, pathname);
   }
@@ -130,65 +224,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Golfer-side auth pages have no allowlist — anyone can sign in.
   if (isAuthPage || isAuthApi) {
-    const response = await next();
-    return applySecurityHeaders(response, pathname);
-  }
-
-  // --- Zone Portail Club : accès par allowlist d'emails (table club_members,
-  // pré-autorisée depuis /ops). Pas de lien-secret : l'email connecté fait foi.
-  if (isClubPage || isClubApi) {
-    if (!user) {
-      if (isClubApi) {
-        return applySecurityHeaders(new Response('Unauthorized', { status: 401 }), pathname);
-      }
-      const next_ = encodeURIComponent(pathname + context.url.search);
-      return applySecurityHeaders(context.redirect(`/auth/login?next=${next_}`, 302), pathname);
-    }
-    const sb = serviceClient();
-    // Accès = l'email connecté est dans l'allowlist. limit(1) + order : si
-    // l'email est rattaché à plusieurs clubs (multi-parcours), on prend le plus
-    // ancien de façon déterministe, sans que maybeSingle ne jette d'erreur
-    // silencieuse (mono-club = pilote).
-    const email = (user.email ?? '').toLowerCase();
-    const { data: membershipRows, error: membershipErr } = await sb
-      .from('club_members')
-      .select('club_id, role')
-      .eq('email', email)
-      .order('created_at', { ascending: true })
-      .limit(1);
-    if (membershipErr) console.error('[middleware] club_members lookup failed', membershipErr);
-    const membership = membershipRows?.[0] ?? null;
-    if (!membership) {
-      if (isClubApi) {
-        return applySecurityHeaders(new Response('Forbidden', { status: 403 }), pathname);
-      }
-      return applySecurityHeaders(
-        new Response(
-          `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Accès club</title></head>` +
-            `<body style="font-family:system-ui;max-width:520px;margin:80px auto;padding:0 20px;color:#1B4332">` +
-            `<h1>Accès non autorisé</h1>` +
-            `<p>Le compte <b>${escapeHtml(user.email ?? '')}</b> n'est pas rattaché à un club.</p>` +
-            `<p>Demandez à Scluba d'ajouter cet email aux accès de votre club.</p>` +
-            `<form action="/auth/signout" method="post" style="margin:0">` +
-            `<button type="submit" style="background:none;border:none;padding:0;color:#D4A574;cursor:pointer;font:inherit;text-decoration:underline">Se déconnecter</button>` +
-            `</form>` +
-            `</body></html>`,
-          { status: 403, headers: { 'Content-Type': 'text/html; charset=utf-8' } },
-        ),
-        pathname,
-      );
-    }
-    context.locals.clubMembership = { clubId: membership.club_id, role: membership.role };
-
-    // Garde rôle sur les pages : greenkeeper ne voit que /club/signalements.
-    if (isClubPage) {
-      const section: ClubSection = pathname.startsWith('/club/signalements')
-        ? 'signalements'
-        : 'dashboard';
-      if (!canAccessSection(membership.role, section)) {
-        return applySecurityHeaders(context.redirect('/club/signalements', 302), pathname);
-      }
-    }
     const response = await next();
     return applySecurityHeaders(response, pathname);
   }

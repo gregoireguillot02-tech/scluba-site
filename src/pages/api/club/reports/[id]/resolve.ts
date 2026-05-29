@@ -20,7 +20,9 @@ export const POST: APIRoute = async ({ params, locals }) => {
   // déjà traité) au lieu d'un ok:true silencieux.
   const { data, error } = await sb
     .from('course_reports')
-    .update({ status: 'traite', resolved_at: new Date().toISOString(), resolved_by: locals.user!.id })
+    // resolved_by = email du membre connecté (la session porte l'email ; plus
+    // de user Supabase côté portail, cf. migration 0034 resolved_by → text).
+    .update({ status: 'traite', resolved_at: new Date().toISOString(), resolved_by: membership.email })
     .eq('id', idParsed.data)
     .eq('club_id', membership.clubId)
     .eq('status', 'nouveau')

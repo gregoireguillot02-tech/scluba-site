@@ -18,6 +18,11 @@ const RULES: Array<{ match: RegExp; method?: string; rule: LimitRule; keyByEmail
   // victim addresses can't bypass.
   { match: /^\/auth\/login\/?$/, method: 'POST', rule: { limit: 8, windowSec: 900 } },
   { match: /^\/ops\/login\/?$/, method: 'POST', rule: { limit: 10, windowSec: 900 } },
+  // /club/login — login Portail Club (email autorisé + mot de passe partagé du
+  // club). Le code est volontairement court/mémorisable → ce bridage est ce qui
+  // rend le brute-force en ligne impraticable. Per-email lent PUIS cap par IP.
+  { match: /^\/club\/login\/?$/, method: 'POST', rule: { limit: 10, windowSec: 900 }, keyByEmail: true },
+  { match: /^\/club\/login\/?$/, method: 'POST', rule: { limit: 20, windowSec: 900 } },
   // Importer-specific (cross-branch with fix/sec-llm-importer-ssrf).
   { match: /^\/api\/ops\/clubs\/import\/?$/, method: 'POST', rule: { limit: 5, windowSec: 60 } },
   { match: /^\/api\/ops\/clubs\/from-import\/?$/, method: 'POST', rule: { limit: 10, windowSec: 60 } },
@@ -104,7 +109,10 @@ export async function applyRateLimit(request: Request): Promise<Response | null>
   const path = url.pathname.replace(/\/+$/, '') || '/';
 
   const isProtected =
-    path.startsWith('/api/') || path === '/auth/login' || path === '/ops/login';
+    path.startsWith('/api/') ||
+    path === '/auth/login' ||
+    path === '/ops/login' ||
+    path === '/club/login';
   if (!isProtected) return null;
   if (request.method === 'GET' || request.method === 'HEAD' || request.method === 'OPTIONS') return null;
 
