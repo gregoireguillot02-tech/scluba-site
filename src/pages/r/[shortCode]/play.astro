@@ -220,9 +220,16 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       </aside>
     )}
 
+    <aside class="pace-banner" data-pace-banner hidden aria-live="polite">
+      <span class="pace-dot" aria-hidden="true"></span>
+      <span class="pace-text" data-pace-text></span>
+    </aside>
+
     <section
       class="hole-card"
       data-play-root
+      data-tee-time={r.tee_time ?? r.started_at ?? ''}
+      data-player-count={String(allPlayers.length)}
       data-spectator={String(isSpectator)}
       data-short-code={r.short_code}
       data-me-id={me.id}
@@ -316,6 +323,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       pulseLeaderRing,
       flashPlayerSwitch,
     } from '../../../lib/animations/play';
+    import { computePace } from '../../../lib/pace';
 
     type CourseData = { holes: { number: number; par: number }[] };
     type LivePlayer = { id: string; name: string };
@@ -605,6 +613,38 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       const statusEl = document.querySelector<HTMLElement>('[data-status]')!;
       const cells = Array.from(document.querySelectorAll<HTMLElement>('[data-cell-hole]'));
 
+      // === Bannière de rythme de jeu (pace) ===
+      // Calcul 100% client (src/lib/pace.ts) depuis le tee-time, le nombre de
+      // joueurs et le trou courant. On n'affiche QUE le retard (orange/rouge) :
+      // silence quand le groupe tient la cadence (règle produit "seulement si
+      // en retard").
+      const paceBanner = document.querySelector<HTMLElement>('[data-pace-banner]');
+      const paceTextEl = document.querySelector<HTMLElement>('[data-pace-text]');
+      const teeTimeRaw = root.dataset.teeTime || '';
+      const playerCount = Number(root.dataset.playerCount) || 1;
+      const teeTimeDate = teeTimeRaw ? new Date(teeTimeRaw) : null;
+
+      function updatePaceBanner() {
+        if (!paceBanner || !paceTextEl || !teeTimeDate || Number.isNaN(teeTimeDate.getTime())) return;
+        const pace = computePace({
+          teeTime: teeTimeDate,
+          now: new Date(),
+          holeCount,
+          playerCount,
+          currentHole,
+        });
+        const show = pace.status === 'orange' || pace.status === 'red';
+        paceBanner.hidden = !show;
+        if (!show) return;
+        paceBanner.classList.toggle('is-orange', pace.status === 'orange');
+        paceBanner.classList.toggle('is-red', pace.status === 'red');
+        paceTextEl.textContent = pace.message;
+      }
+
+      // Le retard évolue avec le temps même sans action du joueur → recalcul/min.
+      window.setInterval(updatePaceBanner, 60_000);
+      updatePaceBanner();
+
       // === Signalement souci parcours (Portail Club) ===
       // Le bouton lit `currentHole` au moment du clic (valeur live du trou
       // affiché) et poste via /api/rounds/[shortCode]/report (cookie player
@@ -738,6 +778,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         const hole = holeAt(currentHole);
         holeNumberEl.textContent = String(currentHole);
         parValueEl.textContent = String(hole.par);
+        updatePaceBanner();
 
         // Carnet de parcours : montre le bouton "Voir le trou" si ce trou a un
         // visuel, sinon le cache. L'URL est stockée pour le handler de clic.
@@ -1653,6 +1694,56 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
        "Corriger un de mes scores" → toggle .is-revealed. */
     .hole-card[data-spectator="true"]:not(.is-revealed) {
       display: none;
+    }
+
+    /* === Bannière de rythme de jeu === Affichée seulement en retard (orange =
+       léger, rouge = important). Silence quand le rythme est bon (toggle de
+       l'attribut hidden en JS). .pace-banner force display:flex donc on doit
+       ré-affirmer display:none sur [hidden]. */
+    .pace-banner {
+      margin: 0 var(--space-4) var(--space-3);
+      padding: 12px 16px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.35;
+      box-shadow: var(--play-card-shadow);
+    }
+    .pace-banner[hidden] { display: none; }
+    .pace-banner .pace-dot {
+      flex-shrink: 0;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .pace-banner .pace-text { flex: 1; }
+    .pace-banner.is-orange {
+      color: #92400E;
+      background:
+        linear-gradient(180deg, rgba(245, 158, 11, 0.18), rgba(245, 158, 11, 0.08)),
+        rgba(255, 255, 255, 0.90);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+    }
+    .pace-banner.is-red {
+      color: #B91C1C;
+      background:
+        linear-gradient(180deg, rgba(220, 38, 38, 0.18), rgba(220, 38, 38, 0.08)),
+        rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(220, 38, 38, 0.5);
+    }
+    .pace-banner.is-red .pace-dot {
+      animation: pace-dot-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pace-dot-pulse {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50%      { opacity: 1;   transform: scale(1.25); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .pace-banner.is-red .pace-dot { animation: none; }
     }
 
     /* Spectator banner : honey gradient renforcé pour rester lisible
