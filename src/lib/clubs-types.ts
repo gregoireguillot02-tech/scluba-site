@@ -65,7 +65,7 @@ export interface Club {
   hole_guides?: Record<string, string>;
   // Mot de passe partagé du Portail Club (généré/ré-affichable depuis /ops).
   // Le membre se connecte sur /club avec un email autorisé + ce code. Null tant
-  // qu'aucun code n'a été généré. Voir migration 0034.
+  // qu'aucun code n'a été généré. Voir migration 0035.
   portal_code: string | null;
   created_by: string | null;
   created_at: string;
