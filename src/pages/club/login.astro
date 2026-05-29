@@ -1,0 +1,263 @@
+---
+export const prerender = false;
+
+import '../../styles/tokens.css';
+import '../../styles/global.css';
+import Honeypot from '../../components/Honeypot.astro';
+import { serviceClient } from '../../lib/supabase';
+import {
+  signClubSession,
+  verifyClubSession,
+  constantTimeEqual,
+  portalCodeFingerprint,
+  CLUB_SESSION_COOKIE,
+  CLUB_SESSION_MAX_AGE_S,
+} from '../../lib/club-session';
+import { canAccessSection } from '../../lib/club-auth';
+import { safeNextPath } from '../../lib/safe-redirect';
+
+const url = Astro.url;
+const next = safeNextPath(url.searchParams.get('next'), '/club');
+
+// Déjà connecté ? On évite d'afficher le login (redirige vers son dashboard).
+const existing = await verifyClubSession(Astro.cookies.get(CLUB_SESSION_COOKIE)?.value);
+if (existing && Astro.request.method === 'GET') {
+  return Astro.redirect(canAccessSection(existing.role, 'dashboard') ? '/club' : '/club/signalements', 302);
+}
+
+// Message d'erreur GÉNÉRIQUE volontaire : ne révèle pas si c'est l'email ou le
+// mot de passe qui cloche (anti-énumération des emails autorisés).
+const GENERIC_ERR = 'Email ou mot de passe incorrect.';
+let formError: string | null = null;
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const honeypot = String(formData.get('hp_email') ?? '');
+    const email = String(formData.get('email') ?? '').trim().toLowerCase();
+    const password = String(formData.get('password') ?? '');
+    const nextField = safeNextPath(String(formData.get('next') ?? ''), '/club');
+
+    if (honeypot || !email || !email.includes('@') || !password) {
+      formError = GENERIC_ERR;
+    } else {
+      const sb = serviceClient();
+      const { data: members } = await sb
+        .from('club_members')
+        .select('club_id, role')
+        .eq('email', email);
+
+      const clubIds = [...new Set((members ?? []).map((m) => m.club_id))];
+      // Anti-énumération (best-effort) : on exécute TOUJOURS la 2e requête, même
+      // pour un email inconnu (id factice), afin que le timing email connu vs
+      // inconnu soit comparable. La vraie protection reste le rate-limit (cf.
+      // rate-limit.ts : /club/login per-email + per-IP).
+      const DUMMY_ID = '00000000-0000-0000-0000-000000000000';
+      const { data: clubs } = await sb
+        .from('clubs')
+        .select('id, portal_code')
+        .in('id', clubIds.length > 0 ? clubIds : [DUMMY_ID]);
+      const codeById = new Map((clubs ?? []).map((c) => [c.id, c.portal_code as string | null]));
+
+      // Compare en temps constant le mot de passe à celui de CHAQUE club du
+      // membre — gère le multi-club (email + mot de passe du bon club).
+      let match: { club_id: string; role: 'admin' | 'greenkeeper' } | null = null;
+      let matchedCode = '';
+      for (const m of members ?? []) {
+        const code = codeById.get(m.club_id);
+        if (typeof code === 'string' && code.length > 0 && constantTimeEqual(code, password)) {
+          match = m;
+          matchedCode = code;
+        }
+      }
+
+      if (!match) {
+        formError = GENERIC_ERR;
+      } else {
+        const pc = await portalCodeFingerprint(match.club_id, matchedCode);
+        const token = await signClubSession({ clubId: match.club_id, role: match.role, email, pc });
+        Astro.cookies.set(CLUB_SESSION_COOKIE, token, {
+          path: '/',
+          httpOnly: true,
+          sameSite: 'lax',
+          secure: import.meta.env.PROD,
+          maxAge: CLUB_SESSION_MAX_AGE_S,
+        });
+        let dest = nextField === '/' ? '/club' : nextField;
+        if (!canAccessSection(match.role, 'dashboard') && dest === '/club') dest = '/club/signalements';
+        return Astro.redirect(dest, 302);
+      }
+    }
+  } catch (e) {
+    console.error('[club/login] unexpected error', e);
+    formError = 'Erreur inattendue. Réessayez dans un instant.';
+  }
+}
+---
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Portail club · Scluba</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#FAF7EE" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+  <main class="auth-page">
+    <header class="auth-head">
+      <p class="auth-eyebrow">Portail club</p>
+      <div class="title-rail" aria-hidden="true"></div>
+      <h1 class="auth-title">Connexion</h1>
+      <div class="title-rail" aria-hidden="true"></div>
+      <p class="auth-lead">
+        Entrez votre email autorisé et le mot de passe communiqué par Scluba pour accéder à votre tableau de bord.
+      </p>
+    </header>
+
+    {formError && <div class="auth-flash err">{formError}</div>}
+
+    <form method="POST" class="auth-form">
+      <input type="hidden" name="next" value={next} />
+      <Honeypot />
+      <label class="auth-label">
+        <span>Email</span>
+        <input
+          type="email"
+          name="email"
+          required
+          autofocus
+          autocomplete="username"
+          inputmode="email"
+          placeholder="vous@club.com"
+          class="auth-input"
+        />
+      </label>
+      <label class="auth-label">
+        <span>Mot de passe du club</span>
+        <input
+          type="password"
+          name="password"
+          required
+          autocomplete="current-password"
+          placeholder="Mot de passe communiqué"
+          class="auth-input"
+        />
+      </label>
+      <button type="submit" class="auth-btn">Se connecter</button>
+    </form>
+
+    <footer class="colophon">
+      <span class="colophon-rail" aria-hidden="true"></span>
+      <span class="colophon-text">
+        <span>by</span>
+        <strong>SCLUBA</strong>
+        <span class="colophon-dot" aria-hidden="true"></span>
+      </span>
+      <span class="colophon-rail" aria-hidden="true"></span>
+    </footer>
+  </main>
+
+  <style>
+    body {
+      background: #FAF7EE;
+      min-height: 100dvh;
+      margin: 0;
+      overflow-x: hidden;
+    }
+    .auth-page {
+      max-width: 420px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: var(--space-5) var(--space-4) var(--space-7);
+    }
+    .auth-head { text-align: center; margin-bottom: var(--space-6); }
+    .auth-eyebrow {
+      margin: 0 0 var(--space-2);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .title-rail { width: 64px; height: 1px; margin: 0 auto; background: var(--accent); opacity: 0.55; }
+    .auth-title {
+      margin: var(--space-3) auto;
+      font-family: var(--font-serif);
+      font-weight: 700;
+      font-size: clamp(1.6rem, 5.5vw, 2.1rem);
+      line-height: 1.15;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+    .auth-lead {
+      margin: var(--space-4) 0 0;
+      color: var(--ink-soft);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .auth-flash {
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-bottom: var(--space-4);
+    }
+    .auth-flash.err { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
+    .auth-form { display: flex; flex-direction: column; gap: var(--space-4); margin-bottom: var(--space-4); }
+    .auth-label > span {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .auth-input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 16px;
+      font-family: var(--font-sans);
+      color: var(--ink);
+    }
+    .auth-input:focus {
+      outline: none;
+      border-color: var(--primary-soft);
+      box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15);
+    }
+    .auth-btn {
+      min-height: 52px;
+      padding: 14px 24px;
+      border-radius: 12px;
+      border: none;
+      background: var(--primary);
+      color: #FAF7EE;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(15, 42, 30, 0.08), 0 8px 20px rgba(27, 67, 50, 0.18);
+    }
+    .auth-btn:hover { filter: brightness(0.92); }
+    .auth-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .colophon {
+      display: flex; align-items: center; justify-content: center; gap: var(--space-3);
+      max-width: 260px;
+      margin: var(--space-7) auto 0;
+      padding-top: var(--space-5);
+    }
+    .colophon-rail { flex: 1; height: 1px; background: var(--accent); opacity: 0.45; }
+    .colophon-text { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-serif); font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .colophon-text strong { font-weight: 700; color: var(--primary); letter-spacing: 0.08em; }
+    .colophon-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 1px; }
+  </style>
+</body>
+</html>

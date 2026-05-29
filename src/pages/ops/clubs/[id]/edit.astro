@@ -426,9 +426,31 @@ function fmtRelative(iso: string | null): string {
       <div class="ops-card" style="margin-top:16px">
         <h2>Accès portail club</h2>
         <p class="ops-hint" style="margin: 0 0 12px">
-          Autorisez un email à accéder au portail. La personne se connecte sur <code>{portalUrl}</code> avec cet email (lien magique, sans mot de passe). « Jardinier » ne voit que les signalements.
+          Le club se connecte sur <code>{portalUrl}</code> avec un <b>email autorisé</b> (liste plus bas) <b>et le mot de passe</b> du club. C'est l'email qui décide du tableau de bord : « Jardinier » ne voit que les signalements.
         </p>
 
+        <div class="portal-code-block">
+          <span class="portal-code-title">Mot de passe du club</span>
+          <div class="portal-code-row">
+            <code class="portal-code-value" id="portal-code-value" data-empty={c.portal_code ? 'false' : 'true'}>{c.portal_code ?? 'Non défini'}</code>
+            <button
+              type="button"
+              class="ops-btn portal-copy-btn"
+              id="portal-copy-btn"
+              data-code={c.portal_code ?? ''}
+              style={c.portal_code ? '' : 'display:none'}
+            >Copier</button>
+            <button type="button" class="ops-btn ops-btn-primary portal-gen-btn" id="portal-gen-btn" data-club-id={c.id}>
+              {c.portal_code ? 'Régénérer' : 'Générer'}
+            </button>
+          </div>
+          <span class="ops-hint">À communiquer au club. « Régénérer » remplace le code — l'ancien ne permettra plus de se connecter.</span>
+          <output id="portal-code-msg" class="member-msg"></output>
+        </div>
+
+        <hr class="portal-sep" />
+
+        <span class="portal-code-title">Emails autorisés</span>
         <ul class="member-list">
           {(clubMembers ?? []).map((m) => (
             <li class="member-row">
@@ -615,6 +637,55 @@ function fmtRelative(iso: string | null): string {
         } catch (e) { alert('Erreur réseau, réessayez.'); btn.disabled = false; }
       });
     });
+  })();
+
+  // Mot de passe du Portail Club : générer / régénérer + copier.
+  (function setupPortalCode() {
+    const genBtn = document.getElementById('portal-gen-btn');
+    if (!genBtn) return;
+    const valueEl = document.getElementById('portal-code-value');
+    const copyBtn = document.getElementById('portal-copy-btn');
+    const msg = document.getElementById('portal-code-msg');
+
+    genBtn.addEventListener('click', async () => {
+      const already = valueEl.dataset.empty === 'false';
+      if (already && !confirm("Régénérer le mot de passe ? L'ancien ne marchera plus.")) return;
+      genBtn.disabled = true;
+      msg.textContent = 'Génération…';
+      try {
+        const res = await fetch('/api/ops/club-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ club_id: genBtn.getAttribute('data-club-id') }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          valueEl.textContent = data.code;
+          valueEl.dataset.empty = 'false';
+          genBtn.textContent = 'Régénérer';
+          if (copyBtn) { copyBtn.style.display = ''; copyBtn.setAttribute('data-code', data.code); }
+          msg.textContent = 'Nouveau mot de passe généré — pensez à le communiquer au club.';
+        } else {
+          msg.textContent = 'Erreur : ' + (await res.text());
+        }
+      } catch (e) {
+        msg.textContent = 'Erreur réseau, réessayez.';
+      } finally {
+        genBtn.disabled = false;
+      }
+    });
+
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        const code = copyBtn.getAttribute('data-code') || valueEl.textContent;
+        try {
+          await navigator.clipboard.writeText(code);
+          msg.textContent = 'Copié !';
+        } catch (e) {
+          msg.textContent = 'Copie impossible — sélectionnez le code à la main.';
+        }
+      });
+    }
   })();
 </script>
 
@@ -1030,6 +1101,23 @@ function fmtRelative(iso: string | null): string {
   .sponsor-delete-form { margin: 0; }
 
   /* Accès portail club */
+  .portal-code-block { margin-bottom: 4px; }
+  .portal-code-title {
+    display: block;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .portal-code-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .portal-code-value {
+    flex: 1; min-width: 120px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 15px; font-weight: 700; letter-spacing: 0.04em;
+    background: var(--line-soft); color: var(--ink);
+    padding: 8px 12px; border-radius: 8px;
+  }
+  .portal-code-value[data-empty="true"] { color: var(--muted); font-weight: 500; }
+  .portal-copy-btn, .portal-gen-btn { flex: none; font-size: 12px; padding: 6px 12px; }
+  .portal-sep { border: none; border-top: 1px solid var(--line-soft); margin: 16px 0; }
   .member-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .member-row { display: flex; align-items: center; gap: 8px; }
   .member-email { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
