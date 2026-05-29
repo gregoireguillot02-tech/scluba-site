@@ -128,16 +128,28 @@ function ownerInitial(owner: string): string {
               </div>
             ) : (
               items.map((p) => (
-                <a href={`/ops/prospects/${p.id}`} class="kanban-card">
-                  <div class="kanban-card-title">{p.club_name}</div>
-                  {p.city && <div class="kanban-card-meta">{p.city}</div>}
-                  <div class="kanban-card-foot">
-                    <span class={`owner-chip owner-${p.owner}`} title={`Owner — ${OWNER_LABELS[p.owner]}`}>
-                      {ownerInitial(p.owner)}
-                    </span>
-                    <time class="kanban-card-date" datetime={p.updated_at}>{fmtDate(p.updated_at)}</time>
-                  </div>
-                </a>
+                <div class="kanban-card-wrap">
+                  <a href={`/ops/prospects/${p.id}`} class="kanban-card">
+                    <div class="kanban-card-title">{p.club_name}</div>
+                    {p.city && <div class="kanban-card-meta">{p.city}</div>}
+                    <div class="kanban-card-foot">
+                      <span class={`owner-chip owner-${p.owner}`} title={`Owner — ${OWNER_LABELS[p.owner]}`}>
+                        {ownerInitial(p.owner)}
+                      </span>
+                      <time class="kanban-card-date" datetime={p.updated_at}>{fmtDate(p.updated_at)}</time>
+                    </div>
+                  </a>
+                  <form method="POST" action="/api/ops/prospects" class="card-del">
+                    <input type="hidden" name="action" value="delete" />
+                    <input type="hidden" name="id" value={p.id} />
+                    <button
+                      type="submit"
+                      class="card-del-btn"
+                      aria-label={`Supprimer ${p.club_name}`}
+                      onclick={`return confirm(${JSON.stringify(`Supprimer "${p.club_name}" ? Cette action est irréversible.`)})`}
+                    >×</button>
+                  </form>
+                </div>
               ))
             )}
           </div>
@@ -348,6 +360,24 @@ function ownerInitial(owner: string): string {
   }
 
   /* ---- Card ---- */
+  .kanban-card-wrap { position: relative; }
+  .card-del { position: absolute; top: 5px; right: 5px; margin: 0; z-index: 1; }
+  .card-del-btn {
+    background: none;
+    border: none;
+    color: var(--muted-soft);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 1px 6px;
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s, background 0.15s;
+  }
+  .kanban-card-wrap:hover .card-del-btn { opacity: 1; }
+  .card-del-btn:hover { color: var(--danger); background: var(--bg); }
+  .kanban-card-title { padding-right: 14px; }
+
   .kanban-card {
     background: var(--bg-soft);
     border: 1px solid var(--line);

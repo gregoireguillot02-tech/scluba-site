@@ -104,6 +104,28 @@ export const POST: APIRoute = async ({ request, locals, redirect, url }) => {
     return redirect(back, 302);
   }
 
+  if (action === 'update') {
+    const id = parseUuid(form.get('id'));
+    if (!id) return new Response('invalid id', { status: 400 });
+    const title = String(form.get('title') ?? '').trim().slice(0, 500);
+    if (!title) return new Response('title required', { status: 400 });
+    const assignee = (form.get('assignee') as Owner | null) ?? 'shared';
+    if (!OWNERS.includes(assignee)) return new Response('bad assignee', { status: 400 });
+    const { error } = await sb
+      .from('tasks')
+      .update({
+        title,
+        assignee,
+        due_date: nullable(form.get('due_date'), 32),
+      })
+      .eq('id', id);
+    if (error) {
+      console.error('[api/ops/tasks] update failed', error);
+      return new Response('Update failed', { status: 500 });
+    }
+    return redirect(back, 302);
+  }
+
   if (action === 'delete') {
     const id = parseUuid(form.get('id'));
     if (!id) return new Response('invalid id', { status: 400 });

@@ -1,0 +1,118 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../lib/supabase';
+import {
+  CLUB_TYPES,
+  CLUB_TYPE_LABELS,
+  OWNERS,
+  OWNER_LABELS,
+  STATUS_LABELS,
+  STATUS_COLORS,
+  type Prospect,
+} from '../../lib/ops-types';
+
+const sb = serviceClient();
+const { data } = await sb
+  .from('prospects')
+  .select('*')
+  .order('created_at', { ascending: false });
+const prospects = (data ?? []) as Prospect[];
+
+function typeLabel(t: string | null): string {
+  if (!t) return '';
+  return (CLUB_TYPE_LABELS as Record<string, string>)[t] ?? t;
+}
+---
+
+<OpsLayout title="Liste d'appel" active="appels">
+  <div class="ops-page-header">
+    <div>
+      <h1 class="ops-page-title">Liste d'appel</h1>
+      <p class="ops-page-subtitle">Prospection à froid — {prospects.length} contact{prospects.length > 1 ? 's' : ''}. Grégoire alimente, Paul appelle.</p>
+    </div>
+  </div>
+
+  <div class="ops-card add-card">
+    <form method="POST" action="/api/ops/prospects" class="add-form">
+      <input type="hidden" name="action" value="create" />
+      <input type="hidden" name="next" value="/ops/appels" />
+      <input class="ops-input" name="club_name" placeholder="Golf *" required />
+      <input class="ops-input" name="contact_name" placeholder="Nom prénom" />
+      <input class="ops-input" type="tel" name="phone" placeholder="Téléphone" />
+      <input class="ops-input" name="city" placeholder="Ville" />
+      <select class="ops-select" name="club_type" aria-label="Type">
+        <option value="">Type…</option>
+        {CLUB_TYPES.map((t) => <option value={t}>{CLUB_TYPE_LABELS[t]}</option>)}
+      </select>
+      <select class="ops-select" name="owner" aria-label="Qui appelle">
+        {OWNERS.map((o) => <option value={o} selected={o === 'shared'}>{OWNER_LABELS[o]}</option>)}
+      </select>
+      <button type="submit" class="ops-btn ops-btn-primary">Ajouter</button>
+    </form>
+  </div>
+
+  <div class="ops-card">
+    {prospects.length === 0 ? (
+      <div class="ops-empty">Aucun prospect. Ajoute le premier club à appeler ci-dessus.</div>
+    ) : (
+      <div class="table-wrap">
+        <table class="ops-table">
+          <thead>
+            <tr>
+              <th>Golf</th>
+              <th>Contact</th>
+              <th>Téléphone</th>
+              <th>Ville</th>
+              <th>Type</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {prospects.map((p) => (
+              <tr>
+                <td><a href={`/ops/prospects/${p.id}`} class="golf-link">{p.club_name}</a></td>
+                <td>{p.contact_name ?? '—'}</td>
+                <td>
+                  {p.phone
+                    ? <a href={`tel:${p.phone.replace(/\s+/g, '')}`} class="phone-link">{p.phone}</a>
+                    : <span class="muted">—</span>}
+                </td>
+                <td>{p.city ?? '—'}</td>
+                <td>{p.club_type ? <span class="ops-tag">{typeLabel(p.club_type)}</span> : <span class="muted">—</span>}</td>
+                <td><span class="ops-pill" style={`--pill-color:${STATUS_COLORS[p.status]}`}>{STATUS_LABELS[p.status]}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+</OpsLayout>
+
+<style>
+  .add-card { margin-bottom: 18px; }
+  .add-form {
+    display: grid;
+    grid-template-columns: 1.4fr 1.2fr 1fr 1fr 1fr 0.9fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  @media (max-width: 1000px) {
+    .add-form { grid-template-columns: 1fr 1fr; }
+    .add-form .ops-btn { grid-column: 1 / -1; }
+  }
+
+  .table-wrap { overflow-x: auto; }
+  .golf-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+  .golf-link:hover { text-decoration: underline; }
+  .phone-link {
+    color: var(--ink);
+    text-decoration: none;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .phone-link:hover { color: var(--primary); }
+  .muted { color: var(--muted-soft); }
+</style>

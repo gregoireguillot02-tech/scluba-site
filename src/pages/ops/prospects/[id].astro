@@ -13,7 +13,7 @@ import {
   type ProspectEvent,
   type ProspectAction,
 } from '../../../lib/ops-types';
-import type { EmailTemplate } from '../../../lib/email-templates';
+import { EMAIL_TEMPLATE_LABELS, type EmailTemplate } from '../../../lib/email-templates';
 
 const { id } = Astro.params;
 const sb = serviceClient();
@@ -46,6 +46,22 @@ function fmtDemo(s: string | null): string {
   return `le ${d}/${m}${time ? ` à ${time.replace(':', 'h')}` : ''}`;
 }
 const demoQuand = fmtDemo(p.demo_at);
+
+// {{jour}} = "mardi 12 juin", {{heure}} = "14h00" (depuis demo_at)
+function fmtJour(s: string | null): string {
+  if (!s) return '';
+  const date = s.split('T')[0];
+  const dt = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(dt.getTime())) return '';
+  return dt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+function fmtHeure(s: string | null): string {
+  if (!s) return '';
+  const time = s.split('T')[1];
+  return time ? time.replace(':', 'h') : '';
+}
+const demoJour = fmtJour(p.demo_at);
+const demoHeure = fmtHeure(p.demo_at);
 const emailTemplates = (emailTemplatesRaw ?? []) as Pick<EmailTemplate, 'key' | 'subject' | 'body'>[];
 const templatesForClient: Record<string, { subject: string; body: string }> = {};
 for (const t of emailTemplates) templatesForClient[t.key] = { subject: t.subject, body: t.body };
@@ -90,10 +106,10 @@ function fmtDateTime(iso: string): string {
 
   <div class="email-actions">
     <button type="button" class="ops-btn ops-btn-primary" data-open-booking>Booker une démo</button>
-    <button type="button" class="ops-btn" data-open-cmp="outreach">Mail démarchage</button>
-    <button type="button" class="ops-btn" data-open-cmp="demo_prospect">Mail démo prospect</button>
-    <button type="button" class="ops-btn" data-open-cmp="demo_pilote">Mail démo pilote</button>
-    <button type="button" class="ops-btn" data-open-cmp="demo_reminder">Mail de rappel</button>
+    <button type="button" class="ops-btn" data-open-cmp="outreach">Démarchage</button>
+    <button type="button" class="ops-btn" data-open-cmp="demo_prospect">Visio - Prospect</button>
+    <button type="button" class="ops-btn" data-open-cmp="demo_pilote">Visio - Pilote</button>
+    <button type="button" class="ops-btn" data-open-cmp="demo_reminder">Rappel visio (H-24)</button>
   </div>
 
   <div class="detail-grid">
@@ -229,6 +245,8 @@ function fmtDateTime(iso: string): string {
     data-compose={composeParam}
     data-demo-link={p.demo_link ?? ''}
     data-demo-quand={demoQuand}
+    data-jour={demoJour}
+    data-heure={demoHeure}
     data-templates={JSON.stringify(templatesForClient)}
     hidden
   ></div>
@@ -526,7 +544,7 @@ function fmtDateTime(iso: string): string {
 </style>
 
 <script>
-  import { renderTemplate, outlookComposeUrl } from '../../../lib/email-templates';
+  import { renderTemplate, outlookComposeUrl, EMAIL_TEMPLATE_LABELS } from '../../../lib/email-templates';
 
   const ctx = document.querySelector('[data-cmp-ctx]');
   const prenom = ctx?.getAttribute('data-prenom') || '';
@@ -535,6 +553,8 @@ function fmtDateTime(iso: string): string {
   const composeParam = ctx?.getAttribute('data-compose') || '';
   const demoLink = ctx?.getAttribute('data-demo-link') || '';
   const demoQuand = ctx?.getAttribute('data-demo-quand') || '';
+  const jour = ctx?.getAttribute('data-jour') || '';
+  const heure = ctx?.getAttribute('data-heure') || '';
   let templates: Record<string, { subject: string; body: string }> = {};
   try { templates = JSON.parse(ctx?.getAttribute('data-templates') || '{}'); } catch {}
 
@@ -547,12 +567,7 @@ function fmtDateTime(iso: string): string {
   const outlookEl = modal?.querySelector('[data-cmp-outlook]') as HTMLAnchorElement | null;
   const copyEl = modal?.querySelector('[data-cmp-copy]') as HTMLButtonElement | null;
 
-  const LABELS: Record<string, string> = {
-    outreach: 'Mail de démarchage',
-    demo_prospect: 'Mail démo — prospect',
-    demo_pilote: 'Mail démo — pilote',
-    demo_reminder: 'Mail de rappel',
-  };
+  const LABELS: Record<string, string> = EMAIL_TEMPLATE_LABELS;
   let current: string | null = null;
 
   function updateOutlook() {
@@ -560,7 +575,7 @@ function fmtDateTime(iso: string): string {
   }
   function rerender() {
     if (!current || !templates[current] || !subjectEl || !bodyEl) return;
-    const vars = { prenom, club, lien_visio: visioEl?.value || '', demo_quand: demoQuand };
+    const vars = { prenom, club, lien_visio: visioEl?.value || '', demo_quand: demoQuand, jour, heure };
     subjectEl.value = renderTemplate(templates[current].subject || '', vars);
     bodyEl.value = renderTemplate(templates[current].body || '', vars);
     updateOutlook();
