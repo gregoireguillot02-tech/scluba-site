@@ -260,20 +260,23 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
 
     <button type="button" class="report-trigger" data-report-trigger>⚠ Signaler un souci sur le parcours</button>
 
-    <dialog class="report-dialog" data-report-dialog>
+    <dialog class="report-dialog" data-report-dialog aria-labelledby="report-title">
       <form method="dialog" data-report-form>
-        <h3 class="report-title">Signaler un souci — trou <span data-report-hole></span></h3>
-        <div class="report-cats">
-          <label><input type="radio" name="category" value="bunker" required /> Bunker</label>
-          <label><input type="radio" name="category" value="green" /> Green</label>
-          <label><input type="radio" name="category" value="fairway" /> Fairway</label>
-          <label><input type="radio" name="category" value="rough" /> Rough</label>
-          <label><input type="radio" name="category" value="equipement" /> Équipement</label>
-          <label><input type="radio" name="category" value="autre" /> Autre</label>
-        </div>
+        <h3 id="report-title" class="report-title">Signaler un souci — trou <span data-report-hole></span></h3>
+        <fieldset class="report-fieldset">
+          <legend class="report-legend">Catégorie</legend>
+          <div class="report-cats">
+            <label><input type="radio" name="category" value="bunker" required /> Bunker</label>
+            <label><input type="radio" name="category" value="green" /> Green</label>
+            <label><input type="radio" name="category" value="fairway" /> Fairway</label>
+            <label><input type="radio" name="category" value="rough" /> Rough</label>
+            <label><input type="radio" name="category" value="equipement" /> Équipement</label>
+            <label><input type="radio" name="category" value="autre" /> Autre</label>
+          </div>
+        </fieldset>
         <textarea class="report-comment" data-report-comment maxlength="200" placeholder="Précisez (facultatif)"></textarea>
         <menu class="report-actions">
-          <button value="cancel" type="submit" class="report-cancel">Annuler</button>
+          <button value="cancel" type="button" class="report-cancel" data-report-cancel>Annuler</button>
           <button value="send" type="submit" class="report-send" data-report-send>Envoyer</button>
         </menu>
         <p class="report-msg" data-report-msg role="status"></p>
@@ -609,6 +612,10 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         const reportHoleEl = reportDialog.querySelector<HTMLElement>('[data-report-hole]')!;
         const reportCommentEl = reportDialog.querySelector<HTMLTextAreaElement>('[data-report-comment]')!;
         const reportMsgEl = reportDialog.querySelector<HTMLElement>('[data-report-msg]')!;
+        const reportCancelBtn = reportDialog.querySelector<HTMLButtonElement>('[data-report-cancel]')!;
+        // « Annuler » est type=button : la validation `required` du radio ne doit
+        // pas bloquer la fermeture. On ferme explicitement.
+        reportCancelBtn.addEventListener('click', () => reportDialog.close());
         reportTrigger.addEventListener('click', () => {
           reportForm.reset();
           reportHoleEl.textContent = String(currentHole);
@@ -1976,11 +1983,12 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     }
     .report-dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
     .report-title { margin: 0 0 12px; font-size: 16px; color: #1B4332; }
+    .report-fieldset { border: 0; margin: 0 0 12px; padding: 0; min-inline-size: 0; }
+    .report-legend { padding: 0; margin: 0 0 6px; font-size: 13px; color: #6b7280; }
     .report-cats {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
-      margin-bottom: 12px;
     }
     .report-cats label {
       display: flex;
