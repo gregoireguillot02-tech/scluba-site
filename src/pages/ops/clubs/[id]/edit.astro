@@ -306,7 +306,6 @@ function fmtRelative(iso: string | null): string {
           class="upload-form"
           data-logo-form
           data-club-id={c.id}
-          data-primary-color={c.primary_color ?? '#0EA968'}
         >
           <label class="ops-label">Remplacer le logo
             <input class="ops-input" type="file" name="file" accept=".svg,.png,.jpg,.jpeg,.webp" required />
@@ -700,7 +699,6 @@ function fmtRelative(iso: string | null): string {
   if (form) {
     const fileInput = form.querySelector('input[type="file"]') as HTMLInputElement;
     const clubId = form.dataset.clubId!;
-    const bgColor = form.dataset.primaryColor || '#0EA968';
 
     form.addEventListener('submit', async (e) => {
       const file = fileInput.files?.[0];
@@ -718,7 +716,7 @@ function fmtRelative(iso: string | null): string {
         const logoRes = await fetch(`/api/ops/clubs/${clubId}/upload?kind=logo`, { method: 'POST', body: logoFd });
         if (!logoRes.ok) throw new Error('logo');
         // 2) Génération du carré 512² + upload comme icône écran d'accueil.
-        const blob = await generateSquareIcon(file, bgColor);
+        const blob = await generateSquareIcon(file);
         const iconFd = new FormData();
         iconFd.append('file', blob, 'icon.png');
         const iconRes = await fetch(`/api/ops/clubs/${clubId}/upload?kind=icon`, { method: 'POST', body: iconFd });
@@ -732,7 +730,7 @@ function fmtRelative(iso: string | null): string {
     });
   }
 
-  async function generateSquareIcon(file: File, bgColor: string): Promise<Blob> {
+  async function generateSquareIcon(file: File): Promise<Blob> {
     const bitmap = await createImageBitmap(file);
     const SIZE = 512;
     const PADDING = 0.1;
@@ -741,7 +739,9 @@ function fmtRelative(iso: string | null): string {
     canvas.width = SIZE;
     canvas.height = SIZE;
     const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = bgColor;
+    // Fond blanc : se fond avec les logos sur fond blanc (cas courant), neutre
+    // pour les logos transparents. Évite la bordure de couleur autour du logo.
+    ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, SIZE, SIZE);
     ctx.drawImage(bitmap, dx, dy, drawW, drawH);
     return await new Promise<Blob>((resolve, reject) =>
