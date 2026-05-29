@@ -255,6 +255,7 @@ const sharePayload = JSON.stringify({
 
 const pageUrl = `${Astro.url.origin}/r/${r.short_code}/recap`;
 const clubColor = r.club.primary_color ?? '#1B4332';
+const iconUrl = r.club.icon_url ?? r.club.logo_url ?? undefined;
 
 // Sponsors : on récupère les slots non vides et on les répartit gauche/droite
 // avec un léger biais à gauche pour un nombre impair, pour rester centré
@@ -277,6 +278,9 @@ const hasSponsors = allSponsors.length > 0;
   title={`Carte du ${fmtDate(r.started_at ?? r.created_at)} — ${r.club.name} · Scluba`}
   themeColor="#FFFFFF"
   clubColor={clubColor}
+  iconUrl={iconUrl}
+  appName={r.club.name}
+  manifestHref={`/r/${r.short_code}/manifest.webmanifest`}
   gridBackdrop={true}
 >
   <main class="card">

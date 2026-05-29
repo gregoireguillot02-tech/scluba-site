@@ -54,6 +54,7 @@ const roundHoles = resolveRoundHoles(r, r.club);
 const roundSections = resolveRoundSections(r, r.club);
 const par = roundHoles.reduce((sum, h) => sum + h.par, 0);
 const clubColor = r.club.primary_color ?? '#1B4332';
+const iconUrl = r.club.icon_url ?? r.club.logo_url ?? undefined;
 
 const scoresByHole: Record<number, number> = {};
 const pickedUpHoles: number[] = [];
@@ -118,6 +119,9 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
   title={`${r.club.name} — Saisie en cours · Scluba`}
   themeColor={clubColor}
   clubColor={clubColor}
+  iconUrl={iconUrl}
+  appName={r.club.name}
+  manifestHref={`/r/${r.short_code}/manifest.webmanifest`}
   lockOverscroll={true}
   gridBackdrop={true}
 >
