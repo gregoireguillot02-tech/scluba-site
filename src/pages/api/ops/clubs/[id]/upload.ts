@@ -8,6 +8,7 @@ export const prerender = false;
 // raster file). Adding a new kind here is enough to wire a new asset slot.
 const KIND_TO_COLUMN: Record<string, string> = {
   logo: 'logo_url',
+  icon: 'icon_url',
   photo: 'photo_url',
   sponsor1: 'sponsor_1_url',
   sponsor2: 'sponsor_2_url',
@@ -162,6 +163,16 @@ export const POST: APIRoute = async ({ request, params, locals, redirect, url })
   if (updErr) {
     console.error('[api/ops/clubs/[id]/upload] DB update failed', updErr);
     return new Response('DB update failed', { status: 500 });
+  }
+
+  // The icon is uploaded programmatically (fetch) alongside the logo by the
+  // /ops edit script — answer JSON so the client can chain logo → icon → reload
+  // instead of following a redirect.
+  if (kind === 'icon') {
+    return new Response(JSON.stringify({ ok: true, url: publicUrl }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
   }
 
   return redirect(`/ops/clubs/${id}/edit?ok=1`, 302);

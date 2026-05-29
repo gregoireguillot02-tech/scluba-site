@@ -64,12 +64,16 @@ const joinUrl = `${Astro.url.origin}/r/${shortCode}/join`;
 const inviteQr = await qrSvg(joinUrl, { errorCorrectionLevel: 'M' });
 
 const clubColor = r.club.primary_color ?? '#1B4332';
+const iconUrl = r.club.icon_url ?? r.club.logo_url ?? undefined;
 ---
 
 <PlayerLayout
   title={`Lobby — ${r.club.name} · Scluba`}
   themeColor="#FFFFFF"
   clubColor={clubColor}
+  iconUrl={iconUrl}
+  appName={r.club.name}
+  manifestHref={`/r/${r.short_code}/manifest.webmanifest`}
   gridBackdrop={true}
 >
   <main

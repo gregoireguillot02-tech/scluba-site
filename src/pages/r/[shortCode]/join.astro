@@ -60,12 +60,16 @@ const creator = allPlayers.find((p) => p.is_creator) ?? null;
 const prefillName = (Astro.url.searchParams.get('name') ?? '').trim().slice(0, 40);
 
 const clubColor = r.club.primary_color ?? '#1B4332';
+const iconUrl = r.club.icon_url ?? r.club.logo_url ?? undefined;
 ---
 
 <PlayerLayout
   title={`Rejoindre — ${r.club.name} · Scluba`}
   themeColor="#FFFFFF"
   clubColor={clubColor}
+  iconUrl={iconUrl}
+  appName={r.club.name}
+  manifestHref={`/r/${r.short_code}/manifest.webmanifest`}
   gridBackdrop={true}
 >
   <main class="join-page" data-join-page data-short-code={shortCode} data-round-id={r.id} data-status={r.status}>
