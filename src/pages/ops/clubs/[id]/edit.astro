@@ -410,6 +410,24 @@ function fmtRelative(iso: string | null): string {
           PNG/JPEG/WebP, max 500 KB. Format carré ou paysage léger conseillé.
         </p>
       </div>
+
+      <!-- Accès portail club -->
+      <div class="ops-card" style="margin-top:16px">
+        <h2>Accès portail club</h2>
+        <p class="ops-hint" style="margin: 0 0 12px">
+          Génère un lien d'invitation à envoyer au club. À l'ouverture, la personne crée son accès au portail (lien valable 7 jours, usage unique). « Jardinier » ne voit que les signalements du parcours.
+        </p>
+        <div class="invite-row">
+          <label class="ops-label" style="margin:0">Rôle
+            <select class="ops-input" id="invite-role">
+              <option value="admin">Admin (voit tout)</option>
+              <option value="greenkeeper">Jardinier (signalements)</option>
+            </select>
+          </label>
+          <button type="button" class="ops-btn ops-btn-primary" id="gen-invite" data-club-id={c.id}>Générer un lien</button>
+        </div>
+        <output id="invite-out" class="invite-out"></output>
+      </div>
     </div>
   </div>
 </OpsLayout>
@@ -529,6 +547,44 @@ function fmtRelative(iso: string | null): string {
       const next = Number(select.value);
       if ([6, 9, 18].indexOf(next) === -1) return;
       render(next);
+    });
+  })();
+</script>
+
+<script is:inline>
+  // Génère un lien d'invitation portail club et l'affiche pour copie.
+  (function setupClubInvite() {
+    const btn = document.getElementById('gen-invite');
+    if (!btn) return;
+    const out = document.getElementById('invite-out');
+    const roleSel = document.getElementById('invite-role');
+    btn.addEventListener('click', async () => {
+      const clubId = btn.getAttribute('data-club-id');
+      btn.disabled = true;
+      out.textContent = 'Génération…';
+      try {
+        const res = await fetch('/api/ops/club-invites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ club_id: clubId, role: roleSel.value }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          out.innerHTML = '';
+          const input = document.createElement('input');
+          input.className = 'ops-input';
+          input.readOnly = true;
+          input.value = data.url;
+          input.addEventListener('focus', () => input.select());
+          out.appendChild(input);
+        } else {
+          out.textContent = 'Erreur : ' + (await res.text());
+        }
+      } catch (e) {
+        out.textContent = 'Erreur réseau, réessayez.';
+      } finally {
+        btn.disabled = false;
+      }
     });
   })();
 </script>
@@ -882,4 +938,15 @@ function fmtRelative(iso: string | null): string {
   }
   .sponsor-delete-btn:hover { background: #FEE2E2; border-color: #F87171; }
   .sponsor-delete-form { margin: 0; }
+
+  /* Accès portail club */
+  .invite-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+  .invite-row .ops-label { flex: 1; min-width: 140px; }
+  .invite-out { display: block; margin-top: 10px; }
+  .invite-out input { width: 100%; font-size: 12px; }
 </style>
