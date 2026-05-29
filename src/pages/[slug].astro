@@ -27,6 +27,7 @@ const c = club as Club;
 const par = totalPar(c.course_data);
 const holeCount = c.course_data.holes.length;
 const clubColor = c.primary_color ?? '#1B4332';
+const iconUrl = c.icon_url ?? c.logo_url ?? undefined;
 
 // Formats are optional — a club without `formats[]` falls back to the legacy
 // 18-hole flat course, and we just don't render the selector.
@@ -109,7 +110,13 @@ function fmtTime(iso: string | null): string {
   <meta name="description" content={`Scorecard digitale pour ${c.name}. Démarrez une partie en quelques secondes.`} />
   <meta name="robots" content="noindex, nofollow" />
   <meta name="theme-color" content="#FFFFFF" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  {iconUrl ? (
+    <link rel="icon" href={iconUrl} />
+  ) : (
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  )}
+  {iconUrl && <link rel="apple-touch-icon" href={iconUrl} />}
+  <meta name="apple-mobile-web-app-title" content={c.name} />
   {/* Fonts Strava Light Green — Inter (body) + Sora (display). Cohérent
        avec le flow joueur (cf. PlayerLayout). */}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
