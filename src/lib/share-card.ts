@@ -1,4 +1,3 @@
-import { createBrowserClient } from '@supabase/ssr';
 import type { Club, CourseHole, RoundPlayer } from './clubs-types';
 import { scoreType } from './clubs-types';
 
@@ -42,14 +41,15 @@ export async function compressPhoto(file: File): Promise<Blob> {
 
 const BUCKET = 'round-share-photos';
 
-function browserClient() {
-  const url = import.meta.env.PUBLIC_SUPABASE_URL as string;
-  const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string;
-  return createBrowserClient(url, key);
-}
-
 export async function uploadSharePhoto(roundId: string, blob: Blob): Promise<string> {
-  const sb = browserClient();
+  // Import dynamique : `@supabase/ssr` est lourd. En le sortant du graphe
+  // statique, le chunk de ShareCardModal reste léger et window.openShareCardModal
+  // s'enregistre quasi-immédiatement (sinon, sur iPhone Safari à froid, le tap
+  // "Partager" peut tomber sur le fallback partage-direct sans aperçu).
+  const { createBrowserClient } = await import('@supabase/ssr');
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL as string;
+  const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string;
+  const sb = createBrowserClient(supabaseUrl, supabaseKey);
   const path = `${roundId}/cover.jpg`;
 
   const { error: uploadError } = await sb.storage
@@ -158,14 +158,39 @@ const CELL_COLOR: Record<string, string> = {
   'double': '#D8A8A8',
 };
 
-function loadImage(url: string): Promise<HTMLImageElement> {
+function loadViaImg(src: string, useCors: boolean): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (useCors) img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error('image load failed'));
-    img.src = url;
+    img.src = src;
   });
+}
+
+async function loadImage(url: string): Promise<HTMLImageElement> {
+  // 1. Cas nominal : <img crossorigin> directement (object URL local, ou
+  //    cache CORS-clean). Pour dessiner sur le canvas sans le tainter, il
+  //    FAUT crossOrigin — donc si ça charge, l'image est sûre.
+  try {
+    return await loadViaImg(url, true);
+  } catch {
+    // 2. Fallback Safari : un <img> sans crossorigin (ex. le bandeau du
+    //    recap) a pu remplir le cache avec une réponse "non-CORS" que le
+    //    chargement crossOrigin ci-dessus refuse → photo absente du PNG
+    //    alors qu'elle s'affiche dans le bandeau. On récupère les octets via
+    //    fetch (cache: 'reload' pour contourner l'entrée empoisonnée) puis on
+    //    dessine depuis un blob object URL same-origin.
+    const res = await fetch(url, { mode: 'cors', cache: 'reload' });
+    if (!res.ok) throw new Error(`image fetch failed (${res.status})`);
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      return await loadViaImg(objectUrl, false);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
 }
 
 function drawRoundedRect(
