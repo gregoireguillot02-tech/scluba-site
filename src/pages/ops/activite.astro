@@ -1,0 +1,299 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../lib/supabase';
+
+const sb = serviceClient();
+const [{ data: clubsRaw }, { data: roundsRaw }, { data: playersRaw }] = await Promise.all([
+  sb.from('clubs').select('id, name, city'),
+  sb.from('rounds').select('id, club_id, status, scoring_mode, share_photo_url, created_at, started_at, finished_at'),
+  sb.from('round_players').select('round_id, user_id, display_name, comment'),
+]);
+
+type RoundRow = {
+  id: string; club_id: string; status: string; scoring_mode: string | null;
+  share_photo_url: string | null; created_at: string; started_at: string | null; finished_at: string | null;
+};
+type PlayerRow = { round_id: string; user_id: string | null; display_name: string; comment: string | null };
+
+const clubs = (clubsRaw ?? []) as { id: string; name: string; city: string | null }[];
+const rounds = (roundsRaw ?? []) as RoundRow[];
+const players = (playersRaw ?? []) as PlayerRow[];
+
+const total = rounds.length;
+const finished = rounds.filter((r) => r.status === 'finished').length;
+const active = rounds.filter((r) => r.status === 'lobby' || r.status === 'playing').length;
+const completionPct = total ? Math.round((finished / total) * 100) : 0;
+const shareCount = rounds.filter((r) => r.share_photo_url).length;
+const sharePct = total ? Math.round((shareCount / total) * 100) : 0;
+const selfCount = rounds.filter((r) => r.scoring_mode === 'self').length;
+const hostCount = rounds.filter((r) => r.scoring_mode === 'host').length;
+
+const totalPlayers = players.length;
+const uniquePlayers = new Set(players.map((p) => (p.display_name || '').toLowerCase().trim()).filter(Boolean)).size;
+const loggedInPlayers = players.filter((p) => p.user_id).length;
+const avgPlayers = total ? totalPlayers / total : 0;
+
+// Tendance : 30 derniers jours
+const DAYS = 30;
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+const trend: { key: string; label: string; count: number }[] = [];
+for (let i = DAYS - 1; i >= 0; i--) {
+  const d = new Date(today);
+  d.setDate(d.getDate() - i);
+  trend.push({ key: d.toISOString().slice(0, 10), label: d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }), count: 0 });
+}
+const trendMap = new Map(trend.map((t) => [t.key, t]));
+for (const r of rounds) {
+  const slot = trendMap.get(new Date(r.created_at).toISOString().slice(0, 10));
+  if (slot) slot.count++;
+}
+const trendMax = Math.max(1, ...trend.map((t) => t.count));
+const trend30 = trend.reduce((s, t) => s + t.count, 0);
+
+// Jour de la semaine (Lun→Dim)
+const DOW = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const dow = DOW.map((l) => ({ label: l, count: 0 }));
+for (const r of rounds) dow[(new Date(r.created_at).getDay() + 6) % 7].count++;
+const dowMax = Math.max(1, ...dow.map((d) => d.count));
+
+// Heure de la journée
+const hours = Array.from({ length: 24 }, (_, h) => ({ h, count: 0 }));
+for (const r of rounds) hours[new Date(r.created_at).getHours()].count++;
+const hoursMax = Math.max(1, ...hours.map((h) => h.count));
+
+// Leaderboard par club
+const roundClub = new Map<string, string>();
+for (const r of rounds) roundClub.set(r.id, r.club_id);
+type Agg = { rounds: number; finished: number; active: number; players: number; share: number; last: string | null };
+const agg = new Map<string, Agg>();
+for (const c of clubs) agg.set(c.id, { rounds: 0, finished: 0, active: 0, players: 0, share: 0, last: null });
+for (const r of rounds) {
+  const a = agg.get(r.club_id);
+  if (!a) continue;
+  a.rounds++;
+  if (r.status === 'finished') a.finished++;
+  else a.active++;
+  if (r.share_photo_url) a.share++;
+  const ts = r.started_at ?? r.created_at;
+  if (!a.last || ts > a.last) a.last = ts;
+}
+for (const p of players) {
+  const cid = roundClub.get(p.round_id);
+  const a = cid ? agg.get(cid) : null;
+  if (a) a.players++;
+}
+const leaderboard = clubs
+  .map((c) => ({ club: c, a: agg.get(c.id)! }))
+  .filter((x) => x.a.rounds > 0)
+  .sort((x, y) => y.a.rounds - x.a.rounds);
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+function pct(n: number, d: number): number {
+  return d ? Math.round((n / d) * 100) : 0;
+}
+---
+
+<OpsLayout title="Activité" active="activite">
+  <div class="ops-page-header">
+    <div>
+      <h1 class="ops-page-title">Activité</h1>
+      <p class="ops-page-subtitle">Usage de la scorecard — {total} partie{total > 1 ? 's' : ''}, {uniquePlayers} joueur{uniquePlayers > 1 ? 's' : ''} unique{uniquePlayers > 1 ? 's' : ''}</p>
+    </div>
+  </div>
+
+  {total === 0 ? (
+    <div class="ops-card"><div class="ops-empty">Aucune partie enregistrée pour l'instant.</div></div>
+  ) : (
+    <>
+      <div class="kpi-grid">
+        <div class="ops-kpi ops-kpi-blue">
+          <div class="ops-kpi-main">
+            <div class="ops-kpi-label">Parties</div>
+            <div class="ops-kpi-value">{total}</div>
+            <div class="ops-kpi-sub">{trend30} sur 30 jours</div>
+          </div>
+        </div>
+        <div class="ops-kpi ops-kpi-emerald">
+          <div class="ops-kpi-main">
+            <div class="ops-kpi-label">Terminées</div>
+            <div class="ops-kpi-value">{finished}</div>
+            <div class="ops-kpi-sub">{completionPct}% complétées</div>
+          </div>
+          <div class="ops-donut" style={`--pct:${completionPct}`} role="img" aria-label={`${completionPct}% complétées`}></div>
+        </div>
+        <div class="ops-kpi ops-kpi-violet">
+          <div class="ops-kpi-main">
+            <div class="ops-kpi-label">Joueurs</div>
+            <div class="ops-kpi-value">{totalPlayers}</div>
+            <div class="ops-kpi-sub">{uniquePlayers} uniques · {loggedInPlayers} connectés</div>
+          </div>
+        </div>
+        <div class="ops-kpi ops-kpi-amber">
+          <div class="ops-kpi-main">
+            <div class="ops-kpi-label">Cartes partagées</div>
+            <div class="ops-kpi-value">{shareCount}</div>
+            <div class="ops-kpi-sub">{sharePct}% des parties</div>
+          </div>
+          <div class="ops-donut" style={`--pct:${sharePct}`} role="img" aria-label={`${sharePct}% partagées`}></div>
+        </div>
+        <div class="ops-kpi ops-kpi-magenta">
+          <div class="ops-kpi-main">
+            <div class="ops-kpi-label">Moy. joueurs/partie</div>
+            <div class="ops-kpi-value">{avgPlayers.toFixed(1)}</div>
+            <div class="ops-kpi-sub">{totalPlayers} joueurs au total</div>
+          </div>
+        </div>
+        <div class="ops-kpi ops-kpi-coral">
+          <div class="ops-kpi-main">
+            <div class="ops-kpi-label">En cours</div>
+            <div class="ops-kpi-value">{active}</div>
+            <div class="ops-kpi-sub">parties non terminées</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ops-card chart-card">
+        <h2>Parties par jour — 30 derniers jours</h2>
+        <div class="bars bars-trend">
+          {trend.map((t) => (
+            <div class="bar-col" title={`${t.label} : ${t.count} partie${t.count > 1 ? 's' : ''}`}>
+              <div class="bar" style={`height:${Math.round((t.count / trendMax) * 100)}%`}></div>
+            </div>
+          ))}
+        </div>
+        <div class="bars-axis"><span>{trend[0].label}</span><span>{trend[trend.length - 1].label}</span></div>
+      </div>
+
+      <div class="two-col">
+        <div class="ops-card chart-card">
+          <h2>Par jour de la semaine</h2>
+          <div class="bars">
+            {dow.map((d) => (
+              <div class="bar-col" title={`${d.label} : ${d.count}`}>
+                <div class="bar bar-accent" style={`height:${Math.round((d.count / dowMax) * 100)}%`}></div>
+                <span class="bar-x">{d.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div class="ops-card chart-card">
+          <h2>Par heure de la journée</h2>
+          <div class="bars">
+            {hours.map((h) => (
+              <div class="bar-col" title={`${h.h}h : ${h.count}`}>
+                <div class="bar bar-blue" style={`height:${Math.round((h.count / hoursMax) * 100)}%`}></div>
+                <span class="bar-x">{h.h % 6 === 0 ? `${h.h}h` : ''}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div class="ops-card">
+        <h2>Mode de saisie</h2>
+        <div class="split">
+          <div class="split-row">
+            <span class="split-label">Self (chacun son tél)</span>
+            <span class="split-track"><span class="split-fill split-self" style={`width:${pct(selfCount, total)}%`}></span></span>
+            <span class="split-val">{selfCount} · {pct(selfCount, total)}%</span>
+          </div>
+          <div class="split-row">
+            <span class="split-label">Host (un seul saisit)</span>
+            <span class="split-track"><span class="split-fill split-host" style={`width:${pct(hostCount, total)}%`}></span></span>
+            <span class="split-val">{hostCount} · {pct(hostCount, total)}%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ops-card" style="margin-top:16px">
+        <h2>Classement des clubs</h2>
+        <div class="table-wrap">
+          <table class="ops-table">
+            <thead>
+              <tr>
+                <th>Club</th>
+                <th>Parties</th>
+                <th>Terminées</th>
+                <th>En cours</th>
+                <th>Joueurs</th>
+                <th>Partagées</th>
+                <th>Dernière activité</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaderboard.map(({ club, a }) => (
+                <tr>
+                  <td><a href={`/ops/activite/${club.id}`} class="club-link">{club.name}</a></td>
+                  <td><strong>{a.rounds}</strong></td>
+                  <td>{a.finished} <span class="dim">({pct(a.finished, a.rounds)}%)</span></td>
+                  <td>{a.active}</td>
+                  <td>{a.players}</td>
+                  <td>{a.share} <span class="dim">({pct(a.share, a.rounds)}%)</span></td>
+                  <td>{fmtDate(a.last)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  )}
+</OpsLayout>
+
+<style>
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .chart-card h2, .ops-card h2 { margin-top: 0; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+  .bars { display: flex; align-items: flex-end; gap: 3px; height: 150px; }
+  .bars-trend { gap: 2px; }
+  .bar-col {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+  }
+  .bar {
+    width: 100%;
+    max-width: 26px;
+    background: linear-gradient(180deg, var(--primary), var(--primary-deep));
+    border-radius: 4px 4px 0 0;
+    min-height: 2px;
+  }
+  .bar-accent { background: linear-gradient(180deg, #7C5CFC, #5B8DEF); }
+  .bar-blue { background: linear-gradient(180deg, #3B82F6, #22D3EE); }
+  .bar-x { font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .bars-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  .split { display: flex; flex-direction: column; gap: 12px; }
+  .split-row { display: grid; grid-template-columns: 160px 1fr 110px; align-items: center; gap: 12px; font-size: 14px; }
+  .split-label { color: var(--ink-soft); }
+  .split-track { height: 12px; background: var(--bg-soft); border-radius: 999px; overflow: hidden; }
+  .split-fill { display: block; height: 100%; border-radius: 999px; }
+  .split-self { background: linear-gradient(90deg, #34D399, #10B981); }
+  .split-host { background: linear-gradient(90deg, #F59E0B, #FB923C); }
+  .split-val { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+  @media (max-width: 600px) { .split-row { grid-template-columns: 1fr; gap: 4px; } .split-val { text-align: left; } }
+
+  .table-wrap { overflow-x: auto; }
+  .club-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+  .club-link:hover { text-decoration: underline; }
+  .dim { color: var(--muted-soft); font-size: 12px; }
+</style>

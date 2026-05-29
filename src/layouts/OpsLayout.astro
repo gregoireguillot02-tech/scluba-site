@@ -4,7 +4,7 @@ import OpsIcon from '../components/ops/OpsIcon.astro';
 
 interface Props {
   title: string;
-  active?: 'home' | 'calendrier' | 'prospects' | 'reseau' | 'appels' | 'clubs' | 'todo' | 'signups' | 'stats' | 'parametres';
+  active?: 'home' | 'calendrier' | 'prospects' | 'reseau' | 'appels' | 'clubs' | 'todo' | 'signups' | 'stats' | 'activite' | 'parametres';
 }
 
 const { title, active } = Astro.props;
@@ -32,6 +32,7 @@ const navGroups = [
   {
     label: 'Système',
     items: [
+      { id: 'activite', label: 'Activité', href: '/ops/activite', icon: 'activity' },
       { id: 'stats', label: 'Stats', href: '/ops/stats', icon: 'bar-chart' },
       { id: 'parametres', label: 'Paramètres', href: '/ops/parametres', icon: 'settings' },
     ],
