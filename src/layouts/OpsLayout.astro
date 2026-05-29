@@ -146,9 +146,13 @@ const user = Astro.locals.user;
         <slot />
       </main>
     </div>
-  </div>
 
-  <div class="ops-scrim" aria-hidden="true"></div>
+    <!-- Scrim DANS .ops-shell : .ops-shell crée un stacking-context (z-index:1),
+         donc un scrim frère au niveau racine (z-index:55) passe par-dessus la
+         sidebar piégée dans ce contexte (z-index:60 inopérant). À l'intérieur,
+         les z-index se comparent : contenu < scrim(55) < sidebar(60). -->
+    <div class="ops-scrim" aria-hidden="true"></div>
+  </div>
 
   <script define:vars={{ themeKey }}>
     const root = document.documentElement;

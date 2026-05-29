@@ -58,10 +58,13 @@ const CATS = ['bunker', 'green', 'fairway', 'rough', 'equipement', 'autre'];
           {r.comment && <p class="report-comment">{r.comment}</p>}
           <small class="report-date">{new Date(r.created_at).toLocaleString('fr-FR')}</small>
         </div>
-        {r.status === 'nouveau' && (
-          <button type="button" class="ops-btn resolve-btn" data-id={r.id}>Marquer traité</button>
-        )}
-        {r.status === 'traite' && <span class="resolved-tag">✔ traité</span>}
+        <div class="report-actions">
+          {r.status === 'nouveau' && (
+            <button type="button" class="ops-btn resolve-btn" data-id={r.id}>Marquer traité</button>
+          )}
+          {r.status === 'traite' && <span class="resolved-tag">✔ traité</span>}
+          <button type="button" class="ops-btn ops-btn-ghost delete-btn" data-id={r.id} aria-label="Supprimer ce signalement">Supprimer</button>
+        </div>
       </li>
     ))}
   </ul>
@@ -72,6 +75,21 @@ const CATS = ['bunker', 'green', 'fairway', 'rough', 'equipement', 'autre'];
         const id = btn.dataset.id;
         btn.disabled = true;
         const res = await fetch(`/api/club/reports/${id}/resolve`, { method: 'POST' });
+        if (res.ok) {
+          location.reload();
+        } else {
+          btn.disabled = false;
+          alert('Échec, réessayez.');
+        }
+      });
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('.delete-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Supprimer définitivement ce signalement ?')) return;
+        const id = btn.dataset.id;
+        btn.disabled = true;
+        const res = await fetch(`/api/club/reports/${id}/delete`, { method: 'POST' });
         if (res.ok) {
           location.reload();
         } else {
@@ -118,6 +136,19 @@ const CATS = ['bunker', 'green', 'fairway', 'rough', 'equipement', 'autre'];
   }
   .report-comment { margin: 0.35rem 0 0; color: var(--ink-soft); }
   .report-date { color: var(--muted-soft); }
+  .report-actions {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+  }
   .resolve-btn { flex: none; }
   .resolved-tag { color: #10b981; flex: none; font-weight: 600; }
+  .delete-btn { color: var(--danger); white-space: nowrap; }
+  .delete-btn:hover {
+    background: var(--danger-soft);
+    border-color: var(--danger-line);
+    color: var(--danger);
+  }
 </style>
