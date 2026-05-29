@@ -6,6 +6,7 @@ declare namespace App {
   interface Locals {
     user: { id: string; email: string } | null;
     supabase: SupabaseClient;
+    clubMembership: import('./lib/club-auth').ClubMembership | null;
   }
 }
 

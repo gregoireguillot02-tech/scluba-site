@@ -1,5 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
-import { authServerClient, isAllowedEmail } from './lib/supabase';
+import { authServerClient, isAllowedEmail, serviceClient } from './lib/supabase';
+import { canAccessSection, type ClubSection } from './lib/club-auth';
 import { applyRateLimit } from './lib/rate-limit';
 
 const PUBLIC_OPS_PATHS = new Set([
@@ -8,7 +9,7 @@ const PUBLIC_OPS_PATHS = new Set([
   '/ops/auth/signout',
 ]);
 
-const CSRF_PROTECTED_PREFIXES = ['/api/ops', '/api/rounds', '/api/clubs'];
+const CSRF_PROTECTED_PREFIXES = ['/api/ops', '/api/rounds', '/api/clubs', '/api/club'];
 const CSRF_PROTECTED_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 const CSP_VALUE = [
@@ -47,10 +48,14 @@ function applySecurityHeaders(response: Response, pathname: string): Response {
     pathname.startsWith('/api/') ||
     pathname.startsWith('/ops') ||
     pathname.startsWith('/auth') ||
+    pathname.startsWith('/club') ||
     pathname.startsWith('/r/');
   if (noStorePath) out.headers.set('Cache-Control', 'no-store');
 
-  const noindexPath = pathname.startsWith('/api/') || pathname.startsWith('/ops');
+  const noindexPath =
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/ops') ||
+    pathname.startsWith('/club');
   if (noindexPath) out.headers.set('X-Robots-Tag', 'noindex, nofollow');
 
   return out;
@@ -99,10 +104,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isOpsApi = pathname.startsWith('/api/ops');
   const isAuthPage = pathname.startsWith('/auth');
   const isAuthApi = pathname.startsWith('/api/auth');
+  const isClubPage = pathname.startsWith('/club');
+  const isClubApi = pathname.startsWith('/api/club');
+  const isClubJoin = pathname === '/club/join';
 
-  // Pages outside the auth/ops zones don't need the supabase client populated,
-  // but they still need security headers applied to the response.
-  if (!isOpsPage && !isOpsApi && !isAuthPage && !isAuthApi) {
+  // Pages outside the auth/ops/club zones don't need the supabase client
+  // populated, but they still need security headers applied to the response.
+  if (!isOpsPage && !isOpsApi && !isAuthPage && !isAuthApi && !isClubPage && !isClubApi) {
     const response = await next();
     return applySecurityHeaders(response, pathname);
   }
@@ -116,9 +124,49 @@ export const onRequest = defineMiddleware(async (context, next) => {
     ? { id: user.id, email: user.email ?? '' }
     : null;
   context.locals.supabase = supabase;
+  context.locals.clubMembership = null;
 
   // Golfer-side auth pages have no allowlist — anyone can sign in.
   if (isAuthPage || isAuthApi) {
+    const response = await next();
+    return applySecurityHeaders(response, pathname);
+  }
+
+  // --- Zone Portail Club (séparée de /ops : membership club, pas allowlist) ---
+  if (isClubPage || isClubApi) {
+    // /club/join est public : la page consomme elle-même le token + magic-link.
+    if (isClubJoin) {
+      const response = await next();
+      return applySecurityHeaders(response, pathname);
+    }
+    if (!user) {
+      if (isClubApi) {
+        return applySecurityHeaders(new Response('Unauthorized', { status: 401 }), pathname);
+      }
+      const next_ = encodeURIComponent(pathname + context.url.search);
+      return applySecurityHeaders(context.redirect(`/auth/login?next=${next_}`, 302), pathname);
+    }
+    const sb = serviceClient();
+    const { data: membership } = await sb
+      .from('club_users')
+      .select('club_id, role')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!membership) {
+      const msg = isClubApi ? 'Forbidden' : 'Accès club non autorisé pour ce compte.';
+      return applySecurityHeaders(new Response(msg, { status: 403 }), pathname);
+    }
+    context.locals.clubMembership = { clubId: membership.club_id, role: membership.role };
+
+    // Garde rôle sur les pages : greenkeeper ne voit que /club/signalements.
+    if (isClubPage) {
+      const section: ClubSection = pathname.startsWith('/club/signalements')
+        ? 'signalements'
+        : 'dashboard';
+      if (!canAccessSection(membership.role, section)) {
+        return applySecurityHeaders(context.redirect('/club/signalements', 302), pathname);
+      }
+    }
     const response = await next();
     return applySecurityHeaders(response, pathname);
   }
