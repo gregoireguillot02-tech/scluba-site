@@ -21,7 +21,7 @@ export const POST: APIRoute = async ({ params, locals }) => {
   const { data, error } = await sb
     .from('course_reports')
     // resolved_by = email du membre connecté (la session porte l'email ; plus
-    // de user Supabase côté portail, cf. migration 0034 resolved_by → text).
+    // de user Supabase côté portail, cf. migration 0035 resolved_by → text).
     .update({ status: 'traite', resolved_at: new Date().toISOString(), resolved_by: membership.email })
     .eq('id', idParsed.data)
     .eq('club_id', membership.clubId)
