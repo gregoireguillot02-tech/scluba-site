@@ -258,6 +258,28 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       />
     </section>
 
+    <button type="button" class="report-trigger" data-report-trigger>⚠ Signaler un souci sur le parcours</button>
+
+    <dialog class="report-dialog" data-report-dialog>
+      <form method="dialog" data-report-form>
+        <h3 class="report-title">Signaler un souci — trou <span data-report-hole></span></h3>
+        <div class="report-cats">
+          <label><input type="radio" name="category" value="bunker" required /> Bunker</label>
+          <label><input type="radio" name="category" value="green" /> Green</label>
+          <label><input type="radio" name="category" value="fairway" /> Fairway</label>
+          <label><input type="radio" name="category" value="rough" /> Rough</label>
+          <label><input type="radio" name="category" value="equipement" /> Équipement</label>
+          <label><input type="radio" name="category" value="autre" /> Autre</label>
+        </div>
+        <textarea class="report-comment" data-report-comment maxlength="200" placeholder="Précisez (facultatif)"></textarea>
+        <menu class="report-actions">
+          <button value="cancel" type="submit" class="report-cancel">Annuler</button>
+          <button value="send" type="submit" class="report-send" data-report-send>Envoyer</button>
+        </menu>
+        <p class="report-msg" data-report-msg role="status"></p>
+      </form>
+    </dialog>
+
     <section class="leaderboard">
       <header class="leaderboard-head">
         <span>Carte</span>
@@ -575,6 +597,52 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       const finishForm = document.querySelector<HTMLFormElement>('[data-finish-form]')!;
       const statusEl = document.querySelector<HTMLElement>('[data-status]')!;
       const cells = Array.from(document.querySelectorAll<HTMLElement>('[data-cell-hole]'));
+
+      // === Signalement souci parcours (Portail Club) ===
+      // Le bouton lit `currentHole` au moment du clic (valeur live du trou
+      // affiché) et poste via /api/rounds/[shortCode]/report (cookie player
+      // + CSRF same-origin assurés par le middleware).
+      const reportTrigger = document.querySelector<HTMLButtonElement>('[data-report-trigger]');
+      const reportDialog = document.querySelector<HTMLDialogElement>('[data-report-dialog]');
+      if (reportTrigger && reportDialog) {
+        const reportForm = reportDialog.querySelector<HTMLFormElement>('[data-report-form]')!;
+        const reportHoleEl = reportDialog.querySelector<HTMLElement>('[data-report-hole]')!;
+        const reportCommentEl = reportDialog.querySelector<HTMLTextAreaElement>('[data-report-comment]')!;
+        const reportMsgEl = reportDialog.querySelector<HTMLElement>('[data-report-msg]')!;
+        reportTrigger.addEventListener('click', () => {
+          reportForm.reset();
+          reportHoleEl.textContent = String(currentHole);
+          reportMsgEl.textContent = '';
+          reportDialog.showModal();
+        });
+        reportForm.addEventListener('submit', async (e) => {
+          const submitter = (e as SubmitEvent).submitter as HTMLButtonElement | null;
+          if (submitter?.value !== 'send') return; // « Annuler » : laisse le dialog se fermer
+          e.preventDefault();
+          const checked = reportForm.querySelector<HTMLInputElement>('input[name="category"]:checked');
+          if (!checked) { reportMsgEl.textContent = 'Choisissez une catégorie.'; return; }
+          reportMsgEl.textContent = 'Envoi…';
+          try {
+            const res = await fetch(`/api/rounds/${shortCode}/report`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                hole_number: currentHole,
+                category: checked.value,
+                comment: reportCommentEl.value,
+              }),
+            });
+            if (res.ok) {
+              reportMsgEl.textContent = 'Merci, signalé au club ✔';
+              setTimeout(() => reportDialog.close(), 900);
+            } else {
+              reportMsgEl.textContent = 'Échec de l\'envoi, réessayez.';
+            }
+          } catch {
+            reportMsgEl.textContent = 'Échec réseau, réessayez.';
+          }
+        });
+      }
 
       // Banner "TOUR DE [joueur]" (mode host uniquement, null sinon).
       const banner = document.querySelector<HTMLElement>('[data-current-player-banner]');
@@ -1884,5 +1952,76 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     @media (prefers-reduced-motion: reduce) {
       .alert-icon { animation: none; }
     }
+
+    /* === Signalement souci parcours (Portail Club) === */
+    .report-trigger {
+      display: block;
+      margin: 12px auto 0;
+      background: none;
+      border: none;
+      color: #9ca3af;
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 4px 8px;
+    }
+    .report-trigger:hover { color: #6b7280; }
+    .report-dialog {
+      border: none;
+      border-radius: 14px;
+      padding: 20px;
+      max-width: 420px;
+      width: calc(100% - 32px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+    .report-dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
+    .report-title { margin: 0 0 12px; font-size: 16px; color: #1B4332; }
+    .report-cats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .report-cats label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      padding: 6px 8px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .report-comment {
+      width: 100%;
+      min-height: 64px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px;
+      font: inherit;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    .report-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin: 12px 0 0;
+      padding: 0;
+    }
+    .report-actions button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .report-send {
+      background: #1B4332;
+      color: #fff;
+      border-color: #1B4332;
+    }
+    .report-msg { margin: 10px 0 0; font-size: 13px; color: #6b7280; min-height: 1.2em; }
   </style>
 </PlayerLayout>
