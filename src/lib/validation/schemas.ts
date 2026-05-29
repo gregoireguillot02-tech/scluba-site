@@ -69,6 +69,20 @@ export const formatIdSchema = z
 
 export const scoringModeSchema = z.enum(['self', 'host']);
 
+// Heure de départ saisie au lobby (tee-time), pour le calcul de cadence.
+// Le client envoie une chaîne ISO 8601 (new Date(...).toISOString()). On
+// vérifie qu'elle est parsable et bornée à ±24h autour de maintenant, pour
+// rejeter les valeurs aberrantes (Date.parse → version-agnostique vs zod). On
+// ne dépend pas de l'API .datetime() de zod. Voir migration 0034.
+export const teeTimeSchema = z
+  .string()
+  .trim()
+  .max(40)
+  .refine((s) => !Number.isNaN(Date.parse(s)), { message: 'heure de départ invalide' })
+  .refine((s) => Math.abs(Date.parse(s) - Date.now()) <= 24 * 60 * 60 * 1000, {
+    message: 'heure de départ hors plage (±24h)',
+  });
+
 export const createRoundSchema = z.object({
   slug: slugSchema,
   display_name: displayNameSchema,

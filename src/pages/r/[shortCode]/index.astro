@@ -202,7 +202,23 @@ const iconUrl = r.club.icon_url ?? r.club.logo_url ?? undefined;
       <p class="add-player-error" data-add-player-error hidden></p>
     </section>
 
+    {isCreator && (
+      <section class="teetime-block" aria-labelledby="teetime-title" data-teetime>
+        <header class="teetime-head">
+          <h2 id="teetime-title" class="teetime-title">Heure de départ</h2>
+          <button type="button" class="teetime-now" data-teetime-now>Maintenant</button>
+        </header>
+        <p class="teetime-hint">Sert à te rappeler le rythme de jeu pendant la partie.</p>
+        <div class="teetime-stepper">
+          <button type="button" class="teetime-step" data-teetime-step="-15" aria-label="Reculer l'heure de départ de 15 minutes">−15&nbsp;min</button>
+          <output class="teetime-value" data-teetime-display aria-live="polite">--:--</output>
+          <button type="button" class="teetime-step" data-teetime-step="15" aria-label="Avancer l'heure de départ de 15 minutes">+15&nbsp;min</button>
+        </div>
+      </section>
+    )}
+
     <form method="POST" action={`/api/rounds/${shortCode}/start`} class="start-form" data-start-form data-pending-count={pendingCount} data-host-mode={String(isHostMode)} data-astro-reload>
+      {isCreator && <input type="hidden" name="tee_time" data-teetime-input />}
       <button
         type="submit"
         class="start-btn"
@@ -514,6 +530,38 @@ const iconUrl = r.club.icon_url ?? r.club.logo_url ?? undefined;
         btn.setAttribute('aria-expanded', String(!popover.hidden));
       }
     });
+
+    // === Heure de départ (tee-time) ===
+    // Stepper +/-15 min robuste cross-navigateur : la source de vérité est un
+    // hidden input ISO (jamais un <input type="time">, dont le commit est
+    // foireux sur Safari iOS). Défaut = maintenant arrondi à 5 min.
+    const teetime = document.querySelector<HTMLElement>('[data-teetime]');
+    const teetimeInput = document.querySelector<HTMLInputElement>('input[data-teetime-input]');
+    if (teetime && teetimeInput) {
+      const display = teetime.querySelector<HTMLElement>('[data-teetime-display]');
+      const roundTo5 = (d: Date): Date => {
+        const x = new Date(d);
+        x.setSeconds(0, 0);
+        x.setMinutes(Math.round(x.getMinutes() / 5) * 5);
+        return x;
+      };
+      let teeDate = roundTo5(new Date());
+      const fmt = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      const render = (): void => {
+        if (display) display.textContent = fmt.format(teeDate);
+        teetimeInput.value = teeDate.toISOString();
+      };
+      teetime.querySelectorAll<HTMLButtonElement>('[data-teetime-step]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const delta = Number(btn.dataset.teetimeStep || '0');
+          teeDate = new Date(teeDate.getTime() + delta * 60_000);
+          render();
+        });
+      });
+      const nowBtn = teetime.querySelector<HTMLButtonElement>('[data-teetime-now]');
+      nowBtn?.addEventListener('click', () => { teeDate = roundTo5(new Date()); render(); });
+      render();
+    }
   </script>
 
   <style>
@@ -829,6 +877,49 @@ const iconUrl = r.club.icon_url ?? r.club.logo_url ?? undefined;
       margin: var(--space-2) 0 0;
       font-size: 12px;
       color: #DC2626;
+    }
+
+    /* === Heure de départ (tee-time) === Carte glass comme les autres modules. */
+    .teetime-block {
+      padding: var(--space-4);
+      margin-bottom: var(--space-5);
+      background: var(--play-card-bg);
+      -webkit-backdrop-filter: var(--play-card-blur);
+              backdrop-filter: var(--play-card-blur);
+      border: 1px solid rgba(15, 42, 30, 0.06);
+      border-radius: 16px;
+      box-shadow: var(--play-card-shadow);
+    }
+    @supports not (backdrop-filter: blur(1px)) {
+      .teetime-block { background: rgba(255, 255, 255, 0.92); }
+    }
+    .teetime-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-2); }
+    .teetime-title { font-family: var(--font-serif); font-size: var(--text-md); font-weight: 700; color: var(--ink); margin: 0; letter-spacing: 0.02em; }
+    .teetime-now {
+      font-size: 12px; font-weight: 600; color: var(--clubColor);
+      background: transparent; border: none; cursor: pointer; padding: 4px 6px;
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+    .teetime-hint { margin: 0 0 var(--space-3); font-size: 13px; color: var(--muted); }
+    .teetime-stepper { display: flex; align-items: center; gap: var(--space-2); }
+    .teetime-step {
+      flex-shrink: 0;
+      min-height: 44px; padding: 0 14px;
+      border-radius: 10px; border: 1px solid var(--clubColor);
+      background: transparent; color: var(--clubColor);
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      font-variant-numeric: tabular-nums;
+      transition: background 0.15s, color 0.15s, transform 0.12s;
+    }
+    .teetime-step:hover { background: var(--clubColor); color: #FAF7EE; }
+    .teetime-step:active { transform: translateY(1px); }
+    .teetime-value {
+      flex: 1; text-align: center;
+      font-family: var(--font-display, var(--font-serif));
+      font-size: clamp(1.6rem, 8vw, 2.2rem); font-weight: 800;
+      color: var(--clubColor); letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums lining-nums;
+      line-height: 1;
     }
 
     /* Start CTA */

@@ -93,6 +93,9 @@ export interface Round {
   started_at: string | null;
   finished_at: string | null;
   created_at: string;
+  // Heure de départ saisie au lobby (référence du calcul de cadence / rythme de
+  // jeu, voir src/lib/pace.ts). Null = fallback sur started_at. Migration 0034.
+  tee_time: string | null;
   share_photo_url: string | null;
   // When set, identifies an entry in `clubs.course_data.formats` describing
   // which loops this round plays. Null means "play the flat course_data.holes

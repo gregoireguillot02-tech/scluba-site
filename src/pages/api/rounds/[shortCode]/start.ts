@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { serviceClient } from '../../../../lib/supabase';
-import { shortCodeSchema, uuidSchema } from '../../../../lib/validation/schemas';
+import { shortCodeSchema, uuidSchema, teeTimeSchema } from '../../../../lib/validation/schemas';
 
 export const prerender = false;
 
@@ -70,6 +70,21 @@ export const POST: APIRoute = async ({ request, params, redirect, cookies }) => 
     return new Response('Seul l\'organisateur peut démarrer la partie.', { status: 403 });
   }
 
+  // Tee-time optionnel saisi au lobby (hidden input ISO du start-form).
+  // Best-effort : si absent/invalide, on laisse null → le calcul de cadence
+  // (src/lib/pace.ts) retombe sur started_at.
+  let teeTime: string | null = null;
+  try {
+    const form = await request.formData();
+    const raw = form.get('tee_time');
+    if (typeof raw === 'string' && raw.trim() !== '') {
+      const parsed = teeTimeSchema.safeParse(raw);
+      if (parsed.success) teeTime = parsed.data;
+    }
+  } catch {
+    // pas de body form-encoded → on ignore, tee_time reste null
+  }
+
   if (round.status === 'lobby') {
     // Gating sur les placeholders non claimed n'est pertinent qu'en mode
     // 'each' (chacun saisit pour soi → sans device, pas de scores). En
@@ -102,7 +117,7 @@ export const POST: APIRoute = async ({ request, params, redirect, cookies }) => 
     // server flips it).
     await sb
       .from('rounds')
-      .update({ status: 'playing', started_at: new Date().toISOString() })
+      .update({ status: 'playing', started_at: new Date().toISOString(), tee_time: teeTime })
       .eq('id', round.id)
       .eq('status', 'lobby');
   }
