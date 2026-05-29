@@ -5,6 +5,10 @@
  * Exposée globalement via window.openHoleGuideModal(url, holeNumber) ; appelée
  * depuis le bouton "Voir le trou" de play.astro. L'image vit dans le bucket
  * public club-assets (même origine que le logo club → couverte par la CSP img-src).
+ *
+ * La feuille occupe quasi tout l'écran (un carnet de trou a des détails fins :
+ * distances, tracé). L'image remplit la hauteur dispo (object-fit: contain) et
+ * un tap dessus bascule en zoom 2x avec défilement (pan) pour lire les détails.
  */
 ---
 
@@ -13,9 +17,10 @@
     <div class="hg-sheet" role="dialog" aria-modal="true" aria-label="Vue du trou">
       <header class="hg-head">
         <span class="hg-title" data-hg-title>Trou</span>
+        <span class="hg-hint" data-hg-hint>Tapez l'image pour zoomer</span>
         <button type="button" class="hg-close" data-hg-close aria-label="Fermer">✕</button>
       </header>
-      <div class="hg-body">
+      <div class="hg-body" data-hg-body>
         <img class="hg-img" data-hg-img alt="" />
       </div>
     </div>
@@ -34,16 +39,17 @@
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    padding: var(--space-3, 16px);
+    padding: var(--space-2, 10px);
   }
   .hg-sheet {
     background: rgba(250, 247, 238, 0.94);
     border: 1px solid rgba(212, 165, 116, 0.40);
     border-radius: 16px;
     box-shadow: 0 24px 60px -12px rgba(15, 42, 30, 0.5);
-    max-width: 560px;
     width: 100%;
-    max-height: 92dvh;
+    max-width: 960px;
+    height: 94dvh;
+    max-height: 94dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -51,7 +57,7 @@
   .hg-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 10px;
     padding: 12px 16px;
     border-bottom: 1px solid rgba(15, 42, 30, 0.08);
   }
@@ -61,6 +67,12 @@
     font-size: 16px;
     color: var(--primary, #1B4332);
     letter-spacing: 0.01em;
+  }
+  .hg-hint {
+    flex: 1 1 auto;
+    font-size: 11px;
+    color: var(--muted, #6B7280);
+    text-align: center;
   }
   .hg-close {
     appearance: none;
@@ -76,18 +88,39 @@
   }
   .hg-close:hover { color: var(--ink, #0F2A1E); background: rgba(15, 42, 30, 0.06); }
   .hg-body {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 12px;
+    padding: 8px;
   }
+  /* Par défaut : l'image remplit la surface dispo (grand), ratio conservé. */
   .hg-img {
     max-width: 100%;
+    max-height: 100%;
+    width: auto;
     height: auto;
+    object-fit: contain;
     display: block;
     border-radius: 8px;
+    cursor: zoom-in;
+    touch-action: manipulation;
+  }
+  /* Zoomé : l'image dépasse le cadre, le body devient scrollable (pan). */
+  .hg-body.is-zoomed {
+    align-items: flex-start;
+    justify-content: flex-start;
+    cursor: zoom-out;
+  }
+  .hg-body.is-zoomed .hg-img {
+    max-width: none;
+    max-height: none;
+    width: 200%;
+    height: auto;
+    cursor: zoom-out;
   }
 </style>
 
@@ -96,16 +129,40 @@
   if (modal) {
     const img = modal.querySelector<HTMLImageElement>('[data-hg-img]');
     const titleEl = modal.querySelector<HTMLElement>('[data-hg-title]');
+    const body = modal.querySelector<HTMLElement>('[data-hg-body]');
+
+    function resetZoom() {
+      body?.classList.remove('is-zoomed');
+      if (body) body.scrollTo(0, 0);
+    }
     function close() {
       modal!.hidden = true;
+      resetZoom();
       if (img) img.removeAttribute('src');
     }
     (window as any).openHoleGuideModal = function (url: string, holeNumber: number) {
       if (!url) return;
+      resetZoom();
       if (img) { img.src = url; img.alt = `Trou ${holeNumber}`; }
       if (titleEl) titleEl.textContent = `Trou ${holeNumber}`;
       modal.hidden = false;
     };
+    // Tap sur l'image : bascule zoom 2x ↔ ajusté. Centre le pan sur le point tapé.
+    img?.addEventListener('click', (e) => {
+      if (!body) return;
+      const zooming = !body.classList.contains('is-zoomed');
+      body.classList.toggle('is-zoomed', zooming);
+      if (zooming) {
+        const rect = img.getBoundingClientRect();
+        const relX = (e.clientX - rect.left) / rect.width;
+        const relY = (e.clientY - rect.top) / rect.height;
+        // Après reflow (image 2x), recentre le scroll sur le point tapé.
+        requestAnimationFrame(() => {
+          body.scrollLeft = relX * (body.scrollWidth - body.clientWidth);
+          body.scrollTop = relY * (body.scrollHeight - body.clientHeight);
+        });
+      }
+    });
     // Ferme si on clique l'overlay lui-même (data-hg-close sur l'overlay) ou
     // le bouton ✕ — mais pas un clic sur la sheet (qui ne porte pas l'attr).
     modal.querySelectorAll<HTMLElement>('[data-hg-close]').forEach((el) => {
