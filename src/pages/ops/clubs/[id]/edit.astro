@@ -304,6 +304,9 @@ function fmtRelative(iso: string | null): string {
           action={`/api/ops/clubs/${c.id}/upload?kind=logo`}
           enctype="multipart/form-data"
           class="upload-form"
+          data-logo-form
+          data-club-id={c.id}
+          data-primary-color={c.primary_color ?? '#0EA968'}
         >
           <label class="ops-label">Remplacer le logo
             <input class="ops-input" type="file" name="file" accept=".svg,.png,.jpg,.jpeg,.webp" required />
@@ -613,6 +616,67 @@ function fmtRelative(iso: string | null): string {
       });
     });
   })();
+</script>
+
+<script>
+  // À l'upload du logo : on génère EN PLUS une icône carrée 512² (logo centré
+  // sur fond couleur club) pour l'écran d'accueil iOS/Android, stockée en
+  // icon_url. Enhancement raster only ; sans JS le form POST classique upload
+  // le logo seul (dégradation gracieuse).
+  import { computeIconLayout } from '../../../../lib/club-icon';
+
+  const form = document.querySelector('[data-logo-form]') as HTMLFormElement | null;
+  if (form) {
+    const fileInput = form.querySelector('input[type="file"]') as HTMLInputElement;
+    const clubId = form.dataset.clubId!;
+    const bgColor = form.dataset.primaryColor || '#0EA968';
+
+    form.addEventListener('submit', async (e) => {
+      const file = fileInput.files?.[0];
+      // SVG/autre → on laisse le POST normal (le serveur valide/refuse).
+      if (!file || !/^image\/(png|jpeg|webp)$/.test(file.type)) return;
+      e.preventDefault();
+      const btn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Traitement…';
+      try {
+        // 1) Upload du logo original.
+        const logoFd = new FormData();
+        logoFd.append('file', file);
+        const logoRes = await fetch(`/api/ops/clubs/${clubId}/upload?kind=logo`, { method: 'POST', body: logoFd });
+        if (!logoRes.ok) throw new Error('logo');
+        // 2) Génération du carré 512² + upload comme icône écran d'accueil.
+        const blob = await generateSquareIcon(file, bgColor);
+        const iconFd = new FormData();
+        iconFd.append('file', blob, 'icon.png');
+        const iconRes = await fetch(`/api/ops/clubs/${clubId}/upload?kind=icon`, { method: 'POST', body: iconFd });
+        if (!iconRes.ok) throw new Error('icon');
+        window.location.href = `/ops/clubs/${clubId}/edit?ok=1`;
+      } catch {
+        btn.disabled = false;
+        btn.textContent = original;
+        window.location.href = `/ops/clubs/${clubId}/edit?err=${encodeURIComponent('Upload logo/icône échoué')}`;
+      }
+    });
+  }
+
+  async function generateSquareIcon(file: File, bgColor: string): Promise<Blob> {
+    const bitmap = await createImageBitmap(file);
+    const SIZE = 512;
+    const PADDING = 0.1;
+    const { drawW, drawH, dx, dy } = computeIconLayout(bitmap.width, bitmap.height, SIZE, PADDING);
+    const canvas = document.createElement('canvas');
+    canvas.width = SIZE;
+    canvas.height = SIZE;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    ctx.drawImage(bitmap, dx, dy, drawW, drawH);
+    return await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png'),
+    );
+  }
 </script>
 
 <style>
