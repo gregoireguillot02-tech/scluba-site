@@ -9,7 +9,7 @@ const PUBLIC_OPS_PATHS = new Set([
   '/ops/auth/signout',
 ]);
 
-const CSRF_PROTECTED_PREFIXES = ['/api/ops', '/api/rounds', '/api/clubs', '/api/club'];
+const CSRF_PROTECTED_PREFIXES = ['/api/ops', '/api/rounds', '/api/clubs', '/api/club/'];
 const CSRF_PROTECTED_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 const CSP_VALUE = [
@@ -48,14 +48,14 @@ function applySecurityHeaders(response: Response, pathname: string): Response {
     pathname.startsWith('/api/') ||
     pathname.startsWith('/ops') ||
     pathname.startsWith('/auth') ||
-    pathname.startsWith('/club') ||
+    pathname === '/club' || pathname.startsWith('/club/') ||
     pathname.startsWith('/r/');
   if (noStorePath) out.headers.set('Cache-Control', 'no-store');
 
   const noindexPath =
     pathname.startsWith('/api/') ||
     pathname.startsWith('/ops') ||
-    pathname.startsWith('/club');
+    pathname === '/club' || pathname.startsWith('/club/');
   if (noindexPath) out.headers.set('X-Robots-Tag', 'noindex, nofollow');
 
   return out;
@@ -104,8 +104,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isOpsApi = pathname.startsWith('/api/ops');
   const isAuthPage = pathname.startsWith('/auth');
   const isAuthApi = pathname.startsWith('/api/auth');
-  const isClubPage = pathname.startsWith('/club');
-  const isClubApi = pathname.startsWith('/api/club');
+  // Préfixes précis : `/api/club/` ne doit PAS happer `/api/clubs/...`
+  // (endpoint public find-round), et `/club/` ne doit pas matcher un futur
+  // `/clubhouse`. La zone club = exactement /club, /club/* et /api/club/*.
+  const isClubPage = pathname === '/club' || pathname.startsWith('/club/');
+  const isClubApi = pathname.startsWith('/api/club/');
   const isClubJoin = pathname === '/club/join';
 
   // Pages outside the auth/ops/club zones don't need the supabase client
