@@ -1,14 +1,15 @@
 ---
 /**
- * Modale plein écran affichant le visuel du carnet de parcours d'un trou.
- * Pattern repris de ShareCardModal : overlay scrim forest + sheet glass.
+ * Modale PLEIN ÉCRAN affichant le visuel du carnet de parcours d'un trou.
  * Exposée globalement via window.openHoleGuideModal(url, holeNumber) ; appelée
  * depuis le bouton "Voir le trou" de play.astro. L'image vit dans le bucket
  * public club-assets (même origine que le logo club → couverte par la CSP img-src).
  *
- * La feuille occupe quasi tout l'écran (un carnet de trou a des détails fins :
- * distances, tracé). L'image remplit la hauteur dispo (object-fit: contain) et
- * un tap dessus bascule en zoom 2x avec défilement (pan) pour lire les détails.
+ * Un carnet de trou a des détails fins (distances, tracé) → la modale occupe
+ * tout l'écran et l'image est mise à l'échelle pour le remplir (object-fit:
+ * contain sur une box 100%×100% : elle grandit même si sa résolution est
+ * modeste, au lieu de rester à sa taille naturelle). Un tap dessus bascule en
+ * zoom 2x avec défilement (pan) pour inspecter le détail.
  */
 ---
 
@@ -32,29 +33,25 @@
   .hg-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 42, 30, 0.55);
-    backdrop-filter: blur(10px) saturate(120%);
-    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    background: rgba(15, 42, 30, 0.92);
+    backdrop-filter: blur(8px) saturate(120%);
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
     display: flex;
-    align-items: center;
-    justify-content: center;
     z-index: 1000;
-    padding: var(--space-2, 10px);
+    padding: 0;
   }
+  /* Plein écran : pas de carte centrée, on prend tout l'espace. */
   .hg-sheet {
-    background: rgba(250, 247, 238, 0.94);
-    border: 1px solid rgba(212, 165, 116, 0.40);
-    border-radius: 16px;
-    box-shadow: 0 24px 60px -12px rgba(15, 42, 30, 0.5);
+    background: rgba(250, 247, 238, 0.96);
     width: 100%;
-    max-width: 960px;
-    height: 94dvh;
-    max-height: 94dvh;
+    height: 100dvh;
+    max-height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
   .hg-head {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -78,11 +75,11 @@
     appearance: none;
     border: none;
     background: transparent;
-    font-size: 20px;
+    font-size: 22px;
     line-height: 1;
     cursor: pointer;
     color: var(--muted, #6B7280);
-    padding: 4px 8px;
+    padding: 4px 10px;
     border-radius: 8px;
     touch-action: manipulation;
   }
@@ -95,17 +92,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    padding: 6px;
   }
-  /* Par défaut : l'image remplit la surface dispo (grand), ratio conservé. */
+  /* Par défaut : la box image remplit toute la surface ; object-fit: contain
+     met l'image à l'échelle (vers le haut si besoin) en gardant le ratio. */
   .hg-img {
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
     display: block;
-    border-radius: 8px;
     cursor: zoom-in;
     touch-action: manipulation;
   }
@@ -113,13 +108,11 @@
   .hg-body.is-zoomed {
     align-items: flex-start;
     justify-content: flex-start;
-    cursor: zoom-out;
   }
   .hg-body.is-zoomed .hg-img {
-    max-width: none;
-    max-height: none;
     width: 200%;
     height: auto;
+    object-fit: contain;
     cursor: zoom-out;
   }
 </style>
@@ -147,7 +140,7 @@
       if (titleEl) titleEl.textContent = `Trou ${holeNumber}`;
       modal.hidden = false;
     };
-    // Tap sur l'image : bascule zoom 2x ↔ ajusté. Centre le pan sur le point tapé.
+    // Tap sur l'image : bascule zoom 2x ↔ ajusté, recentré sur le point tapé.
     img?.addEventListener('click', (e) => {
       if (!body) return;
       const zooming = !body.classList.contains('is-zoomed');
@@ -156,15 +149,14 @@
         const rect = img.getBoundingClientRect();
         const relX = (e.clientX - rect.left) / rect.width;
         const relY = (e.clientY - rect.top) / rect.height;
-        // Après reflow (image 2x), recentre le scroll sur le point tapé.
         requestAnimationFrame(() => {
           body.scrollLeft = relX * (body.scrollWidth - body.clientWidth);
           body.scrollTop = relY * (body.scrollHeight - body.clientHeight);
         });
       }
     });
-    // Ferme si on clique l'overlay lui-même (data-hg-close sur l'overlay) ou
-    // le bouton ✕ — mais pas un clic sur la sheet (qui ne porte pas l'attr).
+    // Ferme via le bouton ✕ (clic direct dessus). En plein écran l'overlay est
+    // entièrement couvert par la sheet, donc le ✕ est la sortie principale.
     modal.querySelectorAll<HTMLElement>('[data-hg-close]').forEach((el) => {
       el.addEventListener('click', (e) => {
         if (e.target === el) close();
