@@ -14,7 +14,15 @@ if (!club) {
 }
 const c = club as Club & { prospect: { id: string; club_name: string } | null };
 
+// Accès portail club : allowlist d'emails (table club_members).
+const { data: clubMembers } = await sb
+  .from('club_members')
+  .select('id, email, role')
+  .eq('club_id', c.id)
+  .order('created_at', { ascending: true });
+
 const url = new URL(Astro.request.url);
+const portalUrl = `${url.origin}/club`;
 const justSaved = url.searchParams.get('ok') === '1';
 const errMsg = url.searchParams.get('err');
 
@@ -410,6 +418,35 @@ function fmtRelative(iso: string | null): string {
           PNG/JPEG/WebP, max 500 KB. Format carré ou paysage léger conseillé.
         </p>
       </div>
+
+      <!-- Accès portail club -->
+      <div class="ops-card" style="margin-top:16px">
+        <h2>Accès portail club</h2>
+        <p class="ops-hint" style="margin: 0 0 12px">
+          Autorisez un email à accéder au portail. La personne se connecte sur <code>{portalUrl}</code> avec cet email (lien magique, sans mot de passe). « Jardinier » ne voit que les signalements.
+        </p>
+
+        <ul class="member-list">
+          {(clubMembers ?? []).map((m) => (
+            <li class="member-row">
+              <span class="member-email">{m.email}</span>
+              <span class="member-role">{m.role === 'admin' ? 'Admin' : 'Jardinier'}</span>
+              <button type="button" class="ops-btn member-remove" data-remove-id={m.id}>Retirer</button>
+            </li>
+          ))}
+          {(clubMembers ?? []).length === 0 && <li class="member-empty">Aucun accès pour l'instant.</li>}
+        </ul>
+
+        <div class="member-add">
+          <input class="ops-input" type="email" id="member-email" placeholder="email@club.com" />
+          <select class="ops-input" id="member-role">
+            <option value="admin">Admin</option>
+            <option value="greenkeeper">Jardinier</option>
+          </select>
+          <button type="button" class="ops-btn ops-btn-primary" id="member-add-btn" data-club-id={c.id}>Ajouter</button>
+        </div>
+        <output id="member-msg" class="member-msg"></output>
+      </div>
     </div>
   </div>
 </OpsLayout>
@@ -529,6 +566,51 @@ function fmtRelative(iso: string | null): string {
       const next = Number(select.value);
       if ([6, 9, 18].indexOf(next) === -1) return;
       render(next);
+    });
+  })();
+</script>
+
+<script is:inline>
+  // Gestion de l'allowlist d'emails du portail club (ajout / retrait).
+  (function setupClubMembers() {
+    const addBtn = document.getElementById('member-add-btn');
+    if (!addBtn) return;
+    const emailInput = document.getElementById('member-email');
+    const roleSel = document.getElementById('member-role');
+    const msg = document.getElementById('member-msg');
+
+    addBtn.addEventListener('click', async () => {
+      const email = emailInput.value.trim();
+      if (!email) { msg.textContent = 'Entrez un email.'; return; }
+      addBtn.disabled = true;
+      msg.textContent = 'Ajout…';
+      try {
+        const res = await fetch('/api/ops/club-members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ club_id: addBtn.getAttribute('data-club-id'), email, role: roleSel.value }),
+        });
+        if (res.ok) { location.reload(); }
+        else { msg.textContent = 'Erreur : ' + (await res.text()); addBtn.disabled = false; }
+      } catch (e) {
+        msg.textContent = 'Erreur réseau, réessayez.'; addBtn.disabled = false;
+      }
+    });
+
+    document.querySelectorAll('.member-remove').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Retirer cet accès au portail ?')) return;
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/ops/club-members', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: btn.getAttribute('data-remove-id') }),
+          });
+          if (res.ok) { location.reload(); }
+          else { alert('Erreur, réessayez.'); btn.disabled = false; }
+        } catch (e) { alert('Erreur réseau, réessayez.'); btn.disabled = false; }
+      });
     });
   })();
 </script>
@@ -882,4 +964,19 @@ function fmtRelative(iso: string | null): string {
   }
   .sponsor-delete-btn:hover { background: #FEE2E2; border-color: #F87171; }
   .sponsor-delete-form { margin: 0; }
+
+  /* Accès portail club */
+  .member-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .member-row { display: flex; align-items: center; gap: 8px; }
+  .member-email { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+  .member-role {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 2px 6px; border-radius: 6px; background: var(--line-soft); color: var(--muted);
+  }
+  .member-empty { color: var(--muted); font-size: 13px; }
+  .member-add { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .member-add .ops-input[type="email"] { flex: 1; min-width: 160px; }
+  .member-add select { width: auto; }
+  .member-remove { font-size: 12px; padding: 4px 10px; }
+  .member-msg { display: block; margin-top: 8px; font-size: 12px; color: var(--muted); }
 </style>

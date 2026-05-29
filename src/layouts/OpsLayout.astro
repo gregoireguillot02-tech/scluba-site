@@ -2,15 +2,24 @@
 import '../styles/tokens.css';
 import OpsIcon from '../components/ops/OpsIcon.astro';
 
+interface NavItem { id: string; label: string; href: string; icon: string; }
+interface NavGroup { label: string; items: NavItem[]; }
+
+// Shell générique : /ops par défaut, réutilisable (ex. portail club) en passant
+// brand / homeHref / signoutAction / navGroups / thème. Les valeurs par défaut
+// reproduisent exactement le comportement ops → les pages /ops sont inchangées.
 interface Props {
   title: string;
-  active?: 'home' | 'calendrier' | 'prospects' | 'reseau' | 'appels' | 'clubs' | 'todo' | 'signups' | 'stats' | 'activite' | 'parametres';
+  active?: string;
+  brand?: string;
+  homeHref?: string;
+  signoutAction?: string;
+  themeKey?: string;
+  defaultTheme?: 'light' | 'dark';
+  navGroups?: NavGroup[];
 }
 
-const { title, active } = Astro.props;
-const user = Astro.locals.user;
-
-const navGroups = [
+const OPS_NAV_GROUPS: NavGroup[] = [
   {
     label: 'Commercial',
     items: [
@@ -37,7 +46,19 @@ const navGroups = [
       { id: 'parametres', label: 'Paramètres', href: '/ops/parametres', icon: 'settings' },
     ],
   },
-] as const;
+];
+
+const {
+  title,
+  active,
+  brand = 'Scluba Ops',
+  homeHref = '/ops',
+  signoutAction = '/ops/auth/signout',
+  themeKey = 'ops-theme',
+  defaultTheme = 'dark',
+  navGroups = OPS_NAV_GROUPS,
+} = Astro.props;
+const user = Astro.locals.user;
 ---
 
 <!doctype html>
@@ -46,16 +67,16 @@ const navGroups = [
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>{title} — Scluba Ops</title>
+  <title>{title} — {brand}</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <script is:inline>
+  <script define:vars={{ themeKey, defaultTheme }}>
     (function () {
       try {
-        var t = localStorage.getItem('ops-theme');
-        if (t !== 'light' && t !== 'dark') t = 'dark';
+        var t = localStorage.getItem(themeKey);
+        if (t !== 'light' && t !== 'dark') t = defaultTheme;
         document.documentElement.dataset.theme = t;
       } catch (e) {
-        document.documentElement.dataset.theme = 'light';
+        document.documentElement.dataset.theme = defaultTheme;
       }
     })();
   </script>
@@ -66,9 +87,9 @@ const navGroups = [
   <div class="ops-shell">
     <aside class="ops-sidebar" id="ops-sidebar">
       <div class="ops-sidebar-head">
-        <a href="/ops" class="ops-brand">
+        <a href={homeHref} class="ops-brand">
           <span class="ops-brand-mark">S</span>
-          <span class="ops-brand-text">Scluba Ops</span>
+          <span class="ops-brand-text">{brand}</span>
         </a>
         <button class="ops-sidebar-close" type="button" aria-label="Fermer le menu">
           <OpsIcon name="x" size={20} />
@@ -101,7 +122,7 @@ const navGroups = [
           <span class="ops-theme-label ops-theme-label-dark">Mode sombre</span>
         </button>
         {user && <div class="ops-user-email" title={user.email}>{user.email}</div>}
-        <form action="/ops/auth/signout" method="post" class="ops-signout-form">
+        <form action={signoutAction} method="post" class="ops-signout-form">
           <button type="submit" class="ops-signout">
             <OpsIcon name="log-out" size={18} />
             <span>Déconnexion</span>
@@ -115,9 +136,9 @@ const navGroups = [
         <button class="ops-menu-btn" type="button" aria-label="Ouvrir le menu">
           <OpsIcon name="menu" size={22} />
         </button>
-        <a href="/ops" class="ops-topbar-brand">
+        <a href={homeHref} class="ops-topbar-brand">
           <span class="ops-brand-mark">S</span>
-          <span>Scluba Ops</span>
+          <span>{brand}</span>
         </a>
       </header>
 
@@ -129,13 +150,13 @@ const navGroups = [
 
   <div class="ops-scrim" aria-hidden="true"></div>
 
-  <script>
+  <script define:vars={{ themeKey }}>
     const root = document.documentElement;
 
     document.querySelector('.ops-theme-toggle')?.addEventListener('click', () => {
       const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
       root.dataset.theme = next;
-      try { localStorage.setItem('ops-theme', next); } catch (e) {}
+      try { localStorage.setItem(themeKey, next); } catch (e) {}
     });
 
     const openNav = () => document.body.classList.add('ops-nav-open');

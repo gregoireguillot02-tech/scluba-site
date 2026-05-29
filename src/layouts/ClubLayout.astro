@@ -1,0 +1,31 @@
+---
+// Portail club : réutilise le shell interne (OpsLayout) pour un look identique
+// au CRM (sidebar, thème slate clair/sombre, cartes). Nav rôle-aware :
+// le jardinier (greenkeeper) ne voit que Signalements.
+import OpsLayout from './OpsLayout.astro';
+import { canAccessSection } from '../lib/club-auth';
+
+interface Props { title: string; active?: string; }
+const { title, active } = Astro.props;
+
+const role = Astro.locals.clubMembership?.role ?? 'greenkeeper';
+
+const items = [];
+if (canAccessSection(role, 'dashboard')) {
+  items.push({ id: 'dashboard', label: 'Tableau de bord', href: '/club', icon: 'bar-chart' });
+}
+items.push({ id: 'signalements', label: 'Signalements', href: '/club/signalements', icon: 'flag' });
+const navGroups = [{ label: 'Club', items }];
+---
+<OpsLayout
+  title={title}
+  active={active}
+  brand="Scluba Club"
+  homeHref="/club"
+  signoutAction="/auth/signout"
+  themeKey="club-theme"
+  defaultTheme="light"
+  navGroups={navGroups}
+>
+  <slot />
+</OpsLayout>

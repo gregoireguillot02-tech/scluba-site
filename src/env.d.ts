@@ -1,11 +1,20 @@
 /// <reference types="astro/client" />
 
-import type { SupabaseClient, User } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-declare namespace App {
-  interface Locals {
-    user: { id: string; email: string } | null;
-    supabase: SupabaseClient;
+// `declare global` est requis ici : ce fichier est un module (il importe
+// SupabaseClient), donc un `declare namespace App` nu serait local et
+// n'augmenterait pas le App.Locals global d'Astro. Sans ce wrapper, le
+// type-checker considère user/supabase/clubMembership comme inexistants sur
+// Astro.locals (cf. astro check). Le build prod n'en souffrait pas (pas de
+// type-check), mais `astro check` oui.
+declare global {
+  namespace App {
+    interface Locals {
+      user: { id: string; email: string } | null;
+      supabase: SupabaseClient;
+      clubMembership: import('./lib/club-auth').ClubMembership | null;
+    }
   }
 }
 

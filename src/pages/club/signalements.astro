@@ -1,0 +1,123 @@
+---
+export const prerender = false;
+import ClubLayout from '../../layouts/ClubLayout.astro';
+import { serviceClient } from '../../lib/supabase';
+
+const membership = Astro.locals.clubMembership!;
+const url = Astro.url;
+const fCategory = url.searchParams.get('category') ?? '';
+const fStatus = url.searchParams.get('status') ?? '';
+const fHole = url.searchParams.get('hole') ?? '';
+
+const sb = serviceClient();
+let q = sb
+  .from('course_reports')
+  .select('id, hole_number, category, comment, status, created_at')
+  .eq('club_id', membership.clubId)
+  .order('status', { ascending: true }) // 'nouveau' avant 'traite'
+  .order('created_at', { ascending: false });
+if (fCategory) q = q.eq('category', fCategory);
+if (fStatus) q = q.eq('status', fStatus);
+if (fHole) q = q.eq('hole_number', Number(fHole));
+const { data: reports } = await q;
+
+const CATS = ['bunker', 'green', 'fairway', 'rough', 'equipement', 'autre'];
+---
+<ClubLayout title="Signalements" active="signalements">
+  <div class="ops-page-header">
+    <div>
+      <h1 class="ops-page-title">Signalements parcours</h1>
+      <p class="ops-page-subtitle">Soucis remontés par les golfeurs pendant leur partie</p>
+    </div>
+  </div>
+
+  <form method="get" class="filters">
+    <select class="ops-input" name="status">
+      <option value="">Tous statuts</option>
+      <option value="nouveau" selected={fStatus === 'nouveau'}>À traiter</option>
+      <option value="traite" selected={fStatus === 'traite'}>Traités</option>
+    </select>
+    <select class="ops-input" name="category">
+      <option value="">Toutes catégories</option>
+      {CATS.map((c) => <option value={c} selected={fCategory === c}>{c}</option>)}
+    </select>
+    <input class="ops-input" name="hole" type="number" min="1" max="18" placeholder="Trou" value={fHole} />
+    <button type="submit" class="ops-btn ops-btn-primary">Filtrer</button>
+  </form>
+
+  {(!reports || reports.length === 0) && <p class="empty">Aucun signalement.</p>}
+
+  <ul class="report-list">
+    {reports?.map((r) => (
+      <li class:list={['ops-card', 'report-item', { resolved: r.status === 'traite' }]}>
+        <div class="report-body">
+          <div class="report-head">
+            <strong>Trou {r.hole_number}</strong>
+            <span class="report-cat">{r.category}</span>
+          </div>
+          {r.comment && <p class="report-comment">{r.comment}</p>}
+          <small class="report-date">{new Date(r.created_at).toLocaleString('fr-FR')}</small>
+        </div>
+        {r.status === 'nouveau' && (
+          <button type="button" class="ops-btn resolve-btn" data-id={r.id}>Marquer traité</button>
+        )}
+        {r.status === 'traite' && <span class="resolved-tag">✔ traité</span>}
+      </li>
+    ))}
+  </ul>
+
+  <script>
+    document.querySelectorAll<HTMLButtonElement>('.resolve-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        btn.disabled = true;
+        const res = await fetch(`/api/club/reports/${id}/resolve`, { method: 'POST' });
+        if (res.ok) {
+          location.reload();
+        } else {
+          btn.disabled = false;
+          alert('Échec, réessayez.');
+        }
+      });
+    });
+  </script>
+</ClubLayout>
+
+<style>
+  .filters {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+  }
+  .filters .ops-input { width: auto; }
+  .filters input[type='number'] { width: 90px; }
+  .empty { color: var(--muted); }
+  .report-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .report-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  .report-item.resolved { opacity: 0.55; }
+  .report-head { display: flex; align-items: baseline; gap: 0.5rem; }
+  .report-head strong { color: var(--primary); }
+  .report-cat {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .report-comment { margin: 0.35rem 0 0; color: var(--ink-soft); }
+  .report-date { color: var(--muted-soft); }
+  .resolve-btn { flex: none; }
+  .resolved-tag { color: #10b981; flex: none; font-weight: 600; }
+</style>
