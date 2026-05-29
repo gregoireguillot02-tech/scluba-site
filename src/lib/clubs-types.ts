@@ -37,6 +37,7 @@ export interface Club {
   name: string;
   city: string | null;
   logo_url: string | null;
+  icon_url: string | null;
   photo_url: string | null;
   primary_color: string | null;
   // Latitude/longitude du clubhouse (utilisé pour fetcher la météo
