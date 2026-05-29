@@ -31,6 +31,12 @@ interface Props {
    *  visuelle avec la landing. Le background body bascule sur le pattern
    *  défini dans global.css (linear-gradient 28×28). */
   gridBackdrop?: boolean;
+  /** URL de l'icône carrée du club (apple-touch-icon + favicon onglet). */
+  iconUrl?: string;
+  /** Nom du club (label écran d'accueil iOS). */
+  appName?: string;
+  /** Lien vers le manifest dynamique du club. */
+  manifestHref?: string;
 }
 
 const {
@@ -40,6 +46,9 @@ const {
   bodyClass = '',
   lockOverscroll = false,
   gridBackdrop = false,
+  iconUrl,
+  appName,
+  manifestHref,
 } = Astro.props;
 
 // Strava Light Green — flow joueur sur fond white avec accent vert vibrant.
@@ -66,7 +75,14 @@ const bodyStyle = [
   <title>{title}</title>
   <meta name="robots" content="noindex, nofollow" />
   <meta name="theme-color" content={themeColor} />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  {iconUrl ? (
+    <link rel="icon" href={iconUrl} />
+  ) : (
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  )}
+  {iconUrl && <link rel="apple-touch-icon" href={iconUrl} />}
+  {appName && <meta name="apple-mobile-web-app-title" content={appName} />}
+  {manifestHref && <link rel="manifest" href={manifestHref} />}
 
   <!-- === Fonts Athletic Pro Dark : Inter (body) + Sora (display) ===
        Switch direction "Variant B golf vert" : on remplace Fraunces
