@@ -30,7 +30,9 @@ async function getPdfjs() {
   return pdfjs;
 }
 
-async function canvasToFile(canvas: HTMLCanvasElement, name: string): Promise<File> {
+// Exporté pour être réutilisé par carnet-crop.ts (auto-crop + découpe grille),
+// qui produit les mêmes JPEG 0.85 que l'endpoint d'upload sniffe et accepte.
+export async function canvasToFile(canvas: HTMLCanvasElement, name: string): Promise<File> {
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (b) => (b ? resolve(b) : reject(new Error('canvas.toBlob returned null'))),

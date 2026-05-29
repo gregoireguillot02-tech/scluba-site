@@ -16,6 +16,9 @@ const c = club as Club;
 
 // Numéros de trous canoniques (course_data.holes). Pour un club mono-parcours
 // (type Téoula) c'est 1..N ; la map hole_guides est clé par ce numéro.
+// LIMITE CONNUE (hors scope) : pour un club multi-boucles, play.astro renumérote
+// les trous 1..N selon le format joué (resolveRoundHoles), donc la clé lue côté
+// joueur peut différer de la clé canonique stockée ici. OK pour le pilote (mono).
 const holeNumbers = c.course_data.holes.map((h) => h.number);
 const existing: Record<string, string> = (c.hole_guides ?? {}) as Record<string, string>;
 const filledCount = holeNumbers.filter((n) => existing[String(n)]).length;
@@ -27,32 +30,75 @@ const filledCount = holeNumbers.filter((n) => existing[String(n)]).length;
       <a class="carnet-back" href={`/ops/clubs/${id}/edit`}>← {c.name}</a>
       <h1>Carnet de parcours</h1>
       <p class="carnet-sub">
-        Dépose le carnet du club (PDF ou images). Chaque page / image devient un
-        visuel à assigner à un trou. Vérifie l'assignation puis enregistre.
+        Ajoute un visuel par trou. Les golfeurs verront un bouton « Voir le trou »
+        sur la scorecard. Chaque image est <strong>recadrée automatiquement</strong>.
         <strong>{filledCount}/{holeNumbers.length}</strong> trou(s) déjà renseigné(s).
       </p>
     </header>
 
-    <section class="carnet-drop">
+    <div class="carnet-modes" role="tablist" aria-label="Mode d'ajout">
+      <button type="button" class="carnet-mode is-active" data-mode-btn="one" aria-pressed="true">Un par un</button>
+      <button type="button" class="carnet-mode" data-mode-btn="grid" aria-pressed="false">Image en grille</button>
+      <button type="button" class="carnet-mode" data-mode-btn="pdf" aria-pressed="false">PDF / multi-pages</button>
+    </div>
+
+    {/* Mode A — un par un : pas de panneau dédié, on clique directement les
+        cases de trou ci-dessous (l'input fichier vit dans chaque case). */}
+    <section class="carnet-panel" data-panel="one">
+      <p class="carnet-panel-hint">Clique une case de trou plus bas, puis choisis son image. Elle est recadrée toute seule.</p>
+    </section>
+
+    {/* Mode B — une grande image, trous en grille régulière → découpe N×M. */}
+    <section class="carnet-panel" data-panel="grid" hidden>
       <label class="carnet-dropzone">
-        <input type="file" accept="image/*,application/pdf" multiple data-carnet-input hidden />
+        <input type="file" accept="image/png,image/jpeg,image/webp" data-grid-input hidden />
+        <span class="carnet-dropzone-icon" aria-hidden="true">＋</span>
+        <span class="carnet-dropzone-text">Choisir l'image en grille</span>
+        <span class="carnet-dropzone-hint">une seule image, trous alignés en grille</span>
+      </label>
+
+      <div class="carnet-grid-cfg" data-grid-cfg hidden>
+        <label>Colonnes<input type="number" min="1" max="12" data-grid-cols /></label>
+        <label>Lignes<input type="number" min="1" max="12" data-grid-rows /></label>
+        <label>Ordre
+          <select data-grid-order>
+            <option value="row">Ligne par ligne</option>
+            <option value="col">Colonne par colonne</option>
+          </select>
+        </label>
+        <button type="button" class="carnet-grid-apply" data-grid-apply>Découper et placer</button>
+      </div>
+
+      <div class="carnet-grid-preview" data-grid-preview hidden>
+        <img data-grid-img alt="" />
+        <div class="carnet-grid-overlay" data-grid-overlay aria-hidden="true"></div>
+      </div>
+
+      <p class="carnet-grid-warn" data-grid-warn role="status" aria-live="polite" hidden></p>
+    </section>
+
+    {/* Mode C — PDF (1 trou / page) ou plusieurs images, dans l'ordre. */}
+    <section class="carnet-panel" data-panel="pdf" hidden>
+      <label class="carnet-dropzone">
+        <input type="file" accept="application/pdf,image/*" multiple data-pdf-input hidden />
         <span class="carnet-dropzone-icon" aria-hidden="true">＋</span>
         <span class="carnet-dropzone-text">Choisir un PDF ou des images</span>
-        <span class="carnet-dropzone-hint">PDF (1 trou/page) ou plusieurs images</span>
+        <span class="carnet-dropzone-hint">1 page = 1 trou, dans l'ordre</span>
       </label>
-      <p class="carnet-status" data-carnet-status role="status" aria-live="polite"></p>
     </section>
+
+    <p class="carnet-status" data-carnet-status role="status" aria-live="polite"></p>
 
     <section class="carnet-grid" aria-label="Assignation des trous">
       {holeNumbers.map((n) => (
-        <div class="carnet-hole" data-carnet-hole={n}>
+        <div class="carnet-hole" data-carnet-hole={n} data-existing={existing[String(n)] ?? ''}>
           <span class="carnet-hole-num">Trou {n}</span>
-          <div class="carnet-thumb" data-carnet-thumb>
+          <label class="carnet-thumb" data-carnet-thumb>
+            <input type="file" accept="image/png,image/jpeg,image/webp" data-carnet-file hidden />
             {existing[String(n)] && <img src={existing[String(n)]} alt={`Trou ${n}`} loading="lazy" />}
-          </div>
-          <select class="carnet-select" data-carnet-select aria-label={`Visuel du trou ${n}`}>
-            <option value="">— aucun / garder —</option>
-          </select>
+            <span class="carnet-thumb-hint" data-carnet-hint aria-hidden="true" hidden={!!existing[String(n)]}>＋</span>
+          </label>
+          <button type="button" class="carnet-clear" data-carnet-clear hidden>Retirer</button>
         </div>
       ))}
     </section>
@@ -63,87 +109,215 @@ const filledCount = holeNumbers.filter((n) => existing[String(n)]).length;
   </main>
 
   <script>
-    import { filesToCandidates, type CarnetCandidate } from '../../../../lib/carnet-split';
+    import { filesToCandidates } from '../../../../lib/carnet-split';
+    import { autoCropToFile, sliceGridToFiles, autoGridDims, type GridOrder } from '../../../../lib/carnet-crop';
+
+    type Assign = { file: File; previewUrl: string };
 
     const root = document.querySelector<HTMLElement>('[data-carnet-root]');
     if (root) {
       const clubId = root.dataset.clubId!;
-      const input = root.querySelector<HTMLInputElement>('[data-carnet-input]')!;
       const statusEl = root.querySelector<HTMLElement>('[data-carnet-status]')!;
       const saveBtn = root.querySelector<HTMLButtonElement>('[data-carnet-save]')!;
       const holeEls = Array.from(root.querySelectorAll<HTMLElement>('[data-carnet-hole]'));
+      const holeNumbers = holeEls.map((el) => Number(el.dataset.carnetHole));
+      const holeByNum = new Map(holeEls.map((el) => [Number(el.dataset.carnetHole), el] as const));
 
-      let candidates: CarnetCandidate[] = [];
+      // Une assignation locale par trou (un fichier recadré prêt à uploader).
+      // Vide pour un trou = on garde le visuel SSR déjà enregistré (data-existing).
+      const assignment = new Map<number, Assign>();
 
-      function populate(sel: HTMLSelectElement) {
-        const prev = sel.value;
-        sel.replaceChildren();
-        sel.add(new Option('— aucun / garder —', ''));
-        candidates.forEach((cand, i) => sel.add(new Option(cand.label, String(i))));
-        sel.value = prev;
-      }
+      function status(msg: string) { statusEl.textContent = msg; }
 
-      function updateThumb(holeEl: HTMLElement) {
-        const sel = holeEl.querySelector<HTMLSelectElement>('select')!;
-        const thumb = holeEl.querySelector<HTMLElement>('[data-carnet-thumb]')!;
-        const idx = sel.value;
-        if (idx !== '' && candidates[Number(idx)]) {
-          thumb.replaceChildren();
+      function renderHole(n: number) {
+        const el = holeByNum.get(n);
+        if (!el) return;
+        const thumb = el.querySelector<HTMLElement>('[data-carnet-thumb]')!;
+        const hint = el.querySelector<HTMLElement>('[data-carnet-hint]')!;
+        const clearBtn = el.querySelector<HTMLButtonElement>('[data-carnet-clear]')!;
+        const a = assignment.get(n);
+        const url = a ? a.previewUrl : (el.dataset.existing || '');
+        // Retire l'ancienne <img> (pas le hint ni l'input fichier).
+        thumb.querySelector('img')?.remove();
+        if (url) {
           const img = document.createElement('img');
-          img.src = candidates[Number(idx)].previewUrl;
-          img.alt = '';
-          thumb.appendChild(img);
+          img.src = url;
+          img.alt = `Trou ${n}`;
+          thumb.insertBefore(img, hint);
         }
-        // Sinon : on laisse le thumb SSR (visuel déjà enregistré) tel quel.
+        hint.hidden = !!url;
+        clearBtn.hidden = !a;
       }
 
-      input.addEventListener('change', async () => {
-        const files = Array.from(input.files ?? []);
-        if (!files.length) return;
-        statusEl.textContent = 'Traitement du document…';
+      async function assignFromFile(n: number, file: File) {
+        status(`Recadrage du trou ${n}…`);
         try {
-          candidates = await filesToCandidates(files);
-          if (!candidates.length) {
-            statusEl.textContent = 'Aucun visuel exploitable dans ce fichier.';
-            return;
-          }
-          for (let i = 0; i < holeEls.length; i++) {
-            const sel = holeEls[i].querySelector<HTMLSelectElement>('select')!;
-            populate(sel);
-            // Auto-assignation : page/image i → trou i (si le slot est vide).
-            if (candidates[i] && sel.value === '') sel.value = String(i);
-            updateThumb(holeEls[i]);
-          }
-          statusEl.textContent = `${candidates.length} visuel(s) détecté(s). Vérifie l'assignation puis enregistre.`;
+          const cropped = await autoCropToFile(file, `trou-${n}.jpg`);
+          const prev = assignment.get(n);
+          if (prev) URL.revokeObjectURL(prev.previewUrl);
+          assignment.set(n, { file: cropped, previewUrl: URL.createObjectURL(cropped) });
+          renderHole(n);
+          status('');
         } catch (e) {
-          statusEl.textContent = 'Erreur de lecture : ' + (e as Error).message;
+          status('Erreur : ' + (e as Error).message);
+        }
+      }
+
+      // === Cases de trou : input fichier par case (mode A + correction) ===
+      for (const el of holeEls) {
+        const n = Number(el.dataset.carnetHole);
+        el.querySelector<HTMLInputElement>('[data-carnet-file]')!.addEventListener('change', async (ev) => {
+          const input = ev.currentTarget as HTMLInputElement;
+          const file = input.files?.[0];
+          input.value = '';
+          if (file) await assignFromFile(n, file);
+        });
+        el.querySelector<HTMLButtonElement>('[data-carnet-clear]')!.addEventListener('click', () => {
+          const prev = assignment.get(n);
+          if (prev) URL.revokeObjectURL(prev.previewUrl);
+          assignment.delete(n);
+          renderHole(n);
+        });
+      }
+
+      // === Sélecteur de mode ===
+      const modeBtns = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-mode-btn]'));
+      const panels = Array.from(root.querySelectorAll<HTMLElement>('[data-panel]'));
+      for (const btn of modeBtns) {
+        btn.addEventListener('click', () => {
+          const mode = btn.dataset.modeBtn!;
+          modeBtns.forEach((b) => {
+            const on = b === btn;
+            b.classList.toggle('is-active', on);
+            b.setAttribute('aria-pressed', String(on));
+          });
+          panels.forEach((p) => { p.hidden = p.dataset.panel !== mode; });
+        });
+      }
+
+      // === Mode B — image en grille ===
+      const gridInput = root.querySelector<HTMLInputElement>('[data-grid-input]')!;
+      const gridCfg = root.querySelector<HTMLElement>('[data-grid-cfg]')!;
+      const gridColsEl = root.querySelector<HTMLInputElement>('[data-grid-cols]')!;
+      const gridRowsEl = root.querySelector<HTMLInputElement>('[data-grid-rows]')!;
+      const gridOrderEl = root.querySelector<HTMLSelectElement>('[data-grid-order]')!;
+      const gridApply = root.querySelector<HTMLButtonElement>('[data-grid-apply]')!;
+      const gridPreview = root.querySelector<HTMLElement>('[data-grid-preview]')!;
+      const gridImg = root.querySelector<HTMLImageElement>('[data-grid-img]')!;
+      const gridOverlay = root.querySelector<HTMLElement>('[data-grid-overlay]')!;
+      const gridWarn = root.querySelector<HTMLElement>('[data-grid-warn]')!;
+      let gridFile: File | null = null;
+
+      function gridDims() {
+        const cols = Math.max(1, Math.min(12, Number(gridColsEl.value) || 1));
+        const rows = Math.max(1, Math.min(12, Number(gridRowsEl.value) || 1));
+        return { cols, rows };
+      }
+
+      function renderOverlay() {
+        const { cols, rows } = gridDims();
+        gridOverlay.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        gridOverlay.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+        gridOverlay.replaceChildren();
+        for (let i = 0; i < cols * rows; i++) {
+          const cell = document.createElement('span');
+          cell.className = 'carnet-grid-cell';
+          gridOverlay.appendChild(cell);
+        }
+        const total = cols * rows;
+        if (total < holeNumbers.length) {
+          gridWarn.hidden = false;
+          gridWarn.textContent = `⚠ ${total} cellule(s) pour ${holeNumbers.length} trous — augmente colonnes/lignes.`;
+        } else {
+          gridWarn.hidden = true;
+          gridWarn.textContent = '';
+        }
+      }
+
+      gridInput.addEventListener('change', () => {
+        const file = gridInput.files?.[0];
+        if (!file) return;
+        gridFile = file;
+        gridImg.src = URL.createObjectURL(file);
+        const { cols, rows } = autoGridDims(holeNumbers.length);
+        gridColsEl.value = String(cols);
+        gridRowsEl.value = String(rows);
+        gridCfg.hidden = false;
+        gridPreview.hidden = false;
+        renderOverlay();
+      });
+      gridColsEl.addEventListener('input', renderOverlay);
+      gridRowsEl.addEventListener('input', renderOverlay);
+
+      gridApply.addEventListener('click', async () => {
+        if (!gridFile) return;
+        const { cols, rows } = gridDims();
+        const order = gridOrderEl.value as GridOrder;
+        gridApply.disabled = true;
+        status('Découpage de la grille…');
+        try {
+          const files = await sliceGridToFiles(gridFile, cols, rows, order);
+          const k = Math.min(files.length, holeNumbers.length);
+          for (let i = 0; i < k; i++) {
+            const n = holeNumbers[i];
+            const prev = assignment.get(n);
+            if (prev) URL.revokeObjectURL(prev.previewUrl);
+            assignment.set(n, { file: files[i], previewUrl: URL.createObjectURL(files[i]) });
+            renderHole(n);
+          }
+          status(`${k} visuel(s) placé(s). Vérifie l'assignation puis enregistre.`);
+        } catch (e) {
+          status('Erreur de découpage : ' + (e as Error).message);
+        } finally {
+          gridApply.disabled = false;
         }
       });
 
-      for (const holeEl of holeEls) {
-        holeEl.querySelector<HTMLSelectElement>('select')!.addEventListener('change', () => updateThumb(holeEl));
-      }
+      // === Mode C — PDF / multi-images ===
+      const pdfInput = root.querySelector<HTMLInputElement>('[data-pdf-input]')!;
+      pdfInput.addEventListener('change', async () => {
+        const files = Array.from(pdfInput.files ?? []);
+        pdfInput.value = '';
+        if (!files.length) return;
+        status('Traitement du document…');
+        try {
+          const candidates = await filesToCandidates(files);
+          if (!candidates.length) {
+            status('Aucun visuel exploitable dans ce fichier.');
+            return;
+          }
+          const k = Math.min(candidates.length, holeNumbers.length);
+          for (let i = 0; i < k; i++) {
+            const n = holeNumbers[i];
+            status(`Recadrage (${i + 1}/${k})…`);
+            const cropped = await autoCropToFile(candidates[i].file, `trou-${n}.jpg`);
+            const prev = assignment.get(n);
+            if (prev) URL.revokeObjectURL(prev.previewUrl);
+            assignment.set(n, { file: cropped, previewUrl: URL.createObjectURL(cropped) });
+            renderHole(n);
+          }
+          status(`${k} page(s) placée(s). Vérifie l'assignation puis enregistre.`);
+        } catch (e) {
+          status('Erreur de lecture : ' + (e as Error).message);
+        }
+      });
 
+      // === Enregistrement (upload SÉQUENTIEL) ===
+      // L'endpoint fait un read-modify-write de hole_guides : des uploads
+      // parallèles s'écraseraient. On envoie un trou à la fois.
       saveBtn.addEventListener('click', async () => {
-        const assigned = holeEls.filter((el) => {
-          const v = el.querySelector<HTMLSelectElement>('select')!.value;
-          return v !== '' && candidates[Number(v)];
-        });
-        if (!assigned.length) {
-          statusEl.textContent = 'Rien à enregistrer : assigne au moins un visuel.';
+        const entries = [...assignment.entries()];
+        if (!entries.length) {
+          status('Rien à enregistrer : ajoute au moins un visuel.');
           return;
         }
         saveBtn.disabled = true;
         let ok = 0;
         let fail = 0;
-        // Upload SÉQUENTIEL : l'endpoint fait un read-modify-write de
-        // hole_guides, des uploads parallèles s'écraseraient.
-        for (const el of assigned) {
-          const n = el.dataset.carnetHole!;
-          const idx = Number(el.querySelector<HTMLSelectElement>('select')!.value);
-          statusEl.textContent = `Envoi du trou ${n}… (${ok + fail + 1}/${assigned.length})`;
+        for (const [n, a] of entries) {
+          status(`Envoi du trou ${n}… (${ok + fail + 1}/${entries.length})`);
           const fd = new FormData();
-          fd.append('file', candidates[idx].file);
+          fd.append('file', a.file);
           try {
             const res = await fetch(`/api/ops/clubs/${clubId}/upload?kind=hole&hole=${n}`, {
               method: 'POST',
@@ -156,7 +330,7 @@ const filledCount = holeNumbers.filter((n) => existing[String(n)]).length;
             console.error('[carnet] upload trou', n, e);
           }
         }
-        statusEl.textContent = `Terminé : ${ok} enregistré(s)${fail ? `, ${fail} échec(s)` : ''}.`;
+        status(`Terminé : ${ok} enregistré(s)${fail ? `, ${fail} échec(s)` : ''}.`);
         saveBtn.disabled = false;
         if (ok > 0) setTimeout(() => location.reload(), 1400);
       });
@@ -174,7 +348,21 @@ const filledCount = holeNumbers.filter((n) => existing[String(n)]).length;
     .carnet-sub { margin: 0; color: #6B7280; font-size: 14px; line-height: 1.5; }
     .carnet-sub strong { color: #1B4332; }
 
-    .carnet-drop { margin: 24px 0; }
+    /* Sélecteur de mode (segmented) */
+    .carnet-modes {
+      display: inline-flex; margin: 22px 0 4px; padding: 4px;
+      background: #F1F3F4; border-radius: 12px; gap: 4px; flex-wrap: wrap;
+    }
+    .carnet-mode {
+      appearance: none; border: none; background: transparent; cursor: pointer;
+      padding: 8px 14px; border-radius: 9px; font-size: 13px; font-weight: 600;
+      color: #6B7280; transition: background 120ms, color 120ms;
+    }
+    .carnet-mode.is-active { background: #fff; color: #1B4332; box-shadow: 0 1px 3px rgba(15, 42, 30, 0.12); }
+
+    .carnet-panel { margin: 12px 0 4px; }
+    .carnet-panel-hint { margin: 0; color: #6B7280; font-size: 14px; }
+
     .carnet-dropzone {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       padding: 28px; border: 2px dashed #D4A574; border-radius: 14px;
@@ -185,11 +373,42 @@ const filledCount = holeNumbers.filter((n) => existing[String(n)]).length;
     .carnet-dropzone-icon { font-size: 28px; color: #D4A574; line-height: 1; }
     .carnet-dropzone-text { font-weight: 600; color: #1B4332; }
     .carnet-dropzone-hint { font-size: 12px; color: #9CA3AF; }
-    .carnet-status { margin: 10px 2px 0; font-size: 13px; color: #6B7280; min-height: 1.2em; }
+    .carnet-status { margin: 12px 2px 0; font-size: 13px; color: #6B7280; min-height: 1.2em; }
 
+    /* Mode grille : config + aperçu */
+    .carnet-grid-cfg {
+      display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin: 16px 0;
+    }
+    .carnet-grid-cfg label {
+      display: flex; flex-direction: column; gap: 4px;
+      font-size: 12px; font-weight: 600; color: #1B4332;
+    }
+    .carnet-grid-cfg input, .carnet-grid-cfg select {
+      padding: 8px 10px; border: 1px solid #E5E7EB; border-radius: 8px;
+      font-size: 14px; color: #1B4332; background: #fff;
+    }
+    .carnet-grid-cfg input[type="number"] { width: 80px; }
+    .carnet-grid-apply {
+      padding: 9px 16px; border: none; border-radius: 9px;
+      background: #D4A574; color: #1B4332; font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+    .carnet-grid-apply:disabled { opacity: 0.6; cursor: progress; }
+
+    .carnet-grid-preview {
+      position: relative; display: inline-block; max-width: 100%;
+      border-radius: 10px; overflow: hidden; border: 1px solid #E5E7EB;
+    }
+    .carnet-grid-preview img { display: block; max-width: 100%; height: auto; }
+    .carnet-grid-overlay {
+      position: absolute; inset: 0; display: grid; pointer-events: none;
+    }
+    .carnet-grid-cell { border: 1px solid rgba(212, 165, 116, 0.9); box-shadow: inset 0 0 0 1px rgba(27, 67, 50, 0.25); }
+    .carnet-grid-warn { margin: 10px 2px 0; font-size: 13px; color: #B45309; }
+
+    /* Grille de vérification des trous */
     .carnet-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 14px;
+      gap: 14px; margin-top: 16px;
     }
     .carnet-hole {
       display: flex; flex-direction: column; gap: 8px;
@@ -200,13 +419,16 @@ const filledCount = holeNumbers.filter((n) => existing[String(n)]).length;
       letter-spacing: 0.1em; text-transform: uppercase; color: #1B4332;
     }
     .carnet-thumb {
-      aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden;
+      position: relative; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden;
       background: #F6F7F8; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border: 1px dashed transparent; transition: border-color 120ms;
     }
-    .carnet-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
-    .carnet-select {
-      width: 100%; padding: 6px 8px; border: 1px solid #E5E7EB; border-radius: 8px;
-      font-size: 13px; background: #fff; color: #1B4332;
+    .carnet-thumb:hover { border-color: #D4A574; }
+    .carnet-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+    .carnet-thumb-hint { font-size: 26px; color: #D4A574; line-height: 1; }
+    .carnet-clear {
+      align-self: flex-start; appearance: none; border: none; background: transparent;
+      padding: 0; font-size: 12px; color: #B45309; cursor: pointer; text-decoration: underline;
     }
 
     .carnet-actions { margin-top: 28px; }
