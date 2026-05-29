@@ -1,0 +1,20 @@
+---
+export const prerender = false;
+import ClubLayout from '../../layouts/ClubLayout.astro';
+import { serviceClient } from '../../lib/supabase';
+const membership = Astro.locals.clubMembership!;
+const sb = serviceClient();
+const { data: club } = await sb.from('clubs').select('name').eq('id', membership.clubId).maybeSingle();
+const { count: openReports } = await sb
+  .from('course_reports')
+  .select('id', { count: 'exact', head: true })
+  .eq('club_id', membership.clubId)
+  .eq('status', 'nouveau');
+---
+<ClubLayout title="Tableau de bord">
+  <h1>{club?.name ?? 'Votre club'}</h1>
+  <p>
+    <a href="/club/signalements" style="color:#D4A574"><strong>{openReports ?? 0}</strong> signalement(s) à traiter →</a>
+  </p>
+  <p style="color:#6b7280">Les statistiques arriveront bientôt ici.</p>
+</ClubLayout>

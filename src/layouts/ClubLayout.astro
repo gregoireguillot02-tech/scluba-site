@@ -1,0 +1,31 @@
+---
+import '../styles/tokens.css';
+import '../styles/global.css';
+import { canAccessSection } from '../lib/club-auth';
+interface Props { title: string; }
+const { title } = Astro.props;
+const membership = Astro.locals.clubMembership;
+const role = membership?.role ?? 'greenkeeper';
+const showDashboard = canAccessSection(role, 'dashboard');
+const path = Astro.url.pathname;
+---
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} — Portail club</title>
+  </head>
+  <body style="font-family:system-ui;margin:0;color:#1B4332">
+    <header style="display:flex;gap:1.5rem;align-items:center;padding:1rem 1.5rem;border-bottom:1px solid #e5e7eb">
+      <strong>Scluba — Club</strong>
+      <nav style="display:flex;gap:1rem">
+        {showDashboard && <a href="/club" aria-current={path === '/club' ? 'page' : undefined} style="color:#1B4332">Tableau de bord</a>}
+        <a href="/club/signalements" aria-current={path.startsWith('/club/signalements') ? 'page' : undefined} style="color:#1B4332">Signalements</a>
+      </nav>
+      <a href="/auth/signout" style="margin-left:auto;color:#D4A574">Déconnexion</a>
+    </header>
+    <main style="max-width:960px;margin:0 auto;padding:1.5rem">
+      <slot />
+    </main>
+  </body>
+</html>
