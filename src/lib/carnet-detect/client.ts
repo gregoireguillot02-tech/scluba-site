@@ -57,7 +57,15 @@ export async function filesToHoleAssignments(
       warnings.push(`Page ${p + 1} : aucun trou reconnu — place-la à la main (mode « Image en grille »).`);
       continue;
     }
-    const cells = await sliceGridToFiles(candidates[p].file, layout.cols, layout.rows, 'row');
+    let cells: File[];
+    try {
+      cells = await sliceGridToFiles(candidates[p].file, layout.cols, layout.rows, 'row');
+    } catch (e) {
+      // Un échec de découpe (canvas/OOM/HEIC) ne doit pas jeter tout le batch :
+      // on préserve les pages déjà détectées et on signale celle-ci.
+      warnings.push(`Page ${p + 1} : découpe échouée (${(e as Error).message}) — place ces trous à la main.`);
+      continue;
+    }
     const { picks, warnings: w } = mapLayoutToHoles(layout, validHoles);
     warnings.push(...w);
     for (const pick of picks) {
