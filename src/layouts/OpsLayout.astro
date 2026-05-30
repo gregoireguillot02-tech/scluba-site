@@ -17,6 +17,13 @@ interface Props {
   themeKey?: string;
   defaultTheme?: 'light' | 'dark';
   navGroups?: NavGroup[];
+  /** Favicon onglet. Défaut /favicon-ops.svg (ambre). Le portail club passe sa balle. */
+  iconHref?: string;
+  /** apple-touch-icon + manifest : identité "web app" sur l'écran d'accueil. Opt-in (ops n'en a pas). */
+  appleIcon?: string;
+  manifestHref?: string;
+  appName?: string;
+  themeColor?: string;
 }
 
 const OPS_NAV_GROUPS: NavGroup[] = [
@@ -57,6 +64,11 @@ const {
   themeKey = 'ops-theme',
   defaultTheme = 'dark',
   navGroups = OPS_NAV_GROUPS,
+  iconHref = '/favicon-ops.svg',
+  appleIcon,
+  manifestHref,
+  appName,
+  themeColor,
 } = Astro.props;
 const user = Astro.locals.user;
 ---
@@ -68,7 +80,13 @@ const user = Astro.locals.user;
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow" />
   <title>{title} — {brand}</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon-ops.svg" />
+  <link rel="icon" type="image/svg+xml" href={iconHref} />
+  {appleIcon && <link rel="apple-touch-icon" href={appleIcon} />}
+  {appName && <meta name="apple-mobile-web-app-title" content={appName} />}
+  {manifestHref && <link rel="manifest" href={manifestHref} />}
+  {manifestHref && <meta name="mobile-web-app-capable" content="yes" />}
+  {manifestHref && <meta name="apple-mobile-web-app-capable" content="yes" />}
+  {themeColor && <meta name="theme-color" content={themeColor} />}
   <script define:vars={{ themeKey, defaultTheme }}>
     (function () {
       try {

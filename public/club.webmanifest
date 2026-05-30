@@ -1,0 +1,15 @@
+{
+  "name": "Scluba Club",
+  "short_name": "Scluba Club",
+  "description": "Portail club Scluba — signalements parcours et tableau de bord.",
+  "icons": [
+    { "src": "/club-icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "/club-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#2D1B0E",
+  "background_color": "#2D1B0E",
+  "start_url": "/club",
+  "scope": "/club"
+}
