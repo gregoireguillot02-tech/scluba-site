@@ -147,4 +147,17 @@ function cellContentFor(entry: ScoreEntry | undefined): string {
     border-style: dashed;
     font-family: var(--font-serif);
   }
+  /* États de synchronisation (anti-perte) — pilotés par play.astro via la
+     file score-sync. pending = envoi en cours, failed = POST KO (on rejoue).
+     Un score confirmé (saved) garde son rendu normal/par-relatif. */
+  .grid-cell.cell-pending {
+    color: #9a6b16;
+    border: 1px dashed #c7922e;
+    background: rgba(199, 146, 46, 0.1);
+  }
+  .grid-cell.cell-failed {
+    color: #b42318;
+    border: 1px solid #b42318;
+    background: rgba(180, 35, 24, 0.1);
+  }
 </style>
