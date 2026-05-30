@@ -108,4 +108,19 @@ describe('applyRateLimit', () => {
     }
     expect(lastStatus).toBe(429);
   });
+
+  it('carnet-detect route is rate-limited at 30/min (LLM endpoint)', async () => {
+    const ip = uniqueIp('carnet-detect');
+    let lastStatus = 0;
+    for (let i = 0; i < 31; i++) {
+      const req = makeRequest({
+        url: 'https://scluba.com/api/ops/clubs/abc123/carnet-detect',
+        method: 'POST',
+        ip,
+      });
+      const res = await applyRateLimit(req);
+      lastStatus = res?.status ?? 0;
+    }
+    expect(lastStatus).toBe(429);
+  });
 });

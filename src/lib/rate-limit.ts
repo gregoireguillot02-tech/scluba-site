@@ -21,6 +21,10 @@ const RULES: Array<{ match: RegExp; method?: string; rule: LimitRule; keyByEmail
   // Importer-specific (cross-branch with fix/sec-llm-importer-ssrf).
   { match: /^\/api\/ops\/clubs\/import\/?$/, method: 'POST', rule: { limit: 5, windowSec: 60 } },
   { match: /^\/api\/ops\/clubs\/from-import\/?$/, method: 'POST', rule: { limit: 10, windowSec: 60 } },
+  // Carnet AI detection (Haiku vision), appelé 1×/page PDF dans une boucle
+  // client → borné comme les autres endpoints LLM (audit 2026-05-21). 30/min
+  // couvre un carnet 18 trous (~5-9 pages) avec marge.
+  { match: /^\/api\/ops\/clubs\/[^/]+\/carnet-detect\/?$/, method: 'POST', rule: { limit: 30, windowSec: 60 } },
   { match: /^\/api\/rounds\/?$/, method: 'POST', rule: { limit: 20, windowSec: 60 } },
   { match: /^\/api\/rounds\/[^/]+\/join\/?$/, method: 'POST', rule: { limit: 30, windowSec: 60 } },
   { match: /^\/api\/rounds\/[^/]+\/start\/?$/, method: 'POST', rule: { limit: 15, windowSec: 60 } },
