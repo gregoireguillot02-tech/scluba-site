@@ -39,7 +39,7 @@ const filledCount = holeNumbers.filter((n) => existing[String(n)]).length;
     <div class="carnet-modes" role="tablist" aria-label="Mode d'ajout">
       <button type="button" class="carnet-mode is-active" data-mode-btn="one" aria-pressed="true">Un par un</button>
       <button type="button" class="carnet-mode" data-mode-btn="grid" aria-pressed="false">Image en grille</button>
-      <button type="button" class="carnet-mode" data-mode-btn="pdf" aria-pressed="false">PDF / multi-pages</button>
+      <button type="button" class="carnet-mode" data-mode-btn="pdf" aria-pressed="false">PDF / images (auto)</button>
     </div>
 
     {/* Mode A — un par un : pas de panneau dédié, on clique directement les
@@ -83,7 +83,7 @@ const filledCount = holeNumbers.filter((n) => existing[String(n)]).length;
         <input type="file" accept="application/pdf,image/*" multiple data-pdf-input hidden />
         <span class="carnet-dropzone-icon" aria-hidden="true">＋</span>
         <span class="carnet-dropzone-text">Choisir un PDF ou des images</span>
-        <span class="carnet-dropzone-hint">1 page = 1 trou, dans l'ordre</span>
+        <span class="carnet-dropzone-hint">cartes multi-trous reconnues automatiquement (IA)</span>
       </label>
     </section>
 
@@ -109,8 +109,8 @@ const filledCount = holeNumbers.filter((n) => existing[String(n)]).length;
   </main>
 
   <script>
-    import { filesToCandidates } from '../../../../lib/carnet-split';
     import { autoCropToFile, sliceGridToFiles, autoGridDims, type GridOrder } from '../../../../lib/carnet-crop';
+    import { filesToHoleAssignments } from '../../../../lib/carnet-detect/client';
 
     type Assign = { file: File; previewUrl: string };
 
@@ -273,32 +273,27 @@ const filledCount = holeNumbers.filter((n) => existing[String(n)]).length;
         }
       });
 
-      // === Mode C — PDF / multi-images ===
+      // === Mode C — PDF / images : détection IA (grille multi-trous par page) ===
       const pdfInput = root.querySelector<HTMLInputElement>('[data-pdf-input]')!;
       pdfInput.addEventListener('change', async () => {
         const files = Array.from(pdfInput.files ?? []);
         pdfInput.value = '';
         if (!files.length) return;
-        status('Traitement du document…');
+        status('Analyse du document…');
         try {
-          const candidates = await filesToCandidates(files);
-          if (!candidates.length) {
-            status('Aucun visuel exploitable dans ce fichier.');
-            return;
-          }
-          const k = Math.min(candidates.length, holeNumbers.length);
-          for (let i = 0; i < k; i++) {
-            const n = holeNumbers[i];
-            status(`Recadrage (${i + 1}/${k})…`);
-            const cropped = await autoCropToFile(candidates[i].file, `trou-${n}.jpg`);
-            const prev = assignment.get(n);
+          const { assignments, warnings } = await filesToHoleAssignments(files, clubId, holeNumbers, status);
+          for (const { hole, file } of assignments) {
+            const prev = assignment.get(hole);
             if (prev) URL.revokeObjectURL(prev.previewUrl);
-            assignment.set(n, { file: cropped, previewUrl: URL.createObjectURL(cropped) });
-            renderHole(n);
+            assignment.set(hole, { file, previewUrl: URL.createObjectURL(file) });
+            renderHole(hole);
           }
-          status(`${k} page(s) placée(s). Vérifie l'assignation puis enregistre.`);
+          if (warnings.length) console.warn('[carnet] détection — avertissements :', warnings);
+          let msg = `${assignments.length} trou(s) détecté(s) et placé(s).`;
+          if (warnings.length) msg += ` ⚠ ${warnings.length} avertissement(s) (voir console).`;
+          status(`${msg} Vérifie l'assignation puis enregistre.`);
         } catch (e) {
-          status('Erreur de lecture : ' + (e as Error).message);
+          status('Erreur de détection : ' + (e as Error).message);
         }
       });
 
