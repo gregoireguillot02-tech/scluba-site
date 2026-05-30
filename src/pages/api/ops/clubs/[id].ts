@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { serviceClient, isAllowedEmail } from '../../../../lib/supabase';
-import { uuidSchema } from '../../../../lib/validation/schemas';
+import { uuidSchema, courseLoopsSchema, formatZodError } from '../../../../lib/validation/schemas';
+import { buildMultiCourseData } from '../../../../lib/course-formats';
 import type { CourseData, CourseHole } from '../../../../lib/clubs-types';
 
 export const prerender = false;
@@ -120,27 +121,41 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
   const existingCourse = existing.course_data as CourseData;
   const existingHoleCount = existingCourse?.holes?.length ?? 18;
 
-  const holeCount = parseHoleCount(form, existingHoleCount);
-  if (holeCount == null) {
-    return new Response('Hole count must be 6, 9, or 18', { status: 400 });
-  }
+  // Le parcours se gère en deux modes (toggle dans l'éditeur ops) :
+  //   - 'multi'  : boucles nommées + formats jouables (champ course_loops_json),
+  //     re-sanitisés et recalculés par buildMultiCourseData ;
+  //   - 'single' : un seul parcours plat (hole_count + par_<n>). Repasser un
+  //     club en mode simple EFFACE volontairement ses loops/formats (choix
+  //     explicite du toggle, plus le hack de préservation d'avant).
+  const courseMode = String(form.get('course_mode') ?? 'single');
+  let courseData: CourseData;
 
-  const holes = parseCourseData(form, holeCount);
-  if (!holes) {
-    return new Response(
-      `Pars must be integers between 3 and 6 for all ${holeCount} holes`,
-      { status: 400 },
-    );
+  if (courseMode === 'multi') {
+    let payload: unknown;
+    try {
+      payload = JSON.parse(String(form.get('course_loops_json') ?? ''));
+    } catch {
+      return new Response('course_loops_json invalide (JSON illisible)', { status: 400 });
+    }
+    const parsed = courseLoopsSchema.safeParse(payload);
+    if (!parsed.success) return new Response(formatZodError(parsed.error), { status: 400 });
+    const built = buildMultiCourseData(parsed.data);
+    if ('error' in built) return new Response(built.error, { status: 400 });
+    courseData = built.courseData;
+  } else {
+    const holeCount = parseHoleCount(form, existingHoleCount);
+    if (holeCount == null) {
+      return new Response('Hole count must be 6, 9, or 18', { status: 400 });
+    }
+    const holes = parseCourseData(form, holeCount);
+    if (!holes) {
+      return new Response(
+        `Pars must be integers between 2 and 6 for all ${holeCount} holes`,
+        { status: 400 },
+      );
+    }
+    courseData = { holes };
   }
-
-  const courseData: CourseData = {
-    holes,
-    // Preserve loops/formats from the existing club. If a club has multi-loop
-    // data, the edit form above only let us touch pars on the flat holes
-    // array — don't drop the loops on save.
-    ...(existingCourse?.loops ? { loops: existingCourse.loops } : {}),
-    ...(existingCourse?.formats ? { formats: existingCourse.formats } : {}),
-  };
 
   const updates: Record<string, unknown> = {
     name,

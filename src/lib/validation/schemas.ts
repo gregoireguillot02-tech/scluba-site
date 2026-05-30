@@ -69,6 +69,38 @@ export const formatIdSchema = z
 
 export const scoringModeSchema = z.enum(['self', 'host']);
 
+// === Éditeur multi-boucles (ops · /ops/clubs/[id]/edit) ===
+// Payload sérialisé par l'éditeur « Plusieurs boucles » dans le champ caché
+// course_loops_json. Le serveur le re-sanitise et recalcule le tableau plat
+// via buildMultiCourseData (src/lib/course-formats.ts) — ce schéma ne fait que
+// borner les entrées. Le numéro de trou n'est pas transmis : il est réassigné
+// 1..N par boucle côté serveur.
+export const courseLoopHoleSchema = z.object({
+  par: z.coerce.number().int().min(2).max(6),
+});
+
+export const courseLoopInputSchema = z.object({
+  id: z.string().trim().max(40).regex(/^[a-z0-9-]+$/, 'id de boucle invalide').optional(),
+  name: z.string().trim().min(1, 'nom de boucle requis').max(120, 'nom de boucle trop long'),
+  holes: z
+    .array(courseLoopHoleSchema)
+    .min(1, 'au moins 1 trou par boucle')
+    .max(9, 'max 9 trous par boucle'),
+});
+
+export const courseFormatInputSchema = z.object({
+  id: formatIdSchema,
+  label: z.string().trim().min(1, 'libellé de format requis').max(120, 'libellé trop long'),
+  loop_ids: z.array(z.string().trim().min(1)).min(1, 'au moins une boucle par format'),
+});
+
+export const courseLoopsSchema = z.object({
+  loops: z.array(courseLoopInputSchema).min(1, 'au moins une boucle').max(8, 'max 8 boucles'),
+  formats: z.array(courseFormatInputSchema).min(1, 'au moins un format à exposer'),
+});
+
+export type CourseLoopsInput = z.infer<typeof courseLoopsSchema>;
+
 // Heure de départ saisie au lobby (tee-time), pour le calcul de cadence.
 // Le client envoie une chaîne ISO 8601 (new Date(...).toISOString()). On
 // vérifie qu'elle est parsable et bornée à ±24h autour de maintenant, pour
