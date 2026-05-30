@@ -430,7 +430,7 @@ const hasSponsors = allSponsors.length > 0;
     <Colophon />
 
     <ShareCardModal
-      initialPhotoUrl={r.share_photo_url}
+      initialPhotoUrl={r.share_photo_url ?? r.club.photo_url}
       shareTitle={`Carte ${r.club.name}`}
       fallbackUrl={pageUrl}
       roundId={r.id}
@@ -455,17 +455,32 @@ const hasSponsors = allSponsors.length > 0;
     const shareBtn = document.querySelector<HTMLButtonElement>('[data-share-url]');
     if (shareBtn) {
       shareBtn.addEventListener('click', () => {
-        const open = (window as unknown as { openShareCardModal?: () => void }).openShareCardModal;
-        if (open) {
-          open();
+        const w = window as unknown as { openShareCardModal?: () => void };
+        if (w.openShareCardModal) {
+          w.openShareCardModal();
           return;
         }
-        // Fallback ultra-conservateur si le modal n'a pas chargé (JS error, etc.)
-        const url = shareBtn.dataset.shareUrl!;
-        const title = shareBtn.dataset.shareTitle!;
-        if (navigator.share) {
-          navigator.share({ url, title }).catch(() => {});
-        }
+        // Le script du modal n'a pas encore fini de s'initialiser (Safari,
+        // JS lent, cache froid). On attend brièvement qu'il s'enregistre —
+        // plutôt que de partir direct en partage natif sans aperçu, ce qui
+        // est exactement le bug remonté ("ça part direct").
+        let tries = 0;
+        const waitForModal = window.setInterval(() => {
+          tries += 1;
+          if (w.openShareCardModal) {
+            window.clearInterval(waitForModal);
+            w.openShareCardModal();
+          } else if (tries >= 20) {
+            // ~2 s écoulées : dernier recours seulement si le modal ne charge
+            // vraiment pas.
+            window.clearInterval(waitForModal);
+            const url = shareBtn.dataset.shareUrl!;
+            const title = shareBtn.dataset.shareTitle!;
+            if (navigator.share) {
+              navigator.share({ url, title }).catch(() => {});
+            }
+          }
+        }, 100);
       });
     }
 

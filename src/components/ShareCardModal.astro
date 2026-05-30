@@ -242,35 +242,43 @@ const { initialPhotoUrl, shareTitle, fallbackUrl, roundId, payload } = Astro.pro
     btnShare.addEventListener('click', async () => {
       if (state !== 'png-review' || !pngBlob) return;
 
-      // Upload Supabase en best-effort avant le partage natif. Si ça échoue
-      // on partage quand même : le PNG est déjà généré côté client à partir
-      // de l'object URL local.
-      if (pendingBlob) {
-        try {
-          const uploadedUrl = await uploadSharePhoto(roundId, pendingBlob);
-          pendingBlob = null;
-          currentPhotoUrl = uploadedUrl;
-        } catch (err) {
-          console.error('upload failed, on partage avec object URL local', err);
-        }
-      }
-
+      // IMPORTANT (iOS Safari) : navigator.share() doit être appelé dans le
+      // geste utilisateur, SANS await réseau préalable — sinon la "transient
+      // activation" est perdue et le partage lève NotAllowedError. On partage
+      // donc d'abord (le PNG est déjà composé depuis l'object URL local), et
+      // on persiste la photo sur Supabase APRÈS, en best-effort.
+      let result: 'shared' | 'downloaded' | 'url-shared' | null = null;
       try {
-        const result = await sharePngFile(pngBlob, {
+        result = await sharePngFile(pngBlob, {
           title: shareTitle,
           fallbackUrl,
           filename: `carte-${roundId.slice(0, 8)}.png`,
         });
-        if (result === 'shared' || result === 'downloaded' || result === 'url-shared') {
-          clearPngPreview();
-          root.hidden = true;
-        }
       } catch (err) {
         if ((err as DOMException)?.name === 'AbortError') {
           return;
         }
         console.error(err);
         showError('Le partage a échoué. Réessaye.');
+        return;
+      }
+
+      // Upload après le partage : ne bloque pas l'utilisateur et persiste la
+      // photo pour le bandeau du recap au prochain chargement. Si ça échoue,
+      // le partage a quand même fonctionné (PNG local).
+      if (pendingBlob) {
+        const blobToUpload = pendingBlob;
+        pendingBlob = null;
+        uploadSharePhoto(roundId, blobToUpload)
+          .then((uploadedUrl) => { currentPhotoUrl = uploadedUrl; })
+          .catch((err) => {
+            console.error('upload photo échoué (le partage a réussi avec le PNG local)', err);
+          });
+      }
+
+      if (result === 'shared' || result === 'downloaded' || result === 'url-shared') {
+        clearPngPreview();
+        root.hidden = true;
       }
     });
 
