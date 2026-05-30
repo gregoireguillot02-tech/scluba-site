@@ -35,6 +35,11 @@ export async function filesToHoleAssignments(
   onProgress?: (msg: string) => void,
 ): Promise<DetectResult> {
   const candidates = await filesToCandidates(files); // 1 entrée par page PDF / image
+  // filesToCandidates ignore silencieusement les types non gérés : si rien n'est
+  // exploitable, on le signale plutôt que de renvoyer un no-op muet.
+  if (candidates.length === 0) {
+    return { assignments: [], warnings: ['Aucun fichier exploitable (dépose un PDF ou des images).'] };
+  }
   const assignments: HoleAssignment[] = [];
   const warnings: string[] = [];
   const taken = new Set<number>();
