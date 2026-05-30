@@ -14,13 +14,9 @@ export interface CarnetLayout {
 
 // Sentinelle "détection échouée / rien d'exploitable sur cette page". Le client
 // la traite comme une page à placer à la main (pas d'erreur bloquante).
-// Gelée (objet + tableau) : parseLayoutToolInput renvoie ce singleton par
-// référence sur échec — on évite qu'un consommateur le mute par mégarde.
-export const EMPTY_LAYOUT: CarnetLayout = Object.freeze({
-  rows: 0,
-  cols: 0,
-  cells: Object.freeze([]) as CarnetCell[],
-});
+// Objet gelé : parseLayoutToolInput renvoie ce singleton par référence sur
+// échec — le freeze évite qu'un consommateur réassigne ses champs par mégarde.
+export const EMPTY_LAYOUT: CarnetLayout = Object.freeze({ rows: 0, cols: 0, cells: [] });
 
 const CellSchema = z.object({
   // row/col 0-indexés : leur max (5) doit rester cohérent avec le max de
