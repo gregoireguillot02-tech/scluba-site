@@ -14,18 +14,30 @@ export interface CarnetLayout {
 
 // Sentinelle "détection échouée / rien d'exploitable sur cette page". Le client
 // la traite comme une page à placer à la main (pas d'erreur bloquante).
-export const EMPTY_LAYOUT: CarnetLayout = { rows: 0, cols: 0, cells: [] };
+// Gelée (objet + tableau) : parseLayoutToolInput renvoie ce singleton par
+// référence sur échec — on évite qu'un consommateur le mute par mégarde.
+export const EMPTY_LAYOUT: CarnetLayout = Object.freeze({
+  rows: 0,
+  cols: 0,
+  cells: Object.freeze([]) as CarnetCell[],
+});
 
 const CellSchema = z.object({
+  // row/col 0-indexés : leur max (5) doit rester cohérent avec le max de
+  // rows/cols (6) ci-dessous.
   row: z.number().int().min(0).max(5),
   col: z.number().int().min(0).max(5),
-  // Claude omet parfois un champ nullable → on traite undefined comme null.
+  // hole : Claude omet parfois un champ nullable → on traite undefined comme
+  // null. Borne haute 36 = plafond de numéro de trou du projet (cf.
+  // MAX_HOLE_NUMBER dans api/ops/clubs/[id]/upload.ts).
   hole: z.preprocess((v) => v ?? null, z.number().int().min(1).max(36).nullable()),
 });
 
 const LayoutSchema = z.object({
   rows: z.number().int().min(1).max(6),
   cols: z.number().int().min(1).max(6),
+  // Pas de contrôle croisé rows×cols == cells.length ici : c'est l'appelant
+  // (mapping.ts) qui valide chaque index de cellule contre rows×cols.
   cells: z.array(CellSchema).max(36),
 });
 

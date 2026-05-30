@@ -29,4 +29,9 @@ describe('parseLayoutToolInput', () => {
     const raw = { rows: 1, cols: 1, cells: [{ row: 0, col: 0, hole: 99 }] };
     expect(parseLayoutToolInput(raw)).toEqual(EMPTY_LAYOUT);
   });
+
+  it('retombe sur EMPTY_LAYOUT si un hole vaut 0 (borne basse)', () => {
+    const raw = { rows: 1, cols: 1, cells: [{ row: 0, col: 0, hole: 0 }] };
+    expect(parseLayoutToolInput(raw)).toEqual(EMPTY_LAYOUT);
+  });
 });
