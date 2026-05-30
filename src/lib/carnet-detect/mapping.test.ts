@@ -41,6 +41,15 @@ describe('mapLayoutToHoles', () => {
     expect(warnings[0]).toContain('5');
   });
 
+  it('écarte une 2e carte sur la même cellule (cellIndex en double)', () => {
+    const layout = { rows: 1, cols: 1, cells: [
+      { row: 0, col: 0, hole: 5 }, { row: 0, col: 0, hole: 6 }] };
+    const { picks, warnings } = mapLayoutToHoles(layout, HOLES_18);
+    expect(picks).toEqual([{ hole: 5, cellIndex: 0 }]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('Cellule');
+  });
+
   it('écarte une position hors grille', () => {
     const layout = { rows: 1, cols: 1, cells: [{ row: 3, col: 3, hole: 3 }] };
     const { picks, warnings } = mapLayoutToHoles(layout, HOLES_18);

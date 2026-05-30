@@ -17,6 +17,7 @@ export interface MapResult {
 export function mapLayoutToHoles(layout: CarnetLayout, validHoles: number[]): MapResult {
   const valid = new Set(validHoles);
   const seen = new Set<number>();
+  const seenCells = new Set<number>();
   const picks: LayoutPick[] = [];
   const warnings: string[] = [];
   const cellCount = layout.rows * layout.cols;
@@ -36,7 +37,14 @@ export function mapLayoutToHoles(layout: CarnetLayout, validHoles: number[]): Ma
       warnings.push(`Trou ${cell.hole} détecté plusieurs fois — 1re occurrence gardée.`);
       continue;
     }
+    // Bijection cellule→trou : deux cartes lues à la même position grille (même
+    // cellIndex) recevraient sinon la MÊME image découpée côté client.
+    if (seenCells.has(idx)) {
+      warnings.push(`Cellule (${cell.row},${cell.col}) déjà attribuée — trou ${cell.hole} ignoré (1re carte gardée).`);
+      continue;
+    }
     seen.add(cell.hole);
+    seenCells.add(idx);
     picks.push({ hole: cell.hole, cellIndex: idx });
   }
   return { picks, warnings };
