@@ -154,10 +154,10 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       <ul class="live-list" data-live-list></ul>
     </section>
 
-    {/* Template cloné par JS pour chaque row. Inclut les 3 médailles SVG
-        (honey/silver/bronze, palette tinted forest cohérente avec recap)
-        qu'on toggle via [hidden] selon le rang. Évite la string interpolation
-        innerHTML côté client. */}
+    {/* Template cloné par JS pour chaque row. (Médailles de rang retirées —
+        décoratif/peu lisible terrain + toggle [hidden] cassé par
+        `.medal-svg{display:block}`. Rang lisible via l'ordre + la sous-ligne.)
+        Évite la string interpolation innerHTML côté client. */}
     <template id="live-card-tpl">
       <li class="live-card">
         <span class="live-avatar" aria-hidden="true"></span>
@@ -165,20 +165,6 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           <span class="live-name"></span>
           <span class="live-sub"></span>
         </div>
-        <span class="live-medal" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" class="medal-svg" data-rank="1" hidden>
-            <circle cx="12" cy="12" r="10" fill="#D4A574" stroke="#0F2A1E" stroke-width="1.25" class="medal-rim" />
-            <text x="12" y="16" text-anchor="middle" font-family="var(--font-display, Georgia, serif)" font-weight="800" font-size="11" fill="#0F2A1E">1</text>
-          </svg>
-          <svg viewBox="0 0 24 24" width="24" height="24" class="medal-svg" data-rank="2" hidden>
-            <circle cx="12" cy="12" r="10" fill="#D5D8DD" stroke="#0F2A1E" stroke-width="1.25" class="medal-rim" />
-            <text x="12" y="16" text-anchor="middle" font-family="var(--font-display, Georgia, serif)" font-weight="800" font-size="11" fill="#0F2A1E">2</text>
-          </svg>
-          <svg viewBox="0 0 24 24" width="24" height="24" class="medal-svg" data-rank="3" hidden>
-            <circle cx="12" cy="12" r="10" fill="#B07D5B" stroke="#0F2A1E" stroke-width="1.25" class="medal-rim" />
-            <text x="12" y="16" text-anchor="middle" font-family="var(--font-display, Georgia, serif)" font-weight="800" font-size="11" fill="#FAF7EE">3</text>
-          </svg>
-        </span>
         <span class="live-score">
           <strong class="live-strokes"></strong>
           <span class="live-diff"></span>
@@ -324,6 +310,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       flashPlayerSwitch,
     } from '../../../lib/animations/play';
     import { computePace } from '../../../lib/pace';
+    import { ScoreSyncQueue } from '../../../lib/score-sync';
 
     type CourseData = { holes: { number: number; par: number }[] };
     type LivePlayer = { id: string; name: string };
@@ -434,13 +421,6 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         }
 
         li.querySelector<HTMLElement>('.live-sub')!.textContent = subLine;
-
-        // Médaille SVG : show celle qui correspond au rang (1/2/3), hide les autres
-        const medals = li.querySelectorAll<SVGSVGElement>('.medal-svg');
-        const targetRank = rankIdx >= 0 && rankIdx < 3 ? rankIdx + 1 : 0;
-        medals.forEach((svg) => {
-          svg.hidden = Number(svg.dataset.rank) !== targetRank;
-        });
 
         const strokesEl = li.querySelector<HTMLElement>('.live-strokes')!;
         strokesEl.textContent = t.played === 0 ? '' : String(t.strokes);
@@ -555,6 +535,28 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       });
 
       window.addEventListener('beforeunload', () => unsubscribeFromRound(channel));
+
+      // Source unique : la saisie émet 'scluba:score' à chaque score CONFIRMÉ
+      // (POST ok). On l'applique direct au store du classement, sans attendre
+      // l'echo Realtime (qui peut sauter sur la 5G du parcours). Le live-board
+      // reflète donc immédiatement les saves confirmées — et n'affiche QUE du
+      // confirmé, donc ne ment jamais. Fin du « 4 trous en haut / 7 en bas ».
+      window.addEventListener('scluba:score', (ev) => {
+        const d = (ev as CustomEvent).detail as {
+          pid: string;
+          hole: number;
+          body: Record<string, unknown>;
+        };
+        if (!players.has(d.pid)) return;
+        const map = scoresByPlayer.get(d.pid) ?? new Map<number, LiveEntry>();
+        const pickedUp = d.body.picked_up === true;
+        map.set(d.hole, {
+          strokes: pickedUp ? null : ((d.body.strokes as number | undefined) ?? null),
+          pickedUp,
+        });
+        scoresByPlayer.set(d.pid, map);
+        renderBoard();
+      });
     }
 
     /* === Score entry =================================================== */
@@ -599,6 +601,13 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         if (!s) { s = new Set<number>(); pickedUpByPlayer.set(pid, s); }
         return s;
       }
+
+      // File de sync anti-perte (cf. lib/score-sync + score-sync.test.ts).
+      // Chaque score saisi y passe : pending → saved | failed, avec retry
+      // auto. Remplace l'ancien « POST optimiste sans rollback » où un POST
+      // échoué laissait un score fantôme, perdu au reload.
+      const syncQueue = new ScoreSyncQueue();
+      let flushing = false;
 
       let currentHole = nextEmptyHole();
       let lastRenderedHole = currentHole;
@@ -870,6 +879,11 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           } else {
             cell.textContent = '—';
           }
+          // Statut de sync (anti-perte) : pending = ambre pointillé,
+          // failed = rouge. Un score saved/persisté garde son rendu normal.
+          const syncSt = syncQueue.statusOf(currentPlayerId, h);
+          if (syncSt === 'pending') cell.classList.add('cell-pending');
+          else if (syncSt === 'failed') cell.classList.add('cell-failed');
         }
         const diffPlayed = total - playedPar;
         const diffLbl = diffPlayed === 0 ? '±0' : diffPlayed > 0 ? `+${diffPlayed}` : String(diffPlayed);
@@ -1001,7 +1015,36 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
 
       // Intercept the early-finish submission to confirm. Skip the confirm
       // when the card is already complete (regular flow).
+      // Garde-fou anti-perte : ne JAMAIS terminer s'il reste des scores non
+      // confirmés en base (sinon ils disparaissent au passage sur /recap).
+      // 1re tentative → on bloque et on relance la sync. 2e tentative (réseau
+      // peut-être mort) → override explicite avec avertissement clair.
+      let finishTriesWhileUnsaved = 0;
       finishForm.addEventListener('submit', (e) => {
+        if (syncQueue.hasUnsaved()) {
+          const n = syncQueue.unsavedCount();
+          void flushSync();
+          finishTriesWhileUnsaved += 1;
+          if (finishTriesWhileUnsaved < 2) {
+            e.preventDefault();
+            window.alert(
+              `${n} score${n > 1 ? 's' : ''} pas encore enregistré${n > 1 ? 's' : ''}. ` +
+                `On réessaie de les envoyer — garde la page ouverte 2-3 secondes, puis retente « Terminer ».`,
+            );
+            return;
+          }
+          if (
+            !window.confirm(
+              `Toujours ${n} score${n > 1 ? 's' : ''} non enregistré${n > 1 ? 's' : ''}. ` +
+                `Si tu termines maintenant, ${n > 1 ? 'ils risquent' : 'il risque'} d'être perdu${n > 1 ? 's' : ''}. Terminer quand même ?`,
+            )
+          ) {
+            e.preventDefault();
+            return;
+          }
+        } else {
+          finishTriesWhileUnsaved = 0;
+        }
         const btn = finishForm.querySelector<HTMLButtonElement>('[data-finish-btn]');
         if (!btn || btn.dataset.allDone === '1') return;
         const remaining = Number(btn.dataset.holeCount) - Number(btn.dataset.played);
@@ -1048,56 +1091,97 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         statusEl.textContent = '';
       }
 
-      async function saveScore(strokes: number, options: { advance?: boolean } = {}) {
+      function buildScoreBody(hole: number, payload: Record<string, unknown>): Record<string, unknown> {
+        const body: Record<string, unknown> = { hole, ...payload };
+        const hint = targetPlayerHint();
+        if (hint) body.player_id = hint;
+        return body;
+      }
+
+      // Reflète l'état de la file dans la ligne de statut globale.
+      function reflectSyncStatus(): void {
+        const n = syncQueue.unsavedCount();
+        if (n === 0) {
+          showStatusSuccess('Enregistré');
+          setTimeout(clearStatus, 1200);
+        } else {
+          showStatusError(`${n} score${n > 1 ? 's' : ''} en attente — on réessaie…`);
+        }
+      }
+
+      // Rejoue toutes les entrées « due » (pending, + failed dont le backoff
+      // est écoulé). Appelée au tap, par l'intervalle, au retour réseau/onglet.
+      async function flushSync(): Promise<void> {
+        if (flushing) return;
+        flushing = true;
+        try {
+          const due = syncQueue.due(Date.now());
+          await Promise.all(
+            due.map(async (entry) => {
+              try {
+                const res = await fetch(`/api/rounds/${shortCode}/scores`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(entry.body),
+                });
+                if (!res.ok) throw new Error(await res.text());
+                syncQueue.markSaved(entry.pid, entry.hole);
+                // Source unique : notifie le classement d'un score confirmé.
+                window.dispatchEvent(
+                  new CustomEvent('scluba:score', {
+                    detail: { pid: entry.pid, hole: entry.hole, body: entry.body },
+                  }),
+                );
+              } catch {
+                syncQueue.markFailed(entry.pid, entry.hole, Date.now());
+              }
+            }),
+          );
+        } finally {
+          flushing = false;
+        }
+        reflectSyncStatus();
+        render();
+        // Si des saisies sont arrivées pendant ce flush (tap rapide multi-
+        // joueurs), on draine tout de suite. Pas de boucle serrée : les
+        // entrées « failed » restent en backoff donc non « due ».
+        if (syncQueue.due(Date.now()).length > 0) void flushSync();
+      }
+
+      // Saisie d'un score : écriture optimiste locale + mise en file. L'avance
+      // se fait tout de suite (UX terrain), le POST tourne en fond avec retry.
+      // Plus de perte silencieuse : un POST échoué reste « failed » (cellule
+      // rouge) et est rejoué jusqu'à confirmation.
+      function saveScore(strokes: number, options: { advance?: boolean } = {}): void {
         const scores = scoresOf(currentPlayerId);
         const pickedUp = pickedUpOf(currentPlayerId);
         scores[currentHole] = strokes;
         pickedUp.delete(currentHole); // saisir un score annule l'abandon
+        syncQueue.enqueue(currentPlayerId, currentHole, buildScoreBody(currentHole, { strokes }));
         render();
-        showStatusInfo('Sauvegarde…');
-        try {
-          const body: Record<string, unknown> = { hole: currentHole, strokes };
-          const hint = targetPlayerHint();
-          if (hint) body.player_id = hint;
-          const res = await fetch(`/api/rounds/${shortCode}/scores`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
-          if (!res.ok) throw new Error(await res.text());
-          showStatusSuccess('Enregistré');
-          setTimeout(clearStatus, 1200);
-          // Si la save vient d'un bouton score (par-relative ou Autre),
-          // on enchaîne automatiquement sur le prochain trou vide.
-          if (options.advance) autoAdvance();
-        } catch (e) {
-          showStatusError((e as Error).message);
-        }
+        showStatusInfo('Synchronisation…');
+        if (options.advance) autoAdvance();
+        void flushSync();
       }
 
-      async function savePickup() {
+      function savePickup(): void {
         const scores = scoresOf(currentPlayerId);
         const pickedUp = pickedUpOf(currentPlayerId);
         delete scores[currentHole];
         pickedUp.add(currentHole);
+        syncQueue.enqueue(currentPlayerId, currentHole, buildScoreBody(currentHole, { picked_up: true }));
         render();
-        showStatusInfo('Sauvegarde…');
-        try {
-          const body: Record<string, unknown> = { hole: currentHole, picked_up: true };
-          const hint = targetPlayerHint();
-          if (hint) body.player_id = hint;
-          const res = await fetch(`/api/rounds/${shortCode}/scores`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
-          if (!res.ok) throw new Error(await res.text());
-          showStatusSuccess('Trou abandonné');
-          setTimeout(clearStatus, 1200);
-        } catch (e) {
-          showStatusError((e as Error).message);
-        }
+        showStatusInfo('Synchronisation…');
+        void flushSync();
       }
+
+      // Retry auto : intervalle léger tant qu'il reste des scores non
+      // confirmés, + reprises immédiates quand le réseau ou l'onglet revient.
+      window.setInterval(() => { if (syncQueue.hasUnsaved()) void flushSync(); }, 4000);
+      window.addEventListener('online', () => void flushSync());
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) void flushSync();
+      });
 
       // === Boutons par-relative (Eagle/Birdie/Par/Bogey/Double) ===
       // Tap = save immédiat (offset → absolute via hole.par) + auto-advance.
@@ -1229,6 +1313,16 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       const entryRoundId = liveBoardEl?.dataset.roundId;
       if (entryRoundId) {
         const entryChannel = subscribeToRound(entryRoundId, {
+          // Late-joiner : play-root fige ses maps (orderedPlayerIds,
+          // playerNameById) au chargement. Sans ça, switcher sur un joueur
+          // arrivé APRÈS affiche « TOUR DE ? » (initialOf('') === '?') et casse
+          // le round-robin. On tient donc les maps à jour ici aussi.
+          onPlayersChange: (event, row) => {
+            const p = row as { id: string; round_id: string; display_name: string };
+            if (event === 'DELETE') return;
+            playerNameById.set(p.id, p.display_name);
+            if (!orderedPlayerIds.includes(p.id)) orderedPlayerIds.push(p.id);
+          },
           onScoresChange: (event, row) => {
             const s = row as {
               round_player_id: string;
@@ -1472,17 +1566,10 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       letter-spacing: 0.14em;
       text-transform: uppercase;
     }
-    .live-medal {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 24px;
-      line-height: 1;
-    }
-    .medal-svg {
-      display: block;
-      filter: drop-shadow(0 1px 1px rgba(15, 42, 30, 0.12));
-    }
+    /* Médailles/trophées de rang supprimées (markup + toggle JS retirés) :
+       décoratif, peu lisible terrain, et le toggle [hidden] était cassé par
+       `.medal-svg{display:block}`. Rang lisible via l'ordre + la sous-ligne ;
+       réintroduction éventuelle (chiffre sobre) prévue en refonte (Couche 2). */
     .live-score {
       display: flex;
       align-items: baseline;
