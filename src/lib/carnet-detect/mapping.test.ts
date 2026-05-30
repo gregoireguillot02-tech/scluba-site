@@ -38,6 +38,7 @@ describe('mapLayoutToHoles', () => {
     const { picks, warnings } = mapLayoutToHoles(layout, HOLES_18);
     expect(picks).toEqual([{ hole: 5, cellIndex: 0 }]);
     expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('5');
   });
 
   it('écarte une position hors grille', () => {
@@ -45,6 +46,7 @@ describe('mapLayoutToHoles', () => {
     const { picks, warnings } = mapLayoutToHoles(layout, HOLES_18);
     expect(picks).toEqual([]);
     expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('hors grille');
   });
 
   it('renvoie vide sur un layout vide (détection échouée)', () => {
