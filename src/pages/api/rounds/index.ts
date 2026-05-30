@@ -3,6 +3,7 @@ import { authServerClient, serviceClient } from '../../../lib/supabase';
 import { generateRoundShortCode } from '../../../lib/slug';
 import { createRoundSchema, formatZodError } from '../../../lib/validation/schemas';
 import { fetchCurrentWeather } from '../../../lib/weather';
+import type { CourseData } from '../../../lib/clubs-types';
 
 export const prerender = false;
 
@@ -55,7 +56,7 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
 
   const { data: club, error: cErr } = await sb
     .from('clubs')
-    .select('id, latitude, longitude')
+    .select('id, latitude, longitude, course_data')
     .eq('slug', slug)
     .maybeSingle();
   if (cErr) {
@@ -63,6 +64,15 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
     return new Response('Lookup failed', { status: 500 });
   }
   if (!club) return new Response('Club not found', { status: 404 });
+
+  // Club multi-boucles : le format est obligatoire. Le sélecteur « Quel
+  // parcours ? » est déjà `required` côté page, mais on verrouille aussi ici
+  // pour qu'aucun round ne retombe silencieusement sur le parcours plat (et
+  // qu'un format_id bidon soit rejeté plutôt qu'ignoré).
+  const clubFormats = (club.course_data as CourseData | null)?.formats ?? [];
+  if (clubFormats.length > 0 && (!formatId || !clubFormats.some((f) => f.id === formatId))) {
+    return new Response('Choisis un parcours pour démarrer la partie.', { status: 400 });
+  }
 
   // Snapshot météo Open-Meteo si on a les coords. Best-effort (3s timeout) :
   // si l'API est down ou lente, on crée la partie sans météo plutôt que

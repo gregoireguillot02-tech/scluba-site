@@ -40,6 +40,14 @@ const totalPar = c.course_data.holes.reduce((s, h) => s + h.par, 0);
 // changes without losing already-entered pars.
 const holesJson = JSON.stringify(c.course_data.holes.map((h) => ({ number: h.number, par: h.par })));
 
+// Mode initial de l'éditeur de parcours : 'multi' si le club a déjà des
+// boucles, sinon 'single'. Le toggle laisse basculer (mode simple = boucles
+// effacées au save). Boucles + formats existants sérialisés pour l'éditeur
+// multi-boucles côté client.
+const initialCourseMode = hasMultiLoop ? 'multi' : 'single';
+const loopsJson = JSON.stringify(c.course_data.loops ?? []);
+const formatsJson = JSON.stringify(c.course_data.formats ?? []);
+
 // === Stats ===
 const now = new Date();
 const startOfDay = new Date(now);
@@ -210,63 +218,66 @@ function fmtRelative(iso: string | null): string {
           <h3 class="course-title">
             Parcours · <span data-total-par>Par {totalPar}</span>
           </h3>
-          {hasMultiLoop ? (
-            <>
-              <p class="ops-hint multi-loop-hint" style="margin:0 0 8px">
-                Club multi-boucles — édition des trous indisponible ici. Modifie via la base, l'édition ne touche que pars (loops/formats préservés).
-              </p>
-              <input type="hidden" name="hole_count" value={String(currentHoleCount)} />
-              <div class="course-grid" style={`--row-cells:${Math.min(currentHoleCount, 9)}`}>
-                {Array.from({ length: Math.ceil(currentHoleCount / 9) }).map((_, rowIdx) => {
-                  const from = rowIdx * 9 + 1;
-                  const to = Math.min(from + 8, currentHoleCount);
-                  return (
-                    <div class="course-row">
-                      <span class="course-row-label">{from}-{to}</span>
-                      {c.course_data.holes.slice(from - 1, to).map((h) => (
-                        <label class="course-cell">
-                          <span class="course-cell-num">{h.number}</span>
-                          <input
-                            class="course-cell-input"
-                            type="number"
-                            name={`par_${h.number}`}
-                            value={h.par}
-                            min="2"
-                            max="6"
-                            required
-                          />
-                        </label>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          ) : (
-            <>
-              <div class="course-controls">
-                <label class="course-count-label">
-                  Nombre de trous
-                  <select
-                    class="ops-input course-count-select"
-                    name="hole_count"
-                    data-hole-count-select
-                  >
-                    {ALLOWED_HOLE_COUNTS.map((n) => (
-                      <option value={n} selected={n === selectorHoleCount}>{n} trous</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <p class="ops-hint" style="margin:8px 0">Pars entre 2 et 6 par trou.</p>
-              <div
-                class="course-grid"
-                data-course-grid
-                data-initial-holes={holesJson}
-                data-initial-count={String(selectorHoleCount)}
-              ></div>
-            </>
-          )}
+
+          <div class="mode-toggle" role="radiogroup" aria-label="Type de parcours">
+            <label class="mode-seg">
+              <input type="radio" name="course_mode" value="single" checked={initialCourseMode === 'single'} data-mode-radio />
+              <span>Un seul parcours</span>
+            </label>
+            <label class="mode-seg">
+              <input type="radio" name="course_mode" value="multi" checked={initialCourseMode === 'multi'} data-mode-radio />
+              <span>Plusieurs boucles</span>
+            </label>
+          </div>
+
+          {/* Mode simple : sélecteur 6/9/18 + grille de pars dynamique (inchangé). */}
+          <div data-editor="single" hidden={initialCourseMode !== 'single'}>
+            <div class="course-controls">
+              <label class="course-count-label">
+                Nombre de trous
+                <select
+                  class="ops-input course-count-select"
+                  name="hole_count"
+                  data-hole-count-select
+                >
+                  {ALLOWED_HOLE_COUNTS.map((n) => (
+                    <option value={n} selected={n === selectorHoleCount}>{n} trous</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <p class="ops-hint" style="margin:8px 0">Pars entre 2 et 6 par trou.</p>
+            <div
+              class="course-grid"
+              data-course-grid
+              data-initial-holes={holesJson}
+              data-initial-count={String(selectorHoleCount)}
+            ></div>
+          </div>
+
+          {/* Mode multi-boucles : éditeur dynamique (voir script plus bas). */}
+          <div
+            data-editor="multi"
+            hidden={initialCourseMode !== 'multi'}
+            data-loops-editor
+            data-initial-loops={loopsJson}
+            data-initial-formats={formatsJson}
+          >
+            <p class="ops-hint" style="margin:0 0 10px">
+              Chaque boucle est un « neuf » nommé (La Plaine, Le Vallon…). Coche ensuite les formats à proposer aux golfeurs au départ.
+            </p>
+            <div class="loops-list" data-loops-list></div>
+            <button type="button" class="ops-btn loops-add-btn" data-add-loop>+ Ajouter une boucle</button>
+
+            <h4 class="loops-formats-title">Formats proposés aux golfeurs</h4>
+            <p class="ops-hint" style="margin:0 0 8px">
+              Le golfeur en choisit un au départ. Décoche ceux que tu ne proposes pas, renomme librement.
+            </p>
+            <div class="formats-list" data-formats-list></div>
+
+            <p class="loops-error" data-loops-error hidden></p>
+            <input type="hidden" name="course_loops_json" data-loops-json />
+          </div>
 
           <div class="form-actions">
             <button type="submit" class="ops-btn ops-btn-primary">Enregistrer</button>
@@ -750,6 +761,289 @@ function fmtRelative(iso: string | null): string {
   }
 </script>
 
+<script>
+  // Toggle « Un seul parcours / Plusieurs boucles » + éditeur multi-boucles.
+  // Le mode multi sérialise tout son modèle (boucles + formats cochés) dans le
+  // champ caché course_loops_json ; l'API le re-valide et recalcule le plat.
+  import { suggestFormats, loopIdsKey, resolvePrimaryFlatHoles } from '../../../../lib/course-formats';
+
+  type EditorHole = { par: number };
+  type EditorLoop = { id: string; name: string; holes: EditorHole[] };
+
+  const totalLabel = document.querySelector('[data-total-par]');
+  const modeRadios = Array.from(document.querySelectorAll('[data-mode-radio]')) as HTMLInputElement[];
+  const singleEditor = document.querySelector('[data-editor="single"]') as HTMLElement | null;
+  const multiEditor = document.querySelector('[data-editor="multi"]') as HTMLElement | null;
+
+  // Présent uniquement sur la page d'édition club (sinon on ne fait rien).
+  if (modeRadios.length && multiEditor) {
+    const loopsListEl = multiEditor.querySelector('[data-loops-list]') as HTMLElement;
+    const formatsListEl = multiEditor.querySelector('[data-formats-list]') as HTMLElement;
+    const jsonInput = multiEditor.querySelector('[data-loops-json]') as HTMLInputElement;
+    const errorEl = multiEditor.querySelector('[data-loops-error]') as HTMLElement;
+    const addBtn = multiEditor.querySelector('[data-add-loop]') as HTMLButtonElement;
+    const form = document.getElementById('identity-form') as HTMLFormElement | null;
+
+    let loops: EditorLoop[] = [];
+    let initialFormats: { id: string; label: string; loop_ids: string[] }[] = [];
+    // Choix utilisateur par format (clé = ensemble de boucles) : coché + libellé.
+    const userFmt = new Map<string, { enabled: boolean; label: string }>();
+    let seq = 0;
+
+    const currentMode = (): string => modeRadios.find((r) => r.checked)?.value ?? 'single';
+
+    function uniqueLoopId(): string {
+      const taken = new Set(loops.map((l) => l.id));
+      let id: string;
+      do { id = 'loop-' + (++seq); } while (taken.has(id));
+      return id;
+    }
+    const nineHoles = (): EditorHole[] => Array.from({ length: 9 }, () => ({ par: 4 }));
+
+    // Formats actuellement cochés (ce qui sera persisté).
+    function enabledFormats() {
+      const out: { id: string; label: string; loop_ids: string[] }[] = [];
+      for (const s of suggestFormats(loops, initialFormats)) {
+        const o = userFmt.get(loopIdsKey(s.loop_ids));
+        const enabled = o ? o.enabled : s.enabled;
+        if (!enabled) continue;
+        out.push({ id: s.id, label: o && o.label ? o.label : s.label, loop_ids: s.loop_ids });
+      }
+      return out;
+    }
+
+    function serialize() {
+      const formats = enabledFormats();
+      jsonInput.value = JSON.stringify({
+        loops: loops.map((l) => ({ id: l.id, name: l.name, holes: l.holes.map((h) => ({ par: h.par })) })),
+        formats,
+      });
+      if (currentMode() === 'multi' && totalLabel) {
+        const modelLoops = loops.map((l) => ({
+          id: l.id,
+          name: l.name,
+          holes: l.holes.map((h, i) => ({ number: i + 1, par: h.par })),
+        }));
+        const flat = resolvePrimaryFlatHoles(modelLoops, formats);
+        totalLabel.textContent = 'Par ' + flat.reduce((s, h) => s + h.par, 0);
+      }
+    }
+
+    function renderLoops() {
+      loopsListEl.innerHTML = '';
+      loops.forEach((loop, idx) => {
+        const card = document.createElement('div');
+        card.className = 'loop-card';
+
+        const head = document.createElement('div');
+        head.className = 'loop-head';
+
+        const nameInput = document.createElement('input');
+        nameInput.className = 'ops-input loop-name';
+        nameInput.placeholder = 'Nom de la boucle (ex. La Plaine)';
+        nameInput.value = loop.name;
+        nameInput.maxLength = 120;
+        nameInput.addEventListener('input', () => {
+          loop.name = nameInput.value;
+          renderFormats();
+          serialize();
+        });
+
+        const holesSel = document.createElement('select');
+        holesSel.className = 'ops-input loop-holes-select';
+        for (const n of [6, 9]) {
+          const opt = document.createElement('option');
+          opt.value = String(n);
+          opt.textContent = n + ' trous';
+          if (loop.holes.length === n) opt.selected = true;
+          holesSel.appendChild(opt);
+        }
+        holesSel.addEventListener('change', () => {
+          const n = Number(holesSel.value);
+          const cur = loop.holes;
+          loop.holes = Array.from({ length: n }, (_, i) => cur[i] ?? { par: 4 });
+          renderLoops();
+          renderFormats();
+          serialize();
+        });
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'ops-btn loop-remove';
+        removeBtn.textContent = 'Retirer';
+        removeBtn.disabled = loops.length <= 1;
+        removeBtn.addEventListener('click', () => {
+          if (loops.length <= 1) return;
+          loops.splice(idx, 1);
+          renderLoops();
+          renderFormats();
+          serialize();
+        });
+
+        head.appendChild(nameInput);
+        head.appendChild(holesSel);
+        head.appendChild(removeBtn);
+        card.appendChild(head);
+
+        const grid = document.createElement('div');
+        grid.className = 'loop-grid';
+        grid.style.setProperty('--row-cells', String(loop.holes.length));
+        loop.holes.forEach((hole, hi) => {
+          const cell = document.createElement('label');
+          cell.className = 'loop-cell';
+          const num = document.createElement('span');
+          num.className = 'loop-cell-num';
+          num.textContent = String(hi + 1);
+          const input = document.createElement('input');
+          input.className = 'loop-par-input';
+          input.type = 'number';
+          input.min = '2';
+          input.max = '6';
+          input.value = String(hole.par);
+          input.addEventListener('input', () => {
+            const v = Number(input.value);
+            hole.par = Number.isFinite(v) ? v : NaN;
+            serialize();
+          });
+          cell.appendChild(num);
+          cell.appendChild(input);
+          grid.appendChild(cell);
+        });
+        card.appendChild(grid);
+        loopsListEl.appendChild(card);
+      });
+    }
+
+    function renderFormats() {
+      formatsListEl.innerHTML = '';
+      const nameById = new Map(loops.map((l) => [l.id, l.name.trim() || '(sans nom)']));
+      const suggestions = suggestFormats(loops, initialFormats);
+      if (suggestions.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'ops-hint';
+        empty.textContent = 'Ajoute des boucles pour voir les formats.';
+        formatsListEl.appendChild(empty);
+        return;
+      }
+      for (const s of suggestions) {
+        const key = loopIdsKey(s.loop_ids);
+        const o = userFmt.get(key);
+        const enabled = o ? o.enabled : s.enabled;
+        const label = o && o.label ? o.label : s.label;
+
+        const row = document.createElement('div');
+        row.className = 'format-row';
+        if (!enabled) row.classList.add('is-off');
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'format-enable';
+        cb.checked = enabled;
+
+        const labelInput = document.createElement('input');
+        labelInput.className = 'ops-input format-label';
+        labelInput.value = label;
+        labelInput.maxLength = 120;
+
+        const desc = document.createElement('span');
+        desc.className = 'format-desc';
+        desc.textContent = s.loop_ids.map((id) => nameById.get(id) ?? id).join(' + ');
+
+        const sync = () => {
+          userFmt.set(key, { enabled: cb.checked, label: labelInput.value });
+          row.classList.toggle('is-off', !cb.checked);
+          serialize();
+        };
+        cb.addEventListener('change', sync);
+        labelInput.addEventListener('input', sync);
+
+        row.appendChild(cb);
+        row.appendChild(labelInput);
+        row.appendChild(desc);
+        formatsListEl.appendChild(row);
+      }
+    }
+
+    function renderAll() {
+      renderLoops();
+      renderFormats();
+      serialize();
+    }
+
+    addBtn.addEventListener('click', () => {
+      loops.push({ id: uniqueLoopId(), name: '', holes: nineHoles() });
+      renderLoops();
+      renderFormats();
+      serialize();
+    });
+
+    // --- Toggle de mode : montre/masque + (dés)active les champs de chaque
+    //     éditeur pour qu'un `required` hors écran ne bloque pas l'envoi. ---
+    function setEditorEnabled(editor: HTMLElement | null, on: boolean) {
+      if (!editor) return;
+      editor.hidden = !on;
+      editor.querySelectorAll('input, select, button, textarea').forEach((el) => {
+        const node = el as HTMLInputElement;
+        if (node.type === 'hidden') return;
+        node.disabled = !on;
+      });
+    }
+    function singleTotal(): number {
+      let total = 0;
+      singleEditor?.querySelectorAll('.course-cell-input').forEach((el) => {
+        const v = Number((el as HTMLInputElement).value);
+        if (Number.isFinite(v)) total += v;
+      });
+      return total;
+    }
+    function applyMode(mode: string) {
+      setEditorEnabled(singleEditor, mode === 'single');
+      setEditorEnabled(multiEditor, mode === 'multi');
+      if (mode === 'multi') renderAll();
+      else if (totalLabel) totalLabel.textContent = 'Par ' + singleTotal();
+    }
+    modeRadios.forEach((r) => r.addEventListener('change', () => applyMode(currentMode())));
+
+    // --- Validation au submit (mode multi seulement). ---
+    form?.addEventListener('submit', (e) => {
+      if (currentMode() !== 'multi') return;
+      serialize();
+      let err = '';
+      if (loops.some((l) => !l.name.trim())) err = 'Chaque boucle doit avoir un nom.';
+      else if (loops.some((l) => l.holes.some((h) => !Number.isInteger(h.par) || h.par < 2 || h.par > 6)))
+        err = 'Tous les pars doivent être des entiers entre 2 et 6.';
+      else if (enabledFormats().length === 0) err = 'Coche au moins un format à proposer aux golfeurs.';
+      if (err) {
+        e.preventDefault();
+        errorEl.textContent = err;
+        errorEl.hidden = false;
+        errorEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      } else {
+        errorEl.hidden = true;
+      }
+    });
+
+    // --- Init du modèle depuis les données SSR. ---
+    const rawLoops = JSON.parse(multiEditor.dataset.initialLoops || '[]');
+    initialFormats = JSON.parse(multiEditor.dataset.initialFormats || '[]');
+    loops = rawLoops.map((l: any) => ({
+      id: String(l.id || ''),
+      name: String(l.name || ''),
+      holes: Array.isArray(l.holes) && l.holes.length
+        ? l.holes.map((h: any) => ({ par: Number(h.par) || 4 }))
+        : nineHoles(),
+    }));
+    for (const l of loops) {
+      const m = /^loop-(\d+)$/.exec(l.id);
+      if (m) seq = Math.max(seq, Number(m[1]));
+    }
+    if (loops.length === 0) loops = [{ id: uniqueLoopId(), name: '', holes: nineHoles() }];
+    for (const f of initialFormats) userFmt.set(loopIdsKey(f.loop_ids), { enabled: true, label: f.label });
+
+    applyMode(currentMode());
+  }
+</script>
+
 <style>
   .back-link { color: var(--muted); font-size: 13px; text-decoration: none; }
   .back-link:hover { color: var(--primary); }
@@ -983,6 +1277,115 @@ function fmtRelative(iso: string | null): string {
     outline: none;
     border-color: var(--primary-soft);
     box-shadow: 0 0 0 2px rgba(45, 106, 79, 0.15);
+  }
+
+  /* === Toggle mode parcours (simple / multi-boucles) === */
+  [data-editor][hidden] { display: none; }
+  .mode-toggle {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    margin: 8px 0 14px;
+    background: var(--line-soft);
+    border-radius: 10px;
+  }
+  .mode-seg { position: relative; display: inline-flex; }
+  .mode-seg input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .mode-seg span {
+    display: block;
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  }
+  .mode-seg input:checked + span {
+    background: var(--bg);
+    color: var(--primary);
+    box-shadow: 0 1px 2px rgba(15, 42, 30, 0.10);
+  }
+  .mode-seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* === Éditeur multi-boucles === */
+  .loops-list { display: flex; flex-direction: column; gap: 12px; }
+  .loop-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+    background: var(--bg-soft);
+  }
+  .loop-head {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .loop-name { font-weight: 600; }
+  .loop-holes-select { width: auto; min-width: 96px; }
+  .loop-remove {
+    font-size: 12px; padding: 6px 10px;
+    border-color: #FECACA; color: #991B1B; background: #FEF2F2;
+  }
+  .loop-remove:hover:not(:disabled) { background: #FEE2E2; border-color: #F87171; }
+  .loop-remove:disabled { opacity: 0.4; cursor: not-allowed; }
+  .loop-grid { display: grid; grid-template-columns: repeat(var(--row-cells), 1fr); gap: 6px; }
+  .loop-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .loop-cell-num { font-size: 10px; color: var(--muted); font-weight: 700; letter-spacing: 0.05em; }
+  .loop-par-input {
+    width: 100%;
+    padding: 8px 4px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    text-align: center;
+    font-family: var(--font-serif);
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+    background: var(--bg);
+  }
+  .loop-par-input::-webkit-outer-spin-button,
+  .loop-par-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .loop-par-input:focus {
+    outline: none;
+    border-color: var(--primary-soft);
+    box-shadow: 0 0 0 2px rgba(45, 106, 79, 0.15);
+  }
+  .loops-add-btn { margin-top: 12px; font-size: 13px; }
+  .loops-formats-title {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    color: var(--primary);
+    margin: 22px 0 4px;
+  }
+  .formats-list { display: flex; flex-direction: column; gap: 8px; }
+  .format-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    transition: opacity 0.15s;
+  }
+  .format-row.is-off { opacity: 0.5; }
+  .format-enable { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .format-label { font-size: 13px; font-weight: 600; }
+  .format-desc { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .loops-error {
+    margin: 12px 0 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #991B1B;
+    font-size: 13px;
   }
 
   .danger-zone { margin-top: 24px; }
