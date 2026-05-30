@@ -19,6 +19,8 @@ interface Props {
   navGroups?: NavGroup[];
   /** Favicon onglet. Défaut /favicon-ops.svg (ambre). Le portail club passe sa balle. */
   iconHref?: string;
+  /** Type MIME du favicon. Défaut SVG ; le portail club passe image/png. */
+  iconType?: string;
   /** apple-touch-icon + manifest : identité "web app" sur l'écran d'accueil. Opt-in (ops n'en a pas). */
   appleIcon?: string;
   manifestHref?: string;
@@ -65,6 +67,7 @@ const {
   defaultTheme = 'dark',
   navGroups = OPS_NAV_GROUPS,
   iconHref = '/favicon-ops.svg',
+  iconType = 'image/svg+xml',
   appleIcon,
   manifestHref,
   appName,
@@ -80,7 +83,7 @@ const user = Astro.locals.user;
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow" />
   <title>{title} — {brand}</title>
-  <link rel="icon" type="image/svg+xml" href={iconHref} />
+  <link rel="icon" type={iconType} href={iconHref} />
   {appleIcon && <link rel="apple-touch-icon" href={appleIcon} />}
   {appName && <meta name="apple-mobile-web-app-title" content={appName} />}
   {manifestHref && <link rel="manifest" href={manifestHref} />}
