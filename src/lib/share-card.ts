@@ -169,27 +169,29 @@ function loadViaImg(src: string, useCors: boolean): Promise<HTMLImageElement> {
 }
 
 async function loadImage(url: string): Promise<HTMLImageElement> {
-  // 1. Cas nominal : <img crossorigin> directement (object URL local, ou
-  //    cache CORS-clean). Pour dessiner sur le canvas sans le tainter, il
-  //    FAUT crossOrigin — donc si ça charge, l'image est sûre.
+  // Object URLs locaux (blob:) ou data: → déjà same-origin, dessin direct.
+  if (url.startsWith('blob:') || url.startsWith('data:')) {
+    return loadViaImg(url, false);
+  }
+  // Images cross-origin (Supabase club-assets / round-share-photos). Le <img>
+  // du bandeau recap charge la même URL en "no-cors" et empoisonne le cache
+  // WebKit/Safari → un chargement crossOrigin (et même un fetch cors) sur CETTE
+  // URL échoue ensuite ("TypeError: Load failed") alors que la photo s'affiche
+  // bien dans le bandeau. Parade : charger une URL FRAÎCHE (param ?canvas=1,
+  // clé de cache distincte) qui n'a jamais été demandée en no-cors — la requête
+  // crossOrigin part au réseau, reçoit ACAO:* et se dessine proprement.
+  const sep = url.includes('?') ? '&' : '?';
+  const freshUrl = `${url}${sep}canvas=1`;
   try {
-    return await loadViaImg(url, true);
+    return await loadViaImg(freshUrl, true);
   } catch {
-    // 2. Fallback Safari : un <img> sans crossorigin (ex. le bandeau du
-    //    recap) a pu remplir le cache avec une réponse "non-CORS" que le
-    //    chargement crossOrigin ci-dessus refuse → photo absente du PNG
-    //    alors qu'elle s'affiche dans le bandeau. On récupère les octets via
-    //    fetch (cache: 'reload' pour contourner l'entrée empoisonnée) puis on
-    //    dessine depuis un blob object URL same-origin.
-    const res = await fetch(url, { mode: 'cors', cache: 'reload' });
+    // Ultime filet : fetch→blob (la CSP autorise blob: désormais). Object URL
+    // volontairement non révoqué — révoquer avant le drawImage ultérieur peut
+    // blanchir l'image sur Safari ; le leak (quelques images/carte) est négligeable.
+    const res = await fetch(freshUrl, { mode: 'cors' });
     if (!res.ok) throw new Error(`image fetch failed (${res.status})`);
     const blob = await res.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    try {
-      return await loadViaImg(objectUrl, false);
-    } finally {
-      URL.revokeObjectURL(objectUrl);
-    }
+    return loadViaImg(URL.createObjectURL(blob), false);
   }
 }
 

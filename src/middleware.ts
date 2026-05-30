@@ -18,11 +18,14 @@ const CSP_VALUE = [
   "base-uri 'self'",
   "frame-ancestors 'self'",
   "form-action 'self'",
-  "img-src 'self' data: https:",
+  // blob: requis pour la share card : l'aperçu PNG (<img src="blob:…">) et le
+  // fallback de chargement photo (fetch→blob→<img>) utilisent des object URLs.
+  // Sûr : les blob: sont same-origin, créés uniquement par notre propre JS.
+  "img-src 'self' data: https: blob:",
   "font-src 'self' data: https://fonts.gstatic.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "script-src 'self' 'unsafe-inline'",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://*.ingest.us.sentry.io",
+  "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://*.ingest.us.sentry.io",
   "object-src 'none'",
   "manifest-src 'self'",
 ].join('; ');
