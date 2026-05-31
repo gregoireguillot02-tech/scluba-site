@@ -36,10 +36,11 @@ function relLabel(par: number, offset: number): string {
   if (offset === 0) return 'Par';
   if (offset === 1) return 'Bogey';
   if (offset === 2) return 'Double';
+  if (offset === 3) return 'Triple';
   return '';
 }
 
-const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
+const REL_OFFSETS = [-2, -1, 0, 1, 2, 3] as const;
 ---
 
 <div class="score-input" data-score-input data-current-hole={currentHole}>
@@ -238,8 +239,8 @@ const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
   /* === 5 boutons par-relative === */
   .rel-buttons {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 5px;
   }
   .rel-btn {
     display: flex;
@@ -456,10 +457,12 @@ const REL_OFFSETS = [-2, -1, 0, 1, 2] as const;
   }
 
   /* Responsive : iPhone SE 375px — tighter spacing */
-  @media (max-width: 380px) {
-    .rel-buttons { gap: 4px; }
-    .rel-btn { min-height: 76px; padding: 8px 2px; }
-    .rel-strokes { font-size: 1.5rem; }
-    .hole-dot.is-current { width: 18px; }
+  /* 6 boutons par-relative (jusqu'au Triple) : resserrer sur petits écrans
+     pour que tout tienne sans scroll (iPhone SE 375px inclus). */
+  @media (max-width: 420px) {
+    .rel-buttons { gap: 3px; }
+    .rel-btn { min-height: 74px; padding: 8px 1px; gap: 4px; }
+    .rel-label { font-size: 8px; letter-spacing: 0.04em; }
+    .rel-strokes { font-size: 1.4rem; }
   }
 </style>
