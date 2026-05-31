@@ -15,8 +15,11 @@ if (!club) {
 }
 const c = club as Club;
 
-const origin = Astro.url.origin;
-const pageUrl = clubPageUrl(c.slug, origin);
+// Affiche IMPRIMÉE → on encode toujours le domaine public canonique (jamais
+// l'origin ops/preview), sinon une affiche générée hors prod imprimerait une
+// mauvaise URL. Même source que astro.config.mjs : PUBLIC_SITE_URL.
+const canonical = import.meta.env.PUBLIC_SITE_URL || 'https://scluba.com';
+const pageUrl = clubPageUrl(c.slug, canonical);
 // Adresse affichée sans le protocole — ex. "scluba.com/teoula".
 const displayUrl = pageUrl.replace(/^https?:\/\//, '');
 
