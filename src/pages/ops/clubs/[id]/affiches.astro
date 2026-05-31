@@ -1,0 +1,422 @@
+---
+export const prerender = false;
+
+import OpsLayout from '../../../../layouts/OpsLayout.astro';
+import { serviceClient } from '../../../../lib/supabase';
+import { qrSvg, clubPageUrl } from '../../../../lib/qr';
+import type { Club } from '../../../../lib/clubs-types';
+
+const { id } = Astro.params;
+const sb = serviceClient();
+
+const { data: club } = await sb.from('clubs').select('*').eq('id', id).maybeSingle();
+if (!club) {
+  return Astro.redirect('/ops/clubs', 302);
+}
+const c = club as Club;
+
+const origin = Astro.url.origin;
+const pageUrl = clubPageUrl(c.slug, origin);
+// Adresse affichée sans le protocole — ex. "scluba.com/teoula".
+const displayUrl = pageUrl.replace(/^https?:\/\//, '');
+
+// QR voyant pour l'affiche départ du 1 (correction H = robuste même abîmé).
+const teeQr = await qrSvg(pageUrl, { errorCorrectionLevel: 'H', dark: '#1B4332', margin: 1 });
+// QR discret pour le club-house (même cible).
+const smallQr = await qrSvg(pageUrl, { errorCorrectionLevel: 'M', dark: '#1B4332', margin: 1 });
+
+// Couleur du club (accent) — repli forest si absente.
+const accent = c.primary_color ?? '#1B4332';
+
+// Direction visuelle de l'affiche A (club-house), à trancher sur deploy preview.
+// ?variant=b → version "bandeau couleur" ; défaut "a" → version claire éditoriale.
+const variant = Astro.url.searchParams.get('variant') === 'b' ? 'b' : 'a';
+---
+
+<OpsLayout title={`Affiches — ${c.name}`} active="clubs">
+  <div class="ops-page-header no-print">
+    <div>
+      <a href={`/ops/clubs/${c.id}/edit`} class="back-link">← {c.name}</a>
+      <h1 class="ops-page-title">Affiches marketing</h1>
+      <p class="ops-page-subtitle">{c.name} · slug <code>{c.slug}</code></p>
+    </div>
+    <div class="header-actions">
+      <a href={`/ops/clubs/${c.id}/affiches?variant=${variant === 'a' ? 'b' : 'a'}`} class="ops-btn">
+        Variante {variant === 'a' ? 'B' : 'A'}
+      </a>
+      <button type="button" class="ops-btn ops-btn-primary" onclick="window.print()">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+        <span class="btn-label">Imprimer / PDF</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="ops-card no-print intro-card">
+    <h2>Comment ça marche</h2>
+    <p>3 affiches A4 aux couleurs du club, à afficher : <strong>club-house</strong> (« c'est quoi Scluba »), <strong>départ du 1</strong> (QR à scanner), <strong>practice</strong> (teaser).</p>
+    <p>Clique <strong>« Imprimer / PDF »</strong> (ou <code>Cmd+P</code>) <strong>depuis Chrome</strong>, active <strong>« Graphiques d'arrière-plan »</strong> pour garder couleurs et fonds. Safari ignore les marges A4 — imprimer depuis Chrome.</p>
+    <p class="intro-hint">Bouton <strong>« Variante A/B »</strong> = deux directions visuelles de l'affiche club-house, à comparer puis trancher. Affiche actuelle : adresse <code>{displayUrl}</code>.</p>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- AFFICHE A — Club-house : « Ce golf utilise Scluba »         -->
+  <!-- ========================================================== -->
+  <section class={`print-sheet affiche affiche-a v-${variant}`} style={`--club:${accent}`}>
+    {variant === 'a' && c.photo_url && (
+      <div class="a-photo" style={`background-image:url('${c.photo_url}')`} aria-hidden="true"></div>
+    )}
+    <div class="a-inner">
+      <div class="a-top">
+        <header class="cobrand">
+          {c.logo_url
+            ? <img class="club-logo" src={c.logo_url} alt={c.name} />
+            : <span class="club-name-fb">{c.name}</span>}
+          <span class="cobrand-x" aria-hidden="true">×</span>
+          <span class="scluba-mark"><span class="sw">Scluba</span><span class="scluba-ball" aria-hidden="true"></span></span>
+        </header>
+        <p class="a-eyebrow">Ce golf utilise</p>
+        <h2 class="a-title">Votre carte de score, <span class="hl">100&nbsp;% digitale</span>.</h2>
+      </div>
+
+      <div class="a-bottom">
+        <p class="a-lead">
+          Vous notez les scores sur votre téléphone, vous suivez le classement en direct,
+          et vous repartez avec la carte de votre partie. Aux couleurs du {c.name}.
+        </p>
+        <ul class="a-tags">
+          <li>Gratuit</li>
+          <li>Sans appli</li>
+          <li>Sans compte</li>
+        </ul>
+        <div class="a-cta">
+          <div class="a-cta-text">
+            <span class="cta-label">Pour jouer, rendez-vous sur</span>
+            <span class="addr">{displayUrl}</span>
+          </div>
+          <div class="a-qr" set:html={smallQr}></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================== -->
+  <!-- AFFICHE B — Départ du 1 : QR voyant « Scannez »             -->
+  <!-- ========================================================== -->
+  <section class="print-sheet affiche affiche-b" style={`--club:${accent}`}>
+    <div class="b-accent" aria-hidden="true"></div>
+    <div class="b-inner">
+      <header class="b-head">
+        {c.logo_url
+          ? <span class="b-logo-chip"><img src={c.logo_url} alt={c.name} /></span>
+          : <span class="b-club-name">{c.name}</span>}
+        <span class="b-kicker">Carte de score digitale</span>
+      </header>
+
+      <h2 class="b-title">Scannez.<br/>Jouez.<br/>Partagez.</h2>
+
+      <div class="b-qr-block">
+        <div class="b-qr-frame">
+          <span class="bracket bracket-tl" aria-hidden="true"></span>
+          <span class="bracket bracket-tr" aria-hidden="true"></span>
+          <span class="bracket bracket-bl" aria-hidden="true"></span>
+          <span class="bracket bracket-br" aria-hidden="true"></span>
+          <div class="b-qr" set:html={teeQr}></div>
+        </div>
+        <p class="b-scan-hint">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
+          </svg>
+          Scannez avec l'appareil photo de votre téléphone
+        </p>
+      </div>
+
+      <footer class="b-foot">
+        <span class="b-addr-label">ou tapez</span>
+        <span class="b-addr">{displayUrl}</span>
+        <span class="b-reassure">Sans appli, sans compte · en 10 secondes</span>
+      </footer>
+    </div>
+  </section>
+
+  <!-- ========================================================== -->
+  <!-- AFFICHE C — Practice : teaser court                         -->
+  <!-- ========================================================== -->
+  <section class="print-sheet affiche affiche-c" style={`--club:${accent}`}>
+    <div class="c-inner">
+      <header class="cobrand">
+        {c.logo_url
+          ? <img class="club-logo" src={c.logo_url} alt={c.name} />
+          : <span class="club-name-fb">{c.name}</span>}
+        <span class="cobrand-x" aria-hidden="true">×</span>
+        <span class="scluba-mark"><span class="sw">Scluba</span><span class="scluba-ball" aria-hidden="true"></span></span>
+      </header>
+
+      <div class="c-mid">
+        <h2 class="c-title">Fini la<br/>carte papier.</h2>
+        <p class="c-lead">Scluba — votre carte de score digitale, à chaque partie.</p>
+      </div>
+
+      <div class="c-cta">
+        <div class="c-qr" set:html={smallQr}></div>
+        <div class="c-cta-text">
+          <span class="cta-label">Pour jouer</span>
+          <span class="addr">{displayUrl}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</OpsLayout>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
+
+  /* === Chrome écran (caché à l'impression) === */
+  .intro-card { margin-bottom: 24px; }
+  .intro-card p { margin: 6px 0; font-size: 14px; line-height: 1.5; color: var(--ink-soft); }
+  .intro-hint { color: var(--muted); font-size: 13px; }
+  .intro-card code, .intro-hint code {
+    font-family: var(--font-mono, ui-monospace), monospace;
+    background: var(--bg-soft); padding: 1px 6px; border-radius: 4px; font-size: 12px;
+  }
+  .back-link { color: var(--muted); font-size: 13px; text-decoration: none; }
+  .back-link:hover { color: var(--primary); }
+  .header-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+  /* === Feuille A4 (base + tokens) === */
+  .print-sheet {
+    --forest:  #1B4332;
+    --forest-deep: #0A1F14;
+    --honey:   #D4A574;
+    --honey-bright: #E8C089;
+    --cream:   #F5E6CF;
+    --ink:     #16110B;
+    --muted:   #6B7280;
+
+    position: relative;
+    aspect-ratio: 21 / 29.7;
+    width: 100%;
+    max-width: 21cm;
+    margin: 24px auto;
+    background: #fff;
+    color: var(--ink);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+
+  /* === Lockup co-brand "club × Scluba" === */
+  .cobrand { display: flex; align-items: center; gap: 0.45cm; }
+  .club-logo { height: 1.7cm; max-width: 6.5cm; object-fit: contain; object-position: left center; }
+  .club-name-fb { font-weight: 800; font-size: 16pt; letter-spacing: -0.01em; color: var(--club); }
+  .cobrand-x { color: var(--muted); font-size: 16pt; font-weight: 400; }
+  .scluba-mark { display: inline-flex; align-items: center; gap: 0.12cm; }
+  .scluba-mark .sw { font-weight: 800; font-size: 18pt; letter-spacing: -0.035em; color: var(--forest); line-height: 1; }
+  .scluba-ball {
+    width: 0.42cm; height: 0.42cm; border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, #fff 0%, #e8e8e8 55%, #8c8c8c 100%);
+    box-shadow: inset 0 0 0 0.4px rgba(0,0,0,0.15);
+  }
+
+  .addr {
+    display: block; font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-weight: 700; color: var(--forest); white-space: nowrap; line-height: 1;
+  }
+  .cta-label {
+    display: block; font-size: 9.5pt; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 0.18cm;
+  }
+
+  /* ==========================================================
+     AFFICHE A — club-house
+     ========================================================== */
+  .affiche-a .a-inner {
+    position: relative; z-index: 1; height: 100%;
+    display: flex; flex-direction: column; box-sizing: border-box;
+    padding: 1.7cm 1.6cm;
+  }
+  .affiche-a .a-eyebrow {
+    margin: 1.15cm 0 0; font-size: 12pt; font-weight: 600;
+    letter-spacing: 0.3em; text-transform: uppercase; color: var(--club);
+  }
+  .affiche-a .a-title {
+    margin: 0.25cm 0 0; font-size: 38pt; font-weight: 900;
+    line-height: 1.02; letter-spacing: -0.025em; color: var(--ink); max-width: 15cm;
+  }
+  .affiche-a .a-title .hl { color: var(--club); }
+  .affiche-a .a-bottom { margin-top: auto; }
+  .affiche-a .a-lead {
+    margin: 0; font-size: 13.5pt; line-height: 1.5; color: #3a342c; max-width: 15cm;
+  }
+  .affiche-a .a-tags {
+    display: flex; flex-wrap: wrap; gap: 0.3cm; margin: 0.7cm 0 0; padding: 0; list-style: none;
+  }
+  .affiche-a .a-tags li {
+    font-size: 9.5pt; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--forest); background: rgba(212, 165, 116, 0.18);
+    padding: 0.16cm 0.42cm; border-radius: 999px;
+  }
+  .affiche-a .a-cta {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.6cm;
+    margin-top: 0.85cm; padding-top: 0.7cm; border-top: 2px solid var(--club);
+  }
+  .affiche-a .addr { font-size: 18pt; }
+  .affiche-a .a-qr { width: 3.1cm; height: 3.1cm; flex-shrink: 0; }
+  .affiche-a .a-qr :global(svg) { width: 100%; height: 100%; display: block; }
+
+  /* photo optionnelle (variante a) : bande haute en fond avec léger voile */
+  .affiche-a .a-photo {
+    position: absolute; inset: 0 0 auto 0; height: 8.5cm; z-index: 0;
+    background-size: cover; background-position: center;
+    -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+    opacity: 0.16;
+  }
+
+  /* Variante B : le haut devient un bandeau plein couleur du club */
+  .affiche-a.v-b .a-top {
+    background: var(--club); color: #fff;
+    margin: -1.7cm -1.6cm 0; padding: 1.7cm 1.6cm 1.3cm;
+  }
+  .affiche-a.v-b .scluba-mark .sw { color: #fff; }
+  .affiche-a.v-b .cobrand-x { color: rgba(255,255,255,0.65); }
+  .affiche-a.v-b .club-name-fb { color: #fff; }
+  .affiche-a.v-b .a-eyebrow { color: rgba(255,255,255,0.82); }
+  .affiche-a.v-b .a-title { color: #fff; }
+  .affiche-a.v-b .a-title .hl { color: var(--honey-bright); }
+  .affiche-a.v-b .a-bottom { padding-top: 1cm; }
+
+  /* ==========================================================
+     AFFICHE B — départ du 1 : QR voyant (fond forest)
+     ========================================================== */
+  .affiche-b {
+    background:
+      radial-gradient(120% 80% at 50% 0%, #1f5240 0%, var(--forest) 45%, var(--forest-deep) 100%);
+    color: #fff;
+  }
+  .affiche-b .b-accent {
+    position: absolute; top: 0; left: 0; right: 0; height: 0.55cm; background: var(--club); z-index: 2;
+  }
+  .affiche-b .b-inner {
+    position: relative; z-index: 1; height: 100%;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    box-sizing: border-box; padding: 1.9cm 1.5cm 1.5cm;
+  }
+  .affiche-b .b-head { display: flex; flex-direction: column; align-items: center; gap: 0.35cm; }
+  .affiche-b .b-logo-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #fff; border-radius: 0.4cm; padding: 0.3cm 0.5cm;
+  }
+  .affiche-b .b-logo-chip img { height: 1.5cm; max-width: 6cm; object-fit: contain; display: block; }
+  .affiche-b .b-club-name { font-size: 16pt; font-weight: 800; color: #fff; }
+  .affiche-b .b-kicker {
+    font-size: 10pt; font-weight: 600; letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--honey);
+  }
+  .affiche-b .b-title {
+    margin: 0.7cm 0 0; font-size: 33pt; font-weight: 900; line-height: 1.0;
+    letter-spacing: -0.02em; color: #fff;
+  }
+  .affiche-b .b-qr-block { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 0.5cm; }
+  .affiche-b .b-qr-frame { position: relative; width: 9.2cm; height: 9.2cm; }
+  .affiche-b .b-qr {
+    width: 100%; height: 100%; padding: 0.45cm; box-sizing: border-box;
+    background: #fff; border-radius: 0.3cm;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.4);
+  }
+  .affiche-b .b-qr :global(svg) { width: 100%; height: 100%; display: block; }
+  .affiche-b .bracket {
+    position: absolute; width: 0.9cm; height: 0.9cm; border: 3px solid var(--honey); z-index: 1;
+  }
+  .affiche-b .bracket-tl { top: -0.28cm; left: -0.28cm; border-right: 0; border-bottom: 0; }
+  .affiche-b .bracket-tr { top: -0.28cm; right: -0.28cm; border-left: 0; border-bottom: 0; }
+  .affiche-b .bracket-bl { bottom: -0.28cm; left: -0.28cm; border-right: 0; border-top: 0; }
+  .affiche-b .bracket-br { bottom: -0.28cm; right: -0.28cm; border-left: 0; border-top: 0; }
+  .affiche-b .b-scan-hint {
+    margin: 0; display: inline-flex; align-items: center; gap: 0.25cm;
+    font-size: 12pt; font-weight: 600; color: var(--honey-bright);
+  }
+  .affiche-b .b-foot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 0.2cm; }
+  .affiche-b .b-addr-label {
+    font-size: 9.5pt; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+  }
+  .affiche-b .b-addr {
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 700; font-size: 16pt;
+    color: #fff; white-space: nowrap;
+  }
+  .affiche-b .b-reassure { margin-top: 0.15cm; font-size: 10pt; color: rgba(255,255,255,0.7); }
+
+  /* ==========================================================
+     AFFICHE C — practice : teaser
+     ========================================================== */
+  .affiche-c { background: #fff; }
+  .affiche-c::before {
+    content: ''; position: absolute; right: -6cm; bottom: -6cm; width: 16cm; height: 16cm;
+    border-radius: 50%; background: var(--club); opacity: 0.08; z-index: 0;
+  }
+  .affiche-c .c-inner {
+    position: relative; z-index: 1; height: 100%;
+    display: flex; flex-direction: column; box-sizing: border-box; padding: 1.7cm 1.6cm;
+  }
+  .affiche-c .c-mid { margin-top: auto; }
+  .affiche-c .c-title {
+    margin: 0; font-size: 54pt; font-weight: 900; line-height: 0.98; letter-spacing: -0.03em;
+    color: var(--ink);
+  }
+  .affiche-c .c-lead {
+    margin: 0.6cm 0 0; font-size: 15pt; line-height: 1.45; color: #3a342c; max-width: 14cm;
+  }
+  .affiche-c .c-cta {
+    margin-top: auto; display: flex; align-items: center; gap: 0.6cm;
+    padding-top: 0.8cm; border-top: 2px solid var(--club);
+  }
+  .affiche-c .c-qr { width: 3.1cm; height: 3.1cm; flex-shrink: 0; }
+  .affiche-c .c-qr :global(svg) { width: 100%; height: 100%; display: block; }
+  .affiche-c .addr { font-size: 18pt; }
+
+  /* ==========================================================
+     Impression
+     ========================================================== */
+  @media print {
+    .no-print { display: none !important; }
+
+    /* OpsLayout rend son propre <html>/<body> + shell flex avec sidebar sticky.
+       On neutralise tout ça (scope Astro différent → :global obligatoire) pour
+       n'imprimer que les feuilles. La sidebar/topbar de OpsLayout n'ont PAS de
+       classe .ops-header — il faut viser .ops-sidebar / .ops-topbar / .ops-shell. */
+    :global(html), :global(body) {
+      background: #fff !important; margin: 0 !important; padding: 0 !important;
+      width: 21cm !important; min-width: 21cm !important;
+    }
+    :global(.ops-shell) { display: block !important; min-height: 0 !important; }
+    :global(.ops-sidebar), :global(.ops-topbar), :global(.ops-scrim) { display: none !important; }
+    :global(.ops-content-wrap) { display: block !important; }
+    :global(.ops-main) {
+      display: block !important; margin: 0 !important; padding: 0 !important;
+      max-width: none !important; width: 21cm !important; background: transparent !important;
+    }
+
+    .print-sheet {
+      display: block !important;
+      margin: 0 !important; max-width: none !important; border-radius: 0 !important;
+      box-shadow: none !important; aspect-ratio: auto !important;
+      width: 21cm !important; height: 29.7cm !important;
+      page-break-after: always; page-break-inside: avoid; box-sizing: border-box; overflow: hidden;
+    }
+    .print-sheet:last-child { page-break-after: auto; }
+
+    /* Conserver fonds + couleurs à l'impression. */
+    .print-sheet, .print-sheet * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+
+    @page { size: A4 portrait; margin: 0; }
+  }
+</style>
