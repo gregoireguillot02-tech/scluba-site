@@ -254,7 +254,10 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       />
     </section>
 
-    {!isSpectator && (
+    {/* CTA « Trou suivant » réservé au mode HOST (saisie pour plusieurs) : là
+        le tap passe au joueur suivant, donc le bouton sert (N/M saisis + sauter
+        au trou). En solo, l'auto-advance va déjà au trou suivant → bouton inutile. */}
+    {canHostSwitch && (
       <button type="button" class="next-hole-cta" data-next-hole-cta>
         <span class="nhc-progress" data-next-hole-progress></span>
         <span class="nhc-label">Trou suivant →</span>
