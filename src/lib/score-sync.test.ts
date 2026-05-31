@@ -85,3 +85,80 @@ describe('ScoreSyncQueue', () => {
     expect(entry.body).toEqual({ hole: 3, picked_up: true, player_id: 'p1' });
   });
 });
+
+describe('ScoreSyncQueue — persistance offline-first', () => {
+  const KEY = 'scluba:sync:ABC';
+  function fakeStorage() {
+    const data: Record<string, string> = {};
+    return {
+      _data: data,
+      getItem: (k: string) => (k in data ? data[k] : null),
+      setItem: (k: string, v: string) => {
+        data[k] = v;
+      },
+    };
+  }
+
+  it('persiste une saisie dans le storage injecté', () => {
+    const s = fakeStorage();
+    const q = new ScoreSyncQueue({ storage: s, key: KEY });
+    q.enqueue('p1', 5, { hole: 5, strokes: 4 });
+    expect(s._data[KEY]).toBeTruthy();
+    expect(JSON.parse(s._data[KEY]).entries).toHaveLength(1);
+  });
+
+  it('survit à un reload : une nouvelle instance retrouve les scores non synchronisés', () => {
+    const s = fakeStorage();
+    const q1 = new ScoreSyncQueue({ storage: s, key: KEY });
+    q1.enqueue('p1', 5, { hole: 5, strokes: 4 });
+    q1.markFailed('p1', 5, 0);
+    const q2 = new ScoreSyncQueue({ storage: s, key: KEY }); // « reload »
+    expect(q2.statusOf('p1', 5)).toBe('failed');
+    expect(q2.hasUnsaved()).toBe(true);
+    expect(q2.bodyOf('p1', 5)).toEqual({ hole: 5, strokes: 4 });
+  });
+
+  it('un score confirmé reste saved après reload (pas de re-POST)', () => {
+    const s = fakeStorage();
+    const q1 = new ScoreSyncQueue({ storage: s, key: KEY });
+    q1.enqueue('p1', 5, { hole: 5, strokes: 4 });
+    q1.markSaved('p1', 5);
+    const q2 = new ScoreSyncQueue({ storage: s, key: KEY });
+    expect(q2.statusOf('p1', 5)).toBe('saved');
+    expect(q2.hasUnsaved()).toBe(false);
+  });
+
+  it("mémorise l'intention de terminer hors-ligne à travers un reload", () => {
+    const s = fakeStorage();
+    const q1 = new ScoreSyncQueue({ storage: s, key: KEY });
+    expect(q1.isFinishRequested()).toBe(false);
+    q1.requestFinish();
+    const q2 = new ScoreSyncQueue({ storage: s, key: KEY });
+    expect(q2.isFinishRequested()).toBe(true);
+    q2.clearFinish();
+    const q3 = new ScoreSyncQueue({ storage: s, key: KEY });
+    expect(q3.isFinishRequested()).toBe(false);
+  });
+
+  it("expose toutes les entrées pour réhydrater l'affichage", () => {
+    const s = fakeStorage();
+    const q = new ScoreSyncQueue({ storage: s, key: KEY });
+    q.enqueue('p1', 1, { hole: 1, strokes: 4 });
+    q.enqueue('p2', 1, { hole: 1, picked_up: true });
+    const all = q.allEntries().map((e) => `${e.pid}:${e.hole}`).sort();
+    expect(all).toEqual(['p1:1', 'p2:1']);
+  });
+
+  it('ignore un storage corrompu sans planter', () => {
+    const s = fakeStorage();
+    s._data[KEY] = '{ pas du json';
+    expect(() => new ScoreSyncQueue({ storage: s, key: KEY })).not.toThrow();
+    expect(new ScoreSyncQueue({ storage: s, key: KEY }).hasUnsaved()).toBe(false);
+  });
+
+  it('sans storage : fonctionne en mémoire (rétrocompat)', () => {
+    const q = new ScoreSyncQueue();
+    q.enqueue('p1', 5, { hole: 5, strokes: 4 });
+    expect(q.statusOf('p1', 5)).toBe('pending');
+  });
+});
