@@ -165,18 +165,27 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       </div>
     </header>
 
-    <section
-      class="live-board"
-      aria-label="Classement en direct"
-      data-live-board
-      data-round-id={r.id}
-      data-me-id={me.id}
-      data-holes={JSON.stringify(holesByNumber)}
-      data-players={JSON.stringify(allPlayers.map((p) => ({ id: p.id, name: p.display_name })))}
-      data-scores={JSON.stringify(allScores.map((s) => ({ pid: s.round_player_id, hole: s.hole_number, strokes: s.strokes, pickedUp: s.picked_up })))}
-    >
-      <ul class="live-list" data-live-list></ul>
-    </section>
+    {/* Classement repliable (flow B « focus saisie ») : collapsé par défaut
+        pendant la saisie pour laisser l'écran au joueur courant, accessible
+        d'un tap. Tap sur une card (déplié) = switch joueur en mode host. */}
+    <details class="lb-collapse" data-lb-collapse>
+      <summary class="lb-summary">
+        <span class="lb-summary-label">Classement</span>
+        <svg class="lb-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+      </summary>
+      <section
+        class="live-board"
+        aria-label="Classement en direct"
+        data-live-board
+        data-round-id={r.id}
+        data-me-id={me.id}
+        data-holes={JSON.stringify(holesByNumber)}
+        data-players={JSON.stringify(allPlayers.map((p) => ({ id: p.id, name: p.display_name })))}
+        data-scores={JSON.stringify(allScores.map((s) => ({ pid: s.round_player_id, hole: s.hole_number, strokes: s.strokes, pickedUp: s.picked_up })))}
+      >
+        <ul class="live-list" data-live-list></ul>
+      </section>
+    </details>
 
     {/* Template cloné par JS pour chaque row : rang (chiffre sobre) · avatar ·
         nom · total + écart au leader. Sous-ligne et médailles retirées
@@ -207,6 +216,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           <span class="cpb-eyebrow">À TOI ·</span>
           <span class="cpb-name" data-cpb-name>{me.display_name}</span>
         </div>
+        <span class="cpb-dots" data-cpb-dots aria-hidden="true"></span>
       </div>
     )}
 
@@ -313,13 +323,16 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       </form>
     </dialog>
 
-    <section class="leaderboard">
-      <header class="leaderboard-head">
+    {/* Carte repliable (flow B « focus saisie ») : le total reste visible dans
+        le résumé (data-total-strokes), la grille s'ouvre d'un tap. */}
+    <details class="leaderboard carte-collapse">
+      <summary class="leaderboard-head">
         <span>Carte</span>
         <span data-total-strokes>—</span>
-      </header>
+        <svg class="carte-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+      </summary>
       <Scorecard sections={roundSections} mode="live" />
-    </section>
+    </details>
 
     <form method="POST" action={`/api/rounds/${r.short_code}/finish`} class="finish-form" data-finish-form data-astro-reload>
       <button type="submit" class="finish-btn" data-finish-btn>Terminer maintenant</button>
@@ -393,6 +406,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         scoresByPlayer.get(s.pid)!.set(s.hole, { strokes: s.strokes, pickedUp: s.pickedUp });
       }
       const list = board.querySelector<HTMLElement>('[data-live-list]')!;
+      const lbCollapse = document.querySelector<HTMLDetailsElement>('[data-lb-collapse]');
 
       function effective(entry: LiveEntry, par: number): number | null {
         if (entry.pickedUp) return par + 2;
@@ -509,7 +523,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         // Capture old DOM rows pour le Flip (avant rebuildDom).
         const oldItems = Array.from(list.children) as HTMLElement[];
 
-        await flipLeaderboard(oldItems, () => {
+        const rebuildRows = () => {
           const newItems: HTMLElement[] = [];
           for (let i = 0; i < ordered.length; i++) {
             const p = ordered[i];
@@ -519,7 +533,14 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
             newItems.push(buildRow(p, isLeader, rankIdx, t, leaderDiff));
           }
           list.replaceChildren(...newItems);
-        });
+        };
+        // Classement replié → pas de Flip (GSAP Flip sur display:none = mesures
+        // nulles + glitch à l'ouverture). On reconstruit simplement.
+        if (lbCollapse && !lbCollapse.open) {
+          rebuildRows();
+        } else {
+          await flipLeaderboard(oldItems, rebuildRows);
+        }
 
         // Post-rebuild : count-ups sur les chiffres qui ont bougé, et ring
         // burst sur la card du nouveau leader si la tête a changé. Ces anims
@@ -770,6 +791,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       const banner = document.querySelector<HTMLElement>('[data-current-player-banner]');
       const bannerAvatar = banner?.querySelector<HTMLElement>('[data-cpb-avatar]') ?? null;
       const bannerName = banner?.querySelector<HTMLElement>('[data-cpb-name]') ?? null;
+      const bannerDots = banner?.querySelector<HTMLElement>('[data-cpb-dots]') ?? null;
 
       // Lecture de l'ordre des joueurs depuis le data-attr du live-board.
       // Ordre stable (= joined_at DB), nécessaire pour le smart next-slot.
@@ -978,6 +1000,18 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           bannerName.textContent = newName;
           if (oldName && oldName !== newName) {
             flashPlayerSwitch(banner);
+          }
+        }
+
+        // Dots de progression (flow B) : un point par joueur, plein si saisi
+        // sur le trou courant, surligné pour le joueur en cours.
+        if (bannerDots) {
+          bannerDots.innerHTML = '';
+          for (const pid of orderedPlayerIds) {
+            const done = scoresOf(pid)[currentHole] !== undefined || pickedUpOf(pid).has(currentHole);
+            const dot = document.createElement('span');
+            dot.className = `cpb-dot${done ? ' is-done' : ''}${pid === currentPlayerId ? ' is-current' : ''}`;
+            bannerDots.appendChild(dot);
           }
         }
 
@@ -1796,6 +1830,43 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    /* === Flow B « focus saisie » : dots de progression + sections repliables === */
+    .cpb-dots { display: flex; gap: 5px; margin-left: auto; flex-shrink: 0; }
+    .cpb-dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: rgba(15, 42, 30, 0.16); transition: background 160ms;
+    }
+    .cpb-dot.is-done { background: var(--accent); }
+    .cpb-dot.is-current { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent); }
+
+    .lb-collapse { margin: 0 var(--space-4); }
+    .lb-summary {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 11px 16px; border-radius: 14px; cursor: pointer;
+      background: var(--play-card-bg); border: 1px solid rgba(15, 42, 30, 0.06);
+      box-shadow: var(--play-card-shadow);
+      font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent);
+      list-style: none; -webkit-tap-highlight-color: transparent;
+    }
+    .lb-summary::-webkit-details-marker { display: none; }
+    .lb-chevron, .carte-chevron {
+      color: var(--muted); flex-shrink: 0;
+      transition: transform 200ms var(--ease-out, ease);
+    }
+    .lb-collapse[open] .lb-chevron,
+    .carte-collapse[open] .carte-chevron { transform: rotate(180deg); }
+    .lb-collapse .live-board { margin: 8px 0 0; }
+
+    .carte-collapse > summary { cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; }
+    .carte-collapse > summary::-webkit-details-marker { display: none; }
+    .carte-collapse .leaderboard-head { justify-content: flex-start; gap: 10px; margin-bottom: 0; }
+    .carte-collapse[open] .leaderboard-head { margin-bottom: var(--space-3); }
+    .carte-collapse .leaderboard-head [data-total-strokes] { margin-left: auto; }
+    @media (prefers-reduced-motion: reduce) {
+      .lb-chevron, .carte-chevron, .cpb-dot { transition: none; }
     }
 
     /* === Live-board card interactive (mode host) ===
