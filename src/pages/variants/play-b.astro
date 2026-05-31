@@ -1,0 +1,161 @@
+---
+/**
+ * Prototype B — « Assisté » (mode par défaut proposé). Un joueur à la fois en
+ * plein écran, gros boutons, tap → ✓ → joueur suivant du même trou ; quand le
+ * trou est complet, le CTA « Trou suivant → » s'active (avance EXPLICITE).
+ * Interactif, données mock (cf. _mock-store), aucun backend. Éphémère.
+ */
+import Shell from './_Shell.astro';
+import './_proto.css';
+import { FIXTURE, REL_OFFSETS } from './_fixture';
+---
+
+<Shell title="Proto B · Assisté — Scluba" clubColor={FIXTURE.club.primary_color} active="b">
+  <main class="proto-main">
+    <section class="glass">
+      <ul class="lb" data-board></ul>
+    </section>
+
+    <section class="cur">
+      <span class="cur-avatar" data-cur-avatar></span>
+      <div class="cur-text">
+        <span class="cur-eyebrow">À toi ·</span>
+        <span class="cur-name" data-cur-name></span>
+      </div>
+      <span class="dots" data-dots></span>
+    </section>
+
+    <section class="glass">
+      <div class="holebar">
+        <div class="holebar-meta" data-hole-meta></div>
+        <div class="holebar-par-label">PAR</div>
+        <div class="holebar-par" data-par></div>
+      </div>
+      <div class="rel-buttons" data-rel-buttons>
+        {REL_OFFSETS.map((offset) => (
+          <button type="button" class="rel-btn" data-rel={offset}>
+            <span class="rel-label" data-rel-label></span>
+            <span class="rel-strokes" data-rel-strokes></span>
+          </button>
+        ))}
+      </div>
+      <button type="button" class="pickup-btn" data-pickup>Abandonner le trou</button>
+    </section>
+
+    <button type="button" class="next-cta" data-next-cta disabled>
+      <span class="nc-progress" data-nc-progress></span>
+      <span class="nc-label">Trou suivant →</span>
+    </button>
+  </main>
+</Shell>
+
+<script>
+  import { createMockStore } from './_mock-store';
+  import { relLabel } from './_fixture';
+  import { ecartToLeader } from '../../lib/leaderboard';
+  import { initialOf, avatarColor } from '../../lib/avatar';
+  import { flashSelected, flashPlayerSwitch } from '../../lib/animations/play';
+
+  const store = createMockStore();
+  const board = document.querySelector<HTMLElement>('[data-board]')!;
+  const curAvatar = document.querySelector<HTMLElement>('[data-cur-avatar]')!;
+  const curName = document.querySelector<HTMLElement>('[data-cur-name]')!;
+  const curEl = document.querySelector<HTMLElement>('.cur')!;
+  const dotsEl = document.querySelector<HTMLElement>('[data-dots]')!;
+  const holeMeta = document.querySelector<HTMLElement>('[data-hole-meta]')!;
+  const parEl = document.querySelector<HTMLElement>('[data-par]')!;
+  const relBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-rel]'));
+  const pickupBtn = document.querySelector<HTMLButtonElement>('[data-pickup]')!;
+  const nextCta = document.querySelector<HTMLButtonElement>('[data-next-cta]')!;
+  const ncProgress = document.querySelector<HTMLElement>('[data-nc-progress]')!;
+  const ncLabel = nextCta.querySelector<HTMLElement>('.nc-label')!;
+
+  let lastCur = store.currentPlayerId;
+
+  function render() {
+    const hole = store.currentHole;
+    const par = store.parOf(hole);
+    const cur = store.currentPlayerId;
+
+    // Leaderboard
+    const lb = store.orderedLeaderboard();
+    const leaderDiff = lb.find((r) => r.played > 0)?.diff ?? 0;
+    board.innerHTML = '';
+    lb.forEach((r, i) => {
+      const li = document.createElement('li');
+      li.className = `lb-row${i === 0 && r.played > 0 ? ' is-leader' : ''}`;
+      const rank = r.played === 0 ? '–' : String(i + 1);
+      const diff = r.played === 0 ? '—' : ecartToLeader(r.diff, leaderDiff);
+      li.innerHTML =
+        `<span class="lb-rank">${rank}</span>` +
+        `<span class="lb-avatar" style="background:${avatarColor(r.pid)}">${initialOf(r.name)}</span>` +
+        `<span class="lb-name">${r.name}${r.isMe ? ' <em>(vous)</em>' : ''}</span>` +
+        `<span class="lb-score"><span class="lb-strokes">${r.played === 0 ? '' : r.strokes}</span><span class="lb-diff">${diff}</span></span>`;
+      board.appendChild(li);
+    });
+
+    // Joueur courant + dots de progression sur le trou
+    curAvatar.style.background = avatarColor(cur);
+    curAvatar.textContent = initialOf(store.nameById.get(cur) ?? '');
+    curName.textContent = store.nameById.get(cur) ?? '';
+    dotsEl.innerHTML = '';
+    for (const pid of store.orderedPlayerIds) {
+      const d = document.createElement('span');
+      d.className = `dot${store.hasEntry(pid, hole) ? ' is-done' : ''}${pid === cur ? ' is-current' : ''}`;
+      dotsEl.appendChild(d);
+    }
+    if (cur !== lastCur) {
+      flashPlayerSwitch(curEl);
+      lastCur = cur;
+    }
+
+    // Trou / par
+    holeMeta.textContent = `Trou ${hole} / ${store.holeCount}`;
+    parEl.textContent = String(par);
+
+    // Boutons par-relatifs
+    for (const btn of relBtns) {
+      const off = Number(btn.dataset.rel);
+      const strokes = par + off;
+      btn.querySelector<HTMLElement>('[data-rel-strokes]')!.textContent = String(strokes);
+      btn.querySelector<HTMLElement>('[data-rel-label]')!.textContent = relLabel(par, off);
+      btn.classList.toggle('is-par', off === 0);
+      btn.classList.toggle('is-selected', store.scoreOf(cur, hole) === strokes && !store.isPickup(cur, hole));
+    }
+
+    // CTA : actif seulement quand tout le monde a saisi ce trou (mode assisté).
+    const complete = store.isHoleCompleteForAll(hole);
+    const atLast = hole >= store.holeCount;
+    ncProgress.textContent = `${store.playedCountOnHole(hole)}/${store.orderedPlayerIds.length} saisis`;
+    ncLabel.textContent = atLast ? 'Partie terminée' : 'Trou suivant →';
+    nextCta.disabled = !complete || atLast;
+  }
+
+  function advanceAfterEntry() {
+    const hole = store.currentHole;
+    const cur = store.currentPlayerId;
+    window.setTimeout(() => {
+      const np = store.nextPlayerOnHole(cur, hole);
+      if (np) store.setCurrent(np, hole); // sinon : trou complet → CTA s'active
+    }, 280);
+  }
+
+  for (const btn of relBtns) {
+    btn.addEventListener('click', () => {
+      store.setScore(store.currentPlayerId, store.currentHole, store.parOf(store.currentHole) + Number(btn.dataset.rel));
+      flashSelected(btn);
+      advanceAfterEntry();
+    });
+  }
+  pickupBtn.addEventListener('click', () => {
+    store.setPickup(store.currentPlayerId, store.currentHole);
+    advanceAfterEntry();
+  });
+  nextCta.addEventListener('click', () => {
+    if (store.currentHole >= store.holeCount) return;
+    store.setCurrent(store.orderedPlayerIds[0], store.currentHole + 1);
+  });
+
+  store.subscribe(render);
+  render();
+</script>

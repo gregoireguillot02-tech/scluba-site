@@ -1,0 +1,72 @@
+---
+/**
+ * Menu des prototypes /variants (Couche 2B). Liens + descriptions des 3 flows.
+ * noindex (via _Shell). Éphémère — supprimé avec /variants après la décision.
+ */
+import Shell from './_Shell.astro';
+import { FIXTURE } from './_fixture';
+
+const CARDS = [
+  {
+    href: '/variants/play-b',
+    tag: 'B',
+    name: 'Assisté',
+    note: 'défaut proposé',
+    desc: 'Un joueur à la fois, plein écran. Tap → ✓ → joueur suivant. « Trou suivant » quand tout le monde est saisi. Guidé, impossible de se perdre.',
+  },
+  {
+    href: '/variants/play-c',
+    tag: 'C',
+    name: 'Ultra-rapide',
+    note: 'habitués',
+    desc: 'Chrome minimal. Un tap enchaîne joueur → joueur → trou en continu. Swipe pour changer de trou. Le plus rapide.',
+  },
+  {
+    href: '/variants/play-a',
+    tag: 'A',
+    name: 'Grille',
+    note: 'coup d’œil',
+    desc: 'Tous les joueurs du trou empilés. Tape une ligne + un score. « Trou suivant » quand tu veux. Tu vois tout le trou.',
+  },
+];
+---
+
+<Shell title="Prototypes flow de saisie — Scluba" clubColor={FIXTURE.club.primary_color}>
+  <main class="proto-main">
+    <section class="glass idx-intro">
+      <h1 class="idx-h1">Choix du flow de saisie</h1>
+      <p class="idx-p">3 prototypes interactifs (données fictives, host qui saisit pour 4 joueurs, mi-partie). Teste-les sur ton tél et choisis celui qui te parle.</p>
+    </section>
+
+    {CARDS.map((c) => (
+      <a class="glass idx-card" href={c.href}>
+        <span class="idx-tag">{c.tag}</span>
+        <span class="idx-body">
+          <span class="idx-name">{c.name} <em>· {c.note}</em></span>
+          <span class="idx-desc">{c.desc}</span>
+        </span>
+        <span class="idx-arrow">→</span>
+      </a>
+    ))}
+  </main>
+</Shell>
+
+<style>
+  .idx-intro { margin-top: 8px; }
+  .idx-h1 { margin: 0 0 6px; font-family: var(--font-serif); font-size: 22px; font-weight: 800; color: var(--ink); }
+  .idx-p { margin: 0; font-family: var(--font-serif); font-size: 14px; color: var(--muted); line-height: 1.45; }
+  .idx-card {
+    display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 14px;
+    text-decoration: none; color: inherit;
+  }
+  .idx-tag {
+    width: 40px; height: 40px; border-radius: 12px; background: var(--accent); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--font-serif); font-weight: 800; font-size: 18px;
+  }
+  .idx-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .idx-name { font-family: var(--font-serif); font-weight: 700; font-size: 16px; color: var(--ink); }
+  .idx-name em { font-style: normal; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .idx-desc { font-family: var(--font-serif); font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .idx-arrow { font-size: 22px; color: var(--accent); font-weight: 800; }
+</style>
