@@ -154,16 +154,15 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       <ul class="live-list" data-live-list></ul>
     </section>
 
-    {/* Template cloné par JS pour chaque row. (Médailles de rang retirées —
-        décoratif/peu lisible terrain + toggle [hidden] cassé par
-        `.medal-svg{display:block}`. Rang lisible via l'ordre + la sous-ligne.)
-        Évite la string interpolation innerHTML côté client. */}
+    {/* Template cloné par JS pour chaque row : rang (chiffre sobre) · avatar ·
+        nom · total + écart au leader. Sous-ligne et médailles retirées
+        (leaderboard épuré, Couche 2). Évite l'interpolation innerHTML client. */}
     <template id="live-card-tpl">
       <li class="live-card">
+        <span class="live-rank" aria-hidden="true"></span>
         <span class="live-avatar" aria-hidden="true"></span>
         <div class="live-info">
           <span class="live-name"></span>
-          <span class="live-sub"></span>
         </div>
         <span class="live-score">
           <strong class="live-strokes"></strong>
@@ -181,7 +180,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       <div class="current-player-banner" data-current-player-banner aria-live="polite">
         <span class="cpb-avatar" data-cpb-avatar aria-hidden="true"></span>
         <div class="cpb-text">
-          <span class="cpb-eyebrow">TOUR DE</span>
+          <span class="cpb-eyebrow">À TOI ·</span>
           <span class="cpb-name" data-cpb-name>{me.display_name}</span>
         </div>
       </div>
@@ -255,6 +254,13 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       />
     </section>
 
+    {!isSpectator && (
+      <button type="button" class="next-hole-cta" data-next-hole-cta>
+        <span class="nhc-progress" data-next-hole-progress></span>
+        <span class="nhc-label">Trou suivant →</span>
+      </button>
+    )}
+
     <button type="button" class="report-trigger" data-report-trigger>⚠ Signaler un souci sur le parcours</button>
 
     <dialog class="report-dialog" data-report-dialog aria-labelledby="report-title">
@@ -311,6 +317,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     } from '../../../lib/animations/play';
     import { computePace } from '../../../lib/pace';
     import { ScoreSyncQueue } from '../../../lib/score-sync';
+    import { fmtToPar, ecartToLeader } from '../../../lib/leaderboard';
 
     type CourseData = { holes: { number: number; par: number }[] };
     type LivePlayer = { id: string; name: string };
@@ -355,12 +362,6 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         return { strokes, played, diff };
       }
 
-      function fmtDiff(diff: number, played: number): string {
-        if (played === 0) return '—';
-        if (diff === 0) return '±0';
-        return diff > 0 ? `+${diff}` : String(diff);
-      }
-
       // Avatar : utilise les helpers hueFromId/initialOf importés depuis
       // lib/avatar (couleur HSL stable + initiale, repère visuel constant).
 
@@ -391,18 +392,9 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         if (rankIdx === 2) classes.push('is-third');
         li.className = classes.join(' ');
 
-        // Sub-line micro-caps (eyebrow JetBrains Mono) :
-        //  - played===0 → « EN ATTENTE »
-        //  - leader → « X TROUS JOUÉS »
-        //  - autres → « +N VS LEADER »
-        let subLine = '';
-        if (t.played === 0) {
-          subLine = 'EN ATTENTE';
-        } else if (isLeader) {
-          subLine = `${t.played} TROU${t.played > 1 ? 'S' : ''} JOUÉ${t.played > 1 ? 'S' : ''}`;
-        } else {
-          subLine = `+${t.diff - leaderDiff} VS LEADER`;
-        }
+        // Rang sobre (chiffre). « – » tant que le joueur n'a pas joué.
+        li.querySelector<HTMLElement>('.live-rank')!.textContent =
+          t.played === 0 ? '–' : String(rankIdx + 1);
 
         const avatarEl = li.querySelector<HTMLElement>('.live-avatar')!;
         avatarEl.style.background = `hsl(${hueFromId(p.id)}, 55%, 55%)`;
@@ -420,18 +412,13 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           nameEl.textContent = p.name;
         }
 
-        li.querySelector<HTMLElement>('.live-sub')!.textContent = subLine;
-
         const strokesEl = li.querySelector<HTMLElement>('.live-strokes')!;
         strokesEl.textContent = t.played === 0 ? '' : String(t.strokes);
 
+        // Écart au leader — un seul format pour tous : « ±0 » pour le leader,
+        // « +N » de retard sinon, « — » avant le 1er trou.
         const diffEl = li.querySelector<HTMLElement>('.live-diff')!;
-        diffEl.textContent = fmtDiff(t.diff, t.played);
-        diffEl.classList.remove('over', 'under');
-        if (t.played > 0) {
-          if (t.diff < 0) diffEl.classList.add('under');
-          else if (t.diff > 0) diffEl.classList.add('over');
-        }
+        diffEl.textContent = t.played === 0 ? '—' : ecartToLeader(t.diff, leaderDiff);
 
         return li;
       }
@@ -768,6 +755,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         if (offset === 0) return 'Par';
         if (offset === 1) return 'Bogey';
         if (offset === 2) return 'Double';
+        if (offset === 3) return 'Triple';
         return '';
       }
 
@@ -907,7 +895,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           else if (syncSt === 'failed') cell.classList.add('cell-failed');
         }
         const diffPlayed = total - playedPar;
-        const diffLbl = diffPlayed === 0 ? '±0' : diffPlayed > 0 ? `+${diffPlayed}` : String(diffPlayed);
+        const diffLbl = fmtToPar(diffPlayed, played); // format unique (cf. lib/leaderboard)
         totalStrokesEl.textContent = played === 0
           ? '—'
           : played === holeCount
@@ -923,6 +911,8 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           finishBtn.dataset.played = String(played);
           finishBtn.dataset.holeCount = String(holeCount);
         }
+
+        updateNextHoleCta();
 
         // Banner "TOUR DE [joueur]" — syncé avec currentPlayerId (mode host).
         if (banner && bannerAvatar && bannerName) {
@@ -1224,6 +1214,47 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         if (!document.hidden) void flushSync();
       });
 
+      // === CTA "Trou suivant →" (Couche 2) ===========================
+      // Voie EXPLICITE pour avancer (en plus de l'auto-advance au tap et du
+      // swipe). Avance d'UN trou : host → 1er joueur du trou suivant ; solo →
+      // trou suivant pour soi. Au dernier trou, devient un raccourci vers
+      // « Terminer ». Label « N/M saisis » (host) = combien reste sur ce trou.
+      const nextHoleCta = document.querySelector<HTMLButtonElement>('[data-next-hole-cta]');
+      const nextHoleProgress = document.querySelector<HTMLElement>('[data-next-hole-progress]');
+
+      function playedCountOnHole(hole: number): number {
+        let n = 0;
+        for (const pid of orderedPlayerIds) {
+          const sc = scoresOf(pid);
+          const pu = pickedUpOf(pid);
+          if (sc[hole] !== undefined || pu.has(hole)) n++;
+        }
+        return n;
+      }
+
+      function updateNextHoleCta(): void {
+        if (!nextHoleCta || !nextHoleProgress) return;
+        const atLast = currentHole >= holeCount;
+        nextHoleProgress.textContent = canHostSwitch
+          ? `${playedCountOnHole(currentHole)}/${orderedPlayerIds.length} saisis`
+          : `Trou ${currentHole}/${holeCount}`;
+        nextHoleCta.classList.toggle('is-last', atLast);
+        const labelEl = nextHoleCta.querySelector<HTMLElement>('.nhc-label');
+        if (labelEl) labelEl.textContent = atLast ? 'Terminer ↓' : 'Trou suivant →';
+      }
+
+      nextHoleCta?.addEventListener('click', () => {
+        const next = currentHole + 1;
+        if (next > holeCount) {
+          finishForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+        currentHole = next;
+        if (canHostSwitch) currentPlayerId = orderedPlayerIds[0] ?? currentPlayerId;
+        closeOtherPicker();
+        render();
+      });
+
       // === Boutons par-relative (Eagle/Birdie/Par/Bogey/Double) ===
       // Tap = save immédiat (offset → absolute via hole.par) + auto-advance.
       for (const btn of relBtns) {
@@ -1492,7 +1523,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     }
     .live-card {
       display: grid;
-      grid-template-columns: 40px 1fr auto auto;
+      grid-template-columns: auto 40px 1fr auto;
       align-items: center;
       gap: 12px;
       padding: 12px 14px;
@@ -1564,6 +1595,17 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       .live-card.is-leader { animation: none; }
     }
 
+    /* Rang sobre (chiffre) en tête de card — remplace les médailles. */
+    .live-rank {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--muted);
+      min-width: 16px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .live-card.is-leader .live-rank { color: var(--primary-deep, var(--primary)); }
     .live-avatar {
       width: 40px; height: 40px;
       border-radius: 50%;
@@ -1602,16 +1644,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       font-size: 12px;
       margin-left: 2px;
     }
-    /* Sub-line = eyebrow micro-caps JetBrains Mono, cohérence avec le
-       reste de la page (PAR, TROU, etc.). */
-    .live-sub {
-      font-family: var(--font-mono);
-      font-weight: 500;
-      font-size: 10.5px;
-      color: var(--muted);
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-    }
+    /* (.live-sub retirée — leaderboard épuré Couche 2 : rang + écart suffisent.) */
     /* Médailles/trophées de rang supprimées (markup + toggle JS retirés) :
        décoratif, peu lisible terrain, et le toggle [hidden] était cassé par
        `.medal-svg{display:block}`. Rang lisible via l'ordre + la sous-ligne ;
@@ -1701,7 +1734,7 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     }
     .cpb-name {
       font-family: var(--font-serif);
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 800;
       color: var(--accent);
       line-height: 1.1;
@@ -2189,6 +2222,42 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     }
 
     /* === Signalement souci parcours (Portail Club) === */
+    /* CTA "Trou suivant →" (Couche 2) — voie explicite d'avance, couleur
+       club (distincte du vert "Terminer"). */
+    .next-hole-cta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: calc(100% - var(--space-4, 16px) * 2);
+      margin: 4px var(--space-4, 16px) 0;
+      min-height: 52px;
+      padding: 12px 18px;
+      border: none;
+      border-radius: 14px;
+      background: var(--clubColor, var(--accent));
+      color: #fff;
+      font-family: var(--font-serif);
+      cursor: pointer;
+      box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--clubColor, var(--accent)) 60%, transparent);
+      transition: transform 120ms var(--ease-out), filter 150ms;
+      touch-action: manipulation;
+    }
+    .next-hole-cta:active { transform: scale(0.98); }
+    .next-hole-cta:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .nhc-progress {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.88;
+    }
+    .nhc-label { font-size: 16px; font-weight: 800; letter-spacing: 0.01em; }
+    .next-hole-cta.is-last { background: var(--accent); }
+    @media (prefers-reduced-motion: reduce) {
+      .next-hole-cta { transition: none; }
+    }
     .report-trigger {
       display: block;
       margin: 12px auto 0;
