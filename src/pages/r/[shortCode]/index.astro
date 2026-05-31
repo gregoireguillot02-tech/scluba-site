@@ -83,6 +83,9 @@ const iconUrl = r.club.icon_url ?? r.club.logo_url ?? undefined;
     data-short-code={shortCode}
     data-player-id={playerId ?? ''}
     data-is-creator={isCreator ? '1' : '0'}
+    data-club-slug={r.club.slug}
+    data-club-name={r.club.name}
+    data-player-name={me.display_name}
   >
     <Masthead
       photoUrl={r.club.photo_url}
@@ -98,6 +101,16 @@ const iconUrl = r.club.icon_url ?? r.club.logo_url ?? undefined;
       <p class="code-hint">Partage ce code ou montre le QR à tes copains.</p>
 
       <div class="invite-actions">
+        {/* « M'envoyer le lien » : le joueur s'envoie l'URL (avec son prénom
+             pré-rempli) pour pouvoir revenir s'il se déconnecte en cours de
+             partie — sans qu'on collecte son numéro. */}
+        <button type="button" class="btn-secondary" data-self-link data-url={`${joinUrl}?name=${encodeURIComponent(me.display_name)}`}>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          <span>M'envoyer le lien</span>
+        </button>
         <button type="button" class="btn-secondary" data-copy-link data-url={joinUrl}>
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -247,6 +260,8 @@ const iconUrl = r.club.icon_url ?? r.club.logo_url ?? undefined;
     import { subscribeToRound, unsubscribeFromRound } from '../../../lib/realtime';
     import { avatarColor, initialOf } from '../../../lib/avatar';
     import { initLobbyAnimations } from '../../../lib/animations/lobby';
+    import { saveActiveRound } from '../../../lib/active-round';
+    import { shareRoundUrl } from '../../../lib/share-url';
 
     // Reveal éditorial + autoAnimate sur la players list + spring QR.
     initLobbyAnimations().catch((err) => {
@@ -269,6 +284,17 @@ const iconUrl = r.club.icon_url ?? r.club.logo_url ?? undefined;
       const shortCode = root.dataset.shortCode!;
       const me = root.dataset.playerId || undefined;
       const isCreator = root.dataset.isCreator === '1';
+
+      // Mémorise la partie sur ce device → bandeau « Reprendre ma partie » sur
+      // la page club si le joueur ferme la PWA / se déconnecte avant la fin.
+      if (root.dataset.clubSlug && root.dataset.playerName) {
+        saveActiveRound({
+          shortCode,
+          clubSlug: root.dataset.clubSlug,
+          clubName: root.dataset.clubName ?? '',
+          playerName: root.dataset.playerName,
+        });
+      }
       const list = root.querySelector<HTMLElement>('[data-players-list]')!;
       const claimedCountEl = root.querySelector<HTMLElement>('[data-claimed-count]')!;
       const totalCountEl = root.querySelector<HTMLElement>('[data-total-count]')!;
@@ -505,6 +531,22 @@ const iconUrl = r.club.icon_url ?? r.club.logo_url ?? undefined;
         });
       }
     }
+
+    // « M'envoyer le lien » : partage natif (le joueur se l'envoie où il veut)
+    // avec repli copier-coller. Distinct de « Copier le lien » (qui sert à
+    // l'host pour inviter les autres).
+    document.querySelector<HTMLElement>('[data-self-link]')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLElement;
+      const url = btn.dataset.url!;
+      const label = btn.querySelector('span')!;
+      const clubName = document.querySelector<HTMLElement>('[data-lobby]')?.dataset.clubName ?? '';
+      const res = await shareRoundUrl(url, clubName ? `Ma partie — ${clubName}` : 'Ma partie · Scluba');
+      if (res === 'copied' || res === 'prompted') {
+        const prev = label.textContent;
+        label.textContent = 'Lien copié ✓';
+        setTimeout(() => { label.textContent = prev; }, 1500);
+      }
+    });
 
     // Copy invite link.
     document.querySelector<HTMLElement>('[data-copy-link]')?.addEventListener('click', async (e) => {

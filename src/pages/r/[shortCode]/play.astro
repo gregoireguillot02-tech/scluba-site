@@ -125,7 +125,14 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
   lockOverscroll={true}
   gridBackdrop={true}
 >
-  <main class="play">
+  <main
+    class="play"
+    data-resume-root
+    data-short-code={r.short_code}
+    data-club-slug={r.club.slug}
+    data-club-name={r.club.name}
+    data-player-name={me.display_name}
+  >
     {/* play-header : carte glass posée sur le quadrillage. Le clubColor
          est isolé sur la pill (logo + nom club) — badge identitaire du
          club. Le nom du joueur reste en eyebrow micro-caps hors pill. */}
@@ -137,7 +144,24 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           )}
           <p class="play-club" transition:name="player-club-name">{r.club.name}</p>
         </div>
-        <p class="play-player">{me.display_name}</p>
+        <div class="play-header-end">
+          <p class="play-player">{me.display_name}</p>
+          {/* « M'envoyer le lien » : le joueur s'envoie l'URL de sa partie
+               (Messages/WhatsApp/Notes) pour pouvoir revenir s'il se
+               déconnecte — sans collecte de numéro. */}
+          <button
+            type="button"
+            class="play-share-btn"
+            data-share-link
+            aria-label="M'envoyer le lien de ma partie"
+            title="M'envoyer le lien"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -318,6 +342,33 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
     import { computePace } from '../../../lib/pace';
     import { ScoreSyncQueue } from '../../../lib/score-sync';
     import { fmtToPar, ecartToLeader } from '../../../lib/leaderboard';
+    import { saveActiveRound } from '../../../lib/active-round';
+    import { shareRoundUrl } from '../../../lib/share-url';
+
+    /* === Partie en cours : pointeur device + « M'envoyer le lien » ======= */
+    // On mémorise localement la partie courante → la page club peut proposer
+    // « Reprendre ma partie » en 1 tap si le joueur ferme la PWA / se
+    // déconnecte (le cookie l'attend, mais il n'a aucune URL à lui sans ça).
+    const resumeRoot = document.querySelector<HTMLElement>('[data-resume-root]');
+    if (resumeRoot) {
+      const shortCode = resumeRoot.dataset.shortCode!;
+      const clubSlug = resumeRoot.dataset.clubSlug!;
+      const clubName = resumeRoot.dataset.clubName!;
+      const playerName = resumeRoot.dataset.playerName!;
+      saveActiveRound({ shortCode, clubSlug, clubName, playerName });
+
+      const shareBtn = resumeRoot.querySelector<HTMLButtonElement>('[data-share-link]');
+      shareBtn?.addEventListener('click', async () => {
+        // ?name pré-remplit le prénom au retour → reclaim en 1 tap si le
+        // cookie a été perdu (navigation privée, cache PWA purgé).
+        const url = `${location.origin}/r/${shortCode}/join?name=${encodeURIComponent(playerName)}`;
+        const res = await shareRoundUrl(url, `Ma partie — ${clubName}`);
+        if (res === 'copied' || res === 'prompted') {
+          shareBtn.classList.add('is-copied');
+          setTimeout(() => shareBtn.classList.remove('is-copied'), 1500);
+        }
+      });
+    }
 
     type CourseData = { holes: { number: number; par: number }[] };
     type LivePlayer = { id: string; name: string };
@@ -1789,6 +1840,33 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+    }
+    .play-header-end {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .play-share-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      flex-shrink: 0;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(15, 42, 30, 0.12);
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--play-ink, #0f2a1e);
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease, color 0.15s ease;
+    }
+    .play-share-btn:active { transform: scale(0.92); }
+    .play-share-btn.is-copied {
+      background: #1B4332;
+      border-color: #1B4332;
+      color: #FFFFFF;
     }
     .play-header-pill {
       display: inline-flex;
