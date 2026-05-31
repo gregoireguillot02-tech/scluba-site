@@ -128,6 +128,25 @@ function fmtTime(iso: string | null): string {
 </head>
 <body data-player-flow style="background: #FFFFFF; color: #0A0A0A; min-height: 100dvh; margin: 0;">
   <main class="club-page">
+    {/* Bandeau « Reprendre ma partie » : affiché par JS si ce device a une
+         partie en cours mémorisée pour ce club (cf. lib/active-round). Couvre
+         le joueur qui a fermé la PWA / s'est déconnecté et revient ici sans
+         re-scanner. Masqué par défaut → aucun flash si pas de partie. */}
+    <a class="resume-banner" data-resume-banner data-club-slug={c.slug} href={`/${c.slug}`} hidden>
+      <span class="resume-banner-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+      </span>
+      <span class="resume-banner-text">
+        <span class="resume-banner-eyebrow">Partie en cours</span>
+        <span class="resume-banner-title">Reprendre ma partie</span>
+      </span>
+      <svg class="resume-banner-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </a>
+
     <header class="masthead">
       {c.photo_url ? (
         <figure class="photo-card">
@@ -408,6 +427,20 @@ function fmtTime(iso: string | null): string {
     </section>
 
     <script>
+      import { getActiveRound } from '../lib/active-round';
+
+      // Bandeau « Reprendre ma partie » : si ce device a une partie en cours
+      // mémorisée POUR CE club, on pointe le bandeau sur /r/<code> (qui route
+      // ensuite vers lobby/play/recap selon le statut) et on l'affiche.
+      const resumeBanner = document.querySelector<HTMLAnchorElement>('[data-resume-banner]');
+      if (resumeBanner) {
+        const active = getActiveRound();
+        if (active && active.clubSlug === resumeBanner.dataset.clubSlug) {
+          resumeBanner.href = `/r/${active.shortCode}`;
+          resumeBanner.hidden = false;
+        }
+      }
+
       // Le form « rejoindre par code » redirige vers /r/<CODE>/join (la page
       // qui affiche la liste des placeholders à claim). Ça évite le bug de
       // doublon : avant on auto-claimait via ilike sur display_name côté
@@ -558,6 +591,54 @@ function fmtTime(iso: string | null): string {
       padding: 0 var(--space-4);
       gap: 0;
     }
+
+    /* === Bandeau « Reprendre ma partie » (affiché par JS) === */
+    .resume-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: var(--space-4);
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--clubColor);
+      color: #FFFFFF;
+      text-decoration: none;
+      box-shadow: 0 6px 20px rgba(15, 42, 30, 0.18);
+    }
+    /* Spécificité > UA [hidden] : sinon display:flex masquerait le hidden. */
+    .resume-banner[hidden] { display: none; }
+    .resume-banner-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .resume-banner-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
+    }
+    .resume-banner-eyebrow {
+      font-family: var(--font-mono, monospace);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+    .resume-banner-title {
+      font-family: var(--font-display, sans-serif);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .resume-banner-chevron { flex-shrink: 0; opacity: 0.9; }
 
     /* === Masthead — photo card + logo overlap + title === */
     .masthead {

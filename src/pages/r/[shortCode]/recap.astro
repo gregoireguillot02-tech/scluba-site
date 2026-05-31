@@ -283,7 +283,7 @@ const hasSponsors = allSponsors.length > 0;
   manifestHref={`/r/${r.short_code}/manifest.webmanifest`}
   gridBackdrop={true}
 >
-  <main class="card">
+  <main class="card" data-recap-root data-short-code={shortCode}>
     <Masthead
       photoUrl={r.share_photo_url ?? r.club.photo_url}
       logoUrl={r.club.logo_url}
@@ -440,6 +440,15 @@ const hasSponsors = allSponsors.length > 0;
 
   <script>
     import { initRecapAnimations } from '../../../lib/animations/recap';
+    import { clearActiveRound } from '../../../lib/active-round';
+
+    // Partie terminée → on oublie le pointeur « partie en cours » pour ne plus
+    // proposer « Reprendre ma partie » sur la page club. Ciblé sur ce shortCode
+    // pour ne pas effacer une autre partie active ouverte ailleurs.
+    {
+      const sc = document.querySelector<HTMLElement>('[data-recap-root]')?.dataset.shortCode;
+      clearActiveRound(sc);
+    }
 
     // Reveal éditorial en 3 actes + parallax photo + scroll triggers.
     // Le score count-up est géré à l'intérieur (avec motion-blur SVG).
