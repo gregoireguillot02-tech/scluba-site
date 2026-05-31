@@ -1,0 +1,107 @@
+---
+/**
+ * Wrapper partagé des prototypes /variants (Couche 2B). Réplique le thème
+ * player-flow de PlayerLayout (tokens.css `body[data-player-flow]` → vert +
+ * glass + Sora/Inter/JetBrains) MAIS SANS <ClientRouter /> : chaque proto a un
+ * script inline, et les View Transitions ré-exécuteraient ces scripts sur
+ * navigation entre /variants/* (double-bind). Les liens <a> du switch = full
+ * load → script exécuté une seule fois.
+ *
+ * noindex : pages éphémères, supprimées après la décision de flow.
+ * Underscore (_Shell) → non routable, importable comme composant.
+ */
+import '../../styles/tokens.css';
+import '../../styles/global.css';
+
+interface Props {
+  title: string;
+  clubColor?: string;
+  active?: 'a' | 'b' | 'c';
+}
+const { title, clubColor = '#1A4490', active } = Astro.props;
+
+const VARIANTS = [
+  { key: 'b', href: '/variants/play-b', label: 'B · Assisté' },
+  { key: 'c', href: '/variants/play-c', label: 'C · Rapide' },
+  { key: 'a', href: '/variants/play-a', label: 'A · Grille' },
+] as const;
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#FFFFFF" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
+    />
+  </head>
+  <body
+    style={`--clubColor: ${clubColor}; color: #0A0A0A; min-height: 100dvh; margin: 0; overflow-x: hidden;`}
+    data-player-flow
+    data-play-grid
+  >
+    <nav class="variants-switch" aria-label="Choisir le prototype">
+      <span class="vs-tag">PROTO · données fictives · choix du flow</span>
+      <div class="vs-links">
+        {VARIANTS.map((v) => (
+          <a href={v.href} class={`vs-link${active === v.key ? ' is-active' : ''}`}>{v.label}</a>
+        ))}
+      </div>
+    </nav>
+
+    <slot />
+  </body>
+</html>
+
+<style>
+  .variants-switch {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 16px 10px;
+    background: rgba(255, 255, 255, 0.82);
+    -webkit-backdrop-filter: blur(10px) saturate(115%);
+    backdrop-filter: blur(10px) saturate(115%);
+    border-bottom: 1px solid var(--line);
+  }
+  .vs-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .vs-links {
+    display: flex;
+    gap: 6px;
+  }
+  .vs-link {
+    flex: 1;
+    text-align: center;
+    padding: 9px 6px;
+    border-radius: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+  .vs-link.is-active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+</style>
