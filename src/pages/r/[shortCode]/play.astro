@@ -602,12 +602,33 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         return s;
       }
 
-      // File de sync anti-perte (cf. lib/score-sync + score-sync.test.ts).
-      // Chaque score saisi y passe : pending → saved | failed, avec retry
-      // auto. Remplace l'ancien « POST optimiste sans rollback » où un POST
-      // échoué laissait un score fantôme, perdu au reload.
-      const syncQueue = new ScoreSyncQueue();
+      // File de sync offline-first (cf. lib/score-sync + score-sync.test.ts) :
+      // chaque score y passe (pending → saved | failed) + retry auto, et tout
+      // est PERSISTÉ dans localStorage par partie. Sur un parcours on peut
+      // saisir / continuer / terminer hors-ligne sans rien perdre (même après
+      // un reload ou un kill du webapp) ; ça se synchronise au retour réseau.
+      const syncQueue = new ScoreSyncQueue({
+        storage: window.localStorage,
+        key: `scluba:sync:${shortCode}`,
+      });
       let flushing = false;
+
+      // Réhydrate l'affichage local depuis le store : les saisies pas encore
+      // synchronisées (absentes des données SSR du serveur) sont ré-appliquées
+      // sur les cartes, pour ne rien « perdre » visuellement après un reload
+      // hors-ligne. Les entrées déjà « saved » viennent du SSR, on les saute.
+      for (const e of syncQueue.allEntries()) {
+        if (e.status === 'saved') continue;
+        const sc = scoresOf(e.pid);
+        const pu = pickedUpOf(e.pid);
+        if (e.body.picked_up === true) {
+          pu.add(e.hole);
+          delete sc[e.hole];
+        } else if (typeof e.body.strokes === 'number') {
+          sc[e.hole] = e.body.strokes as number;
+          pu.delete(e.hole);
+        }
+      }
 
       let currentHole = nextEmptyHole();
       let lastRenderedHole = currentHole;
@@ -1013,45 +1034,31 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         // Tous les trous remplis : on reste sur le trou courant.
       }
 
-      // Intercept the early-finish submission to confirm. Skip the confirm
-      // when the card is already complete (regular flow).
-      // Garde-fou anti-perte : ne JAMAIS terminer s'il reste des scores non
-      // confirmés en base (sinon ils disparaissent au passage sur /recap).
-      // 1re tentative → on bloque et on relance la sync. 2e tentative (réseau
-      // peut-être mort) → override explicite avec avertissement clair.
-      let finishTriesWhileUnsaved = 0;
+      // Fin de partie — offline-first. On intercepte toujours le submit natif :
+      //  - tout synchronisé + en ligne → on termine et on ouvre le récap ;
+      //  - sinon → on mémorise l'intention (persistée) + message rassurant, et
+      //    la sync terminera la partie au retour réseau (puis ouvrira le récap).
+      // Plus de blocage : sur un parcours, finir hors-ligne doit marcher.
       finishForm.addEventListener('submit', (e) => {
-        if (syncQueue.hasUnsaved()) {
-          const n = syncQueue.unsavedCount();
-          void flushSync();
-          finishTriesWhileUnsaved += 1;
-          if (finishTriesWhileUnsaved < 2) {
-            e.preventDefault();
-            window.alert(
-              `${n} score${n > 1 ? 's' : ''} pas encore enregistré${n > 1 ? 's' : ''}. ` +
-                `On réessaie de les envoyer — garde la page ouverte 2-3 secondes, puis retente « Terminer ».`,
-            );
-            return;
-          }
-          if (
-            !window.confirm(
-              `Toujours ${n} score${n > 1 ? 's' : ''} non enregistré${n > 1 ? 's' : ''}. ` +
-                `Si tu termines maintenant, ${n > 1 ? 'ils risquent' : 'il risque'} d'être perdu${n > 1 ? 's' : ''}. Terminer quand même ?`,
-            )
-          ) {
-            e.preventDefault();
-            return;
-          }
-        } else {
-          finishTriesWhileUnsaved = 0;
-        }
+        e.preventDefault();
         const btn = finishForm.querySelector<HTMLButtonElement>('[data-finish-btn]');
-        if (!btn || btn.dataset.allDone === '1') return;
-        const remaining = Number(btn.dataset.holeCount) - Number(btn.dataset.played);
-        const msg = remaining > 0
-          ? `Tu n'as saisi que ${btn.dataset.played} trou(s) sur ${btn.dataset.holeCount}. Les trous restants seront marqués NC. Terminer ?`
-          : 'Terminer la partie maintenant ?';
-        if (!window.confirm(msg)) e.preventDefault();
+        // Confirmation de fin anticipée (trous non joués → NC).
+        if (btn && btn.dataset.allDone !== '1') {
+          const remaining = Number(btn.dataset.holeCount) - Number(btn.dataset.played);
+          const msg = remaining > 0
+            ? `Tu n'as saisi que ${btn.dataset.played} trou(s) sur ${btn.dataset.holeCount}. Les trous restants seront marqués NC. Terminer ?`
+            : 'Terminer la partie maintenant ?';
+          if (!window.confirm(msg)) return;
+        }
+        if (!syncQueue.hasUnsaved() && navigator.onLine) {
+          void finishRoundNow();
+        } else {
+          syncQueue.requestFinish();
+          showStatusInfo(
+            "Partie terminée sur l'appareil · synchronisation en cours, le récap s'ouvrira dès le réseau revenu.",
+          );
+          void flushSync();
+        }
       });
 
       function targetPlayerHint(): string | null {
@@ -1098,12 +1105,17 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         return body;
       }
 
-      // Reflète l'état de la file dans la ligne de statut globale.
+      // Reflète l'état de la file dans la ligne de statut globale. Hors-ligne =
+      // état NORMAL sur un parcours (pas une erreur) → message rassurant.
       function reflectSyncStatus(): void {
         const n = syncQueue.unsavedCount();
         if (n === 0) {
           showStatusSuccess('Enregistré');
           setTimeout(clearStatus, 1200);
+        } else if (!navigator.onLine) {
+          showStatusInfo(
+            `Enregistré sur l'appareil · ${n} à synchroniser au retour du réseau`,
+          );
         } else {
           showStatusError(`${n} score${n > 1 ? 's' : ''} en attente — on réessaie…`);
         }
@@ -1145,7 +1157,36 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         // Si des saisies sont arrivées pendant ce flush (tap rapide multi-
         // joueurs), on draine tout de suite. Pas de boucle serrée : les
         // entrées « failed » restent en backoff donc non « due ».
-        if (syncQueue.due(Date.now()).length > 0) void flushSync();
+        if (syncQueue.due(Date.now()).length > 0) {
+          void flushSync();
+          return;
+        }
+        // Tous les scores synchronisés + une fin de partie demandée (peut-être
+        // hors-ligne) + réseau dispo → on termine et on ouvre le récap.
+        if (syncQueue.isFinishRequested() && !syncQueue.hasUnsaved() && navigator.onLine) {
+          await finishRoundNow();
+        }
+      }
+
+      // POST la fin de partie puis redirige vers le récap.
+      //  - panne réseau / 5xx → on garde l'intention, re-tentée au prochain flush ;
+      //  - 2xx ou redirect (y c. partie déjà terminée, finish.ts est idempotent) → récap ;
+      //  - 4xx (ex. 403 non-organisateur) → on arrête d'insister (pas de boucle).
+      async function finishRoundNow(): Promise<void> {
+        let res: Response;
+        try {
+          res = await fetch(`/api/rounds/${shortCode}/finish`, { method: 'POST' });
+        } catch {
+          return; // réseau KO → retry au prochain flush (online / intervalle)
+        }
+        if (res.ok || res.redirected) {
+          syncQueue.clearFinish();
+          window.location.href = window.location.pathname.replace(/\/play$/, '/recap');
+          return;
+        }
+        if (res.status >= 500) return; // serveur en vrac → retry plus tard
+        syncQueue.clearFinish();
+        showStatusError('Impossible de terminer la partie ici.');
       }
 
       // Saisie d'un score : écriture optimiste locale + mise en file. L'avance
@@ -1350,6 +1391,11 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
       }
 
       render();
+
+      // Au chargement : s'il reste des scores non synchronisés ou une fin de
+      // partie en attente (reprise après reload ou réseau revenu), on relance
+      // la sync tout de suite.
+      if (syncQueue.hasUnsaved() || syncQueue.isFinishRequested()) void flushSync();
     }
 
     /* === Spectator toggle (mode 'host' uniquement, côté joueur invité) ===
