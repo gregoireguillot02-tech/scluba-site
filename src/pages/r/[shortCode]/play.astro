@@ -806,7 +806,10 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
           playerNameById.set(p.id, p.name);
         }
       }
-      playerNameById.set(meIdEntry, root.querySelector<HTMLElement>('.play-player')?.textContent ?? '');
+      // Pas d'override pour « moi » : meIdEntry est déjà dans data-players (ci-
+      // dessus) avec son display_name. L'ancien `root.querySelector('.play-player')`
+      // renvoyait null (.play-player est dans le <header>, HORS de [data-play-root]
+      // = root) → nom vide → avatar « ? » sur le tour du host. (fix « À TOI · ? »)
 
       // Score input PR3 refs
       const relBtns = Array.from(
@@ -1058,41 +1061,21 @@ const initialPar = roundHoles.find((h) => h.number === initialHole)?.par
         return sc[hole] === undefined && !pu.has(hole);
       }
 
-      function nextSlotHost(): { pid: string; hole: number } | null {
-        // 1. Trou courant : reste-t-il un joueur non-saisi ?
-        const currentIdx = orderedPlayerIds.indexOf(currentPlayerId);
-        // Boucle depuis le joueur SUIVANT le courant (round-robin) pour
-        // privilégier l'ordre naturel du flight.
-        for (let i = 1; i <= orderedPlayerIds.length; i++) {
-          const pid = orderedPlayerIds[(currentIdx + i) % orderedPlayerIds.length];
-          if (isEmptyFor(pid, currentHole)) return { pid, hole: currentHole };
-        }
-        // 2. Tous saisi pour ce trou → trou suivant, joueur de tête.
-        for (let h = currentHole + 1; h <= holeCount; h++) {
-          for (const pid of orderedPlayerIds) {
-            if (isEmptyFor(pid, h)) return { pid, hole: h };
-          }
-        }
-        // 3. Wrap-around : trous précédents non-saisis.
-        for (let h = 1; h < currentHole; h++) {
-          for (const pid of orderedPlayerIds) {
-            if (isEmptyFor(pid, h)) return { pid, hole: h };
-          }
-        }
-        return null; // partie complète
-      }
-
       function autoAdvance() {
         if (canHostSwitch) {
-          const slot = nextSlotHost();
-          if (slot) {
-            setTimeout(() => {
-              currentPlayerId = slot.pid;
-              currentHole = slot.hole;
-              render();
-            }, 250);
+          // Flow B : on enchaîne joueur par joueur SUR LE TROU COURANT seulement.
+          // Quand tout le monde a saisi ce trou → on S'ARRÊTE. L'avance vers le
+          // trou suivant est EXPLICITE (CTA « Trou suivant »), c'est le flow B
+          // choisi. Plus d'auto-saut de trou (sinon « ça défile tout seul » = C).
+          const currentIdx = orderedPlayerIds.indexOf(currentPlayerId);
+          for (let i = 1; i <= orderedPlayerIds.length; i++) {
+            const pid = orderedPlayerIds[(currentIdx + i) % orderedPlayerIds.length];
+            if (isEmptyFor(pid, currentHole)) {
+              setTimeout(() => { currentPlayerId = pid; render(); }, 250);
+              return;
+            }
           }
-          return;
+          return; // trou complet pour tous → on attend le CTA « Trou suivant »
         }
         // Mode solo / each : prochain trou vide pour ME.
         const scores = scoresOf(currentPlayerId);
